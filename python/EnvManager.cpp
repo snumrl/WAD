@@ -25,9 +25,23 @@ GetNumState()
 
 int
 EnvManager::
+GetNumState_Device()
+{
+	return mEnvs[0]->GetNumState_Device();
+}
+
+int
+EnvManager::
 GetNumAction()
 {
 	return mEnvs[0]->GetNumAction();
+}
+
+int
+EnvManager::
+GetNumAction_Device()
+{
+	return mEnvs[0]->GetNumAction_Device();
 }
 
 int
@@ -56,6 +70,13 @@ EnvManager::
 UseMuscle()
 {
 	return mEnvs[0]->GetUseMuscle();
+}
+
+bool
+EnvManager::
+UseDevice()
+{
+	return mEnvs[0]->GetUseDevice();
 }
 
 void
@@ -161,6 +182,19 @@ GetStates()
 	return toNumPyArray(states);
 }
 
+np::ndarray 
+EnvManager::
+GetStates_Device()
+{
+	Eigen::MatrixXd states(mNumEnvs,this->GetNumState_Device());
+	for (int id = 0;id<mNumEnvs;++id)
+	{
+		states.row(id) = mEnvs[id]->GetState_Device().transpose();
+	}
+
+	return toNumPyArray(states);
+}
+
 void
 EnvManager::
 SetActions(np::ndarray np_array)
@@ -169,6 +203,17 @@ SetActions(np::ndarray np_array)
 	for (int id = 0;id<mNumEnvs;++id)
 	{
 		mEnvs[id]->SetAction(action.row(id).transpose());
+	}
+}
+
+void
+EnvManager::
+SetActions_Device(np::ndarray np_array)
+{
+	Eigen::MatrixXd action = toEigenMatrix(np_array);
+	for (int id = 0;id<mNumEnvs;++id)
+	{
+		mEnvs[id]->SetAction_Device(action.row(id).transpose());
 	}
 }
 
@@ -252,11 +297,14 @@ BOOST_PYTHON_MODULE(pymss)
 
 	class_<EnvManager>("EnvManager",init<std::string,int>())
 		.def("GetNumState",&EnvManager::GetNumState)
+		.def("GetNumState_Device",&EnvManager::GetNumState_Device)
 		.def("GetNumAction",&EnvManager::GetNumAction)
+		.def("GetNumAction_Device",&EnvManager::GetNumAction_Device)
 		.def("GetSimulationHz",&EnvManager::GetSimulationHz)
 		.def("GetControlHz",&EnvManager::GetControlHz)
 		.def("GetNumSteps",&EnvManager::GetNumSteps)
 		.def("UseMuscle",&EnvManager::UseMuscle)
+		.def("UseDevice",&EnvManager::UseDevice)
 		.def("Step",&EnvManager::Step)
 		.def("Reset",&EnvManager::Reset)
 		.def("IsEndOfEpisode",&EnvManager::IsEndOfEpisode)
@@ -268,8 +316,9 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("Resets",&EnvManager::Resets)
 		.def("IsEndOfEpisodes",&EnvManager::IsEndOfEpisodes)
 		.def("GetStates",&EnvManager::GetStates)
-		.def("SetActions",&EnvManager::SetActions)
-		.def("GetRewards",&EnvManager::GetRewards)
+		.def("GetStates_Device",&EnvManager::GetStates_Device)
+		.def("SetActions",&EnvManager::SetActions)		
+		.def("SetActions_Device",&EnvManager::SetActions_Device)		
 		.def("GetNumTotalMuscleRelatedDofs",&EnvManager::GetNumTotalMuscleRelatedDofs)
 		.def("GetNumMuscles",&EnvManager::GetNumMuscles)
 		.def("GetMuscleTorques",&EnvManager::GetMuscleTorques)

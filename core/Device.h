@@ -18,17 +18,18 @@ public:
     const dart::dynamics::SkeletonPtr& GetSkeleton(){ return mSkeleton; }
 
     int GetNumState(){ return mNumState;}
-    int GetNumActiveDof(){ return mNumActiveDof;}
     int GetNumAction(){ return mNumAction;}
-
+    int GetNumActiveDof(){ return mNumActiveDof;}
+    
 public:
     dart::dynamics::SkeletonPtr mSkeleton;
 
-    double mAssistiveTorqueMax;
+    double mTorqueMax_Device;
     int mNumState;
+    int mNumAction;
     int mNumActiveDof;
     int mRootJointDof;
-    int mNumAction;
+    
 
 public:
     //Dynamics

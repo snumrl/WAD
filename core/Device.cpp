@@ -36,9 +36,9 @@ Initialize()
     mNumActiveDof = this->GetSkeleton()->getNumDofs()-mRootJointDof;
     mNumState = this->GetState(0.0, 1.0).rows();
 
-    mAssistiveTorqueMax = 10.;
+    mTorqueMax_Device = 100.;
 
-    mNumActiveDof = this->GetSkeleton()->getNumDofs()-mRootJointDof;
+    mNumAction = 6;
     mNumState = this->GetState(0.0, 1.0).rows();
     std::cout <<"Device dof : " << mNumState << std::endl;
 }

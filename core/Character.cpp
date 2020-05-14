@@ -123,6 +123,8 @@ Initialize()
 
 	mNumActiveDof = this->GetSkeleton()->getNumDofs()-mRootJointDof;
 	mNumState = this->GetState(0.0).rows();
+
+	mTorqueMax_Device = 100.0;
 }
 
 void
@@ -146,6 +148,8 @@ Initialize_Device()
 {
 	mUseDevice = true;
 	mDevice->Initialize();
+
+	mDesiredTorque_Device = Eigen::VectorXd::Zero(12);
 
 	mWeldJoint_Hip = std::make_shared<dart::constraint::WeldJointConstraint>(
         mSkeleton->getBodyNode(0), mDevice->GetSkeleton()->getBodyNode(0)
@@ -226,10 +230,10 @@ Step()
 	GetDesiredTorques();
 	mSkeleton->setForces(mDesiredTorque);
 
-	for(int i=0; i<mDesiredTorque.size(); i++)
-	{
-		std::cout << "torque " << i << " : " << mDesiredTorque[i] << std::endl;
-	}
+	// for(int i=0; i<mDesiredTorque.size(); i++)
+	// {
+	// 	std::cout << "torque " << i << " : " << mDesiredTorque[i] << std::endl;
+	// }
 	if(mUseDevice)
 		Step_Device();
 }
@@ -279,8 +283,8 @@ void
 Character::
 Step_Device()
 {
-	// GetDesiredTorques_Device();
-	// mDevice->GetSkeleton()->setForces(mDesiredTorque_Device);
+	GetDesiredTorques_Device();
+	mDevice->GetSkeleton()->setForces(mDesiredTorque_Device);
 }
 
 void
@@ -332,8 +336,8 @@ Eigen::VectorXd
 Character::
 GetState_Device(double worldTime)
 {
-	Eigen::VectorXd s;
-	return s;
+	double maxTime = mBVH->GetMaxTime();
+	return mDevice->GetState(worldTime, maxTime);
 }
 
 double exp_of_squared(const Eigen::VectorXd& vec,double w)
@@ -418,15 +422,17 @@ GetReward()
 
 	double r = r_ee*(w_q*r_q + w_v*r_v);
 
-	return r;
+	if(mUseDevice)
+		return 0.9 * r + 0.1 * GetReward_Device() ;	
+	else
+		return r;
 }
 
 double
 Character::
 GetReward_Device()
 {
-	double r = 0;
-	return r;
+	return exp(-1.*(mDesiredTorque_Device/mTorqueMax_Device).squaredNorm());;
 }
 
 Eigen::VectorXd
@@ -437,17 +443,17 @@ GetDesiredTorques()
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction_;
 	mDesiredTorque = this->GetSPDForces(p_des);
 
-	return mDesiredTorque.tail(mDesiredTorque.rows() - mRootJointDof);
+	return mDesiredTorque.tail(mDesiredTorque.rows()-mRootJointDof);
 }
 
 Eigen::VectorXd
 Character::
 GetDesiredTorques_Device()
 {
-	Eigen::VectorXd t;
 	mDesiredTorque_Device.head<6>().setZero();
-	mDesiredTorque_Device.segment<6>(6) = mAction_Device;
-	return t;
+	mDesiredTorque_Device.segment<6>(6) = mTorqueMax_Device * mAction_Device;
+	
+	return mDesiredTorque_Device;
 }
 
 Eigen::VectorXd

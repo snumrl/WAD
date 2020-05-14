@@ -28,9 +28,12 @@ public:
 	void Reset(bool RSI = true);
 	bool IsEndOfEpisode();
 	void SetAction(const Eigen::VectorXd& a);
+	void SetAction_Device(const Eigen::VectorXd& a);
 	void SetActivationLevels(const Eigen::VectorXd& a);
 	double GetReward();
+
 	Eigen::VectorXd GetState();
+	Eigen::VectorXd GetState_Device();
 
 	Eigen::VectorXd GetDesiredTorques();
 	Eigen::VectorXd GetMuscleTorques();
@@ -45,7 +48,9 @@ public:
 	int GetNumTotalRelatedDofs();
 
 	int GetNumState();
+	int GetNumState_Device();
 	int GetNumAction();
+	int GetNumAction_Device();
 	int GetNumSteps(){return mSimulationHz/mControlHz;}
 
 	bool GetUseMuscle(){return mUseMuscle;}

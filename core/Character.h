@@ -53,9 +53,9 @@ public:
 	void SetPDParameters(double kp, double kv);
 
 	Eigen::VectorXd GetDesiredTorques();
-	Eigen::VectorXd GetMuscleTorques();
 	Eigen::VectorXd GetDesiredTorques_Device();
-
+	Eigen::VectorXd GetMuscleTorques();
+	
 	Eigen::VectorXd GetSPDForces(const Eigen::VectorXd& p_desired);
 
 	void SetTargetPosAndVel(double t, int controlHz);
@@ -95,6 +95,8 @@ public:
 
 	bool mUseDevice;
 	bool mUseMuscle;
+
+	double mTorqueMax_Device;
 
 	double w_q,w_v,w_ee,w_com;
 

@@ -207,6 +207,11 @@ IsEndOfEpisode()
 	else if(mWorld->getTime()>10.0)
 		isTerminal =true;
 
+	// if(mUseDevice)
+	// {
+		
+	// }
+
 	return isTerminal;
 }
 
@@ -217,19 +222,47 @@ GetState()
 	return mCharacter->GetState(mWorld->getTime());
 }
 
+Eigen::VectorXd
+Environment::
+GetState_Device()
+{
+	return mCharacter->GetState_Device(mWorld->getTime());
+}
+
 void
 Environment::
 SetAction(const Eigen::VectorXd& a)
+{
+	mAction = a*0.1;
+	// for(int i=0; i<a.size(); i++)
+	// {
+	// 	if(a[i] > 10.0)
+	// 	{
+	// 		std::cout << "action over 10 : " << a[i] << std::endl;
+	// 	}
+	// }
+	mCharacter->SetAction(mAction);
+
+	double t = mWorld->getTime();
+	mCharacter->SetTargetPosAndVel(t, mControlHz);
+
+	mSimCount = 0;
+	mRandomSampleIndex = rand()%(mSimulationHz/mControlHz);
+}
+
+void
+Environment::
+SetAction_Device(const Eigen::VectorXd& a)
 {
 	mAction = a*0.1;
 	for(int i=0; i<a.size(); i++)
 	{
 		if(a[i] > 10.0)
 		{
-			std::cout << "action over 10 : " << a[i] << std::endl;
+			std::cout << "device action over 10 : " << a[i] << std::endl;
 		}
 	}
-	mCharacter->SetAction(mAction);
+	mCharacter->SetAction_Device(mAction);
 
 	double t = mWorld->getTime();
 	mCharacter->SetTargetPosAndVel(t, mControlHz);
@@ -247,9 +280,23 @@ GetNumState()
 
 int
 Environment::
+GetNumState_Device()
+{
+	return mCharacter->GetDevice()->GetNumState();
+}
+
+int
+Environment::
 GetNumAction()
 {
 	return mCharacter->GetNumActiveDof();
+}
+
+int
+Environment::
+GetNumAction_Device()
+{
+	return mCharacter->GetDevice()->GetNumAction();
 }
 
 double
