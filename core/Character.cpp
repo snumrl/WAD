@@ -279,8 +279,8 @@ void
 Character::
 Step_Device()
 {
-	GetDesiredTorques_Device();
-	mDevice->GetSkeleton()->setForces(mDesiredTorque_Device);
+	// GetDesiredTorques_Device();
+	// mDevice->GetSkeleton()->setForces(mDesiredTorque_Device);
 }
 
 void

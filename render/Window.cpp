@@ -1,6 +1,7 @@
 #include "Window.h"
 #include "Environment.h"
 #include "Character.h"
+#include "Device.h"
 #include "BVH.h"
 #include "Muscle.h"
 #include <iostream>
@@ -37,6 +38,7 @@ Window(Environment* env)
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
 }
+
 Window::
 Window(Environment* env,const std::string& nn_path)
 	:Window(env)
@@ -53,6 +55,7 @@ Window(Environment* env,const std::string& nn_path)
 	p::object load = nn_module.attr("load");
 	load(nn_path);
 }
+
 Window::
 Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_path)
 	:Window(env,nn_path)
@@ -92,6 +95,8 @@ draw()
 	DrawGround(y);
 	DrawMuscles(mEnv->GetCharacter()->GetMuscles());
 	DrawSkeleton(mEnv->GetCharacter()->GetSkeleton());
+	if(mEnv->GetUseDevice())
+		DrawSkeleton(mEnv->GetCharacter()->GetDevice()->GetSkeleton());
 	// if(mDrawBVH)
 		// DrawBVH(mEnv->GetCharacter()->GetBVH(), mEnv->GetTime());
 

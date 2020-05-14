@@ -1,5 +1,6 @@
 build/
-python/*.so
-python/__pycache__/*
-core/*.a
 nn/
+*.a
+*.so
+*.pyc
+
