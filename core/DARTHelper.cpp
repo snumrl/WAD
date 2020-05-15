@@ -78,7 +78,7 @@ MakeBallJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 	props->mPositionUpperLimits = upper;
 	props->mVelocityLowerLimits = Eigen::Vector3d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector3d::Constant(100.0);
-	props->mForceLowerLimits = Eigen::Vector3d::Constant(-1000.0); 
+	props->mForceLowerLimits = Eigen::Vector3d::Constant(-1000.0);
 	props->mForceUpperLimits = Eigen::Vector3d::Constant(1000.0);
 	props->mDampingCoefficients = Eigen::Vector3d::Constant(0.4);
 
@@ -99,8 +99,16 @@ MakeRevoluteJointProperties(const std::string& name,const Eigen::Vector3d& axis,
 	props->mAxis = axis;
 	props->mVelocityLowerLimits = Eigen::Vector1d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector1d::Constant(100.0);
-	props->mForceLowerLimits = Eigen::Vector1d::Constant(-1000.0); 
-	props->mForceUpperLimits = Eigen::Vector1d::Constant(1000.0);
+	if(name.compare("TibiaR"))
+	{
+		props->mForceLowerLimits = Eigen::Vector1d::Constant(-30.0);
+		props->mForceUpperLimits = Eigen::Vector1d::Constant(30.0);
+	}
+	else
+	{
+		props->mForceLowerLimits = Eigen::Vector1d::Constant(-1000.0);
+		props->mForceUpperLimits = Eigen::Vector1d::Constant(1000.0);
+	}
 	props->mDampingCoefficients = Eigen::Vector1d::Constant(0.4);
 
 	return props;
@@ -161,7 +169,7 @@ Eigen::Vector3d Proj(const Eigen::Vector3d& u,const Eigen::Vector3d& v)
 {
 	Eigen::Vector3d proj;
 	proj = u.dot(v)/u.dot(u)*u;
-	return proj;	
+	return proj;
 }
 Eigen::Isometry3d Orthonormalize(const Eigen::Isometry3d& T_old)
 {
@@ -216,7 +224,7 @@ Eigen::Vector4d string_to_vector4d(const std::string& input)
 	Eigen::Vector4d res;
 	res << v[0], v[1], v[2],v[3];
 
-	return res;	
+	return res;
 }
 Eigen::VectorXd string_to_vectorXd(const std::string& input, int n){
 	std::vector<double> v = split_to_double(input, n);
@@ -258,7 +266,7 @@ BuildFromFile(const std::string& path,bool create_obj)
 		BodyNode* parent = nullptr;
 		if(parent_str != "None")
 			parent = skel->getBodyNode(parent_str);
-		
+
 		ShapePtr shape;
 		Eigen::Isometry3d T_body = Eigen::Isometry3d::Identity();
 		TiXmlElement* body = node->FirstChildElement("Body");
@@ -297,14 +305,14 @@ BuildFromFile(const std::string& path,bool create_obj)
 		dart::dynamics::Inertia inertia = MakeInertia(shape,mass);
 		T_body.linear() = string_to_matrix3d(body->FirstChildElement("Transformation")->Attribute("linear"));
 		T_body.translation() = string_to_vector3d(body->FirstChildElement("Transformation")->Attribute("translation"));
-		T_body = Orthonormalize(T_body);			
+		T_body = Orthonormalize(T_body);
 		TiXmlElement* joint = node->FirstChildElement("Joint");
 		type = joint->Attribute("type");
 		Joint::Properties* props;
 		Eigen::Isometry3d T_joint = Eigen::Isometry3d::Identity();
 		T_joint.linear() = string_to_matrix3d(joint->FirstChildElement("Transformation")->Attribute("linear"));
 		T_joint.translation() = string_to_vector3d(joint->FirstChildElement("Transformation")->Attribute("translation"));
-		T_joint = Orthonormalize(T_joint);	
+		T_joint = Orthonormalize(T_joint);
 		Eigen::Isometry3d parent_to_joint;
 		if(parent==nullptr)
 			parent_to_joint = T_joint;
@@ -355,7 +363,7 @@ BuildFromFile(const std::string& path,bool create_obj)
 			auto vsn = bn->createShapeNodeWith<VisualAspect>(visual_shape);
 
 			Eigen::Isometry3d T_obj;
-			T_obj.setIdentity();			
+			T_obj.setIdentity();
 			T_obj = T_body.inverse();
 			vsn->setRelativeTransform(T_obj);
 		}

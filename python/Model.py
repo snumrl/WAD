@@ -47,7 +47,7 @@ class MuscleNN(nn.Module):
 			nn.LeakyReLU(0.2, inplace=True),
 			nn.Linear(num_h3,num_muscles),
 			nn.Tanh(),
-			nn.ReLU()		
+			nn.ReLU()
 		)
 		self.std_muscle_tau = torch.zeros(self.num_total_muscle_related_dofs)
 		self.std_tau = torch.zeros(self.num_dofs)
@@ -67,7 +67,7 @@ class MuscleNN(nn.Module):
 
 		tau = tau/self.std_tau
 		out = self.fc.forward(torch.cat([muscle_tau,tau],dim=1))
-		return out		
+		return out
 
 	def load(self,path):
 		print('load muscle nn {}'.format(path))
@@ -76,15 +76,15 @@ class MuscleNN(nn.Module):
 	def save(self,path):
 		print('save muscle nn {}'.format(path))
 		torch.save(self.state_dict(),path)
-		
+
 	def get_activation(self,muscle_tau,tau):
 		act = self.forward(Tensor(muscle_tau.reshape(1,-1)),Tensor(tau.reshape(1,-1)))
 		return act.cpu().detach().numpy()
-		
+
 class SimulationNN(nn.Module):
 	def __init__(self,num_states,num_actions):
 		super(SimulationNN,self).__init__()
-		
+
 		num_h1 = 256
 		num_h2 = 256
 
@@ -134,7 +134,7 @@ class SimulationNN(nn.Module):
 	def save(self,path):
 		print('save simulation nn {}'.format(path))
 		torch.save(self.state_dict(),path)
-		
+
 	def get_action(self,s):
 		ts = torch.tensor(s)
 		p,_ = self.forward(ts)

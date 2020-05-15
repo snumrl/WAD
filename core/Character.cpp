@@ -230,10 +230,26 @@ Step()
 	GetDesiredTorques();
 	mSkeleton->setForces(mDesiredTorque);
 
+	// if(mDesiredTorque[9] > 30.0)
+	// 	std::cout << "Tibia R : " << mDesiredTorque[9] << std::endl;
+	// if(mDesiredTorque[18] > 30.0)
+	// 	std::cout << "Tibia L : " << mDesiredTorque[18] << std::endl;
+
 	// for(int i=0; i<mDesiredTorque.size(); i++)
 	// {
 	// 	std::cout << "torque " << i << " : " << mDesiredTorque[i] << std::endl;
 	// }
+
+	// int dofs = 0;
+	// int n = mSkeleton->getNumJoints();
+	// for(int i=0; i<n; i++)
+	// {
+	// 	std::cout << i << " : " << mSkeleton->getJoint(i)->getName() << " " << mSkeleton->getJoint(i)->getNumDofs()  << std::endl;
+	// 	dofs += mSkeleton->getJoint(i)->getNumDofs();
+	// }
+
+	// std::cout << "dofs : " << dofs << std::endl;
+
 	if(mUseDevice)
 		Step_Device();
 }
@@ -423,7 +439,7 @@ GetReward()
 	double r = r_ee*(w_q*r_q + w_v*r_v);
 
 	if(mUseDevice)
-		return 0.9 * r + 0.1 * GetReward_Device() ;	
+		return 0.9 * r + 0.1 * GetReward_Device() ;
 	else
 		return r;
 }
@@ -452,7 +468,7 @@ GetDesiredTorques_Device()
 {
 	mDesiredTorque_Device.head<6>().setZero();
 	mDesiredTorque_Device.segment<6>(6) = mTorqueMax_Device * mAction_Device;
-	
+
 	return mDesiredTorque_Device;
 }
 
