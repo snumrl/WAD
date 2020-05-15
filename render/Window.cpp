@@ -15,7 +15,8 @@ Window::
 Window(Environment* env)
 	:mEnv(env),mFocus(true),mSimulating(false),mDrawBVH(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false)
 {
-	std::cout << "window test" << std::endl;
+	std::cout << "window" << std::endl;
+
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
 	mBackground[2] = 1.0;
