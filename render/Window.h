@@ -18,6 +18,7 @@ public:
 	Window(Environment* env);
 	Window(Environment* env,const std::string& nn_path);
 	Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_path);
+	Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_path,const std::string& device_nn_path);
 
 	void draw() override;
 	void keyboard(unsigned char _key, int _x, int _y) override;
@@ -39,9 +40,10 @@ private:
 	void Reset();
 
 	Eigen::VectorXd GetActionFromNN();
+	Eigen::VectorXd GetActionFromNN_Device();
 	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt);
 
-	p::object mm,mns,sys_module,nn_module,muscle_nn_module;
+	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module;
 
 
 	Environment* mEnv;
@@ -52,6 +54,7 @@ private:
 	bool mDrawShadow;
 	bool mNNLoaded;
 	bool mMuscleNNLoaded;
+	bool mDeviceNNLoaded;
 	Eigen::Affine3d mViewMatrix;
 };
 };

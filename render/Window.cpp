@@ -13,7 +13,7 @@ using namespace dart::gui;
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawBVH(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawBVH(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false)
 {
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
@@ -74,6 +74,24 @@ Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_
 	p::object load = muscle_nn_module.attr("load");
 	load(muscle_nn_path);
 }
+
+Window::
+Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_path, const std::string& device_nn_path)
+	:Window(env,nn_path,muscle_nn_path)
+{
+	mDeviceNNLoaded = true;
+
+	boost::python::str str = ("num_state_device = "+std::to_string(mEnv->GetNumState_Device())).c_str();
+	p::exec(str,mns);
+	str = ("num_action_device = "+std::to_string(mEnv->GetNumAction_Device())).c_str();
+	p::exec(str,mns);
+
+	device_nn_module = p::eval("SimulationNN(num_state_device,num_action_device)",mns);
+
+	p::object load = device_nn_module.attr("load");
+	load(device_nn_path);
+}
+
 void
 Window::
 draw()
@@ -137,11 +155,19 @@ Step()
 {
 	int num = mEnv->GetSimulationHz()/mEnv->GetControlHz();
 	Eigen::VectorXd action;
+	Eigen::VectorXd action_device;
+
 	if(mNNLoaded)
 		action = GetActionFromNN();
 	else
 		action = Eigen::VectorXd::Zero(mEnv->GetNumAction());
+
+	if(mDeviceNNLoaded)
+		action_device = GetActionFromNN_Device();
+	
 	mEnv->SetAction(action);
+	if(mDeviceNNLoaded)
+		mEnv->SetAction_Device(action_device);
 
 	if(mEnv->GetUseMuscle())
 	{
@@ -218,6 +244,33 @@ GetActionFromNN()
 	float* srcs = reinterpret_cast<float*>(action_np.get_data());
 
 	Eigen::VectorXd action(mEnv->GetNumAction());
+	for(int i=0;i<action.rows();i++)
+		action[i] = srcs[i];
+
+	return action;
+}
+
+Eigen::VectorXd
+Window::
+GetActionFromNN_Device()
+{
+	p::object get_action_device;
+	get_action_device = device_nn_module.attr("get_action");
+	Eigen::VectorXd state = mEnv->GetState_Device();
+	p::tuple shape = p::make_tuple(state.rows());
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::ndarray state_np = np::empty(shape,dtype);
+
+	float* dest = reinterpret_cast<float*>(state_np.get_data());
+	for(int i =0;i<state.rows();i++)
+		dest[i] = state[i];
+
+	p::object temp = get_action_device(state_np);
+	np::ndarray action_np = np::from_object(temp);
+
+	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+
+	Eigen::VectorXd action(mEnv->GetNumAction_Device());
 	for(int i=0;i<action.rows();i++)
 		action[i] = srcs[i];
 
