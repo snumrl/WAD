@@ -66,7 +66,7 @@ MakePlanarJointProperties(const std::string& name,const Eigen::Isometry3d& paren
 }
 BallJoint::Properties*
 MASS::
-MakeBallJointProperties(const std::string& name,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint,const Eigen::Vector3d& lower,const Eigen::Vector3d& upper)
+MakeBallJointProperties(const std::string& name,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint,const Eigen::Vector3d& lower,const Eigen::Vector3d& upper,const Eigen::Vector3d& force_lower,const Eigen::Vector3d& force_upper)
 {
 	BallJoint::Properties* props = new BallJoint::Properties();
 
@@ -78,15 +78,15 @@ MakeBallJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 	props->mPositionUpperLimits = upper;
 	props->mVelocityLowerLimits = Eigen::Vector3d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector3d::Constant(100.0);
-	props->mForceLowerLimits = Eigen::Vector3d::Constant(-1000.0);
-	props->mForceUpperLimits = Eigen::Vector3d::Constant(1000.0);
+	props->mForceLowerLimits = force_lower;
+	props->mForceUpperLimits = force_upper;
 	props->mDampingCoefficients = Eigen::Vector3d::Constant(0.4);
 
 	return props;
 }
 RevoluteJoint::Properties*
 MASS::
-MakeRevoluteJointProperties(const std::string& name,const Eigen::Vector3d& axis,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint,const Eigen::Vector1d& lower,const Eigen::Vector1d& upper)
+MakeRevoluteJointProperties(const std::string& name,const Eigen::Vector3d& axis,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint,const Eigen::Vector1d& lower,const Eigen::Vector1d& upper,const Eigen::Vector1d& force_lower,const Eigen::Vector1d& force_upper)
 {
 	RevoluteJoint::Properties* props = new RevoluteJoint::Properties();
 
@@ -99,16 +99,8 @@ MakeRevoluteJointProperties(const std::string& name,const Eigen::Vector3d& axis,
 	props->mAxis = axis;
 	props->mVelocityLowerLimits = Eigen::Vector1d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector1d::Constant(100.0);
-	if(name.compare("TibiaR"))
-	{
-		props->mForceLowerLimits = Eigen::Vector1d::Constant(-30.0);
-		props->mForceUpperLimits = Eigen::Vector1d::Constant(30.0);
-	}
-	else
-	{
-		props->mForceLowerLimits = Eigen::Vector1d::Constant(-1000.0);
-		props->mForceUpperLimits = Eigen::Vector1d::Constant(1000.0);
-	}
+	props->mForceLowerLimits = force_lower;
+	props->mForceUpperLimits = force_upper;
 	props->mDampingCoefficients = Eigen::Vector1d::Constant(0.4);
 
 	return props;
@@ -331,14 +323,18 @@ BuildFromFile(const std::string& path,bool create_obj)
 		{
 			Eigen::Vector3d lower = string_to_vector3d(joint->Attribute("lower"));
 			Eigen::Vector3d upper = string_to_vector3d(joint->Attribute("upper"));
-			props = MASS::MakeBallJointProperties(name,parent_to_joint,child_to_joint,lower,upper);
+			Eigen::Vector3d force_lower = string_to_vector3d(joint->Attribute("force_lower"));
+			Eigen::Vector3d force_upper = string_to_vector3d(joint->Attribute("force_upper"));
+			props = MASS::MakeBallJointProperties(name,parent_to_joint,child_to_joint,lower,upper,force_lower,force_upper);
 		}
 		else if(type == "Revolute")
 		{
 			Eigen::Vector1d lower = string_to_vector1d(joint->Attribute("lower"));
 			Eigen::Vector1d upper = string_to_vector1d(joint->Attribute("upper"));
+			Eigen::Vector1d force_lower = string_to_vector1d(joint->Attribute("force_lower"));
+			Eigen::Vector1d force_upper = string_to_vector1d(joint->Attribute("force_upper"));
 			Eigen::Vector3d axis = string_to_vector3d(joint->Attribute("axis"));
-			props = MASS::MakeRevoluteJointProperties(name,axis,parent_to_joint,child_to_joint,lower,upper);
+			props = MASS::MakeRevoluteJointProperties(name,axis,parent_to_joint,child_to_joint,lower,upper,force_lower,force_upper);
 		}
 		else if(type == "Weld")
 		{

@@ -355,6 +355,7 @@ class PPO(object):
 		self.SaveModel()
 
 		print('=============================================')
+
 		return np.array(self.rewards)
 
 import matplotlib
