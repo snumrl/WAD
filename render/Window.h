@@ -25,6 +25,8 @@ public:
 	void displayTimer(int _val) override;
 private:
 	void SetFocusing();
+	void SetViewMatrix();
+	float GetGroundY();
 
 	void DrawEntity(const dart::dynamics::Entity* entity);
 	void DrawBodyNode(const dart::dynamics::BodyNode* bn);
@@ -44,7 +46,6 @@ private:
 	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt);
 
 	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module;
-
 
 	Environment* mEnv;
 	bool mFocus;

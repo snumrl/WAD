@@ -94,7 +94,7 @@ Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_
 
 void
 Window::
-draw()
+SetViewMatrix()
 {
 	GLfloat matrix[16];
 	glGetFloatv(GL_MODELVIEW_MATRIX, matrix);
@@ -106,11 +106,25 @@ draw()
 	b<<matrix[12],matrix[13],matrix[14];
 	mViewMatrix.linear() = A;
 	mViewMatrix.translation() = b;
+}
 
+float
+Window::
+GetGroundY()
+{
 	auto ground = mEnv->GetGround();
 	float y = ground->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(ground->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
 
-	DrawGround(y);
+	return y;
+}
+
+void
+Window::
+draw()
+{
+	SetViewMatrix();
+
+	DrawGround(GetGroundY());
 	DrawMuscles(mEnv->GetCharacter()->GetMuscles());
 	DrawSkeleton(mEnv->GetCharacter()->GetSkeleton());
 	if(mEnv->GetUseDevice())

@@ -245,6 +245,7 @@ Step()
 	// for(int i=0; i<n; i++)
 	// {
 	// 	std::cout << i << " : " << mSkeleton->getJoint(i)->getName() << " " << mSkeleton->getJoint(i)->getNumDofs()  << std::endl;
+	// 	std::cout << i << " : " << mSkeleton->getJoint(i)->getName() << " " << mSkeleton->getJoint(i)->getForceLowerLimit(0)  << std::endl;
 	// 	dofs += mSkeleton->getJoint(i)->getNumDofs();
 	// }
 
