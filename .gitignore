@@ -3,4 +3,5 @@ nn/
 *.a
 *.so
 *.pyc
+*.xml
 
