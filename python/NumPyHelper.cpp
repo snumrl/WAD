@@ -236,3 +236,20 @@ std::vector<bool> toStdVector(const p::list& list)
 		vec[i] = boost::python::extract<bool>(list[i]);
 	return vec;
 }
+
+p::dict toPythonDict(const std::map<std::string, double> map) {
+    typename std::map<std::string, double>::const_iterator iter;
+	p::dict dictionary;
+	for (iter = map.begin(); iter != map.end(); ++iter) {
+		dictionary[iter->first] = iter->second;
+	}
+	return dictionary;
+}
+
+// p::dict toPythonDict(const std::map<std::string, double>& map) {
+//     p::dict dictionary;
+// 	for(int i=0; i<map.size(); i++) {
+// 		dictionary[map.at(i).first] = map.at(i).second;
+// 	}
+// 	return dictionary;
+// }

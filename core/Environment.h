@@ -3,6 +3,7 @@
 #include "dart/dart.hpp"
 #include "Character.h"
 #include "Muscle.h"
+#include <map>
 
 namespace MASS
 {
@@ -31,6 +32,7 @@ public:
 	void SetAction_Device(const Eigen::VectorXd& a);
 	void SetActivationLevels(const Eigen::VectorXd& a);
 	double GetReward();
+	std::map<std::string,double> GetRewardSep();
 
 	Eigen::VectorXd GetState();
 	Eigen::VectorXd GetState_Device();

@@ -26,7 +26,7 @@ LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
-Episode = namedtuple('Episode',('s','a','r', 'value', 'logprob'))
+Episode = namedtuple('Episode',('s','a','r', 'value', 'logprob', 'r_sep'))
 class EpisodeBuffer(object):
     def __init__(self):
         self.data = []
@@ -121,6 +121,7 @@ class PPO(object):
         self.loss_critic = 0.0
         self.loss_muscle = 0.0
         self.rewards = []
+        self.rewards_sep = {}
         self.sum_return = 0.0
         self.max_return = -1.0
         self.max_return_epoch = 1
@@ -161,24 +162,37 @@ class PPO(object):
         self.replay_buffer.Clear()
         self.muscle_buffer.Clear()
         self.sum_return = 0.0
+        self.sum_return_sep = {}
         for epi in self.total_episodes:
             data = epi.GetData()
             size = len(data)
             if size == 0:
                 continue
-            states, actions, rewards, values, logprobs = zip(*data)
+            states, actions, rewards, values, logprobs, rewards_sep = zip(*data)
 
             values = np.concatenate((values, np.zeros(1)), axis=0)
             advantages = np.zeros(size)
             ad_t = 0
 
             epi_return = 0.0
+            epi_return_sep = {}
+            epi_return_sep_keys = list(rewards_sep[0].keys())
+            for k in epi_return_sep_keys:
+                epi_return_sep[k] = 0.0;
             for i in reversed(range(len(data))):
                 epi_return += rewards[i]
+                for k in epi_return_sep_keys:
+                    epi_return_sep[k] += rewards_sep[i][k] 
                 delta = rewards[i] + values[i+1] * self.gamma - values[i]
                 ad_t = delta + self.gamma * self.lb * ad_t
                 advantages[i] = ad_t
+            
             self.sum_return += epi_return
+            for k in epi_return_sep_keys:
+                if k not in self.sum_return_sep:
+                    self.sum_return_sep[k] = 0.0   
+                self.sum_return_sep[k] += epi_return_sep[k]
+            
             TD = values[:size] + advantages
 
             for i in range(size):
@@ -202,6 +216,7 @@ class PPO(object):
         actions_device = [None]*self.num_slaves
 
         rewards = [None]*self.num_slaves
+        rewards_sep = [None]*self.num_slaves
         rewards_device = [None]*self.num_slaves
 
         states = self.env.GetStates()
@@ -245,7 +260,8 @@ class PPO(object):
                 elif self.env.IsEndOfEpisode(j) is False:
                     terminated_state = False
                     rewards[j] = self.env.GetReward(j)
-                    self.episodes[j].Push(states_device[j], actions_device[j], rewards[j], values[j], logprobs[j])
+                    rewards_sep[j] = self.env.GetRewardSep(j);
+                    self.episodes[j].Push(states_device[j], actions_device[j], rewards[j], values[j], logprobs[j], rewards_sep[j])
                     local_step += 1
 
                 if terminated_state or (nan_occur is True):
@@ -267,6 +283,7 @@ class PPO(object):
         states = [None]*self.num_slaves
         actions = [None]*self.num_slaves
         rewards = [None]*self.num_slaves
+        rewards_sep = [None]*self.num_slaves
         states = self.env.GetStates()
         local_step = 0
         terminated = [False]*self.num_slaves
@@ -302,7 +319,8 @@ class PPO(object):
                 elif self.env.IsEndOfEpisode(j) is False:
                     terminated_state = False
                     rewards[j] = self.env.GetReward(j)
-                    self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j])
+                    rewards_sep[j] = self.env.GetRewardSep(j)
+                    self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j], rewards_sep[j])
                     local_step += 1
 
                 if terminated_state or (nan_occur is True):
@@ -449,15 +467,21 @@ class PPO(object):
         print('||Avg Reward per transition: {:.3f}'.format(self.sum_return/self.num_tuple))
         print('||Avg Step per episode     : {:.1f}'.format(self.num_tuple/self.num_episode))
         print('||Max Avg Retun So far     : {:.3f} at #{}'.format(self.max_return,self.max_return_epoch))
+      
         self.rewards.append(self.sum_return/self.num_episode)
-
+        keys_ = list(self.sum_return_sep.keys())
+        for key in keys_:
+            if key not in self.rewards_sep:
+                self.rewards_sep[key] = []
+            self.rewards_sep[key].append(self.sum_return_sep[key]/self.num_episode)
+            
         if self.use_device:
             self.SaveModel_Device()
         else:
             self.SaveModel()
 
         print('=============================================')
-        return np.array(self.rewards)
+        return np.array(self.rewards), self.rewards_sep
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -478,13 +502,25 @@ def Plot(y,title,num_fig=1,ylim=True):
     plt.clf()
     plt.title(title)
     plt.plot(y,'b')
-
     plt.plot(temp_y,'r')
 
     plt.show()
     if ylim:
         plt.ylim([0,1])
     plt.pause(0.001)
+
+def Plot_Dict(y,title,num_fig=1):
+    plt.figure(num_fig)
+    plt.clf()
+    plt.title(title)
+    lines = {}
+    for k in list(y.keys()):
+        lines[k] = plt.plot(y[k], label=k)
+    plt.legend()
+
+    plt.show()
+    plt.pause(0.001)
+
 
 import argparse
 import os
@@ -518,5 +554,6 @@ if __name__=="__main__":
     print('num states: {}, num actions: {}'.format(ppo.env.GetNumState(),ppo.env.GetNumAction()))
     for i in range(ppo.max_iteration-5):
         ppo.Train()
-        rewards = ppo.Evaluate()
+        rewards, rewards_sep = ppo.Evaluate()
         Plot(rewards,'reward',0,False)
+        Plot_Dict(rewards_sep,'reward_sep',1)

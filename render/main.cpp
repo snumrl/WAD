@@ -41,6 +41,30 @@ int main(int argc,char** argv)
 	glutInit(&argc, argv);
 
 	MASS::Window* window;
+	// if(argc == 2)
+	// {
+
+	// }
+	// else if(argc == 3)
+	// {
+
+	// }
+	// else if(argc == 4)
+	// {
+
+	// }
+	// else if(argc == 5)
+	// {
+
+	// }
+	// else{
+	// 	std::cout<<"Please check your input"<<std::endl;
+	// 	std::cout<<"Input format is"<<std::endl;
+	// 	std::cout<<"./render/render metadata (model_network) (muscle_network) (device_network)"<<std::endl;
+
+	// 	return 0;
+	// }
+
 	if(argc == 5)
 	{
 		window = new MASS::Window(env,argv[2],argv[3],argv[4]);
@@ -59,16 +83,23 @@ int main(int argc,char** argv)
 					std::cout<<"Please provide two networks"<<std::endl;
 					return 0;
 				}
-				window = new MASS::Window(env,argv[2],argv[3]);
+
+				if(env->GetUseDevice())
+					window = new MASS::Window(env,argv[2],argv[3],argv[4]);
+				else
+					window = new MASS::Window(env,argv[2],argv[3]);
 			}
 			else
 			{
-				if(argc!=3)
-				{
-					std::cout<<"Please provide the network"<<std::endl;
-					return 0;
-				}
-				window = new MASS::Window(env,argv[2]);
+				// if(argc!=3 || argc!=4)
+				// {
+				// 	std::cout<<"Please provide the network"<<std::endl;
+				// 	return 0;
+				// }
+				if(env->GetUseDevice())
+					window = new MASS::Window(env,argv[2],argv[3]);
+				else
+					window = new MASS::Window(env,argv[2]);
 			}
 		}
 	}

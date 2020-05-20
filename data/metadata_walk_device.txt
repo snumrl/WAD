@@ -1,4 +1,4 @@
-use_muscle true
+use_muscle false
 use_device true
 con_hz 30
 sim_hz 600

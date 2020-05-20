@@ -21,6 +21,7 @@ public:
 	np::ndarray GetStates_Device();
 
 	double GetReward(int id);
+	p::dict GetRewardSep(int id);
 	np::ndarray GetRewards();
 
 	void SetAction(np::ndarray np_array, int id);

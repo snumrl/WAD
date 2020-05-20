@@ -40,6 +40,7 @@ public:
 
 	double GetReward();
 	double GetReward_Device();
+	std::map<std::string,double> GetRewardSep();
 
 	void Step();
 	void Step_Muscles(int simCount, int randomSampleIndex);
@@ -98,7 +99,8 @@ public:
 
 	double mTorqueMax_Device;
 
-	double w_q,w_v,w_ee,w_com;
+	double w_q,w_v,w_ee,w_com,w_character,w_device;
+	double r_q,r_v,r_ee,r_com,r_character,r_device;
 
 	Eigen::VectorXd mAction_;
 	Eigen::VectorXd mAction_Device;

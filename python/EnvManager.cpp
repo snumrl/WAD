@@ -121,6 +121,13 @@ GetReward(int id)
 	return mEnvs[id]->GetReward();
 }
 
+p::dict
+EnvManager::
+GetRewardSep(int id)
+{
+	return toPythonDict(mEnvs[id]->GetRewardSep());	
+}
+
 void
 EnvManager::
 Steps(int num)
@@ -311,6 +318,7 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("GetState",&EnvManager::GetState)
 		.def("SetAction",&EnvManager::SetAction)
 		.def("GetReward",&EnvManager::GetReward)
+		.def("GetRewardSep",&EnvManager::GetRewardSep)
 		.def("Steps",&EnvManager::Steps)
 		.def("StepsAtOnce",&EnvManager::StepsAtOnce)
 		.def("Resets",&EnvManager::Resets)

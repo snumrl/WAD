@@ -9,7 +9,7 @@ using namespace dart::dynamics;
 using namespace MASS;
 Character::
 Character()
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),w_q(0.75),w_v(0.1),w_ee(0.0),w_com(0.15),mUseMuscle(false),mUseDevice(false)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),w_q(0.75),w_v(0.1),w_ee(0.0),w_com(0.15),w_character(0.9),w_device(0.1),r_q(0.0),r_v(0.0),r_ee(0.0),r_com(0.0),r_character(0.0),r_device(0.0),mUseMuscle(false),mUseDevice(false)
 {
 
 }
@@ -100,7 +100,7 @@ void
 Character::
 LoadDevice(const std::string& path)
 {
-	mDevice = new Device(BuildFromFile(path));
+	mDevice = new Device(BuildFromFile(path));	
 }
 
 
@@ -432,17 +432,40 @@ GetReward()
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
-	double r_q = exp_of_squared(p_diff, 2.0);
-	double r_v = exp_of_squared(v_diff, 0.1);
-	double r_ee = exp_of_squared(ee_diff, 40.0);
-	double r_com = exp_of_squared(com_diff, 10.0);
+	r_q = exp_of_squared(p_diff, 2.0);
+	r_v = exp_of_squared(v_diff, 0.1);
+	r_ee = exp_of_squared(ee_diff, 40.0);
+	r_com = exp_of_squared(com_diff, 10.0);
 
-	double r = r_ee*(w_q*r_q + w_v*r_v);
+	r_character = r_ee*(w_q*r_q + w_v*r_v);
 
-	if(mUseDevice)
-		return 0.9 * r + 0.1 * GetReward_Device() ;
+	if(mUseDevice){
+		r_device = GetReward_Device();
+
+		return w_character * r_character + w_device * r_device;
+	}
 	else
-		return r;
+		return r_character;
+}
+
+std::map<std::string,double>
+Character::
+GetRewardSep()
+{
+	std::map<std::string, double> r_sep;
+	if(mUseDevice)
+	{
+		r_sep["r_character"] = w_character*r_character;
+		r_sep["r_device"] = w_device*r_device;
+	}
+	else{
+		r_sep["r_q"] = w_q*r_q;
+		r_sep["r_v"] = w_v*r_v;
+		r_sep["r_ee"] = w_ee*r_ee;
+		r_sep["r_com"] = w_com*r_com;
+	}
+
+	return r_sep;
 }
 
 double

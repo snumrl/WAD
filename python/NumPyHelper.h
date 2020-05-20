@@ -1,6 +1,7 @@
 #ifndef __NUMPY_HELPER_H__
 #define __NUMPY_HELPER_H__
 #include <vector>
+#include <map>
 #include <string>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -22,4 +23,6 @@ Eigen::VectorXd toEigenVector(const np::ndarray& array);
 std::vector<Eigen::VectorXd> toEigenVectorVector(const np::ndarray& array);
 Eigen::MatrixXd toEigenMatrix(const np::ndarray& array);
 std::vector<bool> toStdVector(const p::list& list);
+p::dict toPythonDict(const std::map<std::string, double> map);
+// p::dict toPythonDict(const std::map<std::string, double>& map);
 #endif

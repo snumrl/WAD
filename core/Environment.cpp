@@ -21,6 +21,7 @@ void
 Environment::
 Initialize(const std::string& meta_file, bool load_obj)
 {
+	
 	std::ifstream ifs(meta_file);
 	if(!(ifs.is_open()))
 	{
@@ -138,7 +139,7 @@ Initialize()
 		mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_LeftLeg);
 		mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_RightLeg);
 	}
-
+	
 	mAction = Eigen::VectorXd::Zero(GetNumAction());
 
 	Reset(false);
@@ -304,6 +305,13 @@ Environment::
 GetReward()
 {
 	return mCharacter->GetReward();
+}
+
+std::map<std::string,double>
+Environment::
+GetRewardSep()
+{
+	return mCharacter->GetRewardSep();
 }
 
 int
