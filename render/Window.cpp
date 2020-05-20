@@ -94,19 +94,39 @@ Window(Environment* env,const std::string& nn_path,const std::string& nn_path2)
 
 Window::
 Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_path, const std::string& device_nn_path)
-	:Window(env,nn_path,muscle_nn_path)
+	:Window(env,nn_path)
 {
-	mDeviceNNLoaded = true;
 
-	boost::python::str str = ("num_state_device = "+std::to_string(mEnv->GetNumState_Device())).c_str();
-	p::exec(str,mns);
-	str = ("num_action_device = "+std::to_string(mEnv->GetNumAction_Device())).c_str();
-	p::exec(str,mns);
+	if(env->GetUseMuscle()){
+		mMuscleNNLoaded = true;
 
-	device_nn_module = p::eval("SimulationNN(num_state_device,num_action_device)",mns);
+		boost::python::str str = ("num_total_muscle_related_dofs = "+std::to_string(mEnv->GetNumTotalRelatedDofs())).c_str();
+		p::exec(str,mns);
+		str = ("num_actions = "+std::to_string(mEnv->GetNumAction())).c_str();
+		p::exec(str,mns);
+		str = ("num_muscles = "+std::to_string(mEnv->GetCharacter()->GetMuscles().size())).c_str();
+		p::exec(str,mns);
 
-	p::object load = device_nn_module.attr("load");
-	load(device_nn_path);
+		muscle_nn_module = p::eval("MuscleNN(num_total_muscle_related_dofs,num_actions,num_muscles)",mns);
+		
+		p::object load = muscle_nn_module.attr("load");
+		load(muscle_nn_path);		
+	}
+
+	if(env->GetUseDevice())
+	{
+		mDeviceNNLoaded = true;
+
+		boost::python::str str = ("num_state_device = "+std::to_string(mEnv->GetNumState_Device())).c_str();
+		p::exec(str,mns);
+		str = ("num_action_device = "+std::to_string(mEnv->GetNumAction_Device())).c_str();
+		p::exec(str,mns);
+
+		device_nn_module = p::eval("SimulationNN(num_state_device,num_action_device)",mns);
+	
+		p::object load = device_nn_module.attr("load");
+		load(device_nn_path);	
+	}		
 }
 
 void
