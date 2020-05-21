@@ -9,7 +9,7 @@ using namespace dart::dynamics;
 using namespace MASS;
 Character::
 Character()
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),w_q(0.75),w_v(0.1),w_ee(0.0),w_com(0.15),w_character(0.9),w_device(0.1),r_q(0.0),r_v(0.0),r_ee(0.0),r_com(0.0),r_character(0.0),r_device(0.0),mUseMuscle(false),mUseDevice(false)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),w_q(0.75),w_v(0.1),w_ee(0.0),w_com(0.15),w_character(1.0),w_device(0.0),r_q(0.0),r_v(0.0),r_ee(0.0),r_com(0.0),r_character(0.0),r_device(0.0),mUseMuscle(false),mUseDevice(false)
 {
 
 }
@@ -124,7 +124,7 @@ Initialize()
 	mNumActiveDof = this->GetSkeleton()->getNumDofs()-mRootJointDof;
 	mNumState = this->GetState(0.0).rows();
 
-	mTorqueMax_Device = 100.0;
+	mTorqueMax_Device = 15.0;
 }
 
 void
@@ -228,6 +228,27 @@ Character::
 Step()
 {
 	GetDesiredTorques();
+
+	if(mDesiredTorque[6] > 30.0)
+		mDesiredTorque[6] = 30.0;
+	if(mDesiredTorque[6] < -30.0)
+		mDesiredTorque[6] = -30.0;
+
+	if(mDesiredTorque[7] > 30.0)
+		mDesiredTorque[7] = 30.0;
+	if(mDesiredTorque[7] < -30.0)
+		mDesiredTorque[7] = -30.0;
+
+	if(mDesiredTorque[8] > 30.0)
+		mDesiredTorque[8] = 30.0;
+	if(mDesiredTorque[8] < -30.0)
+		mDesiredTorque[8] = -30.0;
+
+	if(mDesiredTorque[9] > 30.0)
+		mDesiredTorque[9] = 30.0;
+	if(mDesiredTorque[9] < -30.0)
+		mDesiredTorque[9] = -30.0;
+
 	mSkeleton->setForces(mDesiredTorque);
 
 	// if(mDesiredTorque[9] > 30.0)
@@ -301,6 +322,38 @@ Character::
 Step_Device()
 {
 	GetDesiredTorques_Device();
+
+	if(mDesiredTorque_Device[6] > 15.0)
+		mDesiredTorque_Device[6] = 15.0;
+	if(mDesiredTorque_Device[6] < -15.0)
+		mDesiredTorque_Device[6] = -15.0;
+
+	if(mDesiredTorque_Device[7] > 15.0)
+		mDesiredTorque_Device[7] = 15.0;
+	if(mDesiredTorque_Device[7] < -15.0)
+		mDesiredTorque_Device[7] = -15.0;
+
+	if(mDesiredTorque_Device[8] > 15.0)
+		mDesiredTorque_Device[8] = 15.0;
+	if(mDesiredTorque_Device[8] < -15.0)
+		mDesiredTorque_Device[8] = -15.0;
+
+	if(mDesiredTorque_Device[9] > 15.0)
+		mDesiredTorque_Device[9] = 15.0;
+	if(mDesiredTorque_Device[9] < -15.0)
+		mDesiredTorque_Device[9] = -15.0;
+
+	if(mDesiredTorque_Device[10] > 15.0)
+		mDesiredTorque_Device[10] = 15.0;
+	if(mDesiredTorque_Device[10] < -15.0)
+		mDesiredTorque_Device[10] = -15.0;
+
+	if(mDesiredTorque_Device[11] > 15.0)
+		mDesiredTorque_Device[11] = 15.0;
+	if(mDesiredTorque_Device[11] < -15.0)
+		mDesiredTorque_Device[11] = -15.0;
+
+
 	mDevice->GetSkeleton()->setForces(mDesiredTorque_Device);
 }
 
