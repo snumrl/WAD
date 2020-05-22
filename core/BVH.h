@@ -75,6 +75,9 @@ public:
 
 	BVHNode* GetRoot(){return mRoot;}
 
+	void SetSkeleton(const dart::dynamics::SkeletonPtr& skel){mSkeleton = skel;}
+	void SetBVHMap(const std::map<std::string,std::string>& bvh_map){mBVHMap = bvh_map;}
+
 private:
 	bool mCyclic;
 	std::vector<Eigen::VectorXd> mMotions;

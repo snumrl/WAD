@@ -169,6 +169,75 @@ Step()
 		mCharacter->Step_Muscles(mSimCount, mRandomSampleIndex);
 	else
 		mCharacter->Step();
+	
+	if(mUseDevice)
+		mCharacter->Step_Device();
+		
+	mWorld->step();
+
+	mSimCount++;
+}
+
+void
+Environment::
+Clone()
+{
+	mWorld_clone = mWorld->clone();
+	mCharacter->Clone();
+}
+
+void
+Environment::
+Clone_Back()
+{
+	double curR = mCharacter->GetReward();
+	mCharacter->SetRewardCharacterOnly(curR);
+		
+	mWorld = nullptr;
+	mWorld = mWorld_clone;
+	mGround = nullptr;
+	mGround = mWorld->getSkeleton("Ground");
+	mCharacter->mSkeleton = nullptr;
+	mCharacter->mSkeleton = mWorld->getSkeleton("Human");
+	mCharacter->mDevice->mSkeleton = nullptr;
+	mCharacter->mDevice->mSkeleton = mWorld->getSkeleton("Device");
+	mCharacter->Clone_Back();
+	mWorld->getConstraintSolver()->setCollisionDetector(dart::collision::BulletCollisionDetector::create());
+	mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_Hip);
+	mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_LeftLeg);
+	mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_RightLeg);
+}	
+
+void
+Environment::
+StepTrain()
+{
+	if(mUseDevice){
+		this->Clone();		
+		mCharacter->Step_Device(Eigen::VectorXd::Zero(12));	
+	}
+
+	if(mUseMuscle)
+		mCharacter->Step_Muscles(mSimCount, mRandomSampleIndex);
+	else
+		mCharacter->Step();
+
+	mWorld->step();
+
+	if(mUseDevice){
+		this->Clone_Back();
+
+		if(mUseMuscle)
+			mCharacter->Step_Muscles(mSimCount, mRandomSampleIndex);
+		else
+			mCharacter->Step();
+	
+		mCharacter->Step_Device();
+			
+		mWorld->step();
+	}
+	
+	mSimCount++;
 
 	// Eigen::VectorXd getF = mCharacter->GetSkeleton()->getForces();
 	// std::cout << "===================================" << std::endl;
@@ -177,18 +246,8 @@ Step()
 	// {
 	// 	std::cout << "idx " << i << " : " << getF[i] << std::endl;
 	// }
-
-	mWorld->step();
-
-	mSimCount++;
 }
 
-void
-Environment::
-SetActivationLevels(const Eigen::VectorXd& a)
-{
-	mCharacter->SetActivationLevels(a);
-}
 
 bool
 Environment::
@@ -216,32 +275,12 @@ IsEndOfEpisode()
 	return isTerminal;
 }
 
-Eigen::VectorXd
-Environment::
-GetState()
-{
-	return mCharacter->GetState(mWorld->getTime());
-}
-
-Eigen::VectorXd
-Environment::
-GetState_Device()
-{
-	return mCharacter->GetState_Device(mWorld->getTime());
-}
-
 void
 Environment::
 SetAction(const Eigen::VectorXd& a)
 {
-	mAction = a*0.1;
-	// for(int i=0; i<a.size(); i++)
-	// {
-	// 	if(a[i] > 10.0)
-	// 	{
-	// 		std::cout << "action over 10 : " << a[i] << std::endl;
-	// 	}
-	// }
+	double action_scale = 0.1;
+	mAction = a*action_scale;
 	mCharacter->SetAction(mAction);
 
 	double t = mWorld->getTime();
@@ -255,14 +294,8 @@ void
 Environment::
 SetAction_Device(const Eigen::VectorXd& a)
 {
-	mAction = a*0.1;
-	for(int i=0; i<a.size(); i++)
-	{
-		if(a[i] > 10.0)
-		{
-			std::cout << "device action over 10 : " << a[i] << std::endl;
-		}
-	}
+	double action_scale = 1.0;
+	mAction_Device = a*action_scale;
 	mCharacter->SetAction_Device(mAction);
 
 	double t = mWorld->getTime();
@@ -270,6 +303,27 @@ SetAction_Device(const Eigen::VectorXd& a)
 
 	mSimCount = 0;
 	mRandomSampleIndex = rand()%(mSimulationHz/mControlHz);
+}
+
+void
+Environment::
+SetActivationLevels(const Eigen::VectorXd& a)
+{
+	mCharacter->SetActivationLevels(a);
+}
+
+Eigen::VectorXd
+Environment::
+GetState()
+{
+	return mCharacter->GetState(mWorld->getTime());
+}
+
+Eigen::VectorXd
+Environment::
+GetState_Device()
+{
+	return mCharacter->GetState_Device(mWorld->getTime());
 }
 
 int

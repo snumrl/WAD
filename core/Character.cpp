@@ -14,13 +14,14 @@ Character()
 
 }
 
-
 void
 Character::
 LoadSkeleton(const std::string& path,bool create_obj)
 {
+	skel_path = path;
+
 	mSkeleton = BuildFromFile(path,create_obj);
-	std::map<std::string,std::string> bvh_map;
+	
 	TiXmlDocument doc;
 	doc.LoadFile(path);
 	TiXmlElement *skel_elem = doc.FirstChildElement("Skeleton");
@@ -102,7 +103,6 @@ LoadDevice(const std::string& path)
 {
 	mDevice = new Device(BuildFromFile(path));	
 }
-
 
 void
 Character::
@@ -225,6 +225,67 @@ Reset_Device()
 
 void
 Character::
+Clone()
+{
+	for(int i=0; i<mMuscles.size(); i++)
+	{
+		mMuscles_clone.push_back(*mMuscles[i]);
+	}
+	
+	mTc_clone = mTc;
+	mCurrentMuscleTuple_clone = mCurrentMuscleTuple;
+
+    mMuscleTuples_clone = mMuscleTuples;
+}
+
+void
+Character::
+Clone_Back()
+{
+	for(int i=0; i<mMuscles_clone.size(); i++)
+	{
+		mMuscles[i] = &mMuscles_clone[i];
+	}
+
+	mTc = mTc_clone;
+	mCurrentMuscleTuple = mCurrentMuscleTuple_clone;
+
+    mMuscleTuples = mMuscleTuples_clone;
+
+    mWeldJoint_Hip = std::make_shared<dart::constraint::WeldJointConstraint>(
+        mSkeleton->getBodyNode(0), mDevice->GetSkeleton()->getBodyNode(0)
+        );
+
+    mWeldJoint_LeftLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
+        mSkeleton->getBodyNode("FemurL"), mDevice->GetSkeleton()->getBodyNode("FastenerLeftOut")
+        );
+
+    mWeldJoint_RightLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
+        mSkeleton->getBodyNode("FemurR"), mDevice->GetSkeleton()->getBodyNode("FastenerRightOut")
+        );
+
+	TiXmlDocument doc;
+	doc.LoadFile(skel_path);
+	TiXmlElement *skel_elem = doc.FirstChildElement("Skeleton");
+
+	mEndEffectors.clear();
+	for(TiXmlElement* node = skel_elem->FirstChildElement("Node");node != nullptr;node = node->NextSiblingElement("Node"))
+	{
+		if(node->Attribute("endeffector")!=nullptr)
+		{
+			std::string ee =node->Attribute("endeffector");
+			if(ee == "True")
+			{
+				mEndEffectors.push_back(mSkeleton->getBodyNode(std::string(node->Attribute("name"))));
+			}
+		}
+	}
+
+    mBVH->SetSkeleton(mSkeleton);
+}
+
+void
+Character::
 Step()
 {
 	GetDesiredTorques();
@@ -270,10 +331,7 @@ Step()
 	// 	dofs += mSkeleton->getJoint(i)->getNumDofs();
 	// }
 
-	// std::cout << "dofs : " << dofs << std::endl;
-
-	if(mUseDevice)
-		Step_Device();
+	// std::cout << "dofs : " << dofs << std::endl;	
 }
 
 void
@@ -312,9 +370,13 @@ Step_Muscles(int simCount, int randomSampleIndex)
 		mCurrentMuscleTuple.tau_des = mDesiredTorque.tail(mDesiredTorque.rows()-mRootJointDof);
 		mMuscleTuples.push_back(mCurrentMuscleTuple);
 	}
+}
 
-	if(mUseDevice)
-		Step_Device();
+void
+Character::
+Step_Device(const Eigen::VectorXd& a)
+{
+	mDevice->GetSkeleton()->setForces(a);
 }
 
 void
@@ -353,8 +415,31 @@ Step_Device()
 	if(mDesiredTorque_Device[11] < -15.0)
 		mDesiredTorque_Device[11] = -15.0;
 
-
 	mDevice->GetSkeleton()->setForces(mDesiredTorque_Device);
+
+	// int n = mDevice->GetSkeleton()->getNumJoints();
+	// int dofs = mDevice->GetSkeleton()->getNumDofs();
+	// for(int i=0; i<n; i++)
+	// {
+	// 	Eigen::VectorXd f_ = mDevice->GetSkeleton()->getForces();
+	// 	for(int j=0; j<f_.size(); j++)
+	// 	{
+	// 		std::cout << "device forces " << j << " : " << f_[j] << std::endl; 	
+	// 	}
+		
+	// 	std::cout << "device joint num : " << n << std::endl;
+	// 	std::cout << "device dofs  : " << dofs << std::endl;
+	// 	std::cout << i << " : " << mDevice->GetSkeleton()->getJoint(i)->getName() << " " << mDevice->GetSkeleton()->getJoint(i)->getNumDofs() << std::endl;
+	// 	std::cout << i << " : " << mDevice->GetSkeleton()->getJoint(i)->getName() << " " << mDevice->GetSkeleton()->getJoint(i)->getForces() << std::endl;
+	// }
+}
+
+void 
+Character::
+Print()
+{
+	std::cout << "mSkel : " << mSkeleton << std::endl;
+	std::cout << "Device skel : " << mDevice->mSkeleton << std::endl;
 }
 
 void
@@ -369,6 +454,7 @@ Character::
 SetAction_Device(const Eigen::VectorXd& a)
 {
 	mAction_Device = a;
+	// std::cout << "set action : " << mAction_Device << std::endl;
 }
 
 Eigen::VectorXd
@@ -446,15 +532,15 @@ GetReward()
 {
 	Eigen::VectorXd cur_pos = mSkeleton->getPositions();
 	Eigen::VectorXd cur_vel = mSkeleton->getVelocities();
-
+	
 	Eigen::VectorXd p_diff_all = mSkeleton->getPositionDifferences(mTargetPositions, cur_pos);
 	Eigen::VectorXd v_diff_all = mSkeleton->getPositionDifferences(mTargetVelocities, cur_vel);
-
+	
 	Eigen::VectorXd p_diff = Eigen::VectorXd::Zero(mSkeleton->getNumDofs());
 	Eigen::VectorXd v_diff = Eigen::VectorXd::Zero(mSkeleton->getNumDofs());
-
+	
 	const auto& bvh_map = mBVH->GetBVHMap();
-
+	
 	for(auto ss : bvh_map)
 	{
 		auto joint = mSkeleton->getBodyNode(ss.first)->getParentJoint();
@@ -466,25 +552,24 @@ GetReward()
 		else if(joint->getType()=="BallJoint")
 			p_diff.segment<3>(idx) = p_diff_all.segment<3>(idx);
 	}
-
+	
 	auto ees = this->GetEndEffectors();
 	Eigen::VectorXd ee_diff(ees.size()*3);
 	Eigen::VectorXd com_diff;
-
 	for(int i =0;i<ees.size();i++)
 		ee_diff.segment<3>(i*3) = ees[i]->getCOM();
+	
 	com_diff = mSkeleton->getCOM();
-
 	mSkeleton->setPositions(mTargetPositions);
 	mSkeleton->computeForwardKinematics(true, false, false);
-
+	
 	com_diff -= mSkeleton->getCOM();
 	for(int i=0;i<ees.size();i++)
 		ee_diff.segment<3>(i*3) -= ees[i]->getCOM()+com_diff;
-
+	
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->computeForwardKinematics(true, false, false);
-
+	
 	r_q = exp_of_squared(p_diff, 2.0);
 	r_v = exp_of_squared(v_diff, 0.1);
 	r_ee = exp_of_squared(ee_diff, 40.0);
@@ -493,9 +578,11 @@ GetReward()
 	r_character = r_ee*(w_q*r_q + w_v*r_v);
 
 	if(mUseDevice){
-		r_device = GetReward_Device();
-
-		return w_character * r_character + w_device * r_device;
+		// r_device = GetReward_Device();
+		// return w_character * r_character + w_device * r_device;
+		// std::cout << "r cur : " << w_character * r_character << std::endl;
+		// std::cout << "r prev : " << r_character_only << std::endl;
+		return w_character * r_character - r_character_only;
 	}
 	else
 		return r_character;
@@ -551,6 +638,28 @@ GetDesiredTorques_Device()
 
 Eigen::VectorXd
 Character::
+GetSPDForces(const Eigen::VectorXd& p_desired)
+{
+	Eigen::VectorXd q = mSkeleton->getPositions();
+	Eigen::VectorXd dq = mSkeleton->getVelocities();
+	double dt = mSkeleton->getTimeStep();
+	Eigen::MatrixXd M_inv = (mSkeleton->getMassMatrix() + Eigen::MatrixXd(dt*mKv.asDiagonal())).inverse();
+
+	Eigen::VectorXd qdqdt = q + dq*dt;
+
+	Eigen::VectorXd p_diff = -mKp.cwiseProduct(mSkeleton->getPositionDifferences(qdqdt,p_desired));
+	Eigen::VectorXd v_diff = -mKv.cwiseProduct(dq);
+	Eigen::VectorXd ddq = M_inv*(-mSkeleton->getCoriolisAndGravityForces() + p_diff + v_diff+mSkeleton->getConstraintForces());
+
+	Eigen::VectorXd tau = p_diff + v_diff - dt*mKv.cwiseProduct(ddq);
+
+	tau.head<6>().setZero();
+
+	return tau;
+}
+
+Eigen::VectorXd
+Character::
 GetMuscleTorques()
 {
 	int index = 0;
@@ -573,28 +682,6 @@ SetPDParameters(double kp, double kv)
 	int dof = mSkeleton->getNumDofs();
 	mKp = Eigen::VectorXd::Constant(dof,kp);
 	mKv = Eigen::VectorXd::Constant(dof,kv);
-}
-
-Eigen::VectorXd
-Character::
-GetSPDForces(const Eigen::VectorXd& p_desired)
-{
-	Eigen::VectorXd q = mSkeleton->getPositions();
-	Eigen::VectorXd dq = mSkeleton->getVelocities();
-	double dt = mSkeleton->getTimeStep();
-	Eigen::MatrixXd M_inv = (mSkeleton->getMassMatrix() + Eigen::MatrixXd(dt*mKv.asDiagonal())).inverse();
-
-	Eigen::VectorXd qdqdt = q + dq*dt;
-
-	Eigen::VectorXd p_diff = -mKp.cwiseProduct(mSkeleton->getPositionDifferences(qdqdt,p_desired));
-	Eigen::VectorXd v_diff = -mKv.cwiseProduct(dq);
-	Eigen::VectorXd ddq = M_inv*(-mSkeleton->getCoriolisAndGravityForces() + p_diff + v_diff+mSkeleton->getConstraintForces());
-
-	Eigen::VectorXd tau = p_diff + v_diff - dt*mKv.cwiseProduct(ddq);
-
-	tau.head<6>().setZero();
-
-	return tau;
 }
 
 Eigen::VectorXd

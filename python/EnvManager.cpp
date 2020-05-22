@@ -81,13 +81,6 @@ UseDevice()
 
 void
 EnvManager::
-Step(int id)
-{
-	mEnvs[id]->Step();
-}
-
-void
-EnvManager::
 Reset(bool RSI,int id)
 {
 	mEnvs[id]->Reset(RSI);
@@ -128,6 +121,25 @@ GetRewardSep(int id)
 	return toPythonDict(mEnvs[id]->GetRewardSep());	
 }
 
+np::ndarray
+EnvManager::
+GetRewards()
+{
+	std::vector<float> rewards(mNumEnvs);
+	for (int id = 0;id<mNumEnvs;++id)
+	{
+		rewards[id] = mEnvs[id]->GetReward();
+	}
+	return toNumPyArray(rewards);
+}
+
+void
+EnvManager::
+Step(int id)
+{
+	mEnvs[id]->Step();
+}
+
 void
 EnvManager::
 Steps(int num)
@@ -142,6 +154,18 @@ Steps(int num)
 
 void
 EnvManager::
+StepsTrain(int num)
+{
+#pragma omp parallel for
+	for (int id = 0;id<mNumEnvs;++id)
+	{
+		for(int j=0;j<num;j++)
+			mEnvs[id]->StepTrain();
+	}
+}
+
+void
+EnvManager::
 StepsAtOnce()
 {
 	int num = this->GetNumSteps();
@@ -150,6 +174,19 @@ StepsAtOnce()
 	{
 		for(int j=0;j<num;j++)
 			mEnvs[id]->Step();
+	}
+}
+
+void
+EnvManager::
+StepsAtOnceTrain()
+{
+	int num = this->GetNumSteps();
+#pragma omp parallel for
+	for (int id = 0;id<mNumEnvs;++id)
+	{
+		for(int j=0;j<num;j++)
+			mEnvs[id]->StepTrain();
 	}
 }
 
@@ -222,18 +259,6 @@ SetActions_Device(np::ndarray np_array)
 	{
 		mEnvs[id]->SetAction_Device(action.row(id).transpose());
 	}
-}
-
-np::ndarray
-EnvManager::
-GetRewards()
-{
-	std::vector<float> rewards(mNumEnvs);
-	for (int id = 0;id<mNumEnvs;++id)
-	{
-		rewards[id] = mEnvs[id]->GetReward();
-	}
-	return toNumPyArray(rewards);
 }
 
 np::ndarray
@@ -321,6 +346,8 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("GetRewardSep",&EnvManager::GetRewardSep)
 		.def("Steps",&EnvManager::Steps)
 		.def("StepsAtOnce",&EnvManager::StepsAtOnce)
+		.def("StepsTrain",&EnvManager::StepsTrain)
+		.def("StepsAtOnceTrain",&EnvManager::StepsAtOnceTrain)
 		.def("Resets",&EnvManager::Resets)
 		.def("IsEndOfEpisodes",&EnvManager::IsEndOfEpisodes)
 		.def("GetStates",&EnvManager::GetStates)

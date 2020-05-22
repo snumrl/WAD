@@ -12,6 +12,8 @@ public:
 	void Step(int id);
 	void Steps(int num);
 	void StepsAtOnce();
+	void StepsTrain(int num);
+	void StepsAtOnceTrain();
 
 	void Reset(bool RSI,int id);
 	void Resets(bool RSI);

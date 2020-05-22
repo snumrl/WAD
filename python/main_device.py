@@ -242,14 +242,14 @@ class PPO(object):
             self.env.SetActions_Device(actions_device)
             if self.use_muscle:
                 mt = Tensor(self.env.GetMuscleTorques())
-                for i in range(self.num_simulation_per_control//2):
+                for i in range(self.num_simulation_per_control):
                     dt = Tensor(self.env.GetDesiredTorques())
                     activations = self.muscle_model(mt,dt).cpu().detach().numpy()
                     self.env.SetActivationLevels(activations)
 
-                    self.env.Steps(2)
+                    self.env.StepsTrain(1)
             else:
-                self.env.StepsAtOnce()
+                self.env.StepsAtOnceTrain()
 
             for j in range(self.num_slaves):
                 nan_occur = False
@@ -278,63 +278,63 @@ class PPO(object):
             states = self.env.GetStates()
             states_device = self.env.GetStates_Device()
 
-    def GenerateTransitions(self):
-        self.total_episodes = []
-        states = [None]*self.num_slaves
-        actions = [None]*self.num_slaves
-        rewards = [None]*self.num_slaves
-        rewards_sep = [None]*self.num_slaves
-        states = self.env.GetStates()
-        local_step = 0
-        terminated = [False]*self.num_slaves
-        counter = 0
-        while True:
-            counter += 1
-            if counter%10 == 0:
-                print('SIM : {}'.format(local_step),end='\r')
-            a_dist,v = self.model(Tensor(states))
-            actions = a_dist.sample().cpu().detach().numpy()
-            # actions = a_dist.loc.cpu().detach().numpy()
-            logprobs = a_dist.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
-            values = v.cpu().detach().numpy().reshape(-1)
-            self.env.SetActions(actions)
-            if self.use_muscle:
-                mt = Tensor(self.env.GetMuscleTorques())
-                for i in range(self.num_simulation_per_control//2):
-                    dt = Tensor(self.env.GetDesiredTorques())
-                    activations = self.muscle_model(mt,dt).cpu().detach().numpy()
-                    self.env.SetActivationLevels(activations)
+    # def GenerateTransitions(self):
+    #     self.total_episodes = []
+    #     states = [None]*self.num_slaves
+    #     actions = [None]*self.num_slaves
+    #     rewards = [None]*self.num_slaves
+    #     rewards_sep = [None]*self.num_slaves
+    #     states = self.env.GetStates()
+    #     local_step = 0
+    #     terminated = [False]*self.num_slaves
+    #     counter = 0
+    #     while True:
+    #         counter += 1
+    #         if counter%10 == 0:
+    #             print('SIM : {}'.format(local_step),end='\r')
+    #         a_dist,v = self.model(Tensor(states))
+    #         actions = a_dist.sample().cpu().detach().numpy()
+    #         # actions = a_dist.loc.cpu().detach().numpy()
+    #         logprobs = a_dist.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
+    #         values = v.cpu().detach().numpy().reshape(-1)
+    #         self.env.SetActions(actions)
+    #         if self.use_muscle:
+    #             mt = Tensor(self.env.GetMuscleTorques())
+    #             for i in range(self.num_simulation_per_control//2):
+    #                 dt = Tensor(self.env.GetDesiredTorques())
+    #                 activations = self.muscle_model(mt,dt).cpu().detach().numpy()
+    #                 self.env.SetActivationLevels(activations)
 
-                    self.env.Steps(2)
-            else:
-                self.env.StepsAtOnce()
+    #                 self.env.Steps(2)
+    #         else:
+    #             self.env.StepsAtOnce()
 
-            for j in range(self.num_slaves):
-                nan_occur = False
-                terminated_state = True
+    #         for j in range(self.num_slaves):
+    #             nan_occur = False
+    #             terminated_state = True
 
-                if np.any(np.isnan(states[j])) or np.any(np.isnan(actions[j])) or np.any(np.isnan(states[j])) or np.any(np.isnan(values[j])) or np.any(np.isnan(logprobs[j])):
-                    nan_occur = True
+    #             if np.any(np.isnan(states[j])) or np.any(np.isnan(actions[j])) or np.any(np.isnan(states[j])) or np.any(np.isnan(values[j])) or np.any(np.isnan(logprobs[j])):
+    #                 nan_occur = True
 
-                elif self.env.IsEndOfEpisode(j) is False:
-                    terminated_state = False
-                    rewards[j] = self.env.GetReward(j)
-                    rewards_sep[j] = self.env.GetRewardSep(j)
-                    self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j], rewards_sep[j])
-                    local_step += 1
+    #             elif self.env.IsEndOfEpisode(j) is False:
+    #                 terminated_state = False
+    #                 rewards[j] = self.env.GetReward(j)
+    #                 rewards_sep[j] = self.env.GetRewardSep(j)
+    #                 self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j], rewards_sep[j])
+    #                 local_step += 1
 
-                if terminated_state or (nan_occur is True):
-                    if (nan_occur is True):
-                        self.episodes[j].Pop()
-                    self.total_episodes.append(self.episodes[j])
-                    self.episodes[j] = EpisodeBuffer()
+    #             if terminated_state or (nan_occur is True):
+    #                 if (nan_occur is True):
+    #                     self.episodes[j].Pop()
+    #                 self.total_episodes.append(self.episodes[j])
+    #                 self.episodes[j] = EpisodeBuffer()
 
-                    self.env.Reset(True,j)
+    #                 self.env.Reset(True,j)
 
-            if local_step >= self.buffer_size:
-                break
+    #         if local_step >= self.buffer_size:
+    #             break
 
-            states = self.env.GetStates()
+    #         states = self.env.GetStates()
 
     def OptimizeSimulationNN(self):
         all_transitions = np.array(self.replay_buffer.buffer)

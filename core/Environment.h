@@ -32,6 +32,11 @@ public:
 	void SetAction_Device(const Eigen::VectorXd& a);
 	void SetActivationLevels(const Eigen::VectorXd& a);
 	double GetReward();
+
+	void Clone();
+	void Clone_Back();
+	void StepTrain();
+
 	std::map<std::string,double> GetRewardSep();
 
 	Eigen::VectorXd GetState();
@@ -60,9 +65,11 @@ public:
 
 private:
 	dart::simulation::WorldPtr mWorld;
+	dart::simulation::WorldPtr mWorld_clone;
 	dart::dynamics::SkeletonPtr mGround;
 	Character* mCharacter;
 	Eigen::VectorXd mAction;
+	Eigen::VectorXd mAction_Device;
 
 	int mControlHz;
 	int mSimulationHz;
