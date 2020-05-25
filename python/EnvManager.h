@@ -38,9 +38,9 @@ public:
 	int GetNumState_Device();
 	int GetNumAction();
 	int GetNumAction_Device();
-	int GetSimulationHz();
-	int GetControlHz();
 	int GetNumSteps();
+	int GetControlHz();
+	int GetSimulationHz();
 	
 	bool UseMuscle();
 	bool UseDevice();

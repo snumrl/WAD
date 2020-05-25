@@ -26,16 +26,14 @@ public:
 
 public:
 	void Step();
+	void StepTrain();
+	void StepBack();
 	void Reset(bool RSI = true);
 	bool IsEndOfEpisode();
 	void SetAction(const Eigen::VectorXd& a);
 	void SetAction_Device(const Eigen::VectorXd& a);
 	void SetActivationLevels(const Eigen::VectorXd& a);
 	double GetReward();
-
-	void Clone();
-	void Clone_Back();
-	void StepTrain();
 
 	std::map<std::string,double> GetRewardSep();
 
@@ -65,7 +63,6 @@ public:
 
 private:
 	dart::simulation::WorldPtr mWorld;
-	dart::simulation::WorldPtr mWorld_clone;
 	dart::dynamics::SkeletonPtr mGround;
 	Character* mCharacter;
 	Eigen::VectorXd mAction;
@@ -79,6 +76,9 @@ private:
 
 	int mSimCount;
 	int mRandomSampleIndex;
+
+	double r_only = 0.0;
+	double r_d = 0.0;
 };
 };
 

@@ -68,6 +68,17 @@ GetState(double worldTime, double maxTime)
     double t_phase = maxTime;
     double phi = std::fmod(worldTime,t_phase)/t_phase;
 
+    // int n = mSkeleton->getNumJoints();
+    // int dofs = mSkeleton->getNumDofs();
+    // for(int i=0; i<n; i++)
+    // {
+    //     std::cout << "device joint num : " << n << std::endl;
+    //     std::cout << "device dofs  : " << dofs << std::endl;
+    //     std::cout << i << " : " << mSkeleton->getJoint(i)->getName() << " dof : " << mSkeleton->getJoint(i)->getNumDofs() << std::endl;
+    //     std::cout << i << " : " << mSkeleton->getJoint(i)->getName() << " force : " << mSkeleton->getJoint(i)->getForces() << std::endl;
+    //     std::cout << "position size : " << mSkeleton->getPositions().size() << std::endl;
+    // }
+
     Eigen::VectorXd state(23);
     state << phi, rotation.w(), rotation.x(), rotation.y(), rotation.z(),
                 root_linvel / 10., root_angvel/10., positions.tail<6>(), velocities.tail<6>()/10.;

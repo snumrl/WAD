@@ -190,6 +190,7 @@ StepsAtOnceTrain()
 	}
 }
 
+
 void
 EnvManager::
 Resets(bool RSI)

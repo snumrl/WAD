@@ -65,7 +65,7 @@ class ReplayBuffer(object):
 class PPO(object):
     def __init__(self,meta_file):
         np.random.seed(seed = int(time.time()))
-        self.num_slaves = 16
+        self.num_slaves = 32
         self.env = EnvManager(meta_file, self.num_slaves)
         self.use_muscle = self.env.UseMuscle()
         self.use_device = self.env.UseDevice()
@@ -240,6 +240,7 @@ class PPO(object):
             
             self.env.SetActions(actions)
             self.env.SetActions_Device(actions_device)
+            # print("python action : ", actions_device.shape)
             if self.use_muscle:
                 mt = Tensor(self.env.GetMuscleTorques())
                 for i in range(self.num_simulation_per_control):
@@ -250,6 +251,7 @@ class PPO(object):
                     self.env.StepsTrain(1)
             else:
                 self.env.StepsAtOnceTrain()
+
 
             for j in range(self.num_slaves):
                 nan_occur = False

@@ -35,26 +35,22 @@ public:
 	void Reset_Muscles();
 	void Reset_Device();
 
-	void Clone();
-	void Clone_Back();
-	void Print();
-
 	Eigen::VectorXd GetState(double worldTime);
 	Eigen::VectorXd GetState_Device(double worldTime);
 
 	double GetReward();
+	double GetReward_Character();
 	double GetReward_Device();
 	std::map<std::string,double> GetRewardSep();
 
 	void Step();
 	void Step_Muscles(int simCount, int randomSampleIndex);
 	void Step_Device();
-	void Step_Device(const Eigen::VectorXd& a);
+	void Step_Device(const Eigen::VectorXd& a_);
+	void StepBack();
 
 	void SetAction(const Eigen::VectorXd& a);
 	void SetAction_Device(const Eigen::VectorXd& a);
-
-	void SetRewardCharacterOnly(double r){r_character_only = r;}
 
 	void SetRewardParameters(double w_q,double w_v,double w_ee,double w_com);
 	void SetRewardParameters_Device();
@@ -90,13 +86,11 @@ public:
 	// void AddEndEffector(const std::string& body_name){mEndEffectors.push_back(mSkeleton->getBodyNode(body_name));}
 
 public:
-	dart::dynamics::SkeletonPtr mSkeleton; // clone
+	dart::dynamics::SkeletonPtr mSkeleton; 
 	BVH* mBVH;
-	Device* mDevice; // clone
-	std::vector<Muscle*> mMuscles; //haveto clone
-	std::vector<dart::dynamics::BodyNode*> mEndEffectors; // clone
-
-	std::string skel_path;
+	Device* mDevice;
+	std::vector<Muscle*> mMuscles;
+	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
 
 	int mNumState;
 	int mNumActiveDof;
@@ -110,34 +104,30 @@ public:
 
 	double w_q,w_v,w_ee,w_com,w_character,w_device;
 	double r_q,r_v,r_ee,r_com,r_character,r_device;
-	double r_character_only = 0.0;	
+	double r_cur = 0.0;	
 
 	Eigen::VectorXd mAction_;
 	Eigen::VectorXd mAction_Device;
 	Eigen::VectorXd mActivationLevels;
 
-	Eigen::Isometry3d mTc; //haveto clone
+	Eigen::Isometry3d mTc;
 	Eigen::VectorXd mKp, mKv;
 
-	Eigen::VectorXd mTargetPositions; // check
-	Eigen::VectorXd mTargetVelocities; // check
-	Eigen::VectorXd mDesiredTorque;  // check
-	Eigen::VectorXd mDesiredTorque_Device; // check
+	Eigen::VectorXd mTargetPositions; 
+	Eigen::VectorXd mTargetVelocities; 	
+	Eigen::VectorXd mDesiredTorque;  
+	Eigen::VectorXd mDesiredTorque_Device; 
+	Eigen::VectorXd mStoredPositions; 
+	Eigen::VectorXd mStoredVelocities; 	
+	Eigen::VectorXd mStoredPositions_Device; 
+	Eigen::VectorXd mStoredVelocities_Device; 	
+	
+	MuscleTuple mCurrentMuscleTuple; 
+	std::vector<MuscleTuple> mMuscleTuples; 
 
-	MuscleTuple mCurrentMuscleTuple; // have to clone
-	std::vector<MuscleTuple> mMuscleTuples; // have to clone
-
-	dart::constraint::WeldJointConstraintPtr mWeldJoint_Hip; // clone
-    dart::constraint::WeldJointConstraintPtr mWeldJoint_LeftLeg; // clone
-    dart::constraint::WeldJointConstraintPtr mWeldJoint_RightLeg; // clone
-
-    // clone
-    std::vector<Muscle> mMuscles_clone;
-    Eigen::Isometry3d mTc_clone;
-	MuscleTuple mCurrentMuscleTuple_clone; // have to clone
-	std::vector<MuscleTuple> mMuscleTuples_clone; // have to clone
-
-	std::map<std::string,std::string> bvh_map;
+	dart::constraint::WeldJointConstraintPtr mWeldJoint_Hip; 
+    dart::constraint::WeldJointConstraintPtr mWeldJoint_LeftLeg; 
+    dart::constraint::WeldJointConstraintPtr mWeldJoint_RightLeg;
 };
 
 };

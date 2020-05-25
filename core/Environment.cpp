@@ -124,6 +124,9 @@ Initialize()
   	if(mUseDevice)
   	{
   		mCharacter->Initialize_Device();
+		mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_Hip);
+		mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_LeftLeg);
+		mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_RightLeg);
 		mWorld->addSkeleton(mCharacter->GetDevice()->GetSkeleton());
   	}
 
@@ -132,14 +135,6 @@ Initialize()
 	mWorld->setTimeStep(1.0/mSimulationHz);
 	mWorld->getConstraintSolver()->setCollisionDetector(dart::collision::BulletCollisionDetector::create());
 
-	// device constraint
-	if(mUseDevice)
-	{
-		mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_Hip);
-		mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_LeftLeg);
-		mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_RightLeg);
-	}
-	
 	mAction = Eigen::VectorXd::Zero(GetNumAction());
 
 	Reset(false);
@@ -169,85 +164,81 @@ Step()
 		mCharacter->Step_Muscles(mSimCount, mRandomSampleIndex);
 	else
 		mCharacter->Step();
-	
+			
 	if(mUseDevice)
 		mCharacter->Step_Device();
-		
+
 	mWorld->step();
 
 	mSimCount++;
 }
 
-void
-Environment::
-Clone()
-{
-	mWorld_clone = mWorld->clone();
-	mCharacter->Clone();
-}
-
-void
-Environment::
-Clone_Back()
-{
-	double curR = mCharacter->GetReward();
-	mCharacter->SetRewardCharacterOnly(curR);
-		
-	mWorld = nullptr;
-	mWorld = mWorld_clone;
-	mGround = nullptr;
-	mGround = mWorld->getSkeleton("Ground");
-	mCharacter->mSkeleton = nullptr;
-	mCharacter->mSkeleton = mWorld->getSkeleton("Human");
-	mCharacter->mDevice->mSkeleton = nullptr;
-	mCharacter->mDevice->mSkeleton = mWorld->getSkeleton("Device");
-	mCharacter->Clone_Back();
-	mWorld->getConstraintSolver()->setCollisionDetector(dart::collision::BulletCollisionDetector::create());
-	mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_Hip);
-	mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_LeftLeg);
-	mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_RightLeg);
-}	
-
-void
+void 
 Environment::
 StepTrain()
 {
-	if(mUseDevice){
-		this->Clone();		
-		mCharacter->Step_Device(Eigen::VectorXd::Zero(12));	
-	}
+	Eigen::VectorXd pos_ = mCharacter->GetSkeleton()->getPositions();
+	Eigen::VectorXd vel_ = mCharacter->GetSkeleton()->getVelocities();
+
+	Eigen::VectorXd pos_d = mCharacter->mDevice->GetSkeleton()->getPositions();
+	Eigen::VectorXd vel_d = mCharacter->mDevice->GetSkeleton()->getVelocities();
 
 	if(mUseMuscle)
 		mCharacter->Step_Muscles(mSimCount, mRandomSampleIndex);
 	else
 		mCharacter->Step();
 
+	if(mUseDevice)
+		mCharacter->Step_Device(Eigen::VectorXd::Zero(12));
+			
 	mWorld->step();
 
 	if(mUseDevice){
-		this->Clone_Back();
-
-		if(mUseMuscle)
-			mCharacter->Step_Muscles(mSimCount, mRandomSampleIndex);
-		else
-			mCharacter->Step();
+		double r = mCharacter->GetReward_Character();
+		if(mSimCount < mSimulationHz/mControlHz)
+		{
+			r_only += r;
+			mCharacter->r_cur = r_only;
+		}
 	
+		mCharacter->GetSkeleton()->setPositions(pos_);
+		mCharacter->GetSkeleton()->setVelocities(vel_);
+		mCharacter->GetSkeleton()->computeForwardKinematics(true, false, false);	
+
+		mCharacter->mDevice->GetSkeleton()->setPositions(pos_d);
+		mCharacter->mDevice->GetSkeleton()->setVelocities(vel_d);
+		mCharacter->mDevice->GetSkeleton()->computeForwardKinematics(true, false, false);
+
+		if(!mUseMuscle){
+			this->StepBack();
+			// mCharacter->StepBack();
+	
+			mCharacter->Step();	
+		}
+		// muscle step back not implemented
+
 		mCharacter->Step_Device();
-			
-		mWorld->step();
-	}
-	
-	mSimCount++;
 
-	// Eigen::VectorXd getF = mCharacter->GetSkeleton()->getForces();
-	// std::cout << "===================================" << std::endl;
-	// std::cout << std::endl;
-	// for(int i=0; i<getF.size(); i++)
-	// {
-	// 	std::cout << "idx " << i << " : " << getF[i] << std::endl;
-	// }
+		mWorld->step();
+	
+		double r_ = mCharacter->GetReward_Character();
+		if(mSimCount < mSimulationHz/mControlHz)
+		{
+			r_d += r_;
+			mCharacter->r_device = r_d;
+		}
+	}
+
+	mSimCount++;
 }
 
+void
+Environment::
+StepBack()
+{
+
+	mWorld->setTime(mWorld->getTime()-mWorld->getTimeStep());
+}
 
 bool
 Environment::
@@ -287,6 +278,8 @@ SetAction(const Eigen::VectorXd& a)
 	mCharacter->SetTargetPosAndVel(t, mControlHz);
 
 	mSimCount = 0;
+	r_only = 0.0;
+	mCharacter->r_cur = 0.0;
 	mRandomSampleIndex = rand()%(mSimulationHz/mControlHz);
 }
 
@@ -296,12 +289,14 @@ SetAction_Device(const Eigen::VectorXd& a)
 {
 	double action_scale = 1.0;
 	mAction_Device = a*action_scale;
-	mCharacter->SetAction_Device(mAction);
+	mCharacter->SetAction_Device(mAction_Device);
 
 	double t = mWorld->getTime();
 	mCharacter->SetTargetPosAndVel(t, mControlHz);
 
 	mSimCount = 0;
+	r_d = 0.0;
+	mCharacter->r_device = 0.0;
 	mRandomSampleIndex = rand()%(mSimulationHz/mControlHz);
 }
 
