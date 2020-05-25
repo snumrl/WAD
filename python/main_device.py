@@ -69,21 +69,24 @@ class PPO(object):
         self.env = EnvManager(meta_file, self.num_slaves)
         self.use_muscle = self.env.UseMuscle()
         self.use_device = self.env.UseDevice()
+        if self.use_device is False:
+            print("use device is false in metadata")
+            sys.exit()
+
         self.num_state = self.env.GetNumState()
         self.num_state_device = self.env.GetNumState_Device()
         self.num_action = self.env.GetNumAction()
         self.num_action_device = self.env.GetNumAction_Device()
-        self.num_muscles = self.env.GetNumMuscles()
+        
+        self.num_simulation_Hz = self.env.GetSimulationHz()
+        self.num_control_Hz = self.env.GetControlHz()
+        self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
 
         self.num_epochs = 10
-        self.num_epochs_muscle = 3
         self.num_evaluation = 0
         self.num_tuple_so_far = 0
         self.num_episode = 0
         self.num_tuple = 0
-        self.num_simulation_Hz = self.env.GetSimulationHz()
-        self.num_control_Hz = self.env.GetControlHz()
-        self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
 
         self.gamma = 0.99
         self.lb = 0.99
@@ -92,36 +95,41 @@ class PPO(object):
         self.batch_size = 128
         self.muscle_batch_size = 128
         self.replay_buffer = ReplayBuffer(30000)
-        self.muscle_buffer = MuscleBuffer(30000)
-
-        print("state : ", self.num_state)
-        print("action : ", self.num_action)
+        
+        print("char state : ", self.num_state)
+        print("char action : ", self.num_action)
         self.model = SimulationNN(self.num_state,self.num_action)
-        self.muscle_model = MuscleNN(self.env.GetNumTotalMuscleRelatedDofs(),self.num_action,self.num_muscles)
-        if self.use_device:
-            self.device_model = SimulationNN(self.num_state_device, self.num_action_device)        
-
+        print("device state : ", self.num_state_device)
+        print("device action : ", self.num_action_device)
+        self.device_model = SimulationNN(self.num_state_device, self.num_action_device)        
+        
         if use_cuda:
             self.model.cuda()
-            self.muscle_model.cuda()
-            if self.use_device:
-                self.device_model.cuda()
+            self.device_model.cuda()
 
         self.default_learning_rate = 1E-4
         self.default_clip_ratio = 0.2
         self.learning_rate = self.default_learning_rate
         self.clip_ratio = self.default_clip_ratio
         self.optimizer = optim.Adam(self.model.parameters(),lr=self.learning_rate)
-        self.optimizer_muscle = optim.Adam(self.muscle_model.parameters(),lr=self.learning_rate)
+        
         self.max_iteration = 50000
-
         self.w_entropy = -0.001
-
         self.loss_actor = 0.0
         self.loss_critic = 0.0
-        self.loss_muscle = 0.0
         self.rewards = []
         self.rewards_sep = {}
+
+        if self.use_muscle:
+            self.muscle_buffer = MuscleBuffer(30000)
+            self.muscle_model = MuscleNN(self.env.GetNumTotalMuscleRelatedDofs(),self.num_action,self.num_muscles)
+            self.optimizer_muscle = optim.Adam(self.muscle_model.parameters(),lr=self.learning_rate)
+            self.num_muscles = self.env.GetNumMuscles()
+            self.num_epochs_muscle = 3
+            self.loss_muscle = 0.0
+            if self.use_muscle:
+                self.muscle_model.cuda()
+        
         self.sum_return = 0.0
         self.max_return = -1.0
         self.max_return_epoch = 1
@@ -134,16 +142,20 @@ class PPO(object):
 
     def SaveModel(self):
         self.model.save('../nn/current.pt')
+    
+        if self.max_return_epoch == self.num_evaluation:
+            self.model.save('../nn/max.pt')
+        if self.num_evaluation%100 == 0:
+            self.model.save('../nn/'+str(self.num_evaluation//100)+'.pt')
+       
+    def SaveModel_Muscle(self):
         self.muscle_model.save('../nn/current_muscle.pt')
 
         if self.max_return_epoch == self.num_evaluation:
-            self.model.save('../nn/max.pt')
             self.muscle_model.save('../nn/max_muscle.pt')
-            
         if self.num_evaluation%100 == 0:
-            self.model.save('../nn/'+str(self.num_evaluation//100)+'.pt')
             self.muscle_model.save('../nn/'+str(self.num_evaluation//100)+'_muscle.pt')
-       
+
     def SaveModel_Device(self):
         self.device_model.save('../nn/current_device.pt')
         if self.max_return_epoch == self.num_evaluation:
@@ -153,6 +165,8 @@ class PPO(object):
 
     def LoadModel(self,path):
         self.model.load('../nn/'+path+'.pt')
+        
+    def LoadModel_Muscle(self,path):
         self.muscle_model.load('../nn/'+path+'_muscle.pt')
         
     def LoadModel_Device(self,path):
@@ -240,18 +254,15 @@ class PPO(object):
             
             self.env.SetActions(actions)
             self.env.SetActions_Device(actions_device)
-            # print("python action : ", actions_device.shape)
             if self.use_muscle:
                 mt = Tensor(self.env.GetMuscleTorques())
                 for i in range(self.num_simulation_per_control):
                     dt = Tensor(self.env.GetDesiredTorques())
                     activations = self.muscle_model(mt,dt).cpu().detach().numpy()
                     self.env.SetActivationLevels(activations)
-
-                    self.env.StepsTrain(1)
+                    self.env.StepsDeviceOnly(1)
             else:
-                self.env.StepsAtOnceTrain()
-
+                self.env.StepsAtOnceDeviceOnly()
 
             for j in range(self.num_slaves):
                 nan_occur = False
@@ -279,64 +290,6 @@ class PPO(object):
 
             states = self.env.GetStates()
             states_device = self.env.GetStates_Device()
-
-    # def GenerateTransitions(self):
-    #     self.total_episodes = []
-    #     states = [None]*self.num_slaves
-    #     actions = [None]*self.num_slaves
-    #     rewards = [None]*self.num_slaves
-    #     rewards_sep = [None]*self.num_slaves
-    #     states = self.env.GetStates()
-    #     local_step = 0
-    #     terminated = [False]*self.num_slaves
-    #     counter = 0
-    #     while True:
-    #         counter += 1
-    #         if counter%10 == 0:
-    #             print('SIM : {}'.format(local_step),end='\r')
-    #         a_dist,v = self.model(Tensor(states))
-    #         actions = a_dist.sample().cpu().detach().numpy()
-    #         # actions = a_dist.loc.cpu().detach().numpy()
-    #         logprobs = a_dist.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
-    #         values = v.cpu().detach().numpy().reshape(-1)
-    #         self.env.SetActions(actions)
-    #         if self.use_muscle:
-    #             mt = Tensor(self.env.GetMuscleTorques())
-    #             for i in range(self.num_simulation_per_control//2):
-    #                 dt = Tensor(self.env.GetDesiredTorques())
-    #                 activations = self.muscle_model(mt,dt).cpu().detach().numpy()
-    #                 self.env.SetActivationLevels(activations)
-
-    #                 self.env.Steps(2)
-    #         else:
-    #             self.env.StepsAtOnce()
-
-    #         for j in range(self.num_slaves):
-    #             nan_occur = False
-    #             terminated_state = True
-
-    #             if np.any(np.isnan(states[j])) or np.any(np.isnan(actions[j])) or np.any(np.isnan(states[j])) or np.any(np.isnan(values[j])) or np.any(np.isnan(logprobs[j])):
-    #                 nan_occur = True
-
-    #             elif self.env.IsEndOfEpisode(j) is False:
-    #                 terminated_state = False
-    #                 rewards[j] = self.env.GetReward(j)
-    #                 rewards_sep[j] = self.env.GetRewardSep(j)
-    #                 self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j], rewards_sep[j])
-    #                 local_step += 1
-
-    #             if terminated_state or (nan_occur is True):
-    #                 if (nan_occur is True):
-    #                     self.episodes[j].Pop()
-    #                 self.total_episodes.append(self.episodes[j])
-    #                 self.episodes[j] = EpisodeBuffer()
-
-    #                 self.env.Reset(True,j)
-
-    #         if local_step >= self.buffer_size:
-    #             break
-
-    #         states = self.env.GetStates()
 
     def OptimizeSimulationNN(self):
         all_transitions = np.array(self.replay_buffer.buffer)
@@ -433,12 +386,11 @@ class PPO(object):
     def OptimizeModel(self):
         self.ComputeTDandGAE()
         self.OptimizeSimulationNN()
+        if self.use_muscle:
+            self.OptimizeMuscleNN()
         
     def Train(self):
-        if self.use_device :
-            self.GenerateTransitions_Device()
-        else:
-            self.GenerateTransitions()
+        self.GenerateTransitions_Device()
         self.OptimizeModel()
 
     def Evaluate(self):
@@ -477,11 +429,8 @@ class PPO(object):
                 self.rewards_sep[key] = []
             self.rewards_sep[key].append(self.sum_return_sep[key]/self.num_episode)
             
-        if self.use_device:
-            self.SaveModel_Device()
-        else:
-            self.SaveModel()
-
+        self.SaveModel_Device()
+        
         print('=============================================')
         return np.array(self.rewards), self.rewards_sep
 
@@ -528,10 +477,12 @@ import argparse
 import os
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m','--model',help='model path')
     parser.add_argument('-d','--meta',help='meta file')
+    parser.add_argument('-m','--model',help='model path')
     parser.add_argument('-a','--device',help='device path')
+    parser.add_argument('-u','--muscle',help='muscle path')
     
+
     args =parser.parse_args()
     if args.meta is None:
         print('Provide meta file')
@@ -546,9 +497,21 @@ if __name__=="__main__":
     if args.model is not None:
         ppo.LoadModel(args.model)
     else:
-        ppo.SaveModel()
+        print("Missing : -m path/to/model network")
+        sys.exit()
 
-    if args.device is not None:
+    if args.muscle is not None:
+        if ppo.use_muscle is False:
+            print("Dont put : -u command")
+            sys.exit()
+        else:
+            ppo.LoadModel_Muscle(args.muscle)
+    else:
+        if ppo.use_muscle:
+            print("Missing : -u path/to/muscle network")
+            sys.exit()           
+
+    if args.device is not None:        
         ppo.LoadModel_Device(args.device)
     else:
         ppo.SaveModel_Device()

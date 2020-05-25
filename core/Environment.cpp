@@ -135,8 +135,6 @@ Initialize()
 	mWorld->setTimeStep(1.0/mSimulationHz);
 	mWorld->getConstraintSolver()->setCollisionDetector(dart::collision::BulletCollisionDetector::create());
 
-	mAction = Eigen::VectorXd::Zero(GetNumAction());
-
 	Reset(false);
 }
 
@@ -175,7 +173,7 @@ Step()
 
 void 
 Environment::
-StepTrain()
+StepDeviceOnly()
 {
 	Eigen::VectorXd pos_ = mCharacter->GetSkeleton()->getPositions();
 	Eigen::VectorXd vel_ = mCharacter->GetSkeleton()->getVelocities();
@@ -215,7 +213,11 @@ StepTrain()
 	
 			mCharacter->Step();	
 		}
-		// muscle step back not implemented
+		else
+		{
+			// muscle step back not implemented	
+		}
+		
 
 		mCharacter->Step_Device();
 
@@ -236,7 +238,6 @@ void
 Environment::
 StepBack()
 {
-
 	mWorld->setTime(mWorld->getTime()-mWorld->getTimeStep());
 }
 

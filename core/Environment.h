@@ -26,7 +26,7 @@ public:
 
 public:
 	void Step();
-	void StepTrain();
+	void StepDeviceOnly();
 	void StepBack();
 	void Reset(bool RSI = true);
 	bool IsEndOfEpisode();

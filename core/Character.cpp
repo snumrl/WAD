@@ -334,11 +334,12 @@ Step_Device()
 		if(mDesiredTorque_Device[i] < -offset)
 			mDesiredTorque_Device[i] = -offset;
 	}
-	// std::cout << "device L : " << mDesiredTorque_Device[6] << " " << mDesiredTorque_Device[7] << " " << mDesiredTorque_Device[8] << std::endl;
-	// std::cout << "device R : " << mDesiredTorque_Device[9] << " " << mDesiredTorque_Device[10] << " " << mDesiredTorque_Device[11] << std::endl;
 	
 	mDevice->GetSkeleton()->setForces(mDesiredTorque_Device);
 
+	// std::cout << "device L : " << mDesiredTorque_Device[6] << " " << mDesiredTorque_Device[7] << " " << mDesiredTorque_Device[8] << std::endl;
+	// std::cout << "device R : " << mDesiredTorque_Device[9] << " " << mDesiredTorque_Device[10] << " " << mDesiredTorque_Device[11] << std::endl;
+	
 	// int n = mDevice->GetSkeleton()->getNumJoints();
 	// int dofs = mDevice->GetSkeleton()->getNumDofs();
 	// for(int i=0; i<n; i++)
@@ -448,7 +449,9 @@ GetReward()
 		// r_character = this->GetReward_Character();
 		// return (w_character*r_character - r_cur)*10000.0;
 		// std::cout << "reward : " << 0.1*exp((r_device - r_cur)*100) << std::endl;
-		return 0.1*exp((r_device - r_cur)*10);
+		// return 0.1*exp((r_device - r_cur)*10);
+		r_character = this->GetReward_Character(); 
+		return r_character; 
 	}
 	else
 		r_character = this->GetReward_Character(); 
@@ -552,8 +555,7 @@ Character::
 GetDesiredTorques_Device()
 {
 	mDesiredTorque_Device.head<6>().setZero();
-	// mDesiredTorque_Device.segment<6>(6) = mAction_Device;
-	mDesiredTorque_Device.segment<6>(6) = 100 * mAction_Device;
+	mDesiredTorque_Device.segment<6>(6) = mTorqueMax_Device * mAction_Device;
 	
 	return mDesiredTorque_Device;
 }

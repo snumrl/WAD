@@ -154,13 +154,13 @@ Steps(int num)
 
 void
 EnvManager::
-StepsTrain(int num)
+StepsDeviceOnly(int num)
 {
 #pragma omp parallel for
 	for (int id = 0;id<mNumEnvs;++id)
 	{
 		for(int j=0;j<num;j++)
-			mEnvs[id]->StepTrain();
+			mEnvs[id]->StepDeviceOnly();
 	}
 }
 
@@ -179,17 +179,16 @@ StepsAtOnce()
 
 void
 EnvManager::
-StepsAtOnceTrain()
+StepsAtOnceDeviceOnly()
 {
 	int num = this->GetNumSteps();
 #pragma omp parallel for
 	for (int id = 0;id<mNumEnvs;++id)
 	{
 		for(int j=0;j<num;j++)
-			mEnvs[id]->StepTrain();
+			mEnvs[id]->StepDeviceOnly();
 	}
 }
-
 
 void
 EnvManager::
@@ -347,8 +346,8 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("GetRewardSep",&EnvManager::GetRewardSep)
 		.def("Steps",&EnvManager::Steps)
 		.def("StepsAtOnce",&EnvManager::StepsAtOnce)
-		.def("StepsTrain",&EnvManager::StepsTrain)
-		.def("StepsAtOnceTrain",&EnvManager::StepsAtOnceTrain)
+		.def("StepsDeviceOnly",&EnvManager::StepsDeviceOnly)
+		.def("StepsAtOnceDeviceOnly",&EnvManager::StepsAtOnceDeviceOnly)
 		.def("Resets",&EnvManager::Resets)
 		.def("IsEndOfEpisodes",&EnvManager::IsEndOfEpisodes)
 		.def("GetStates",&EnvManager::GetStates)
