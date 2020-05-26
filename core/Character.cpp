@@ -252,12 +252,6 @@ Step()
 
 	mSkeleton->setForces(mDesiredTorque);
 
-	// if(mDesiredTorque[9] > 30.0)
-	// 	std::cout << "Tibia R : " << mDesiredTorque[9] << std::endl;
-	// if(mDesiredTorque[18] > 30.0)
-	// 	std::cout << "Tibia L : " << mDesiredTorque[18] << std::endl;
-
-
 	// int dofs = 0;
 	// int n = mSkeleton->getNumJoints();
 	// for(int i=0; i<n; i++)
@@ -365,7 +359,10 @@ Character::
 SetAction_Device(const Eigen::VectorXd& a)
 {
 	mAction_Device = a;
+<<<<<<< HEAD
 	// std::cout << "set action : " << mAction_Device << std::endl;
+=======
+>>>>>>> trainDeviceV1
 }
 
 Eigen::VectorXd
