@@ -29,7 +29,7 @@ public:
 
 	void Initialize();
 	void Initialize_Muscles();
-	void Initialize_Device(dart::simulation::WorldPtr& wPtr);
+	void Initialize_Device();
 
 	void Reset(double worldTime, int controlHz);
 	void Reset_Muscles();

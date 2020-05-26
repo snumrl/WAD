@@ -33,8 +33,8 @@ public:
 	void SetAction(const Eigen::VectorXd& a);
 	void SetAction_Device(const Eigen::VectorXd& a);
 	void SetActivationLevels(const Eigen::VectorXd& a);
-	
 	double GetReward();
+
 	std::map<std::string,double> GetRewardSep();
 
 	Eigen::VectorXd GetState();
@@ -75,7 +75,10 @@ private:
 	bool mUseDevice;
 
 	int mSimCount;
-	int mRandomSampleIndex;	
+	int mRandomSampleIndex;
+
+	double r_only = 0.0;
+	double r_d = 0.0;
 };
 };
 
