@@ -99,7 +99,7 @@ void
 Character::
 LoadDevice(const std::string& path)
 {
-	mDevice = new Device(BuildFromFile(path));	
+	mDevice = new Device(BuildFromFile(path));
 }
 
 void
@@ -227,11 +227,11 @@ StepBack()
 {
 	// mSkeleton->setPositions(mStoredPositions);
 	// mSkeleton->setVelocities(mStoredVelocities);
-	// mSkeleton->computeForwardKinematics(true, false, false);	
+	// mSkeleton->computeForwardKinematics(true, false, false);
 
 	// mDevice->GetSkeleton()->setPositions(mStoredPositions_Device);
 	// mDevice->GetSkeleton()->setVelocities(mStoredVelocities_Device);
-	// mDevice->GetSkeleton()->computeForwardKinematics(true, false, false);	
+	// mDevice->GetSkeleton()->computeForwardKinematics(true, false, false);
 }
 
 void
@@ -243,7 +243,7 @@ Step()
 	double offset = 30.0;
 
 	for(int i=6; i<10; i++)
-	{	
+	{
 		if(mDesiredTorque[i] > offset)
 			mDesiredTorque[i] = offset;
 		if(mDesiredTorque[i] < -offset)
@@ -257,10 +257,6 @@ Step()
 	// if(mDesiredTorque[18] > 30.0)
 	// 	std::cout << "Tibia L : " << mDesiredTorque[18] << std::endl;
 
-	// for(int i=0; i<mDesiredTorque.size(); i++)
-	// {
-	// 	std::cout << "torque " << i << " : " << mDesiredTorque[i] << std::endl;
-	// }
 
 	// int dofs = 0;
 	// int n = mSkeleton->getNumJoints();
@@ -271,7 +267,7 @@ Step()
 	// 	dofs += mSkeleton->getJoint(i)->getNumDofs();
 	// }
 
-	// std::cout << "dofs : " << dofs << std::endl;	
+	// std::cout << "dofs : " << dofs << std::endl;
 }
 
 void
@@ -334,12 +330,12 @@ Step_Device()
 		if(mDesiredTorque_Device[i] < -offset)
 			mDesiredTorque_Device[i] = -offset;
 	}
-	
+
 	mDevice->GetSkeleton()->setForces(mDesiredTorque_Device);
 
 	// std::cout << "device L : " << mDesiredTorque_Device[6] << " " << mDesiredTorque_Device[7] << " " << mDesiredTorque_Device[8] << std::endl;
 	// std::cout << "device R : " << mDesiredTorque_Device[9] << " " << mDesiredTorque_Device[10] << " " << mDesiredTorque_Device[11] << std::endl;
-	
+
 	// int n = mDevice->GetSkeleton()->getNumJoints();
 	// int dofs = mDevice->GetSkeleton()->getNumDofs();
 	// for(int i=0; i<n; i++)
@@ -347,9 +343,9 @@ Step_Device()
 	// 	Eigen::VectorXd f_ = mDevice->GetSkeleton()->getForces();
 	// 	for(int j=0; j<f_.size(); j++)
 	// 	{
-	// 		std::cout << "device forces " << j << " : " << f_[j] << std::endl; 	
+	// 		std::cout << "device forces " << j << " : " << f_[j] << std::endl;
 	// 	}
-		
+
 	// 	std::cout << "device joint num : " << n << std::endl;
 	// 	std::cout << "device dofs  : " << dofs << std::endl;
 	// 	std::cout << i << " : " << mDevice->GetSkeleton()->getJoint(i)->getName() << " " << mDevice->GetSkeleton()->getJoint(i)->getNumDofs() << std::endl;
@@ -450,11 +446,11 @@ GetReward()
 		// return (w_character*r_character - r_cur)*10000.0;
 		// std::cout << "reward : " << 0.1*exp((r_device - r_cur)*100) << std::endl;
 		// return 0.1*exp((r_device - r_cur)*10);
-		r_character = this->GetReward_Character(); 
-		return r_character; 
+		r_character = this->GetReward_Character();
+		return r_character;
 	}
 	else
-		r_character = this->GetReward_Character(); 
+		r_character = this->GetReward_Character();
 		return r_character;
 }
 
@@ -484,15 +480,15 @@ GetReward_Character()
 {
 	Eigen::VectorXd cur_pos = mSkeleton->getPositions();
 	Eigen::VectorXd cur_vel = mSkeleton->getVelocities();
-	
+
 	Eigen::VectorXd p_diff_all = mSkeleton->getPositionDifferences(mTargetPositions, cur_pos);
 	Eigen::VectorXd v_diff_all = mSkeleton->getPositionDifferences(mTargetVelocities, cur_vel);
-	
+
 	Eigen::VectorXd p_diff = Eigen::VectorXd::Zero(mSkeleton->getNumDofs());
 	Eigen::VectorXd v_diff = Eigen::VectorXd::Zero(mSkeleton->getNumDofs());
-	
+
 	const auto& bvh_map = mBVH->GetBVHMap();
-	
+
 	for(auto ss : bvh_map)
 	{
 		auto joint = mSkeleton->getBodyNode(ss.first)->getParentJoint();
@@ -504,31 +500,31 @@ GetReward_Character()
 		else if(joint->getType()=="BallJoint")
 			p_diff.segment<3>(idx) = p_diff_all.segment<3>(idx);
 	}
-	
+
 	auto ees = this->GetEndEffectors();
 	Eigen::VectorXd ee_diff(ees.size()*3);
 	Eigen::VectorXd com_diff;
 	for(int i =0;i<ees.size();i++)
 		ee_diff.segment<3>(i*3) = ees[i]->getCOM();
-	
+
 	com_diff = mSkeleton->getCOM();
 	mSkeleton->setPositions(mTargetPositions);
 	mSkeleton->computeForwardKinematics(true, false, false);
-	
+
 	com_diff -= mSkeleton->getCOM();
 	for(int i=0;i<ees.size();i++)
 		ee_diff.segment<3>(i*3) -= ees[i]->getCOM()+com_diff;
-	
+
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->computeForwardKinematics(true, false, false);
-	
+
 	r_q = exp_of_squared(p_diff, 2.0);
 	r_v = exp_of_squared(v_diff, 0.1);
 	r_ee = exp_of_squared(ee_diff, 40.0);
 	r_com = exp_of_squared(com_diff, 10.0);
 
 	double r_ = r_ee*(w_q*r_q + w_v*r_v);
-	
+
 	return r_;
 }
 
@@ -556,7 +552,7 @@ GetDesiredTorques_Device()
 {
 	mDesiredTorque_Device.head<6>().setZero();
 	mDesiredTorque_Device.segment<6>(6) = mTorqueMax_Device * mAction_Device;
-	
+
 	return mDesiredTorque_Device;
 }
 
@@ -578,7 +574,7 @@ GetSPDForces(const Eigen::VectorXd& p_desired)
 	Eigen::VectorXd tau = p_diff + v_diff - dt*mKv.cwiseProduct(ddq);
 
 	tau.head<6>().setZero();
-	
+
 	return tau;
 }
 
