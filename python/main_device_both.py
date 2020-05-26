@@ -126,7 +126,7 @@ class PPO(object):
         self.loss_actor_device = 0.0
         self.loss_critic = 0.0
         self.loss_critic_device = 0.0
-        
+        self.loss_muscle = 0.0
         self.rewards = []
         
         if self.use_muscle:
@@ -135,7 +135,6 @@ class PPO(object):
             self.optimizer_muscle = optim.Adam(self.muscle_model.parameters(),lr=self.learning_rate) 
             self.num_muscles = self.env.GetNumMuscles()
             self.num_epochs_muscle = 3
-            self.loss_muscle = 0.0
             if use_cuda:
                 self.muscle_model.cuda()    
            
@@ -258,7 +257,8 @@ class PPO(object):
 
     def ComputeTDandGAE(self):
         self.replay_buffer.Clear()
-        self.muscle_buffer.Clear()
+        if self.use_muscle:
+            self.muscle_buffer.Clear()
         self.sum_return = 0.0
         for epi in self.total_episodes:
             data = epi.GetData()
@@ -290,9 +290,10 @@ class PPO(object):
         print('SIM : {}'.format(self.num_tuple))
         self.num_tuple_so_far += self.num_tuple
 
-        muscle_tuples = self.env.GetMuscleTuples()
-        for i in range(len(muscle_tuples)):
-            self.muscle_buffer.Push(muscle_tuples[i][0],muscle_tuples[i][1],muscle_tuples[i][2],muscle_tuples[i][3])
+        if self.use_muscle:
+            muscle_tuples = self.env.GetMuscleTuples()
+            for i in range(len(muscle_tuples)):
+                self.muscle_buffer.Push(muscle_tuples[i][0],muscle_tuples[i][1],muscle_tuples[i][2],muscle_tuples[i][3])
    
     def ComputeTDandGAE_Device(self):
         self.replay_buffer_device.Clear()
@@ -571,9 +572,15 @@ if __name__=="__main__":
         ppo.SaveModel()
 
     if args.muscle is not None:
-        ppo.LoadModel_Muscle(args.muscle)
+        if ppo.use_muscle is False:
+            print("Dont put : -u command")
+            sys.exit()
+        else:
+            ppo.LoadModel_Muscle(args.muscle)
     else:
-        ppo.SaveModel_Muscle()
+        if ppo.use_muscle:
+            print("Missing : -u path/to/muscle network")
+            sys.exit()           
 
     if args.device is not None:
         ppo.LoadModel_Device(args.device)
