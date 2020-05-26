@@ -121,8 +121,6 @@ Initialize()
 
 	mNumActiveDof = this->GetSkeleton()->getNumDofs()-mRootJointDof;
 	mNumState = this->GetState(0.0).rows();
-
-	mTorqueMax_Device = 15.0;
 }
 
 void
@@ -136,18 +134,14 @@ Initialize_Muscles()
 		m->Update();
 		mNumTotalRelatedDof += m->GetNumRelatedDofs();
 	}
-
-	Reset_Muscles();
 }
 
 void
 Character::
-Initialize_Device()
+Initialize_Device(dart::simulation::WorldPtr& wPtr)
 {
 	mUseDevice = true;
 	mDevice->Initialize();
-
-	mDesiredTorque_Device = Eigen::VectorXd::Zero(12);
 
 	mWeldJoint_Hip = std::make_shared<dart::constraint::WeldJointConstraint>(
         mSkeleton->getBodyNode(0), mDevice->GetSkeleton()->getBodyNode(0)
@@ -160,6 +154,14 @@ Initialize_Device()
     mWeldJoint_RightLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
         mSkeleton->getBodyNode("FemurR"), mDevice->GetSkeleton()->getBodyNode("FastenerRightOut")
         );
+
+    wPtr->getConstraintSolver()->addConstraint(mWeldJoint_Hip);
+	wPtr->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
+	wPtr->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
+	wPtr->addSkeleton(mDevice->GetSkeleton());
+
+	mDesiredTorque_Device = Eigen::VectorXd::Zero(12);
+	mTorqueMax_Device = 15.0;
 }
 
 void
@@ -296,7 +298,6 @@ Step_Muscles(int simCount, int randomSampleIndex)
 		for(int i=0;i<mMuscles.size();i++)
 		{
 			auto muscle = mMuscles[i];
-			// muscle->Update();
 			Eigen::MatrixXd Jt = muscle->GetJacobianTranspose();
 			auto Ap = muscle->GetForceJacobianAndPassive();
 
@@ -325,7 +326,7 @@ Step_Device()
 {
 	GetDesiredTorques_Device();
 
-	double offset = 60.0;
+	double offset = 15.0;
 
 	for(int i=6; i<12; i++)
 	{
@@ -368,8 +369,7 @@ void
 Character::
 SetAction_Device(const Eigen::VectorXd& a)
 {
-	mAction_Device = a;
-	// std::cout << "set action : " << mAction_Device << std::endl;
+	mAction_Device = a;	
 }
 
 Eigen::VectorXd
