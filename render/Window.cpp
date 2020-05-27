@@ -191,8 +191,8 @@ keyboard(unsigned char _key, int _x, int _y)
 	default:
 		Win3D::keyboard(_key,_x,_y);break;
 	}
-
 }
+
 void
 Window::
 displayTimer(int _val)
