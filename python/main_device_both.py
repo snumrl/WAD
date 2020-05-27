@@ -72,7 +72,7 @@ class PPO(object):
         if self.use_device is False:
             print("use device is false in metadata")
             sys.exit()
-                
+
         self.num_state = self.env.GetNumState()
         self.num_state_device = self.env.GetNumState_Device()
         self.num_action = self.env.GetNumAction()
@@ -91,7 +91,7 @@ class PPO(object):
         self.num_episode_device = 0
         self.num_tuple = 0
         self.num_tuple_device = 0
-        
+
         self.gamma = 0.99
         self.lb = 0.99
 
@@ -106,19 +106,19 @@ class PPO(object):
         self.model = SimulationNN(self.num_state,self.num_action)
         print("device state : ", self.num_state_device)
         print("device action : ", self.num_action_device)
-        self.device_model = SimulationNN(self.num_state_device, self.num_action_device)        
-        
+        self.device_model = SimulationNN(self.num_state_device, self.num_action_device)
+
         if use_cuda:
             self.model.cuda()
             self.device_model.cuda()
-     
+
         self.default_learning_rate = 1E-4
         self.default_clip_ratio = 0.2
         self.learning_rate = self.default_learning_rate
         self.clip_ratio = self.default_clip_ratio
         self.optimizer = optim.Adam(self.model.parameters(),lr=self.learning_rate)
         self.optimizer_device = optim.Adam(self.device_model.parameters(),lr=self.learning_rate)
-      
+
         self.max_iteration = 50000
         self.w_entropy = -0.001
         self.w_entropy_device = -0.001
@@ -128,16 +128,16 @@ class PPO(object):
         self.loss_critic_device = 0.0
         self.loss_muscle = 0.0
         self.rewards = []
-        
+
         if self.use_muscle:
+            self.num_muscles = self.env.GetNumMuscles()
             self.muscle_buffer = MuscleBuffer(30000)
             self.muscle_model = MuscleNN(self.env.GetNumTotalMuscleRelatedDofs(),self.num_action,self.num_muscles)
-            self.optimizer_muscle = optim.Adam(self.muscle_model.parameters(),lr=self.learning_rate) 
-            self.num_muscles = self.env.GetNumMuscles()
+            self.optimizer_muscle = optim.Adam(self.muscle_model.parameters(),lr=self.learning_rate)
             self.num_epochs_muscle = 3
             if use_cuda:
-                self.muscle_model.cuda()    
-           
+                self.muscle_model.cuda()
+
         self.sum_return = 0.0
         self.sum_return_device = 0.0
         self.max_return = -1.0
@@ -151,7 +151,7 @@ class PPO(object):
         for j in range(self.num_slaves):
             self.episodes[j] = EpisodeBuffer()
             self.episodes_device[j] = EpisodeBuffer()
-        
+
         self.env.Resets(True)
 
     def SaveModel(self):
@@ -161,17 +161,18 @@ class PPO(object):
             self.model.save('../nn/max.pt')
         if self.num_evaluation%100 == 0:
             self.model.save('../nn/'+str(self.num_evaluation//100)+'.pt')
-  
+
     def SaveModel_Muscle(self):
         self.muscle_model.save('../nn/current_muscle.pt')
-        
+
         if self.max_return_epoch == self.num_evaluation:
             self.muscle_model.save('../nn/max_muscle.pt')
         if self.num_evaluation%100 == 0:
             self.muscle_model.save('../nn/'+str(self.num_evaluation//100)+'_muscle.pt')
-  
+
     def SaveModel_Device(self):
         self.device_model.save('../nn/current_device.pt')
+
         if self.max_return_epoch_device == self.num_evaluation:
             self.device_model.save('../nn/max_device.pt')
         if self.num_evaluation%100 == 0:
@@ -182,10 +183,10 @@ class PPO(object):
 
     def LoadModel_Muscle(self,path):
         self.muscle_model.load('../nn/'+path+'_muscle.pt')
-        
+
     def LoadModel_Device(self,path):
-        self.device_model.load('../nn/'+path+'_device.pt')        
-    
+        self.device_model.load('../nn/'+path+'_device.pt')
+
     def GenerateTransitions(self):
         self.total_episodes = []
         self.total_episodes_device = []
@@ -279,12 +280,12 @@ class PPO(object):
                 advantages[i] = ad_t
 
             self.sum_return += epi_return
-            
+
             TD = values[:size] + advantages
 
             for i in range(size):
                 self.replay_buffer.Push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
-        
+
         self.num_episode = len(self.total_episodes)
         self.num_tuple = len(self.replay_buffer.buffer)
         print('SIM : {}'.format(self.num_tuple))
@@ -294,7 +295,7 @@ class PPO(object):
             muscle_tuples = self.env.GetMuscleTuples()
             for i in range(len(muscle_tuples)):
                 self.muscle_buffer.Push(muscle_tuples[i][0],muscle_tuples[i][1],muscle_tuples[i][2],muscle_tuples[i][3])
-   
+
     def ComputeTDandGAE_Device(self):
         self.replay_buffer_device.Clear()
         self.sum_return_device = 0.0
@@ -317,12 +318,12 @@ class PPO(object):
                 advantages[i] = ad_t
 
             self.sum_return_device += epi_return
-            
+
             TD = values[:size] + advantages
 
             for i in range(size):
                 self.replay_buffer_device.Push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
-        
+
         self.num_episode_device = len(self.total_episodes_device)
         self.num_tuple_device = len(self.replay_buffer_device.buffer)
         print('SIM : {}'.format(self.num_tuple_device))
@@ -366,8 +367,8 @@ class PPO(object):
                 loss.backward(retain_graph=True)
                 for param in self.model.parameters():
                     if param.grad is not None:
-                        param.grad.data.clamp_(-0.5,0.5)    
-                
+                        param.grad.data.clamp_(-0.5,0.5)
+
                 self.optimizer.step()
             print('Optimizing sim nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
         print('')
@@ -387,7 +388,7 @@ class PPO(object):
                 stack_gae = np.vstack(batch.GAE).astype(np.float32)
 
                 a_dist,v = self.device_model(Tensor(stack_s))
-                
+
                 '''Critic Loss'''
                 loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
 
@@ -410,8 +411,8 @@ class PPO(object):
                 loss.backward(retain_graph=True)
                 for param in self.device_model.parameters():
                     if param.grad is not None:
-                       param.grad.data.clamp_(-0.5,0.5)    
-                
+                       param.grad.data.clamp_(-0.5,0.5)
+
                 self.optimizer_device.step()
             print('Optimizing device nn : {}/{}'.format(j+1,self.num_epochs_device),end='\r')
         print('')
@@ -463,11 +464,11 @@ class PPO(object):
         self.OptimizeSimulationNN_Device()
         if self.use_muscle:
             self.OptimizeMuscleNN()
-        
+
     def Train(self):
         self.GenerateTransitions()
         self.OptimizeModel()
-    
+
     def Evaluate(self):
         self.num_evaluation = self.num_evaluation + 1
         h = int((time.time() - self.tic)//3600.0)
@@ -496,14 +497,14 @@ class PPO(object):
         print('||Avg Reward per transition: {:.3f}'.format(self.sum_return/self.num_tuple))
         print('||Avg Step per episode     : {:.1f}'.format(self.num_tuple/self.num_episode))
         print('||Max Avg Retun So far     : {:.3f} at #{}'.format(self.max_return,self.max_return_epoch))
-      
+
         self.rewards.append(self.sum_return/self.num_episode)
-        
-        self.SaveModel()    
+
+        self.SaveModel()
         self.SaveModel_Device()
         if self.use_muscle:
             self.SaveModel_Muscle()
-        
+
         print('=============================================')
         return np.array(self.rewards)
 
@@ -554,7 +555,7 @@ if __name__=="__main__":
     parser.add_argument('-m','--model',help='model path')
     parser.add_argument('-a','--device',help='device path')
     parser.add_argument('-u','--muscle',help='muscle path')
-    
+
     args =parser.parse_args()
     if args.meta is None:
         print('Provide meta file')
@@ -579,17 +580,16 @@ if __name__=="__main__":
             ppo.LoadModel_Muscle(args.muscle)
     else:
         if ppo.use_muscle:
-            print("Missing : -u path/to/muscle network")
-            sys.exit()           
+            ppo.SaveModel_Muscle()
 
     if args.device is not None:
         ppo.LoadModel_Device(args.device)
     else:
         ppo.SaveModel_Device()
-    
+
     print('num states: {}, num actions: {}'.format(ppo.env.GetNumState(),ppo.env.GetNumAction()))
     for i in range(ppo.max_iteration-5):
         ppo.Train()
         rewards = ppo.Evaluate()
         Plot(rewards,'reward',0,False)
-        
+
