@@ -56,6 +56,7 @@ private:
 	bool mNNLoaded;
 	bool mMuscleNNLoaded;
 	bool mDeviceNNLoaded;
+	bool mOnDevice;
 	Eigen::Affine3d mViewMatrix;
 };
 };
