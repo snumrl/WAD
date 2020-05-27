@@ -122,7 +122,6 @@ Initialize()
 	mNumActiveDof = this->GetSkeleton()->getNumDofs()-mRootJointDof;
 	mNumState = this->GetState(0.0).rows();
 
-	mTorqueMax_Device = 15.0;
 }
 
 void
@@ -142,7 +141,7 @@ Initialize_Muscles()
 
 void
 Character::
-Initialize_Device()
+Initialize_Device(dart::simulation::WorldPtr& wPtr)
 {
 	mUseDevice = true;
 	mDevice->Initialize();
@@ -160,6 +159,14 @@ Initialize_Device()
     mWeldJoint_RightLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
         mSkeleton->getBodyNode("FemurR"), mDevice->GetSkeleton()->getBodyNode("FastenerRightOut")
         );
+
+    wPtr->getConstraintSolver()->addConstraint(mWeldJoint_Hip);
+	wPtr->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
+	wPtr->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
+	wPtr->addSkeleton(mDevice->GetSkeleton());
+
+	mDesiredTorque_Device = Eigen::VectorXd::Zero(12);
+	mTorqueMax_Device = 15.0;
 }
 
 void

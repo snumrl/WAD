@@ -21,7 +21,7 @@ void
 Environment::
 Initialize(const std::string& meta_file, bool load_obj)
 {
-	
+
 	std::ifstream ifs(meta_file);
 	if(!(ifs.is_open()))
 	{
@@ -122,13 +122,7 @@ Initialize()
 		mCharacter->Initialize_Muscles();
 
   	if(mUseDevice)
-  	{
-  		mCharacter->Initialize_Device();
-		mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_Hip);
-		mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_LeftLeg);
-		mWorld->getConstraintSolver()->addConstraint(mCharacter->mWeldJoint_RightLeg);
-		mWorld->addSkeleton(mCharacter->GetDevice()->GetSkeleton());
-  	}
+  		mCharacter->Initialize_Device(mWorld);
 
 	mWorld->addSkeleton(mGround);
 	mWorld->setGravity(Eigen::Vector3d(0,-9.8,0.0));
@@ -162,7 +156,7 @@ Step()
 		mCharacter->Step_Muscles(mSimCount, mRandomSampleIndex);
 	else
 		mCharacter->Step();
-			
+
 	if(mUseDevice)
 		mCharacter->Step_Device();
 
@@ -171,7 +165,7 @@ Step()
 	mSimCount++;
 }
 
-void 
+void
 Environment::
 StepDeviceOnly()
 {
@@ -188,7 +182,7 @@ StepDeviceOnly()
 
 	if(mUseDevice)
 		mCharacter->Step_Device(Eigen::VectorXd::Zero(12));
-			
+
 	mWorld->step();
 
 	if(mUseDevice){
@@ -198,10 +192,10 @@ StepDeviceOnly()
 			r_only += r;
 			mCharacter->r_cur = r_only;
 		}
-	
+
 		mCharacter->GetSkeleton()->setPositions(pos_);
 		mCharacter->GetSkeleton()->setVelocities(vel_);
-		mCharacter->GetSkeleton()->computeForwardKinematics(true, false, false);	
+		mCharacter->GetSkeleton()->computeForwardKinematics(true, false, false);
 
 		mCharacter->mDevice->GetSkeleton()->setPositions(pos_d);
 		mCharacter->mDevice->GetSkeleton()->setVelocities(vel_d);
@@ -210,19 +204,19 @@ StepDeviceOnly()
 		if(!mUseMuscle){
 			this->StepBack();
 			// mCharacter->StepBack();
-	
-			mCharacter->Step();	
+
+			mCharacter->Step();
 		}
 		else
 		{
-			// muscle step back not implemented	
+			// muscle step back not implemented
 		}
-		
+
 
 		mCharacter->Step_Device();
 
 		mWorld->step();
-	
+
 		double r_ = mCharacter->GetReward_Character();
 		if(mSimCount < mSimulationHz/mControlHz)
 		{
@@ -261,7 +255,7 @@ IsEndOfEpisode()
 
 	// if(mUseDevice)
 	// {
-		
+
 	// }
 
 	return isTerminal;

@@ -26,8 +26,6 @@ include_directories(${PYTHON_INCLUDE_DIR})
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${DART_INCLUDE_DIRS})
 
-
-
 add_library(pymss SHARED ${srcs})
 
 target_link_libraries(pymss ${DART_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} mss)
