@@ -359,10 +359,6 @@ Character::
 SetAction_Device(const Eigen::VectorXd& a)
 {
 	mAction_Device = a;
-<<<<<<< HEAD
-	// std::cout << "set action : " << mAction_Device << std::endl;
-=======
->>>>>>> trainDeviceV1
 }
 
 Eigen::VectorXd
