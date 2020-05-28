@@ -10,9 +10,9 @@ public:
 	EnvManager(std::string meta_file,int num_envs);
 
 	void Step(int id);
-	void Steps(int num);
+	void Steps(int num, bool onDevice);
 	void StepsDeviceOnly(int num);
-	void StepsAtOnce();
+	void StepsAtOnce(bool onDevice);
 	void StepsAtOnceDeviceOnly();
 
 	void Reset(bool RSI,int id);
@@ -41,7 +41,7 @@ public:
 	int GetNumSteps();
 	int GetControlHz();
 	int GetSimulationHz();
-	
+
 	bool UseMuscle();
 	bool UseDevice();
 

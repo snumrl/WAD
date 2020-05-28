@@ -118,7 +118,7 @@ p::dict
 EnvManager::
 GetRewardSep(int id)
 {
-	return toPythonDict(mEnvs[id]->GetRewardSep());	
+	return toPythonDict(mEnvs[id]->GetRewardSep());
 }
 
 np::ndarray
@@ -137,18 +137,18 @@ void
 EnvManager::
 Step(int id)
 {
-	mEnvs[id]->Step();
+	mEnvs[id]->Step(false);
 }
 
 void
 EnvManager::
-Steps(int num)
+Steps(int num, bool onDevice)
 {
 #pragma omp parallel for
 	for (int id = 0;id<mNumEnvs;++id)
 	{
 		for(int j=0;j<num;j++)
-			mEnvs[id]->Step();
+			mEnvs[id]->Step(onDevice);
 	}
 }
 
@@ -166,14 +166,14 @@ StepsDeviceOnly(int num)
 
 void
 EnvManager::
-StepsAtOnce()
+StepsAtOnce(bool onDevice)
 {
 	int num = this->GetNumSteps();
 #pragma omp parallel for
 	for (int id = 0;id<mNumEnvs;++id)
 	{
 		for(int j=0;j<num;j++)
-			mEnvs[id]->Step();
+			mEnvs[id]->Step(onDevice);
 	}
 }
 
@@ -226,7 +226,7 @@ GetStates()
 	return toNumPyArray(states);
 }
 
-np::ndarray 
+np::ndarray
 EnvManager::
 GetStates_Device()
 {
@@ -352,8 +352,8 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("IsEndOfEpisodes",&EnvManager::IsEndOfEpisodes)
 		.def("GetStates",&EnvManager::GetStates)
 		.def("GetStates_Device",&EnvManager::GetStates_Device)
-		.def("SetActions",&EnvManager::SetActions)		
-		.def("SetActions_Device",&EnvManager::SetActions_Device)		
+		.def("SetActions",&EnvManager::SetActions)
+		.def("SetActions_Device",&EnvManager::SetActions_Device)
 		.def("GetNumTotalMuscleRelatedDofs",&EnvManager::GetNumTotalMuscleRelatedDofs)
 		.def("GetNumMuscles",&EnvManager::GetNumMuscles)
 		.def("GetMuscleTorques",&EnvManager::GetMuscleTorques)

@@ -166,7 +166,7 @@ draw()
 	DrawGround(GetGroundY());
 	DrawMuscles(mEnv->GetCharacter()->GetMuscles());
 	DrawSkeleton(mEnv->GetCharacter()->GetSkeleton());
-	if(mEnv->GetUseDevice())
+	if(mEnv->GetUseDevice() && mEnv->GetCharacter()->mOnDevice)
 		DrawSkeleton(mEnv->GetCharacter()->GetDevice()->GetSkeleton());
 	// if(mDrawBVH)
 		// DrawBVH(mEnv->GetCharacter()->GetBVH(), mEnv->GetTime());
@@ -186,7 +186,10 @@ keyboard(unsigned char _key, int _x, int _y)
 	case 'f': mFocus = !mFocus;break;
 	case 'o': mDrawOBJ = !mDrawOBJ;break;
 	case 'b': mDrawBVH = !mDrawBVH;break;
-	case 'd': mOnDevice = !mOnDevice;break;
+	case 'd':
+		if(mEnv->GetUseDevice())
+			mOnDevice = !mOnDevice;
+		break;
 	case 27 : exit(0);break;
 	default:
 		Win3D::keyboard(_key,_x,_y);break;
@@ -230,13 +233,13 @@ Step()
 			Eigen::VectorXd mt = mEnv->GetCharacter()->GetMuscleTorques();
 			mEnv->SetActivationLevels(GetActivationFromNN(mt));
 			for(int j=0;j<inference_per_sim;j++)
-				mEnv->Step();
+				mEnv->Step(mOnDevice);
 		}
 	}
 	else
 	{
 		for(int i=0;i<num;i++)
-			mEnv->Step();
+			mEnv->Step(mOnDevice);
 	}
 }
 

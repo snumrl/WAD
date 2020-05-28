@@ -37,6 +37,8 @@ class EpisodeBuffer(object):
         self.data.pop()
     def GetData(self):
         return self.data
+    def Size(self):
+        return len(self.data)
 
 MuscleTransition = namedtuple('MuscleTransition',('JtA','tau_des','L','b'))
 class MuscleBuffer(object):
@@ -69,89 +71,117 @@ class PPO(object):
         self.env = EnvManager(meta_file, self.num_slaves)
         self.use_muscle = self.env.UseMuscle()
         self.use_device = self.env.UseDevice()
+        self.onDevice = True
         if self.use_device is False:
             print("use device is false in metadata")
             sys.exit()
 
+        # ========== Character setting ========== #
         self.num_state = self.env.GetNumState()
-        self.num_state_device = self.env.GetNumState_Device()
         self.num_action = self.env.GetNumAction()
-        self.num_action_device = self.env.GetNumAction_Device()
-
-        self.num_simulation_Hz = self.env.GetSimulationHz()
-        self.num_control_Hz = self.env.GetControlHz()
-        self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
 
         self.num_epochs = 10
-        self.num_epochs_device = 10
-        self.num_evaluation = 0
         self.num_tuple_so_far = 0
-        self.num_tuple_so_far_device = 0
         self.num_episode = 0
-        self.num_episode_device = 0
         self.num_tuple = 0
-        self.num_tuple_device = 0
-
-        self.gamma = 0.99
-        self.lb = 0.99
-
-        self.buffer_size = 2048
-        self.batch_size = 128
-        self.muscle_batch_size = 128
-        self.replay_buffer = ReplayBuffer(30000)
-        self.replay_buffer_device = ReplayBuffer(30000)
 
         print("char state : ", self.num_state)
         print("char action : ", self.num_action)
         self.model = SimulationNN(self.num_state,self.num_action)
+        if use_cuda:
+            self.model.cuda()
+
+        self.buffer_size = 2048
+        self.batch_size = 128
+        self.replay_buffer = ReplayBuffer(30000)
+
+        self.gamma = 0.99
+        self.lb = 0.99
+
+        self.default_clip_ratio = 0.2
+        self.default_learning_rate = 1E-4
+        self.clip_ratio = self.default_clip_ratio
+        self.learning_rate = self.default_learning_rate
+
+        self.optimizer = optim.Adam(self.model.parameters(),lr=self.learning_rate)
+
+        self.w_entropy = -0.001
+        self.loss_actor = 0.0
+        self.loss_critic = 0.0
+        self.sum_return = 0.0
+        self.max_return = -1.0
+        self.max_return_epoch = 1
+
+        self.episodes = [None]*self.num_slaves
+        for j in range(self.num_slaves):
+            self.episodes[j] = EpisodeBuffer()
+
+        # ========== Device setting ========== #
+        self.num_state_device = self.env.GetNumState_Device()
+        self.num_action_device = self.env.GetNumAction_Device()
+
+        self.num_epochs_device = 10
+        self.num_tuple_so_far_device = 0
+        self.num_episode_device = 0
+        self.num_tuple_device = 0
+
         print("device state : ", self.num_state_device)
         print("device action : ", self.num_action_device)
         self.device_model = SimulationNN(self.num_state_device, self.num_action_device)
-
         if use_cuda:
-            self.model.cuda()
             self.device_model.cuda()
 
-        self.default_learning_rate = 1E-4
-        self.default_clip_ratio = 0.2
-        self.learning_rate = self.default_learning_rate
-        self.clip_ratio = self.default_clip_ratio
-        self.optimizer = optim.Adam(self.model.parameters(),lr=self.learning_rate)
-        self.optimizer_device = optim.Adam(self.device_model.parameters(),lr=self.learning_rate)
+        self.buffer_size_device = 1024
+        self.batch_size_device = 64
+        self.replay_buffer_device = ReplayBuffer(30000)
 
-        self.max_iteration = 50000
-        self.w_entropy = -0.001
+        self.gamma_device = 0.99
+        self.lb_device = 0.99
+
+        self.default_clip_ratio_device = 0.2
+        self.default_learning_rate_device = 1E-4
+        self.clip_ratio_device = self.default_clip_ratio
+        self.learning_rate_device = self.default_learning_rate_device
+
+        self.optimizer_device = optim.Adam(self.device_model.parameters(),lr=self.learning_rate_device)
+
         self.w_entropy_device = -0.001
-        self.loss_actor = 0.0
         self.loss_actor_device = 0.0
-        self.loss_critic = 0.0
         self.loss_critic_device = 0.0
-        self.loss_muscle = 0.0
-        self.rewards = []
+        self.sum_return_device = 0.0
+        self.max_return_device = -1.0
+        self.max_return_epoch_device = 1
 
+        self.episodes_device = [None]*self.num_slaves
+        for j in range(self.num_slaves):
+            self.episodes_device[j] = EpisodeBuffer()
+
+        # ========== Muscle setting ========== #
         if self.use_muscle:
             self.num_muscles = self.env.GetNumMuscles()
+            self.num_action_muscle = self.env.GetNumAction()
+            self.muscle_model = MuscleNN(self.env.GetNumTotalMuscleRelatedDofs(), self.num_action_muscle,self.num_muscles)
             self.muscle_buffer = MuscleBuffer(30000)
-            self.muscle_model = MuscleNN(self.env.GetNumTotalMuscleRelatedDofs(),self.num_action,self.num_muscles)
-            self.optimizer_muscle = optim.Adam(self.muscle_model.parameters(),lr=self.learning_rate)
+
+            self.loss_muscle = 0.0
+            self.muscle_batch_size = 128
+            self.default_learning_rate_muscle = 1E-4
+            self.learning_rate_muscle = self.default_learning_rate_muscle
+            self.optimizer_muscle = optim.Adam(self.muscle_model.parameters(),lr=self.learning_rate_muscle)
             self.num_epochs_muscle = 3
             if use_cuda:
                 self.muscle_model.cuda()
 
-        self.sum_return = 0.0
-        self.sum_return_device = 0.0
-        self.max_return = -1.0
-        self.max_return_device = -1.0
-        self.max_return_epoch = 1
-        self.max_return_epoch_device = 1
+        #========= Common setting ==========#
+        self.num_simulation_Hz = self.env.GetSimulationHz()
+        self.num_control_Hz = self.env.GetControlHz()
+        self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
+
+        self.max_iteration = 10000
+        self.num_evaluation = 0
+        self.rewards = []
+
         self.tic = time.time()
-
-        self.episodes = [None]*self.num_slaves
-        self.episodes_device = [None]*self.num_slaves
-        for j in range(self.num_slaves):
-            self.episodes[j] = EpisodeBuffer()
-            self.episodes_device[j] = EpisodeBuffer()
-
         self.env.Resets(True)
 
     def SaveModel(self):
@@ -187,74 +217,185 @@ class PPO(object):
     def LoadModel_Device(self,path):
         self.device_model.load('../nn/'+path+'_device.pt')
 
+    # def GenerateTransitions(self):
+    #     self.total_episodes = []
+    #     actions = [None]*self.num_slaves
+    #     states = [None]*self.num_slaves
+    #     states = self.env.GetStates()
+    #     rewards = [None]*self.num_slaves
+    #     # rewards_sep = [None]*self.num_slaves
+    #     local_step = 0
+    #     counter = 0
+    #     while True:
+    #         counter += 1
+    #         if counter%10 == 0:
+    #             print('SIM : {}'.format(local_step),end='\r')
+
+    #         a_dist,v = self.model(Tensor(states))
+    #         actions = a_dist.sample().cpu().detach().numpy()
+    #         logprobs = a_dist.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
+    #         values = v.cpu().detach().numpy().reshape(-1)
+    #         self.env.SetActions(actions)
+
+    #         if self.use_muscle:
+    #             mt = Tensor(self.env.GetMuscleTorques())
+    #             for i in range(self.num_simulation_per_control):
+    #                 dt = Tensor(self.env.GetDesiredTorques())
+    #                 activations = self.muscle_model(mt,dt).cpu().detach().numpy()
+    #                 self.env.SetActivationLevels(activations)
+    #                 self.env.Steps(1, self.onDevice)
+    #         else:
+    #             self.env.StepsAtOnce(self.onDevice)
+
+    #         for j in range(self.num_slaves):
+    #             nan_occur = False
+    #             terminated_state = True
+
+    #             if np.any(np.isnan(states[j])) or np.any(np.isnan(actions[j])) or np.any(np.isnan(states[j])) or np.any(np.isnan(values[j])) or np.any(np.isnan(logprobs[j])) or np.any(np.isnan(states[j])):
+    #                 nan_occur = True
+    #                 print("Nan")
+    #             elif self.env.IsEndOfEpisode(j) is False:
+    #                 terminated_state = False
+    #                 rewards[j] = self.env.GetReward(j)
+    #                 # rewards_sep[j] = self.env.GetRewardSep(j)
+    #                 self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j])
+    #                 local_step += 1
+
+    #             if self.onDevice:
+    #                 if np.any(np.isnan(actions_device[j])) or np.any(np.isnan(states_device[j])) or np.any(np.isnan(values_device[j])) or np.any(np.isnan(logprobs_device[j])):
+    #                     nan_occur |= True
+    #                     print("Nan device")
+
+    #                 elif self.env.IsEndOfEpisode(j) is False:
+    #                     self.episodes_device[j].Push(states_device[j], actions_device[j], rewards[j], values_device[j], logprobs_device[j])
+
+    #             if terminated_state or (nan_occur is True):
+    #                 print("epi len : ", self.episodes[j].Size())
+    #                 if self.episodes[j].Size() != 0:
+    #                     if (nan_occur is True):
+    #                         self.episodes[j].Pop()
+    #                     self.total_episodes.append(self.episodes[j])
+    #                     self.episodes[j] = EpisodeBuffer()
+
+    #                 if self.onDevice:
+    #                     if self.episodes_device[j].Size() != 0:
+    #                         if (nan_occur is True):
+    #                             self.episodes_device[j].Pop()
+    #                         self.total_episodes_device.append(self.episodes_device[j])
+    #                         self.episodes_device[j] = EpisodeBuffer()
+
+    #                 self.env.Reset(True,j)
+
+    #         if local_step >= self.buffer_size:
+    #             break
+
+    #         states = self.env.GetStates()
+    #         if self.onDevice:
+    #             states_device = self.env.GetStates_Device()
+
+    #         if random.random() > 0.5:
+    #             self.onDevice = True
+    #         else:
+    #             self.onDevice = False
+
     def GenerateTransitions(self):
         self.total_episodes = []
-        self.total_episodes_device = []
-        states = [None]*self.num_slaves
-        states_device = [None]*self.num_slaves
         actions = [None]*self.num_slaves
-        actions_device = [None]*self.num_slaves
-        rewards = [None]*self.num_slaves
-        # rewards_sep = [None]*self.num_slaves
+        states = [None]*self.num_slaves
         states = self.env.GetStates()
+
+        self.total_episodes_device = []
+        actions_device = [None]*self.num_slaves
+        states_device = [None]*self.num_slaves
         states_device = self.env.GetStates_Device()
+
+        rewards = [None]*self.num_slaves
+
         local_step = 0
+        local_step_device = 0
         counter = 0
         while True:
             counter += 1
             if counter%10 == 0:
                 print('SIM : {}'.format(local_step),end='\r')
+
             a_dist,v = self.model(Tensor(states))
-            a_dist_device,v_device = self.device_model(Tensor(states_device))
             actions = a_dist.sample().cpu().detach().numpy()
-            actions_device = a_dist_device.sample().cpu().detach().numpy()
             logprobs = a_dist.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
-            logprobs_device = a_dist_device.log_prob(Tensor(actions_device)).cpu().detach().numpy().reshape(-1)
             values = v.cpu().detach().numpy().reshape(-1)
-            values_device = v_device.cpu().detach().numpy().reshape(-1)
             self.env.SetActions(actions)
-            self.env.SetActions_Device(actions_device)
+
+            if self.onDevice:
+                a_dist_device,v_device = self.device_model(Tensor(states_device))
+                actions_device = a_dist_device.sample().cpu().detach().numpy()
+                logprobs_device = a_dist_device.log_prob(Tensor(actions_device)).cpu().detach().numpy().reshape(-1)
+                values_device = v_device.cpu().detach().numpy().reshape(-1)
+                self.env.SetActions_Device(actions_device)
+
             if self.use_muscle:
                 mt = Tensor(self.env.GetMuscleTorques())
                 for i in range(self.num_simulation_per_control):
                     dt = Tensor(self.env.GetDesiredTorques())
                     activations = self.muscle_model(mt,dt).cpu().detach().numpy()
                     self.env.SetActivationLevels(activations)
-                    self.env.Steps(1)
+                    self.env.Steps(1, self.onDevice)
             else:
-                self.env.StepsAtOnce()
+                self.env.StepsAtOnce(self.onDevice)
 
             for j in range(self.num_slaves):
                 nan_occur = False
                 terminated_state = True
 
-                if np.any(np.isnan(states[j])) or np.any(np.isnan(actions[j])) or np.any(np.isnan(states[j])) or np.any(np.isnan(values[j])) or np.any(np.isnan(logprobs[j])) or np.any(np.isnan(states[j])) or np.any(np.isnan(actions_device[j])) or np.any(np.isnan(states_device[j])) or np.any(np.isnan(values_device[j])) or np.any(np.isnan(logprobs_device[j])):
+                if np.any(np.isnan(states[j])) or np.any(np.isnan(actions[j])) or np.any(np.isnan(values[j])) or np.any(np.isnan(logprobs[j])):
                     nan_occur = True
+                    print("Nan Character")
 
-                elif self.env.IsEndOfEpisode(j) is False:
+                if self.onDevice:
+                    if np.any(np.isnan(actions_device[j])) or np.any(np.isnan(states_device[j])) or np.any(np.isnan(values_device[j])) or np.any(np.isnan(logprobs_device[j])):
+                        nan_occur |= True
+                        print("Nan device")
+
+                if nan_occur is False and self.env.IsEndOfEpisode(j) is False:
                     terminated_state = False
                     rewards[j] = self.env.GetReward(j)
-                    # rewards_sep[j] = self.env.GetRewardSep(j)
                     self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j])
-                    self.episodes_device[j].Push(states_device[j], actions_device[j], rewards[j], values_device[j], logprobs_device[j])
                     local_step += 1
+                    if self.onDevice:
+                        self.episodes_device[j].Push(states_device[j], actions_device[j], rewards[j], values_device[j], logprobs_device[j])
+                        local_step_device += 1
 
-                if terminated_state or (nan_occur is True):
-                    if (nan_occur is True):
+                if nan_occur is True:
+                    if self.episodes[j].Size() != 0:
                         self.episodes[j].Pop()
-                        self.episodes_device[j].Pop()
-                    self.total_episodes.append(self.episodes[j])
-                    self.total_episodes_device.append(self.episodes_device[j])
-                    self.episodes[j] = EpisodeBuffer()
-                    self.episodes_device[j] = EpisodeBuffer()
+                    if self.onDevice:
+                        if self.episodes_device[j].Size() != 0:
+                            self.episodes_device[j].Pop()
 
                     self.env.Reset(True,j)
 
+                if terminated_state:
+                    self.total_episodes.append(self.episodes[j])
+                    self.episodes[j] = EpisodeBuffer()
+
+                    if self.onDevice:
+                        self.total_episodes_device.append(self.episodes_device[j])
+                        self.episodes_device[j] = EpisodeBuffer()
+
+                    self.env.Reset(True,j)
+
+            if random.random() > 0.5:
+                self.onDevice = True
+            else:
+                self.onDevice = False
+
             if local_step >= self.buffer_size:
-                break
+                self.onDevice = True
+                if local_step_device >= self.buffer_size_device:
+                    break
 
             states = self.env.GetStates()
-            states_device = self.env.GetStates_Device()
+            if self.onDevice:
+                states_device = self.env.GetStates_Device()
 
     def ComputeTDandGAE(self):
         self.replay_buffer.Clear()
@@ -487,7 +628,11 @@ class PPO(object):
         print('# {} === {}h:{}m:{}s ==='.format(self.num_evaluation,h,m,s))
         print('||Loss Actor               : {:.4f}'.format(self.loss_actor))
         print('||Loss Critic              : {:.4f}'.format(self.loss_critic))
-        print('||Loss Muscle              : {:.4f}'.format(self.loss_muscle))
+        if self.use_muscle:
+            print('||Loss Muscle              : {:.4f}'.format(self.loss_muscle))
+        if self.use_device:
+            print('||Loss Actor Device        : {:.4f}'.format(self.loss_actor_device))
+            print('||Loss Critic Device       : {:.4f}'.format(self.loss_critic_device))
         print('||Noise Character          : {:.3f}'.format(self.model.log_std.exp().mean()))
         print('||Noise Device             : {:.3f}'.format(self.device_model.log_std.exp().mean()))
         print('||Num Transition So far    : {}'.format(self.num_tuple_so_far))

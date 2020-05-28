@@ -25,7 +25,7 @@ public:
 	void Initialize(const std::string& meta_file, bool load_obj = false);
 
 public:
-	void Step();
+	void Step(bool onDevice);
 	void StepDeviceOnly();
 	void StepBack();
 	void Reset(bool RSI = true);

@@ -31,6 +31,9 @@ public:
 	void Initialize_Muscles();
 	void Initialize_Device(dart::simulation::WorldPtr& wPtr);
 
+	void On_Device(dart::simulation::WorldPtr& wPtr);
+	void Off_Device(dart::simulation::WorldPtr& wPtr);
+
 	void Reset(double worldTime, int controlHz);
 	void Reset_Muscles();
 	void Reset_Device();
@@ -48,6 +51,8 @@ public:
 	void Step_Device();
 	void Step_Device(const Eigen::VectorXd& a_);
 	void StepBack();
+
+	void SetOnDevice(bool onDevice){mOnDevice = onDevice;}
 
 	void SetAction(const Eigen::VectorXd& a);
 	void SetAction_Device(const Eigen::VectorXd& a);
@@ -99,6 +104,7 @@ public:
 
 	bool mUseDevice;
 	bool mUseMuscle;
+	bool mOnDevice;
 
 	double mTorqueMax_Device;
 
