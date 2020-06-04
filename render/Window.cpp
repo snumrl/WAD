@@ -171,6 +171,7 @@ draw()
 	// if(mDrawBVH)
 		// DrawBVH(mEnv->GetCharacter()->GetBVH(), mEnv->GetTime());
 
+	//draw graph
 	SetFocusing();
 }
 
