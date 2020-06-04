@@ -212,7 +212,6 @@ StepDeviceOnly()
 
 		if(!mUseMuscle){
 			this->StepBack();
-			// mCharacter->StepBack();
 
 			mCharacter->Step();
 		}
