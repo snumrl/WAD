@@ -343,7 +343,7 @@ Step_Device()
 {
 	GetDesiredTorques_Device();
 
-	double offset = 60.0;
+	double offset = 30.0;
 
 	for(int i=6; i<12; i++)
 	{
