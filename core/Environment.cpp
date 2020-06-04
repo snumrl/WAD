@@ -150,14 +150,23 @@ Reset(bool RSI)
 
 void
 Environment::
-Step()
+Step(bool onDevice)
 {
+	if(onDevice ^ mCharacter->mOnDevice)
+	{
+		if(onDevice)
+			mCharacter->On_Device(mWorld);
+		else
+			mCharacter->Off_Device(mWorld);
+	}
+	mCharacter->SetOnDevice(onDevice);
+
 	if(mUseMuscle)
 		mCharacter->Step_Muscles(mSimCount, mRandomSampleIndex);
 	else
 		mCharacter->Step();
 
-	if(mUseDevice)
+	if(mUseDevice && onDevice)
 		mCharacter->Step_Device();
 
 	mWorld->step();

@@ -9,7 +9,7 @@ using namespace dart::dynamics;
 using namespace MASS;
 Character::
 Character()
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),w_q(0.75),w_v(0.1),w_ee(0.0),w_com(0.15),w_character(1.0),w_device(0.0),r_q(0.0),r_v(0.0),r_ee(0.0),r_com(0.0),r_character(0.0),r_device(0.0),mUseMuscle(false),mUseDevice(false)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),w_q(0.75),w_v(0.1),w_ee(0.0),w_com(0.15),w_character(1.0),w_device(0.0),r_q(0.0),r_v(0.0),r_ee(0.0),r_com(0.0),r_character(0.0),r_device(0.0),mUseMuscle(false),mUseDevice(false),mOnDevice(false)
 {
 
 }
@@ -100,6 +100,7 @@ Character::
 LoadDevice(const std::string& path)
 {
 	mDevice = new Device(BuildFromFile(path));
+	mOnDevice = true;
 }
 
 void
@@ -121,7 +122,6 @@ Initialize()
 
 	mNumActiveDof = this->GetSkeleton()->getNumDofs()-mRootJointDof;
 	mNumState = this->GetState(0.0).rows();
-
 }
 
 void
@@ -171,6 +171,27 @@ Initialize_Device(dart::simulation::WorldPtr& wPtr)
 
 void
 Character::
+On_Device(dart::simulation::WorldPtr& wPtr)
+{
+	Reset_Device();
+	wPtr->getConstraintSolver()->addConstraint(mWeldJoint_Hip);
+	wPtr->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
+	wPtr->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
+	wPtr->addSkeleton(mDevice->GetSkeleton());
+}
+
+void
+Character::
+Off_Device(dart::simulation::WorldPtr& wPtr)
+{
+	wPtr->getConstraintSolver()->removeConstraint(mWeldJoint_Hip);
+	wPtr->getConstraintSolver()->removeConstraint(mWeldJoint_LeftLeg);
+	wPtr->getConstraintSolver()->removeConstraint(mWeldJoint_RightLeg);
+	wPtr->removeSkeleton(mDevice->GetSkeleton());
+}
+
+void
+Character::
 Reset(double worldTime, int controlHz)
 {
 	mTc = mBVH->GetT0();
@@ -216,8 +237,8 @@ Reset_Device()
 
     p.setZero();
     v.setZero();
-    p.head(6) = mTargetPositions.head(6);
-    v.head(6) = mTargetVelocities.head(6);
+    p.head(6) = mSkeleton->getPositions().head(6);
+    v.head(6) = mSkeleton->getVelocities().head(6);
     p.segment<3>(6) = mSkeleton->getJoint("FemurL")->getPositions();
     p.segment<3>(9) = mSkeleton->getJoint("FemurR")->getPositions();
     v.segment<3>(6) = mSkeleton->getJoint("FemurL")->getVelocities();
@@ -323,7 +344,7 @@ Step_Device()
 {
 	GetDesiredTorques_Device();
 
-	double offset = 60.0;
+	double offset = 30.0;
 
 	for(int i=6; i<12; i++)
 	{

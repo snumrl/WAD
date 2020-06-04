@@ -13,7 +13,7 @@ using namespace dart::gui;
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawBVH(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawBVH(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false)
 {
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
@@ -71,14 +71,15 @@ Window(Environment* env,const std::string& nn_path,const std::string& nn_path2)
 		p::exec(str,mns);
 
 		muscle_nn_module = p::eval("MuscleNN(num_total_muscle_related_dofs,num_actions,num_muscles)",mns);
-		
+
 		p::object load = muscle_nn_module.attr("load");
-		load(nn_path2);		
+		load(nn_path2);
 	}
 
 	if(env->GetUseDevice())
 	{
 		mDeviceNNLoaded = true;
+		mOnDevice = true;
 
 		boost::python::str str = ("num_state_device = "+std::to_string(mEnv->GetNumState_Device())).c_str();
 		p::exec(str,mns);
@@ -86,10 +87,10 @@ Window(Environment* env,const std::string& nn_path,const std::string& nn_path2)
 		p::exec(str,mns);
 
 		device_nn_module = p::eval("SimulationNN(num_state_device,num_action_device)",mns);
-	
+
 		p::object load = device_nn_module.attr("load");
-		load(nn_path2);	
-	}		
+		load(nn_path2);
+	}
 }
 
 Window::
@@ -108,14 +109,15 @@ Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_
 		p::exec(str,mns);
 
 		muscle_nn_module = p::eval("MuscleNN(num_total_muscle_related_dofs,num_actions,num_muscles)",mns);
-		
+
 		p::object load = muscle_nn_module.attr("load");
-		load(muscle_nn_path);		
+		load(muscle_nn_path);
 	}
 
 	if(env->GetUseDevice())
 	{
 		mDeviceNNLoaded = true;
+		mOnDevice = true;
 
 		boost::python::str str = ("num_state_device = "+std::to_string(mEnv->GetNumState_Device())).c_str();
 		p::exec(str,mns);
@@ -123,10 +125,10 @@ Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_
 		p::exec(str,mns);
 
 		device_nn_module = p::eval("SimulationNN(num_state_device,num_action_device)",mns);
-	
+
 		p::object load = device_nn_module.attr("load");
-		load(device_nn_path);	
-	}		
+		load(device_nn_path);
+	}
 }
 
 void
@@ -164,7 +166,7 @@ draw()
 	DrawGround(GetGroundY());
 	DrawMuscles(mEnv->GetCharacter()->GetMuscles());
 	DrawSkeleton(mEnv->GetCharacter()->GetSkeleton());
-	if(mEnv->GetUseDevice())
+	if(mEnv->GetUseDevice() && mEnv->GetCharacter()->mOnDevice)
 		DrawSkeleton(mEnv->GetCharacter()->GetDevice()->GetSkeleton());
 	// if(mDrawBVH)
 		// DrawBVH(mEnv->GetCharacter()->GetBVH(), mEnv->GetTime());
@@ -184,12 +186,16 @@ keyboard(unsigned char _key, int _x, int _y)
 	case 'f': mFocus = !mFocus;break;
 	case 'o': mDrawOBJ = !mDrawOBJ;break;
 	case 'b': mDrawBVH = !mDrawBVH;break;
+	case 'd':
+		if(mEnv->GetUseDevice())
+			mOnDevice = !mOnDevice;
+		break;
 	case 27 : exit(0);break;
 	default:
 		Win3D::keyboard(_key,_x,_y);break;
 	}
-
 }
+
 void
 Window::
 displayTimer(int _val)
@@ -227,13 +233,13 @@ Step()
 			Eigen::VectorXd mt = mEnv->GetCharacter()->GetMuscleTorques();
 			mEnv->SetActivationLevels(GetActivationFromNN(mt));
 			for(int j=0;j<inference_per_sim;j++)
-				mEnv->Step();
+				mEnv->Step(mOnDevice);
 		}
 	}
 	else
 	{
 		for(int i=0;i<num;i++)
-			mEnv->Step();
+			mEnv->Step(mOnDevice);
 	}
 }
 
