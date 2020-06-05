@@ -5,6 +5,7 @@
 #include "BVH.h"
 #include "Muscle.h"
 #include <iostream>
+#include <deque>
 using namespace MASS;
 using namespace dart;
 using namespace dart::dynamics;
@@ -172,7 +173,27 @@ draw()
 		// DrawBVH(mEnv->GetCharacter()->GetBVH(), mEnv->GetTime());
 
 	//draw graph
+	DrawDeviceSignals();
 	SetFocusing();
+}
+
+void 
+Window::
+DrawDeviceSignals()
+{
+	std::deque<double> data = mEnv->GetDeviceSignals();
+
+	glPushMatrix();
+	glBegin(GL_LINE_STRIP);
+	glLineWidth(10.0);
+	double t = 0.0;
+	for(int i=0; i<data.size(); i++)
+	{
+		glVertex2f(t, data[i]);
+		t += 0.1;
+	}
+	glEnd();
+	glPopMatrix();
 }
 
 void

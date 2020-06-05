@@ -11,10 +11,8 @@ public:
 
 	void Step(int id);
 	void Steps(int num, bool onDevice);
-	void StepsDeviceOnly(int num);
 	void StepsAtOnce(bool onDevice);
-	void StepsAtOnceDeviceOnly();
-
+	
 	void Reset(bool RSI,int id);
 	void Resets(bool RSI);
 

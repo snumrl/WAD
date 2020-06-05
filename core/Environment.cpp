@@ -107,7 +107,8 @@ Initialize(const std::string& meta_file, bool load_obj)
 	character->SetPDParameters(kp,sqrt(2*kp));
 	this->SetCharacter(character);
 	this->SetGround(MASS::BuildFromFile(std::string(MASS_ROOT_DIR)+std::string("/data/ground.xml")));
-
+	this->SetNumSteps();
+	
 	this->Initialize();
 }
 
@@ -167,80 +168,11 @@ Step(bool onDevice)
 		mCharacter->Step();
 
 	if(mUseDevice && onDevice)
-		mCharacter->Step_Device();
+		mCharacter->Step_Device((double)mSimCount/(double)mNumSteps);
 
 	mWorld->step();
 
 	mSimCount++;
-}
-
-void
-Environment::
-StepDeviceOnly()
-{
-	Eigen::VectorXd pos_ = mCharacter->GetSkeleton()->getPositions();
-	Eigen::VectorXd vel_ = mCharacter->GetSkeleton()->getVelocities();
-
-	Eigen::VectorXd pos_d = mCharacter->mDevice->GetSkeleton()->getPositions();
-	Eigen::VectorXd vel_d = mCharacter->mDevice->GetSkeleton()->getVelocities();
-
-	if(mUseMuscle)
-		mCharacter->Step_Muscles(mSimCount, mRandomSampleIndex);
-	else
-		mCharacter->Step();
-
-	if(mUseDevice)
-		mCharacter->Step_Device(Eigen::VectorXd::Zero(12));
-
-	mWorld->step();
-
-	if(mUseDevice){
-		double r = mCharacter->GetReward_Character();
-		if(mSimCount < mSimulationHz/mControlHz)
-		{
-			r_only += r;
-			mCharacter->r_cur = r_only;
-		}
-
-		mCharacter->GetSkeleton()->setPositions(pos_);
-		mCharacter->GetSkeleton()->setVelocities(vel_);
-		mCharacter->GetSkeleton()->computeForwardKinematics(true, false, false);
-
-		mCharacter->mDevice->GetSkeleton()->setPositions(pos_d);
-		mCharacter->mDevice->GetSkeleton()->setVelocities(vel_d);
-		mCharacter->mDevice->GetSkeleton()->computeForwardKinematics(true, false, false);
-
-		if(!mUseMuscle){
-			this->StepBack();
-
-			mCharacter->Step();
-		}
-		else
-		{
-			// muscle step back not implemented
-		}
-
-
-		mCharacter->Step_Device();
-
-		mWorld->step();
-
-		double r_ = mCharacter->GetReward_Character();
-		if(mSimCount < mSimulationHz/mControlHz)
-		{
-			r_d += r_;
-			mCharacter->r_device = r_d;
-		}
-	}
-
-	mSimCount++;
-}
-
-void
-Environment::
-StepBack()
-{
-	mWorld->setTime(mWorld->getTime()-mWorld->getTimeStep());
 }
 
 bool
@@ -281,9 +213,7 @@ SetAction(const Eigen::VectorXd& a)
 	mCharacter->SetTargetPosAndVel(t, mControlHz);
 
 	mSimCount = 0;
-	r_only = 0.0;
-	mCharacter->r_cur = 0.0;
-	mRandomSampleIndex = rand()%(mSimulationHz/mControlHz);
+	mRandomSampleIndex = rand()%(mNumSteps);
 }
 
 void
@@ -298,9 +228,7 @@ SetAction_Device(const Eigen::VectorXd& a)
 	mCharacter->SetTargetPosAndVel(t, mControlHz);
 
 	mSimCount = 0;
-	r_d = 0.0;
-	mCharacter->r_device = 0.0;
-	mRandomSampleIndex = rand()%(mSimulationHz/mControlHz);
+	mRandomSampleIndex = rand()%(mNumSteps);
 }
 
 void
@@ -308,6 +236,13 @@ Environment::
 SetActivationLevels(const Eigen::VectorXd& a)
 {
 	mCharacter->SetActivationLevels(a);
+}
+
+void
+Environment::
+SetNumSteps()
+{
+	mNumSteps = mSimulationHz/mControlHz;
 }
 
 Eigen::VectorXd

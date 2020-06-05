@@ -38,6 +38,7 @@ private:
 	void DrawShadow(const Eigen::Vector3d& scale, const aiScene* mesh,double y);
 	void DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine3d& M,double y);
 	void DrawGround(double y);
+	void DrawDeviceSignals();
 	void Step();
 	void Reset();
 

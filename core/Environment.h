@@ -4,6 +4,7 @@
 #include "Character.h"
 #include "Muscle.h"
 #include <map>
+#include <deque>
 
 namespace MASS
 {
@@ -26,15 +27,12 @@ public:
 
 public:
 	void Step(bool onDevice);
-	void StepDeviceOnly();
-	void StepBack();
 	void Reset(bool RSI = true);
 	bool IsEndOfEpisode();
 	void SetAction(const Eigen::VectorXd& a);
 	void SetAction_Device(const Eigen::VectorXd& a);
 	void SetActivationLevels(const Eigen::VectorXd& a);
-	double GetReward();
-
+	void SetNumSteps();
 	std::map<std::string,double> GetRewardSep();
 
 	Eigen::VectorXd GetState();
@@ -48,18 +46,21 @@ public:
 	const dart::dynamics::SkeletonPtr& GetGround(){return mGround;}
 	Character* GetCharacter(){return mCharacter;}
 
+	double GetReward();
+	
 	int GetControlHz(){return mControlHz;}
 	int GetSimulationHz(){return mSimulationHz;}
-	int GetNumTotalRelatedDofs();
+	int GetNumSteps(){return mNumSteps;}
 
 	int GetNumState();
 	int GetNumState_Device();
 	int GetNumAction();
 	int GetNumAction_Device();
-	int GetNumSteps(){return mSimulationHz/mControlHz;}
+	int GetNumTotalRelatedDofs();
 
 	bool GetUseMuscle(){return mUseMuscle;}
 	bool GetUseDevice(){return mUseDevice;}
+	std::deque<double> GetDeviceSignals(){return mCharacter->GetDeviceSignals();}
 
 private:
 	dart::simulation::WorldPtr mWorld;
@@ -70,6 +71,7 @@ private:
 
 	int mControlHz;
 	int mSimulationHz;
+	int mNumSteps;
 
 	bool mUseMuscle;
 	bool mUseDevice;
@@ -77,8 +79,6 @@ private:
 	int mSimCount;
 	int mRandomSampleIndex;
 
-	double r_only = 0.0;
-	double r_d = 0.0;
 };
 };
 

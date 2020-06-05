@@ -154,18 +154,6 @@ Steps(int num, bool onDevice)
 
 void
 EnvManager::
-StepsDeviceOnly(int num)
-{
-#pragma omp parallel for
-	for (int id = 0;id<mNumEnvs;++id)
-	{
-		for(int j=0;j<num;j++)
-			mEnvs[id]->StepDeviceOnly();
-	}
-}
-
-void
-EnvManager::
 StepsAtOnce(bool onDevice)
 {
 	int num = this->GetNumSteps();
@@ -174,19 +162,6 @@ StepsAtOnce(bool onDevice)
 	{
 		for(int j=0;j<num;j++)
 			mEnvs[id]->Step(onDevice);
-	}
-}
-
-void
-EnvManager::
-StepsAtOnceDeviceOnly()
-{
-	int num = this->GetNumSteps();
-#pragma omp parallel for
-	for (int id = 0;id<mNumEnvs;++id)
-	{
-		for(int j=0;j<num;j++)
-			mEnvs[id]->StepDeviceOnly();
 	}
 }
 
@@ -346,8 +321,6 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("GetRewardSep",&EnvManager::GetRewardSep)
 		.def("Steps",&EnvManager::Steps)
 		.def("StepsAtOnce",&EnvManager::StepsAtOnce)
-		.def("StepsDeviceOnly",&EnvManager::StepsDeviceOnly)
-		.def("StepsAtOnceDeviceOnly",&EnvManager::StepsAtOnceDeviceOnly)
 		.def("Resets",&EnvManager::Resets)
 		.def("IsEndOfEpisodes",&EnvManager::IsEndOfEpisodes)
 		.def("GetStates",&EnvManager::GetStates)
