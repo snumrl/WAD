@@ -14,7 +14,7 @@ using namespace dart::gui;
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawBVH(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawBVH(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),mDrawDeviceForce(false)
 {
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
@@ -38,6 +38,12 @@ Window(Environment* env)
 	p::exec("import torchvision.transforms as T",mns);
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
+
+	// glutCreateSubWindow(0, 500,500,500,500);
+	
+
+	// mSubWindow = new dart::gui::GraphWindow();
+	// mSubWindow->initWindow(500, 500, "graph");	
 }
 
 Window::
@@ -169,11 +175,13 @@ draw()
 	DrawSkeleton(mEnv->GetCharacter()->GetSkeleton());
 	if(mEnv->GetUseDevice() && mEnv->GetCharacter()->mOnDevice)
 		DrawSkeleton(mEnv->GetCharacter()->GetDevice()->GetSkeleton());
+	if(mEnv->GetUseDevice() && mEnv->GetCharacter()->mOnDevice && mDrawDeviceForce)
+		DrawDeviceForce();
 	// if(mDrawBVH)
 		// DrawBVH(mEnv->GetCharacter()->GetBVH(), mEnv->GetTime());
 
 	//draw graph
-	DrawDeviceSignals();
+	// DrawDeviceSignals();
 	SetFocusing();
 }
 
@@ -181,9 +189,19 @@ void
 Window::
 DrawDeviceSignals()
 {
-	std::deque<double> data = mEnv->GetDeviceSignals();
+	glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0.0, 1.0, 0.0, 1.0);
 
-	glPushMatrix();
+	glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    std::deque<double> data_ = mEnv->GetDeviceSignals();
+	double* ptr = &data_[0];
+	Eigen::Map<Eigen::VectorXd> data(ptr, data_.size());
+	mSubWindow->setData(data);
+
+    glPushMatrix();
 	glBegin(GL_LINE_STRIP);
 	glLineWidth(10.0);
 	double t = 0.0;
@@ -194,6 +212,37 @@ DrawDeviceSignals()
 	}
 	glEnd();
 	glPopMatrix();
+
+
+
+	// double width = 1920;
+	// double height = 1080;
+	
+	// glClear(GL_DEPTH_BUFFER_BIT);
+ //    glMatrixMode(GL_PROJECTION);
+ //    glLoadIdentity();
+ //    gluOrtho2D(0.8, 1.0, 0.8, 1.0);
+
+ //    glMatrixMode(GL_MODELVIEW);
+ //    glLoadIdentity();
+    
+	
+
+ //    std::deque<double> data = mEnv->GetDeviceSignals();
+	
+	// glPushMatrix();
+	// glBegin(GL_LINE_STRIP);
+	// glLineWidth(10.0);
+	// double t = 0.0;
+	// for(int i=0; i<data.size(); i++)
+	// {
+	// 	glVertex2f(0.8 + t, 0.001 * data[i]);
+	// 	t += 0.01;
+	// }
+	// glEnd();
+	// glPopMatrix();
+
+	// glDisable(GL_SCISSOR_TEST);
 }
 
 void
@@ -212,6 +261,7 @@ keyboard(unsigned char _key, int _x, int _y)
 		if(mEnv->GetUseDevice())
 			mOnDevice = !mOnDevice;
 		break;
+	case 'w': mDrawDeviceForce = !mDrawDeviceForce;break;
 	case 27 : exit(0);break;
 	default:
 		Win3D::keyboard(_key,_x,_y);break;
@@ -224,7 +274,7 @@ displayTimer(int _val)
 {
 	if(mSimulating)
 		Step();
-	glutPostRedisplay();
+	glutPostRedisplay();	
 	glutTimerFunc(mDisplayTimeout, refreshTimer, _val);
 }
 
@@ -414,40 +464,6 @@ Eigen::Matrix3d R_z(double z)
 	return R;
 }
 
-// void
-// Window::
-// DrawBVH(BVH* bvh, double t)
-// {
-// 	BVHNode* root = bvh->GetRoot();
-// 	Eigen::VectorXd motion = mEnv->GetCharacter()->GetTargetPositions();
-// 	root->Set(motion);
-// 	DrawBVHRecursive(root, motion)
-// }
-
-// void
-// Window::
-// DrawBVHRecursive(BVHNode* node, Eigen::VectorXd& motion)
-// {
-// 	if(!mRI)
-// 		return;
-
-// 	Eigen::Matrix4d relativeTransform;
-// 	relativeTransform.linear() = node->Get();
-// 	relativeTransform.translation() = node->GetOffset();
-
-// 	mRI->pushMatrix();
-// 	mRI->transform(relativeTransform);
-
-// 	for(auto& c : root->GetChildren())
-// 	{
-
-// 	}
-
-// 	DrawShape(sf->getShape().get(),va->getRGBA());
-
-// 	mRI->popMatrix();
-// }
-
 void
 Window::
 DrawEntity(const Entity* entity)
@@ -468,6 +484,44 @@ DrawEntity(const Entity* entity)
 		return;
 	}
 }
+
+void
+Window::
+DrawDeviceForce()
+{
+	const SkeletonPtr& skel_device = mEnv->GetCharacter()->GetDevice()->GetSkeleton();
+	const BodyNode* rodLeft = skel_device->getBodyNode(4);
+	const BodyNode* rodRight = skel_device->getBodyNode(9);
+
+	Eigen::VectorXd device_force = mEnv->GetDeviceForce();
+	Eigen::Vector3d rodLeft_force = device_force.head(3);
+	Eigen::Vector3d rodRight_force = device_force.tail(3);
+
+	double rl_force = rodLeft_force.norm();
+	rodLeft_force /= rl_force;
+
+	double rr_force = rodRight_force.norm();
+	rodRight_force /= rr_force;
+
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+	Eigen::Vector4d color(0.9, 0.1, 0.1, 0.8);
+	mRI->setPenColor(color);
+
+	mRI->pushMatrix();
+	rodLeft_force = rodLeft->getRelativeTransform().rotation() * rodLeft_force;
+	dart::gui::drawArrow3D(rodLeft->getCOM(), rodLeft_force, rl_force*0.1, 0.02, 0.03);
+	mRI->popMatrix();
+
+	mRI->pushMatrix();
+	rodRight_force = rodRight->getRelativeTransform().rotation() * rodRight_force;
+	dart::gui::drawArrow3D(rodRight->getCOM(), rodRight_force, rr_force*0.1, 0.02, 0.03);
+	mRI->popMatrix();
+
+	glDisable(GL_COLOR_MATERIAL);
+
+}
+
 void
 Window::
 DrawBodyNode(const BodyNode* bn)

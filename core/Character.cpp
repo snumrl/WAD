@@ -335,6 +335,7 @@ Step_Device(double t)
 	mDevice->GetSkeleton()->setForces(mDesiredTorque_Device);
 
 	mDeviceSignals.push_back(mDesiredTorque_Device[6]);
+	mDeviceForce = mDesiredTorque_Device.segment(6,3);
 }
 
 void
@@ -542,6 +543,16 @@ double Pulse_Linear(double t)
 	return ratio;
 }
 
+double Pulse_Period(double t)
+{
+	double ratio = 1.0;
+	if(t <= 0.5)
+		ratio = 1.0;
+	else
+		ratio = 0.0;
+	return ratio;
+}
+
 Eigen::VectorXd
 Character::
 GetDesiredTorques_Device(double t)
@@ -556,7 +567,8 @@ GetDesiredTorques_Device(double t)
 			mAction_Device[i] = -offset;
 	}
 
-	double ratio = Pulse_Linear(t);
+	// double ratio = Pulse_Linear(t);
+	double ratio = Pulse_Period(t);
 
 	mDesiredTorque_Device.head<6>().setZero();
 	mDesiredTorque_Device.segment<6>(6) = ratio * mAction_Device;

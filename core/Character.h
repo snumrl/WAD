@@ -89,6 +89,7 @@ public:
 	int GetNumTotalRelatedDof(){return mNumTotalRelatedDof;}
 
 	std::deque<double> GetDeviceSignals(){return mDeviceSignals;}
+	Eigen::VectorXd GetDeviceForce(){return mDeviceForce;}
 
 	// void AddEndEffector(const std::string& body_name){mEndEffectors.push_back(mSkeleton->getBodyNode(body_name));}
 
@@ -99,6 +100,7 @@ public:
 	std::vector<Muscle*> mMuscles;
 	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
 	std::deque<double> mDeviceSignals;
+	Eigen::VectorXd mDeviceForce;
 
 	int mNumState;
 	int mNumActiveDof;

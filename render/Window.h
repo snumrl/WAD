@@ -10,6 +10,7 @@ namespace np = boost::python::numpy;
 
 namespace MASS
 {
+
 class Environment;
 class Muscle;
 class Window : public dart::gui::Win3D
@@ -23,6 +24,7 @@ public:
 	void draw() override;
 	void keyboard(unsigned char _key, int _x, int _y) override;
 	void displayTimer(int _val) override;
+	
 private:
 	void SetFocusing();
 	void SetViewMatrix();
@@ -38,6 +40,7 @@ private:
 	void DrawShadow(const Eigen::Vector3d& scale, const aiScene* mesh,double y);
 	void DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine3d& M,double y);
 	void DrawGround(double y);
+	void DrawDeviceForce();
 	void DrawDeviceSignals();
 	void Step();
 	void Reset();
@@ -54,11 +57,16 @@ private:
 	bool mDrawBVH;
 	bool mDrawOBJ;
 	bool mDrawShadow;
+	bool mDrawDeviceForce;
 	bool mNNLoaded;
 	bool mMuscleNNLoaded;
 	bool mDeviceNNLoaded;
 	bool mOnDevice;
 	Eigen::Affine3d mViewMatrix;
+
+	int renderMode = 0;
+
+	dart::gui::GraphWindow* mSubWindow;
 };
 };
 

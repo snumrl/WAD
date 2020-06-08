@@ -61,6 +61,7 @@ public:
 	bool GetUseMuscle(){return mUseMuscle;}
 	bool GetUseDevice(){return mUseDevice;}
 	std::deque<double> GetDeviceSignals(){return mCharacter->GetDeviceSignals();}
+	Eigen::VectorXd GetDeviceForce(){return mCharacter->GetDeviceForce();}
 
 private:
 	dart::simulation::WorldPtr mWorld;
