@@ -146,8 +146,6 @@ Initialize_Device(dart::simulation::WorldPtr& wPtr)
 	mUseDevice = true;
 	mDevice->Initialize();
 
-	mDesiredTorque_Device = Eigen::VectorXd::Zero(12);
-
 	mWeldJoint_Hip = std::make_shared<dart::constraint::WeldJointConstraint>(
         mSkeleton->getBodyNode(0), mDevice->GetSkeleton()->getBodyNode(0)
         );
@@ -165,8 +163,11 @@ Initialize_Device(dart::simulation::WorldPtr& wPtr)
 	wPtr->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
 	wPtr->addSkeleton(mDevice->GetSkeleton());
 
-	mDesiredTorque_Device = Eigen::VectorXd::Zero(12);
 	mTorqueMax_Device = 15.0;
+
+	mDesiredTorque_Device = Eigen::VectorXd::Zero(12);
+	mDeviceForce = Eigen::VectorXd::Zero(6);
+	mDeviceSignals.resize(160);
 }
 
 void
@@ -249,6 +250,7 @@ Reset_Device()
     mDevice->GetSkeleton()->computeForwardKinematics(true, false, false);
 
     mDeviceSignals.clear();
+    mDeviceSignals.resize(160);
 }
 
 void
@@ -268,17 +270,6 @@ Step()
 	}
 
 	mSkeleton->setForces(mDesiredTorque);
-
-	// int dofs = 0;
-	// int n = mSkeleton->getNumJoints();
-	// for(int i=0; i<n; i++)
-	// {
-	// 	std::cout << i << " : " << mSkeleton->getJoint(i)->getName() << " " << mSkeleton->getJoint(i)->getNumDofs()  << std::endl;
-	// 	std::cout << i << " : " << mSkeleton->getJoint(i)->getName() << " " << mSkeleton->getJoint(i)->getForceLowerLimit(0)  << std::endl;
-	// 	dofs += mSkeleton->getJoint(i)->getNumDofs();
-	// }
-
-	// std::cout << "dofs : " << dofs << std::endl;
 }
 
 void
@@ -332,11 +323,24 @@ Step_Device(double t)
 {
 	GetDesiredTorques_Device(t);
 
-	mDevice->GetSkeleton()->setForces(mDesiredTorque_Device);
+	Eigen::Vector3d device_L_vec = mDesiredTorque_Device.segment(6,3);
+	Eigen::Vector3d device_R_vec = mDesiredTorque_Device.segment(9,3);
+	
+	double device_L = mDesiredTorque_Device.segment(6,3).norm();
+	double device_R = mDesiredTorque_Device.segment(9,3).norm();
 
-	mDeviceSignals.push_back(mDesiredTorque_Device[6]);
-	mDeviceForce = mDesiredTorque_Device.segment(6,3);
+	mDeviceSignals.pop_back();
+	mDeviceSignals.push_front(device_L);
+
+	mDeviceSignals.pop_back();
+	mDeviceSignals.push_front(device_R);
+
+	if(mDesiredTorque_Device.segment(6,6).norm()!=0)
+		mDeviceForce = mDesiredTorque_Device.segment(6,6);
+	
+	mDevice->GetSkeleton()->setForces(mDesiredTorque_Device);
 }
+	
 
 void
 Character::
@@ -352,7 +356,6 @@ SetAction_Device(const Eigen::VectorXd& a)
 	mAction_Device = a;
 	for(int i=0; i<mAction_Device.size(); i++)
 		mAction_Device[i] *= mTorqueMax_Device;
-	mDeviceSignals.clear();
 }
 
 Eigen::VectorXd
@@ -376,6 +379,7 @@ GetState(double worldTime)
 
 	double t_phase = mBVH->GetMaxTime();
 	double phi = std::fmod(worldTime, t_phase)/t_phase;
+	mPhase = phi;
 
 	p *= 0.8;
 	v *= 0.2;
@@ -429,10 +433,6 @@ Character::
 GetReward()
 {
 	if(mUseDevice){
-		// r_character = this->GetReward_Character();
-		// return (w_character*r_character - r_cur)*10000.0;
-		// std::cout << "reward : " << 0.1*exp((r_device - r_cur)*100) << std::endl;
-		// return 0.1*exp((r_device - r_cur)*10);
 		r_character = this->GetReward_Character();
 		return r_character;
 	}
@@ -557,7 +557,7 @@ Eigen::VectorXd
 Character::
 GetDesiredTorques_Device(double t)
 {
-	double offset = 30.0;
+	double offset = 60.0;
 
 	for(int i=0; i<mAction_Device.size(); i++)
 	{
@@ -572,7 +572,7 @@ GetDesiredTorques_Device(double t)
 
 	mDesiredTorque_Device.head<6>().setZero();
 	mDesiredTorque_Device.segment<6>(6) = ratio * mAction_Device;
-
+	
 	return mDesiredTorque_Device;
 }
 

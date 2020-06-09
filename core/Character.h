@@ -91,6 +91,7 @@ public:
 	std::deque<double> GetDeviceSignals(){return mDeviceSignals;}
 	Eigen::VectorXd GetDeviceForce(){return mDeviceForce;}
 
+	double GetPhase(){return mPhase;}
 	// void AddEndEffector(const std::string& body_name){mEndEffectors.push_back(mSkeleton->getBodyNode(body_name));}
 
 public:
@@ -99,9 +100,7 @@ public:
 	Device* mDevice;
 	std::vector<Muscle*> mMuscles;
 	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
-	std::deque<double> mDeviceSignals;
-	Eigen::VectorXd mDeviceForce;
-
+	
 	int mNumState;
 	int mNumActiveDof;
 	int mRootJointDof;
@@ -117,6 +116,8 @@ public:
 	double r_q,r_v,r_ee,r_com,r_character,r_device;
 	double r_cur = 0.0;
 
+	double mPhase = 0.0;
+
 	Eigen::VectorXd mAction_;
 	Eigen::VectorXd mAction_Device;
 	Eigen::VectorXd mActivationLevels;
@@ -128,11 +129,10 @@ public:
 	Eigen::VectorXd mTargetVelocities;
 	Eigen::VectorXd mDesiredTorque;
 	Eigen::VectorXd mDesiredTorque_Device;
-	Eigen::VectorXd mStoredPositions;
-	Eigen::VectorXd mStoredVelocities;
-	Eigen::VectorXd mStoredPositions_Device;
-	Eigen::VectorXd mStoredVelocities_Device;
-
+	
+	Eigen::VectorXd mDeviceForce;
+	std::deque<double> mDeviceSignals;
+	
 	MuscleTuple mCurrentMuscleTuple;
 	std::vector<MuscleTuple> mMuscleTuples;
 

@@ -30,6 +30,12 @@ private:
 	void SetViewMatrix();
 	float GetGroundY();
 
+	void DrawCharacter();
+	void DrawTrajectory();
+	void DrawDevice();
+	void Footprint();
+	void DrawProgress();
+
 	void DrawEntity(const dart::dynamics::Entity* entity);
 	void DrawBodyNode(const dart::dynamics::BodyNode* bn);
 	void DrawSkeleton(const dart::dynamics::SkeletonPtr& skel);
@@ -58,15 +64,21 @@ private:
 	bool mDrawOBJ;
 	bool mDrawShadow;
 	bool mDrawDeviceForce;
+	bool mDrawTrajectory;
+	bool mDrawProgressBar;
 	bool mNNLoaded;
 	bool mMuscleNNLoaded;
 	bool mDeviceNNLoaded;
 	bool mOnDevice;
+
+	bool mTalusL = false;
+	bool mTalusR = false;
 	Eigen::Affine3d mViewMatrix;
 
-	int renderMode = 0;
+	std::vector<Eigen::Vector3d> mTrajectory;
+	std::vector<Eigen::Vector3d> mFootprint;
 
-	dart::gui::GraphWindow* mSubWindow;
+	
 };
 };
 
