@@ -366,7 +366,6 @@ Footprint()
 		mFootprint.push_back(talusL->getCOM());
 		mTalusL = true;
 	}
-
 }
 
 void
@@ -380,7 +379,6 @@ DrawDevice()
 			DrawDeviceForce();		
 	}
 
-	//draw graph
 	DrawDeviceSignals();
 }
 
@@ -477,85 +475,100 @@ DrawDeviceSignals()
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
 
-	// glPolygonMode(GL_FRONT, GL_LINE);
-	
+	// graph
 	Eigen::Vector4d white(1.0, 1.0, 1.0, 1.0);
 	mRI->setPenColor(white);
 	mRI->setLineWidth(2.0);
 
-	// glColor4d(0.0, 0.0, 0.0, 1.0);
+	double p_w = 0.27;
+	double p_h = 0.15;
+
+	double pl_x = 0.68;
+	double pl_y = 0.83;
+
+	double pr_x = 0.68;
+	double pr_y = 0.65;	
+
+	// graph device l
 	glBegin(GL_QUADS);
-	glVertex2f(0.65f, 0.8f);
-	glVertex2f(0.65f, 0.95f);
-	glVertex2f(0.95f, 0.95f);
-	glVertex2f(0.95f, 0.8f);
+	glVertex2f(pl_x      , pl_y);
+	glVertex2f(pl_x      , pl_y + p_h);
+	glVertex2f(pl_x + p_w, pl_y + p_h);
+	glVertex2f(pl_x + p_w, pl_y);
 	glEnd();
 
+	// graph device r
 	glBegin(GL_QUADS);
-	glVertex2f(0.65f, 0.65f);
-	glVertex2f(0.65f, 0.80f);
-	glVertex2f(0.95f, 0.80f);
-	glVertex2f(0.95f, 0.65f);
+	glVertex2f(pr_x      , pr_y);
+	glVertex2f(pr_x      , pr_y + p_h);
+	glVertex2f(pr_x + p_w, pr_y + p_h);
+	glVertex2f(pr_x + p_w, pr_y);
 	glEnd();
 
+	// graph base line
 	Eigen::Vector4d black(0.0, 0.0, 0.0, 1.0);
 	mRI->setPenColor(black);
 	mRI->setLineWidth(1.0);
 
+	// base line device l
 	glBegin(GL_LINE_STRIP);
-	glVertex2f(0.66f, 0.81f);
-	glVertex2f(0.94f, 0.81f);
+	glVertex2f(pl_x + 0.01             , pl_y + 0.01);
+	glVertex2f(pl_x + 0.01 + p_w - 0.02, pl_y + 0.01);
 	glEnd();
 
 	glBegin(GL_LINE_STRIP);
-	glVertex2f(0.66f, 0.81f);
-	glVertex2f(0.66f, 0.94f);
+	glVertex2f(pl_x + 0.01, pl_y + 0.01);
+	glVertex2f(pl_x + 0.01, pl_y + 0.01 + p_h - 0.02);
+	glEnd();
+
+	glRasterPos2f(pl_x + 0.5*p_w, pl_y - 0.01);
+  	std::string l_name = "Device L"; 
+	unsigned int l_length = l_name.length();
+  	for (unsigned int c = 0; c < l_length; c++)
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, l_name.at(c) );
+  
+  	// base line device r
+	glBegin(GL_LINE_STRIP);
+	glVertex2f(pr_x + 0.01             , pr_y + 0.01);
+	glVertex2f(pr_x + 0.01 + p_w - 0.02, pr_y + 0.01);
 	glEnd();
 
 	glBegin(GL_LINE_STRIP);
-	glVertex2f(0.66f, 0.66f);
-	glVertex2f(0.94f, 0.66f);
+	glVertex2f(pr_x + 0.01, pr_y + 0.01);
+	glVertex2f(pr_x + 0.01, pr_y + 0.01 + p_h - 0.02);
 	glEnd();
 
-	glBegin(GL_LINE_STRIP);
-	glVertex2f(0.66f, 0.66f);
-	glVertex2f(0.66f, 0.79f);
-	glEnd();
-
-    std::deque<double> data = mEnv->GetDeviceSignals();
-	
+	glRasterPos2f(pr_x + 0.5*p_w, pr_y - 0.01);
+  	std::string r_name = "Device R"; 
+	unsigned int r_length = r_name.length();
+  	for (unsigned int c = 0; c < r_length; c++)
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, r_name.at(c) );
+  
+   	// graph value line
 	Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
 	mRI->setPenColor(red);
 	mRI->setLineWidth(2.0);
+
+    std::deque<double> data = mEnv->GetDeviceSignals();
+	double offset_x = 0.003;
+	double offset_y = 0.002;
 		
 	glBegin(GL_LINE_STRIP);
-	double t1 = 0.0;
 	for(int i=0; i<data.size()/2; i++)
-	{
-		glVertex2f(0.66f + t1, 0.81f + 0.002*data.at(i*2));
-		t1 += 0.003;
-	}
+		glVertex2f(pl_x + offset_x*i + 0.01, pl_y + offset_y*data.at(i*2) + 0.01);
 	glEnd();
 
 	glBegin(GL_LINE_STRIP);
-	double t2 = 0.0;
 	for(int i=0; i<data.size()/2; i++)
-	{
-		glVertex2f(0.66f + t2, 0.66f + 0.002*data.at(i*2+1));
-		t2 += 0.003;
-		if(data.at(i*2+1) < 0)
-			std::cout << i*2+1 << " : " << data.at(i*2+1) << std::endl;
-	}
+		glVertex2f(pr_x + offset_x*i + 0.01, pr_y + offset_y*data.at(i*2+1) + 0.01);
 	glEnd();
 
 	glDisable(GL_COLOR_MATERIAL);
-
 	glPopMatrix();
-
+	
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(oldMode);
-
 }
 
 

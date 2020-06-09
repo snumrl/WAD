@@ -341,7 +341,6 @@ Step_Device(double t)
 	mDevice->GetSkeleton()->setForces(mDesiredTorque_Device);
 }
 	
-
 void
 Character::
 SetAction(const Eigen::VectorXd& a)
@@ -533,6 +532,12 @@ GetDesiredTorques()
 	return mDesiredTorque.tail(mDesiredTorque.rows()-mRootJointDof);
 }
 
+double Pulse_Constant(double t)
+{
+	double ratio = 1.0;
+	return ratio;
+}
+
 double Pulse_Linear(double t)
 {
 	double ratio = 1.0;
@@ -567,6 +572,7 @@ GetDesiredTorques_Device(double t)
 			mAction_Device[i] = -offset;
 	}
 
+	// double ratio = Pulse_Constant(t);
 	// double ratio = Pulse_Linear(t);
 	double ratio = Pulse_Period(t);
 
