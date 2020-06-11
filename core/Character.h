@@ -92,7 +92,7 @@ public:
 	Eigen::VectorXd GetDeviceForce(){return mDeviceForce;}
 
 	double GetPhase(){return mPhase;}
-	// void AddEndEffector(const std::string& body_name){mEndEffectors.push_back(mSkeleton->getBodyNode(body_name));}
+	
 
 public:
 	dart::dynamics::SkeletonPtr mSkeleton;
