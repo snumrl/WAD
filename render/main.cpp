@@ -4,6 +4,7 @@
 #include "Character.h"
 #include "BVH.h"
 #include "Muscle.h"
+#include "dart/gui/gui.hpp"
 namespace p = boost::python;
 namespace np = boost::python::numpy;
 int main(int argc,char** argv)
@@ -16,26 +17,7 @@ int main(int argc,char** argv)
 		return 0;
 	}
 	env->Initialize(std::string(argv[1]),true);
-	// if(argc==3)
-	// 	env->SetUseMuscle(true);
-	// else
-	// 	env->SetUseMuscle(false);
-	// env->SetControlHz(30);
-	// env->SetSimulationHz(600);
-
-	// MASS::Character* character = new MASS::Character();
-	// character->LoadSkeleton(std::string(MASS_ROOT_DIR)+std::string("/data/human.xml"),true);
-	// if(env->GetUseMuscle())
-	// 	character->LoadMuscles(std::string(MASS_ROOT_DIR)+std::string("/data/muscle.xml"));
-	// character->LoadBVH(std::string(MASS_ROOT_DIR)+std::string("/data/motion/walk.bvh"),true);
 	
-	// double kp = 300.0;
-	// character->SetPDParameters(kp,sqrt(2*kp));
-	// env->SetCharacter(character);
-	// env->SetGround(MASS::BuildFromFile(std::string(MASS_ROOT_DIR)+std::string("/data/ground.xml")));
-
-	// env->Initialize();
-
 	Py_Initialize();
 	np::initialize();
 	glutInit(&argc, argv);
@@ -66,5 +48,15 @@ int main(int argc,char** argv)
 	}
 	
 	window->initWindow(1920,1080,"gui");
+	
+	// MASS::Window* window2 = new MASS::Window(env, argv[2], argv[3]);
+	// window2->initWindow(200,200,"sub");
+	// glutCreateSubWindow(0, 500,500,500,500);
+	
+
+	// int subWindow = glutCreateSubWindow(0, 200,200,200,200);
+	
+
+
 	glutMainLoop();
 }

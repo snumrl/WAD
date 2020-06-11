@@ -10,6 +10,7 @@ namespace np = boost::python::numpy;
 
 namespace MASS
 {
+
 class Environment;
 class Muscle;
 class Window : public dart::gui::Win3D
@@ -23,10 +24,17 @@ public:
 	void draw() override;
 	void keyboard(unsigned char _key, int _x, int _y) override;
 	void displayTimer(int _val) override;
+	
 private:
 	void SetFocusing();
 	void SetViewMatrix();
 	float GetGroundY();
+
+	void DrawCharacter();
+	void DrawTrajectory();
+	void DrawDevice();
+	void Footprint();
+	void DrawProgress();
 
 	void DrawEntity(const dart::dynamics::Entity* entity);
 	void DrawBodyNode(const dart::dynamics::BodyNode* bn);
@@ -38,6 +46,8 @@ private:
 	void DrawShadow(const Eigen::Vector3d& scale, const aiScene* mesh,double y);
 	void DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine3d& M,double y);
 	void DrawGround(double y);
+	void DrawDeviceForce();
+	void DrawDeviceSignals();
 	void Step();
 	void Reset();
 
@@ -53,11 +63,22 @@ private:
 	bool mDrawBVH;
 	bool mDrawOBJ;
 	bool mDrawShadow;
+	bool mDrawDeviceForce;
+	bool mDrawTrajectory;
+	bool mDrawProgressBar;
 	bool mNNLoaded;
 	bool mMuscleNNLoaded;
 	bool mDeviceNNLoaded;
 	bool mOnDevice;
+
+	bool mTalusL = false;
+	bool mTalusR = false;
 	Eigen::Affine3d mViewMatrix;
+
+	std::vector<Eigen::Vector3d> mTrajectory;
+	std::vector<Eigen::Vector3d> mFootprint;
+
+	
 };
 };
 

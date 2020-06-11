@@ -1,6 +1,7 @@
 #ifndef __MASS_CHARACTER_H__
 #define __MASS_CHARACTER_H__
 #include "dart/dart.hpp"
+#include <deque>
 
 namespace MASS
 {
@@ -48,10 +49,9 @@ public:
 
 	void Step();
 	void Step_Muscles(int simCount, int randomSampleIndex);
-	void Step_Device();
+	void Step_Device(double t);
 	void Step_Device(const Eigen::VectorXd& a_);
-	void StepBack();
-
+	
 	void SetOnDevice(bool onDevice){mOnDevice = onDevice;}
 
 	void SetAction(const Eigen::VectorXd& a);
@@ -62,7 +62,7 @@ public:
 	void SetPDParameters(double kp, double kv);
 
 	Eigen::VectorXd GetDesiredTorques();
-	Eigen::VectorXd GetDesiredTorques_Device();
+	Eigen::VectorXd GetDesiredTorques_Device(double t);
 	Eigen::VectorXd GetMuscleTorques();
 
 	Eigen::VectorXd GetSPDForces(const Eigen::VectorXd& p_desired);
@@ -88,6 +88,10 @@ public:
 	int GetRootJointDof(){return mRootJointDof;}
 	int GetNumTotalRelatedDof(){return mNumTotalRelatedDof;}
 
+	std::deque<double> GetDeviceSignals(){return mDeviceSignals;}
+	Eigen::VectorXd GetDeviceForce(){return mDeviceForce;}
+
+	double GetPhase(){return mPhase;}
 	// void AddEndEffector(const std::string& body_name){mEndEffectors.push_back(mSkeleton->getBodyNode(body_name));}
 
 public:
@@ -96,7 +100,7 @@ public:
 	Device* mDevice;
 	std::vector<Muscle*> mMuscles;
 	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
-
+	
 	int mNumState;
 	int mNumActiveDof;
 	int mRootJointDof;
@@ -112,6 +116,8 @@ public:
 	double r_q,r_v,r_ee,r_com,r_character,r_device;
 	double r_cur = 0.0;
 
+	double mPhase = 0.0;
+
 	Eigen::VectorXd mAction_;
 	Eigen::VectorXd mAction_Device;
 	Eigen::VectorXd mActivationLevels;
@@ -123,11 +129,10 @@ public:
 	Eigen::VectorXd mTargetVelocities;
 	Eigen::VectorXd mDesiredTorque;
 	Eigen::VectorXd mDesiredTorque_Device;
-	Eigen::VectorXd mStoredPositions;
-	Eigen::VectorXd mStoredVelocities;
-	Eigen::VectorXd mStoredPositions_Device;
-	Eigen::VectorXd mStoredVelocities_Device;
-
+	
+	Eigen::VectorXd mDeviceForce;
+	std::deque<double> mDeviceSignals;
+	
 	MuscleTuple mCurrentMuscleTuple;
 	std::vector<MuscleTuple> mMuscleTuples;
 

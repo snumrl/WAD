@@ -5,15 +5,50 @@
 #include "BVH.h"
 #include "Muscle.h"
 #include <iostream>
+#include <deque>
 using namespace MASS;
 using namespace dart;
 using namespace dart::dynamics;
 using namespace dart::simulation;
 using namespace dart::gui;
 
+Eigen::Matrix3d
+R_x(double x)
+{
+	double cosa = cos(x*3.141592/180.0);
+	double sina = sin(x*3.141592/180.0);
+	Eigen::Matrix3d R;
+	R<<	1,0		,0	  ,
+		0,cosa	,-sina,
+		0,sina	,cosa ;
+	return R;
+}
+
+Eigen::Matrix3d R_y(double y)
+{
+	double cosa = cos(y*3.141592/180.0);
+	double sina = sin(y*3.141592/180.0);
+	Eigen::Matrix3d R;
+	R <<cosa ,0,sina,
+		0    ,1,   0,
+		-sina,0,cosa;
+	return R;
+}
+
+Eigen::Matrix3d R_z(double z)
+{
+	double cosa = cos(z*3.141592/180.0);
+	double sina = sin(z*3.141592/180.0);
+	Eigen::Matrix3d R;
+	R<<	cosa,-sina,0,
+		sina,cosa ,0,
+		0   ,0    ,1;
+	return R;
+}
+
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawBVH(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawBVH(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),mDrawDeviceForce(false),mDrawTrajectory(false),mDrawProgressBar(false)
 {
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
@@ -37,6 +72,12 @@ Window(Environment* env)
 	p::exec("import torchvision.transforms as T",mns);
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
+
+	// glutCreateSubWindow(0, 500,500,500,500);
+	
+
+	// mSubWindow = new dart::gui::GraphWindow();
+	// mSubWindow->initWindow(500, 500, "graph");	
 }
 
 Window::
@@ -133,49 +174,6 @@ Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_
 
 void
 Window::
-SetViewMatrix()
-{
-	GLfloat matrix[16];
-	glGetFloatv(GL_MODELVIEW_MATRIX, matrix);
-	Eigen::Matrix3d A;
-	Eigen::Vector3d b;
-	A<<matrix[0],matrix[4],matrix[8],
-	matrix[1],matrix[5],matrix[9],
-	matrix[2],matrix[6],matrix[10];
-	b<<matrix[12],matrix[13],matrix[14];
-	mViewMatrix.linear() = A;
-	mViewMatrix.translation() = b;
-}
-
-float
-Window::
-GetGroundY()
-{
-	auto ground = mEnv->GetGround();
-	float y = ground->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(ground->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
-
-	return y;
-}
-
-void
-Window::
-draw()
-{
-	SetViewMatrix();
-
-	DrawGround(GetGroundY());
-	DrawMuscles(mEnv->GetCharacter()->GetMuscles());
-	DrawSkeleton(mEnv->GetCharacter()->GetSkeleton());
-	if(mEnv->GetUseDevice() && mEnv->GetCharacter()->mOnDevice)
-		DrawSkeleton(mEnv->GetCharacter()->GetDevice()->GetSkeleton());
-	// if(mDrawBVH)
-		// DrawBVH(mEnv->GetCharacter()->GetBVH(), mEnv->GetTime());
-
-	SetFocusing();
-}
-
-void
-Window::
 keyboard(unsigned char _key, int _x, int _y)
 {
 	switch (_key)
@@ -190,6 +188,9 @@ keyboard(unsigned char _key, int _x, int _y)
 		if(mEnv->GetUseDevice())
 			mOnDevice = !mOnDevice;
 		break;
+	case 'w': mDrawDeviceForce = !mDrawDeviceForce;break;
+	case 't': mDrawTrajectory = !mDrawTrajectory;break;
+	case 'p': mDrawProgressBar = !mDrawProgressBar;break;
 	case 27 : exit(0);break;
 	default:
 		Win3D::keyboard(_key,_x,_y);break;
@@ -202,7 +203,7 @@ displayTimer(int _val)
 {
 	if(mSimulating)
 		Step();
-	glutPostRedisplay();
+	glutPostRedisplay();	
 	glutTimerFunc(mDisplayTimeout, refreshTimer, _val);
 }
 
@@ -247,6 +248,8 @@ void
 Window::
 Reset()
 {
+	mTrajectory.clear();
+	mFootprint.clear();
 	mEnv->Reset();
 }
 
@@ -263,168 +266,311 @@ SetFocusing()
 	}
 }
 
-np::ndarray toNumPyArray(const Eigen::VectorXd& vec)
+void
+Window::
+SetViewMatrix()
 {
-	int n = vec.rows();
-	p::tuple shape = p::make_tuple(n);
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray array = np::empty(shape,dtype);
+	GLfloat matrix[16];
+	glGetFloatv(GL_MODELVIEW_MATRIX, matrix);
+	Eigen::Matrix3d A;
+	Eigen::Vector3d b;
+	A<<matrix[0],matrix[4],matrix[8],
+	matrix[1],matrix[5],matrix[9],
+	matrix[2],matrix[6],matrix[10];
+	b<<matrix[12],matrix[13],matrix[14];
+	mViewMatrix.linear() = A;
+	mViewMatrix.translation() = b;
+}
 
-	float* dest = reinterpret_cast<float*>(array.get_data());
-	for(int i =0;i<n;i++)
+float
+Window::
+GetGroundY()
+{
+	auto ground = mEnv->GetGround();
+	float y = ground->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(ground->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
+
+	return y;
+}
+
+void
+Window::
+draw()
+{
+	SetViewMatrix();
+
+	DrawGround(GetGroundY());
+	DrawCharacter();
+	DrawDevice();
+	if(mDrawProgressBar)
+		DrawProgress();
+
+	// if(mDrawBVH)
+		// DrawBVH(mEnv->GetCharacter()->GetBVH(), mEnv->GetTime());
+
+	SetFocusing();
+}
+
+void 
+Window::
+DrawProgress()
+{
+	double phase = mEnv->GetPhase();
+
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+	
+	Eigen::Vector4d color(0.5, 0.2, 0.2, 0.5);
+	mRI->setPenColor(color);
+	mRI->setLineWidth(3.0);
+	
+	dart::gui::drawProgressBar(phase*100, 100);
+
+	glDisable(GL_COLOR_MATERIAL);
+}
+
+void
+Window::
+DrawCharacter()
+{
+	DrawSkeleton(mEnv->GetCharacter()->GetSkeleton());
+
+	mTrajectory.push_back(mEnv->GetCharacter()->GetSkeleton()->getRootBodyNode()->getCOM());
+	Footprint();
+	if(mDrawTrajectory)
+		DrawTrajectory();
+
+	if(mEnv->GetUseMuscle())
+		DrawMuscles(mEnv->GetCharacter()->GetMuscles());
+}
+
+void 
+Window::
+Footprint()
+{
+	const SkeletonPtr& skel = mEnv->GetCharacter()->GetSkeleton();	
+	const BodyNode* talusR = skel->getBodyNode(3);
+	const BodyNode* talusL = skel->getBodyNode(8);
+	
+	if(talusR->getCOM()[1] > 0.03)
+		mTalusR = false;
+	if(talusR->getCOM()[1] < 0.0255 && !mTalusR)
 	{
-		dest[i] = vec[i];
+		mFootprint.push_back(talusR->getCOM());
+		mTalusR = true;
 	}
 
-	return array;
-}
-
-Eigen::VectorXd
-Window::
-GetActionFromNN()
-{
-	p::object get_action;
-	get_action= nn_module.attr("get_action");
-	Eigen::VectorXd state = mEnv->GetState();
-	p::tuple shape = p::make_tuple(state.rows());
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray state_np = np::empty(shape,dtype);
-
-	float* dest = reinterpret_cast<float*>(state_np.get_data());
-	for(int i =0;i<state.rows();i++)
-		dest[i] = state[i];
-
-	p::object temp = get_action(state_np);
-	np::ndarray action_np = np::from_object(temp);
-
-	float* srcs = reinterpret_cast<float*>(action_np.get_data());
-
-	Eigen::VectorXd action(mEnv->GetNumAction());
-	for(int i=0;i<action.rows();i++)
-		action[i] = srcs[i];
-
-	return action;
-}
-
-Eigen::VectorXd
-Window::
-GetActionFromNN_Device()
-{
-	p::object get_action_device;
-	get_action_device = device_nn_module.attr("get_action");
-	Eigen::VectorXd state = mEnv->GetState_Device();
-	p::tuple shape = p::make_tuple(state.rows());
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray state_np = np::empty(shape,dtype);
-
-	float* dest = reinterpret_cast<float*>(state_np.get_data());
-	for(int i =0;i<state.rows();i++)
-		dest[i] = state[i];
-
-	p::object temp = get_action_device(state_np);
-	np::ndarray action_np = np::from_object(temp);
-
-	float* srcs = reinterpret_cast<float*>(action_np.get_data());
-
-	Eigen::VectorXd action(mEnv->GetNumAction_Device());
-	for(int i=0;i<action.rows();i++)
-		action[i] = srcs[i];
-
-	return action;
-}
-
-Eigen::VectorXd
-Window::
-GetActivationFromNN(const Eigen::VectorXd& mt)
-{
-	if(!mMuscleNNLoaded)
+	if(talusL->getCOM()[1] > 0.03)
+		mTalusL = false;
+	if(talusL->getCOM()[1] < 0.0255 && !mTalusL)
 	{
-		mEnv->GetCharacter()->GetDesiredTorques();
-		return Eigen::VectorXd::Zero(mEnv->GetCharacter()->GetMuscles().size());
+		mFootprint.push_back(talusL->getCOM());
+		mTalusL = true;
 	}
-	p::object get_activation = muscle_nn_module.attr("get_activation");
-	Eigen::VectorXd dt = mEnv->GetCharacter()->GetDesiredTorques();
-	np::ndarray mt_np = toNumPyArray(mt);
-	np::ndarray dt_np = toNumPyArray(dt);
-
-	p::object temp = get_activation(mt_np,dt_np);
-	np::ndarray activation_np = np::from_object(temp);
-
-	Eigen::VectorXd activation(mEnv->GetCharacter()->GetMuscles().size());
-	float* srcs = reinterpret_cast<float*>(activation_np.get_data());
-	for(int i=0;i<activation.rows();i++)
-		activation[i] = srcs[i];
-
-	return activation;
 }
 
-Eigen::Matrix3d
-R_x(double x)
+void
+Window::
+DrawDevice()
 {
-	double cosa = cos(x*3.141592/180.0);
-	double sina = sin(x*3.141592/180.0);
-	Eigen::Matrix3d R;
-	R<<	1,0		,0	  ,
-		0,cosa	,-sina,
-		0,sina	,cosa ;
-	return R;
+	if(mEnv->GetUseDevice() && mEnv->GetCharacter()->mOnDevice)
+	{
+		DrawSkeleton(mEnv->GetCharacter()->GetDevice()->GetSkeleton());
+		if(mDrawDeviceForce)
+			DrawDeviceForce();		
+	}
+
+	DrawDeviceSignals();
 }
 
-Eigen::Matrix3d R_y(double y)
+void
+Window::
+DrawTrajectory()
 {
-	double cosa = cos(y*3.141592/180.0);
-	double sina = sin(y*3.141592/180.0);
-	Eigen::Matrix3d R;
-	R <<cosa ,0,sina,
-		0    ,1,   0,
-		-sina,0,cosa;
-	return R;
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+	
+	Eigen::Vector4d color(0.5, 0.5, 0.5, 0.7);
+	mRI->setPenColor(color);
+	mRI->setLineWidth(8.0);
+	
+	glBegin(GL_LINE_STRIP);
+	for(int i=0; i<mTrajectory.size(); i++)
+	{
+		glVertex3f(mTrajectory[i][0], 0.0, mTrajectory[i][2]);
+	}
+	glEnd();
+
+	Eigen::Vector4d color1(0.5, 0.8, 0.5, 0.7);
+	mRI->setPenColor(color1);
+	for(int i=0; i<mFootprint.size(); i++)
+	{	
+		glPushMatrix();
+		glTranslatef(mFootprint[i][0], 0.0, mFootprint[i][2]);
+		glutSolidCube(0.05);
+		glPopMatrix();		
+	}
+	
+	glDisable(GL_COLOR_MATERIAL);
 }
 
-Eigen::Matrix3d R_z(double z)
+void
+Window::
+DrawDeviceForce()
 {
-	double cosa = cos(z*3.141592/180.0);
-	double sina = sin(z*3.141592/180.0);
-	Eigen::Matrix3d R;
-	R<<	cosa,-sina,0,
-		sina,cosa ,0,
-		0   ,0    ,1;
-	return R;
+	const SkeletonPtr& skel_device = mEnv->GetCharacter()->GetDevice()->GetSkeleton();
+	const BodyNode* rodLeft = skel_device->getBodyNode(4);
+	const BodyNode* rodRight = skel_device->getBodyNode(9);
+
+	Eigen::VectorXd device_force = mEnv->GetDeviceForce();
+	Eigen::Vector3d rodLeft_force = device_force.head(3);
+	Eigen::Vector3d rodRight_force = device_force.tail(3);
+
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+	
+	Eigen::Vector4d color(0.7, 0.1, 0.1, 0.7);
+	mRI->setPenColor(color);
+	
+	double rl_force = rodLeft_force.norm();
+	if(rl_force != 0)
+	{
+		rodLeft_force /= rl_force;
+		
+		mRI->pushMatrix();
+		rodLeft_force = rodLeft->getWorldTransform().rotation() * rodLeft_force;
+		dart::gui::drawArrow3D(rodLeft->getCOM(), rodLeft_force, rl_force*0.02, 0.03, 0.04);
+		mRI->popMatrix();
+	}
+
+	double rr_force = rodRight_force.norm();
+	if(rr_force != 0)
+	{
+		rodRight_force /= rr_force;
+
+		mRI->pushMatrix();
+		rodRight_force = rodRight->getWorldTransform().rotation() * rodRight_force;
+		dart::gui::drawArrow3D(rodRight->getCOM(), rodRight_force, rr_force*0.02, 0.03, 0.04);
+		mRI->popMatrix();
+	}
+	
+	glDisable(GL_COLOR_MATERIAL);
 }
 
-// void
-// Window::
-// DrawBVH(BVH* bvh, double t)
-// {
-// 	BVHNode* root = bvh->GetRoot();
-// 	Eigen::VectorXd motion = mEnv->GetCharacter()->GetTargetPositions();
-// 	root->Set(motion);
-// 	DrawBVHRecursive(root, motion)
-// }
+void 
+Window::
+DrawDeviceSignals()
+{
+	GLint oldMode;
+	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
+	glMatrixMode(GL_PROJECTION);
 
-// void
-// Window::
-// DrawBVHRecursive(BVHNode* node, Eigen::VectorXd& motion)
-// {
-// 	if(!mRI)
-// 		return;
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
 
-// 	Eigen::Matrix4d relativeTransform;
-// 	relativeTransform.linear() = node->Get();
-// 	relativeTransform.translation() = node->GetOffset();
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
 
-// 	mRI->pushMatrix();
-// 	mRI->transform(relativeTransform);
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
 
-// 	for(auto& c : root->GetChildren())
-// 	{
+	// graph
+	Eigen::Vector4d white(1.0, 1.0, 1.0, 1.0);
+	mRI->setPenColor(white);
+	mRI->setLineWidth(2.0);
 
-// 	}
+	double p_w = 0.27;
+	double p_h = 0.15;
 
-// 	DrawShape(sf->getShape().get(),va->getRGBA());
+	double pl_x = 0.68;
+	double pl_y = 0.83;
 
-// 	mRI->popMatrix();
-// }
+	double pr_x = 0.68;
+	double pr_y = 0.65;	
+
+	// graph device l
+	glBegin(GL_QUADS);
+	glVertex2f(pl_x      , pl_y);
+	glVertex2f(pl_x      , pl_y + p_h);
+	glVertex2f(pl_x + p_w, pl_y + p_h);
+	glVertex2f(pl_x + p_w, pl_y);
+	glEnd();
+
+	// graph device r
+	glBegin(GL_QUADS);
+	glVertex2f(pr_x      , pr_y);
+	glVertex2f(pr_x      , pr_y + p_h);
+	glVertex2f(pr_x + p_w, pr_y + p_h);
+	glVertex2f(pr_x + p_w, pr_y);
+	glEnd();
+
+	// graph base line
+	Eigen::Vector4d black(0.0, 0.0, 0.0, 1.0);
+	mRI->setPenColor(black);
+	mRI->setLineWidth(1.0);
+
+	// base line device l
+	glBegin(GL_LINE_STRIP);
+	glVertex2f(pl_x + 0.01             , pl_y + 0.01);
+	glVertex2f(pl_x + 0.01 + p_w - 0.02, pl_y + 0.01);
+	glEnd();
+
+	glBegin(GL_LINE_STRIP);
+	glVertex2f(pl_x + 0.01, pl_y + 0.01);
+	glVertex2f(pl_x + 0.01, pl_y + 0.01 + p_h - 0.02);
+	glEnd();
+
+	glRasterPos2f(pl_x + 0.5*p_w, pl_y - 0.01);
+  	std::string l_name = "Device L"; 
+	unsigned int l_length = l_name.length();
+  	for (unsigned int c = 0; c < l_length; c++)
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, l_name.at(c) );
+  
+  	// base line device r
+	glBegin(GL_LINE_STRIP);
+	glVertex2f(pr_x + 0.01             , pr_y + 0.01);
+	glVertex2f(pr_x + 0.01 + p_w - 0.02, pr_y + 0.01);
+	glEnd();
+
+	glBegin(GL_LINE_STRIP);
+	glVertex2f(pr_x + 0.01, pr_y + 0.01);
+	glVertex2f(pr_x + 0.01, pr_y + 0.01 + p_h - 0.02);
+	glEnd();
+
+	glRasterPos2f(pr_x + 0.5*p_w, pr_y - 0.01);
+  	std::string r_name = "Device R"; 
+	unsigned int r_length = r_name.length();
+  	for (unsigned int c = 0; c < r_length; c++)
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, r_name.at(c) );
+  
+   	// graph value line
+	Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
+	mRI->setPenColor(red);
+	mRI->setLineWidth(2.0);
+
+    std::deque<double> data = mEnv->GetDeviceSignals();
+	double offset_x = 0.003;
+	double offset_y = 0.002;
+		
+	glBegin(GL_LINE_STRIP);
+	for(int i=0; i<data.size()/2; i++)
+		glVertex2f(pl_x + offset_x*i + 0.01, pl_y + offset_y*data.at(i*2) + 0.01);
+	glEnd();
+
+	glBegin(GL_LINE_STRIP);
+	for(int i=0; i<data.size()/2; i++)
+		glVertex2f(pr_x + offset_x*i + 0.01, pr_y + offset_y*data.at(i*2+1) + 0.01);
+	glEnd();
+
+	glDisable(GL_COLOR_MATERIAL);
+	glPopMatrix();
+	
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(oldMode);
+}
+
 
 void
 Window::
@@ -446,6 +592,7 @@ DrawEntity(const Entity* entity)
 		return;
 	}
 }
+
 void
 Window::
 DrawBodyNode(const BodyNode* bn)
@@ -717,4 +864,100 @@ DrawGround(double y)
 	}
 	glEnd();
 	glEnable(GL_LIGHTING);
+}
+
+
+np::ndarray toNumPyArray(const Eigen::VectorXd& vec)
+{
+	int n = vec.rows();
+	p::tuple shape = p::make_tuple(n);
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::ndarray array = np::empty(shape,dtype);
+
+	float* dest = reinterpret_cast<float*>(array.get_data());
+	for(int i =0;i<n;i++)
+	{
+		dest[i] = vec[i];
+	}
+
+	return array;
+}
+
+Eigen::VectorXd
+Window::
+GetActionFromNN()
+{
+	p::object get_action;
+	get_action= nn_module.attr("get_action");
+	Eigen::VectorXd state = mEnv->GetState();
+	p::tuple shape = p::make_tuple(state.rows());
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::ndarray state_np = np::empty(shape,dtype);
+
+	float* dest = reinterpret_cast<float*>(state_np.get_data());
+	for(int i =0;i<state.rows();i++)
+		dest[i] = state[i];
+
+	p::object temp = get_action(state_np);
+	np::ndarray action_np = np::from_object(temp);
+
+	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+
+	Eigen::VectorXd action(mEnv->GetNumAction());
+	for(int i=0;i<action.rows();i++)
+		action[i] = srcs[i];
+
+	return action;
+}
+
+Eigen::VectorXd
+Window::
+GetActionFromNN_Device()
+{
+	p::object get_action_device;
+	get_action_device = device_nn_module.attr("get_action");
+	Eigen::VectorXd state = mEnv->GetState_Device();
+	p::tuple shape = p::make_tuple(state.rows());
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::ndarray state_np = np::empty(shape,dtype);
+
+	float* dest = reinterpret_cast<float*>(state_np.get_data());
+	for(int i =0;i<state.rows();i++)
+		dest[i] = state[i];
+
+	p::object temp = get_action_device(state_np);
+	np::ndarray action_np = np::from_object(temp);
+
+	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+
+	Eigen::VectorXd action(mEnv->GetNumAction_Device());
+	for(int i=0;i<action.rows();i++)
+		action[i] = srcs[i];
+
+	return action;
+}
+
+Eigen::VectorXd
+Window::
+GetActivationFromNN(const Eigen::VectorXd& mt)
+{
+	if(!mMuscleNNLoaded)
+	{
+		mEnv->GetCharacter()->GetDesiredTorques();
+		return Eigen::VectorXd::Zero(mEnv->GetCharacter()->GetMuscles().size());
+	}
+	p::object get_activation = muscle_nn_module.attr("get_activation");
+	Eigen::VectorXd dt = mEnv->GetCharacter()->GetDesiredTorques();
+	np::ndarray mt_np = toNumPyArray(mt);
+	np::ndarray dt_np = toNumPyArray(dt);
+
+	p::object temp = get_activation(mt_np,dt_np);
+	np::ndarray activation_np = np::from_object(temp);
+
+	Eigen::VectorXd activation(mEnv->GetCharacter()->GetMuscles().size());
+	float* srcs = reinterpret_cast<float*>(activation_np.get_data());
+	for(int i=0;i<activation.rows();i++)
+		activation[i] = srcs[i];
+
+	return activation;
 }
