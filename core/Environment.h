@@ -60,7 +60,7 @@ public:
 
 	bool GetUseMuscle(){return mUseMuscle;}
 	bool GetUseDevice(){return mUseDevice;}
-	std::deque<double> GetDeviceSignals(){return mCharacter->GetDeviceSignals();}
+	std::deque<double> GetDeviceSignals(int idx);
 	Eigen::VectorXd GetDeviceForce(){return mCharacter->GetDeviceForce();}
 	double GetPhase(){return mCharacter->GetPhase();}
 private:

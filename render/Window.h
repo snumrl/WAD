@@ -21,21 +21,28 @@ public:
 	Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_path);
 	Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_path,const std::string& device_nn_path);
 
+	void LoadMuscleNN(const std::string& muscle_nn_path);
+	void LoadDeviceNN(const std::string& device_nn_path);
+
 	void draw() override;
 	void keyboard(unsigned char _key, int _x, int _y) override;
 	void displayTimer(int _val) override;
 	
-private:
+	void Step();
+	void Reset();
+
 	void SetFocusing();
 	void SetViewMatrix();
-	float GetGroundY();
+	void SetTrajectory();
 
+	void DrawGround();
 	void DrawCharacter();
-	void DrawTrajectory();
 	void DrawDevice();
-	void Footprint();
-	void DrawProgress();
-
+	void DrawDeviceForce();
+	void DrawDeviceSignals();
+	void DrawTrajectory();
+	void DrawProgressBar();
+	
 	void DrawEntity(const dart::dynamics::Entity* entity);
 	void DrawBodyNode(const dart::dynamics::BodyNode* bn);
 	void DrawSkeleton(const dart::dynamics::SkeletonPtr& skel);
@@ -45,15 +52,17 @@ private:
 	void DrawMuscles(const std::vector<Muscle*>& muscles);
 	void DrawShadow(const Eigen::Vector3d& scale, const aiScene* mesh,double y);
 	void DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine3d& M,double y);
-	void DrawGround(double y);
-	void DrawDeviceForce();
-	void DrawDeviceSignals();
-	void Step();
-	void Reset();
-
+	
+	void DrawQuads(double x, double y, double w, double h, Eigen::Vector4d color);
+	void DrawString(double x, double y, std::string str);
+	void DrawLine(double p1_x, double p1_y, double p2_x, double p2_y, Eigen::Vector4d color, double line_width);
+	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::deque<double>& data);
+	
 	Eigen::VectorXd GetActionFromNN();
 	Eigen::VectorXd GetActionFromNN_Device();
 	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt);
+
+private:
 
 	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module;
 
@@ -73,12 +82,10 @@ private:
 
 	bool mTalusL = false;
 	bool mTalusR = false;
+	
 	Eigen::Affine3d mViewMatrix;
-
 	std::vector<Eigen::Vector3d> mTrajectory;
 	std::vector<Eigen::Vector3d> mFootprint;
-
-	
 };
 };
 

@@ -49,14 +49,5 @@ int main(int argc,char** argv)
 	
 	window->initWindow(1920,1080,"gui");
 	
-	// MASS::Window* window2 = new MASS::Window(env, argv[2], argv[3]);
-	// window2->initWindow(200,200,"sub");
-	// glutCreateSubWindow(0, 500,500,500,500);
-	
-
-	// int subWindow = glutCreateSubWindow(0, 200,200,200,200);
-	
-
-
 	glutMainLoop();
 }

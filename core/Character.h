@@ -88,7 +88,7 @@ public:
 	int GetRootJointDof(){return mRootJointDof;}
 	int GetNumTotalRelatedDof(){return mNumTotalRelatedDof;}
 
-	std::deque<double> GetDeviceSignals(){return mDeviceSignals;}
+	std::deque<double> GetDeviceSignals(int idx);
 	Eigen::VectorXd GetDeviceForce(){return mDeviceForce;}
 
 	double GetPhase(){return mPhase;}
@@ -131,7 +131,8 @@ public:
 	Eigen::VectorXd mDesiredTorque_Device;
 	
 	Eigen::VectorXd mDeviceForce;
-	std::deque<double> mDeviceSignals;
+	std::deque<double> mDeviceSignals_L;
+	std::deque<double> mDeviceSignals_R;
 	
 	MuscleTuple mCurrentMuscleTuple;
 	std::vector<MuscleTuple> mMuscleTuples;

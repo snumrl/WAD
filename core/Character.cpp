@@ -167,7 +167,8 @@ Initialize_Device(dart::simulation::WorldPtr& wPtr)
 
 	mDesiredTorque_Device = Eigen::VectorXd::Zero(12);
 	mDeviceForce = Eigen::VectorXd::Zero(6);
-	mDeviceSignals.resize(160);
+	mDeviceSignals_L.resize(80);
+	mDeviceSignals_R.resize(80);
 }
 
 void
@@ -249,8 +250,10 @@ Reset_Device()
     mDevice->GetSkeleton()->setVelocities(v);
     mDevice->GetSkeleton()->computeForwardKinematics(true, false, false);
 
-    mDeviceSignals.clear();
-    mDeviceSignals.resize(160);
+    mDeviceSignals_L.clear();
+    mDeviceSignals_R.clear();
+    mDeviceSignals_L.resize(80);
+    mDeviceSignals_R.resize(80);
 }
 
 void
@@ -329,11 +332,11 @@ Step_Device(double t)
 	double device_L = mDesiredTorque_Device.segment(6,3).norm();
 	double device_R = mDesiredTorque_Device.segment(9,3).norm();
 
-	mDeviceSignals.pop_back();
-	mDeviceSignals.push_front(device_L);
+	mDeviceSignals_L.pop_back();
+	mDeviceSignals_L.push_front(device_L);
 
-	mDeviceSignals.pop_back();
-	mDeviceSignals.push_front(device_R);
+	mDeviceSignals_R.pop_back();
+	mDeviceSignals_R.push_front(device_R);
 
 	if(mDesiredTorque_Device.segment(6,6).norm()!=0)
 		mDeviceForce = mDesiredTorque_Device.segment(6,6);
@@ -691,4 +694,14 @@ SetTargetPosAndVel(double t, int controlHz)
 	std::pair<Eigen::VectorXd,Eigen::VectorXd> pv = this->GetTargetPosAndVel(t, 1.0/controlHz);
 	mTargetPositions = pv.first;
 	mTargetVelocities = pv.second;
+}
+
+std::deque<double> 
+Character::
+GetDeviceSignals(int idx)
+{
+	if(idx==0)
+		return mDeviceSignals_L;
+	else if(idx==1)
+		return mDeviceSignals_R;
 }
