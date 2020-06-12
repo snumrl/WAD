@@ -443,6 +443,7 @@ DrawDeviceSignals()
 	Eigen::Vector4d white(1.0, 1.0, 1.0, 1.0);
 	Eigen::Vector4d black(0.0, 0.0, 0.0, 1.0);
 	Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
+	Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
 
 	double offset_x = 0.003;
 	double offset_y = 0.002;
@@ -463,7 +464,9 @@ DrawDeviceSignals()
 	DrawString(pr_x+0.5*p_w, pr_y-0.01, "Device R");
 
 	std::deque<double> data_R = mEnv->GetDeviceSignals(1);
-    DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R);
+	std::deque<double> Femur_R = mEnv->GetDeviceSignals(2);    
+    // DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R);
+    DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R, blue, 2.0, Femur_R);
 
 	glDisable(GL_COLOR_MATERIAL);
 	glPopMatrix();
@@ -933,4 +936,35 @@ DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vecto
 	for(int i=0; i<data.size(); i++)
 		glVertex2f(x + offset_x*i, y + offset_y*data.at(i));
 	glEnd();
+}
+
+void
+Window::
+DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::deque<double>& data, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1)
+{
+	mRI->setPenColor(color);
+	mRI->setLineWidth(line_width);
+
+	glBegin(GL_LINE_STRIP);
+	for(int i=0; i<data.size(); i++)
+		glVertex2f(x + offset_x*i, y + offset_y*data.at(i));
+	glEnd();
+	
+	mRI->setPenColor(color1);
+	mRI->setLineWidth(line_width1);
+
+	glBegin(GL_LINE_STRIP);
+	for(int i=0; i<data1.size(); i++)
+		glVertex2f(x + offset_x*i, y + offset_y*data1.at(i));
+	glEnd();
+
+	Eigen::Vector4d blend((color[0]+color1[0])/2.0, (color[1]+color1[1])/2.0, (color[2]+color1[2])/2.0, (color[3]+color1[3])/2.0);
+
+	mRI->setPenColor(blend);
+	
+	glBegin(GL_LINE_STRIP);
+	for(int i=0; i<data1.size(); i++)
+		glVertex2f(x + offset_x*i, y + offset_y*(data.at(i)+data1.at(i)));
+	glEnd();
+
 }

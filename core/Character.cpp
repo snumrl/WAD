@@ -122,6 +122,7 @@ Initialize()
 
 	mNumActiveDof = this->GetSkeleton()->getNumDofs()-mRootJointDof;
 	mNumState = this->GetState(0.0).rows();
+	mFemurForce_R.resize(80);
 }
 
 void
@@ -209,6 +210,9 @@ Reset(double worldTime, int controlHz)
 	mSkeleton->setVelocities(mTargetVelocities);
 	mSkeleton->computeForwardKinematics(true,false,false);
 
+	mFemurForce_R.clear();
+	mFemurForce_R.resize(80);
+
 	if(mUseMuscle)
 		Reset_Muscles();
 
@@ -272,6 +276,13 @@ Step()
 			mDesiredTorque[i] = -offset;
 	}
 
+	Eigen::Vector3d Femur_R_vec = mDesiredTorque.segment(6,3);
+		
+	double Femur_R = Femur_R_vec.norm();
+
+	mFemurForce_R.pop_back();
+	mFemurForce_R.push_front(Femur_R);
+	
 	mSkeleton->setForces(mDesiredTorque);
 }
 
@@ -356,7 +367,7 @@ Character::
 SetAction_Device(const Eigen::VectorXd& a)
 {
 	mAction_Device = a;
-	for(int i=0; i<mAction_Device.size(); i++)
+	for(int i=0; i<mAction_Device.size()-2; i++)
 		mAction_Device[i] *= mTorqueMax_Device;
 }
 
@@ -561,13 +572,23 @@ double Pulse_Period(double t)
 	return ratio;
 }
 
+double Pulse_Period(double t, double offset)
+{
+	double ratio = 1.0;
+	if(t <= offset)
+		ratio = 1.0;
+	else
+		ratio = 0.0;
+	return ratio;
+}
+
 Eigen::VectorXd
 Character::
 GetDesiredTorques_Device(double t)
 {
 	double offset = 60.0;
 
-	for(int i=0; i<mAction_Device.size(); i++)
+	for(int i=0; i<mAction_Device.size()-2; i++)
 	{
 		if(mAction_Device[i] > offset)
 			mAction_Device[i] = offset;
@@ -575,12 +596,30 @@ GetDesiredTorques_Device(double t)
 			mAction_Device[i] = -offset;
 	}
 
+	double offset_L = mAction_Device[6];
+	if(offset_L<-2.0)
+		offset_L = -2.0;
+	if(offset_L>2.0)
+		offset_L = 2.0;
+
+	offset_L = 0.5 + offset_L/4.0;
+
+	double offset_R = mAction_Device[7];
+	if(offset_R<-2.0)
+		offset_R = -2.0;
+	if(offset_R>2.0)
+		offset_R = 2.0;
+
+	offset_R = 0.5 + offset_R/4.0;
+
 	// double ratio = Pulse_Constant(t);
 	// double ratio = Pulse_Linear(t);
-	double ratio = Pulse_Period(t);
+	double ratio_L = Pulse_Period(t, offset_L);
+	double ratio_R = Pulse_Period(t, offset_R);
 
 	mDesiredTorque_Device.head<6>().setZero();
-	mDesiredTorque_Device.segment<6>(6) = ratio * mAction_Device;
+	mDesiredTorque_Device.segment<3>(6) = ratio_L * mAction_Device.head<3>();
+	mDesiredTorque_Device.segment<3>(9) = ratio_R * mAction_Device.segment<3>(3);
 	
 	return mDesiredTorque_Device;
 }
@@ -704,4 +743,6 @@ GetDeviceSignals(int idx)
 		return mDeviceSignals_L;
 	else if(idx==1)
 		return mDeviceSignals_R;
+	else if(idx==2)
+		return mFemurForce_R;
 }

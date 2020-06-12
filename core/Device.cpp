@@ -38,7 +38,7 @@ Initialize()
 
     mTorqueMax_Device = 100.;
 
-    mNumAction = 6;
+    mNumAction = 8;
     mNumState = this->GetState(0.0, 1.0).rows();
     std::cout <<"Device dof : " << mNumState << std::endl;
 }

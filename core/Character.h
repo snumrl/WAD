@@ -133,6 +133,7 @@ public:
 	Eigen::VectorXd mDeviceForce;
 	std::deque<double> mDeviceSignals_L;
 	std::deque<double> mDeviceSignals_R;
+	std::deque<double> mFemurForce_R;
 	
 	MuscleTuple mCurrentMuscleTuple;
 	std::vector<MuscleTuple> mMuscleTuples;

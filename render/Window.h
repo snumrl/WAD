@@ -57,7 +57,8 @@ public:
 	void DrawString(double x, double y, std::string str);
 	void DrawLine(double p1_x, double p1_y, double p2_x, double p2_y, Eigen::Vector4d color, double line_width);
 	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::deque<double>& data);
-	
+	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::deque<double>& data, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1);
+
 	Eigen::VectorXd GetActionFromNN();
 	Eigen::VectorXd GetActionFromNN_Device();
 	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt);
