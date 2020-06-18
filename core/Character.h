@@ -22,9 +22,10 @@ class Character
 {
 public:
 	Character();
+	~Character();
 
-	void LoadSkeleton(const std::string& path,bool create_obj = false);
-	void LoadBVH(const std::string& path,bool cyclic=true);
+	void LoadSkeleton(const std::string& path, bool create_obj = false);
+	void LoadBVH(const std::string& path, bool cyclic=true);
 	void LoadMuscles(const std::string& path);
 	void LoadDevice(const std::string& path);
 
@@ -32,12 +33,12 @@ public:
 	void Initialize_Muscles();
 	void Initialize_Device(dart::simulation::WorldPtr& wPtr);
 
-	void On_Device(dart::simulation::WorldPtr& wPtr);
-	void Off_Device(dart::simulation::WorldPtr& wPtr);
-
 	void Reset(double worldTime, int controlHz);
 	void Reset_Muscles();
 	void Reset_Device();
+
+	void On_Device(dart::simulation::WorldPtr& wPtr);
+	void Off_Device(dart::simulation::WorldPtr& wPtr);
 
 	Eigen::VectorXd GetState(double worldTime);
 	Eigen::VectorXd GetState_Device(double worldTime);
@@ -45,26 +46,26 @@ public:
 	double GetReward();
 	double GetReward_Character();
 	double GetReward_Device();
-	std::map<std::string,double> GetRewardSep();
+	std::map<std::string,double> GetRewardSep(); // not
 
 	void Step();
 	void Step_Muscles(int simCount, int randomSampleIndex);
 	void Step_Device(double t);
 	void Step_Device(const Eigen::VectorXd& a_);
-	
-	void SetOnDevice(bool onDevice){mOnDevice = onDevice;}
 
 	void SetAction(const Eigen::VectorXd& a);
 	void SetAction_Device(const Eigen::VectorXd& a);
 
+	void SetOnDevice(bool onDevice){mOnDevice = onDevice;}
+	bool GetOnDevice(){return mOnDevice;}
+
 	void SetRewardParameters(double w_q,double w_v,double w_ee,double w_com);
-	void SetRewardParameters_Device();
+	void SetRewardParameters_Device(); // not
 	void SetPDParameters(double kp, double kv);
 
 	Eigen::VectorXd GetDesiredTorques();
 	Eigen::VectorXd GetDesiredTorques_Device(double t);
 	Eigen::VectorXd GetMuscleTorques();
-
 	Eigen::VectorXd GetSPDForces(const Eigen::VectorXd& p_desired);
 
 	void SetTargetPosAndVel(double t, int controlHz);
@@ -80,27 +81,26 @@ public:
 	const dart::dynamics::SkeletonPtr& GetSkeleton(){return mSkeleton;}
 	const std::vector<Muscle*>& GetMuscles() {return mMuscles;}
 	const std::vector<dart::dynamics::BodyNode*>& GetEndEffectors(){return mEndEffectors;}
-	Device* GetDevice(){return mDevice;}
-	BVH* GetBVH(){return mBVH;}
 
 	int GetNumState(){return mNumState;}
 	int GetNumActiveDof(){return mNumActiveDof;}
 	int GetRootJointDof(){return mRootJointDof;}
 	int GetNumTotalRelatedDof(){return mNumTotalRelatedDof;}
 
-	std::deque<double> GetDeviceSignals(int idx);
+	Device* GetDevice(){return mDevice;}
 	Eigen::VectorXd GetDeviceForce(){return mDeviceForce;}
+	std::deque<double> GetDeviceSignals(int idx);
 
+	BVH* GetBVH(){return mBVH;}
 	double GetPhase(){return mPhase;}
-	
 
-public:
+private:
 	dart::dynamics::SkeletonPtr mSkeleton;
+	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
+	std::vector<Muscle*> mMuscles;
 	BVH* mBVH;
 	Device* mDevice;
-	std::vector<Muscle*> mMuscles;
-	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
-	
+
 	int mNumState;
 	int mNumActiveDof;
 	int mRootJointDof;
@@ -110,11 +110,8 @@ public:
 	bool mUseMuscle;
 	bool mOnDevice;
 
-	double mTorqueMax_Device;
-
 	double w_q,w_v,w_ee,w_com,w_character,w_device;
 	double r_q,r_v,r_ee,r_com,r_character,r_device;
-	double r_cur = 0.0;
 
 	double mPhase = 0.0;
 
@@ -129,11 +126,11 @@ public:
 	Eigen::VectorXd mTargetVelocities;
 	Eigen::VectorXd mDesiredTorque;
 	Eigen::VectorXd mDesiredTorque_Device;
-	
+
 	Eigen::VectorXd mDeviceForce;
 	std::deque<double> mDeviceSignals_L;
 	std::deque<double> mDeviceSignals_R;
-	
+
 	MuscleTuple mCurrentMuscleTuple;
 	std::vector<MuscleTuple> mMuscleTuples;
 

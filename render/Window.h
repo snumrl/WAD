@@ -4,6 +4,11 @@
 #include "dart/gui/gui.hpp"
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
+#include "Environment.h"
+#include "Character.h"
+#include "Device.h"
+#include "BVH.h"
+#include "Muscle.h"
 
 namespace p = boost::python;
 namespace np = boost::python::numpy;
@@ -27,7 +32,7 @@ public:
 	void draw() override;
 	void keyboard(unsigned char _key, int _x, int _y) override;
 	void displayTimer(int _val) override;
-	
+
 	void Step();
 	void Reset();
 
@@ -42,7 +47,7 @@ public:
 	void DrawDeviceSignals();
 	void DrawTrajectory();
 	void DrawProgressBar();
-	
+
 	void DrawEntity(const dart::dynamics::Entity* entity);
 	void DrawBodyNode(const dart::dynamics::BodyNode* bn);
 	void DrawSkeleton(const dart::dynamics::SkeletonPtr& skel);
@@ -52,21 +57,26 @@ public:
 	void DrawMuscles(const std::vector<Muscle*>& muscles);
 	void DrawShadow(const Eigen::Vector3d& scale, const aiScene* mesh,double y);
 	void DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine3d& M,double y);
-	
+
 	void DrawQuads(double x, double y, double w, double h, Eigen::Vector4d color);
 	void DrawString(double x, double y, std::string str);
 	void DrawLine(double p1_x, double p1_y, double p2_x, double p2_y, Eigen::Vector4d color, double line_width);
 	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::deque<double>& data);
-	
+
 	Eigen::VectorXd GetActionFromNN();
 	Eigen::VectorXd GetActionFromNN_Device();
 	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt);
+
+	float* tmp;
+	float* tmp2;
 
 private:
 
 	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module;
 
 	Environment* mEnv;
+	Character* mCharacter;
+	Device* mDevice;
 	bool mFocus;
 	bool mSimulating;
 	bool mDrawBVH;
@@ -82,7 +92,7 @@ private:
 
 	bool mTalusL = false;
 	bool mTalusR = false;
-	
+
 	Eigen::Affine3d mViewMatrix;
 	std::vector<Eigen::Vector3d> mTrajectory;
 	std::vector<Eigen::Vector3d> mFootprint;

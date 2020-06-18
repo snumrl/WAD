@@ -14,6 +14,7 @@ namespace MASS
 Eigen::Matrix3d R_x(double x);
 Eigen::Matrix3d R_y(double y);
 Eigen::Matrix3d R_z(double z);
+
 class BVHNode
 {
 public:
@@ -41,6 +42,7 @@ public:
 	int GetChannelOffset(){return mChannelOffset;}
 	int GetNumChannels(){return mNumChannels;}
 	Eigen::Vector3d GetOffset(){return mOffset;}
+
 private:
 	BVHNode* mParent;
 	std::vector<BVHNode*> mChildren;

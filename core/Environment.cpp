@@ -5,6 +5,7 @@
 #include "Muscle.h"
 #include "Device.h"
 #include "dart/collision/bullet/bullet.hpp"
+
 using namespace dart;
 using namespace dart::simulation;
 using namespace dart::dynamics;
@@ -15,6 +16,11 @@ Environment()
 	:mControlHz(30),mSimulationHz(900),mWorld(std::make_shared<World>()),mUseMuscle(true)
 {
 
+}
+
+Environment::
+~Environment()
+{
 }
 
 void
@@ -108,7 +114,7 @@ Initialize(const std::string& meta_file, bool load_obj)
 	this->SetCharacter(character);
 	this->SetGround(MASS::BuildFromFile(std::string(MASS_ROOT_DIR)+std::string("/data/ground.xml")));
 	this->SetNumSteps();
-	
+
 	this->Initialize();
 }
 
@@ -153,7 +159,7 @@ void
 Environment::
 Step(bool onDevice)
 {
-	if(onDevice ^ mCharacter->mOnDevice)
+	if(onDevice ^ mCharacter->GetOnDevice())
 	{
 		if(onDevice)
 			mCharacter->On_Device(mWorld);
@@ -315,9 +321,9 @@ GetMuscleTuples()
 	return mCharacter->GetMuscleTuples();
 }
 
-std::deque<double> 
+std::deque<double>
 Environment::
 GetDeviceSignals(int idx)
-{	
+{
 	return mCharacter->GetDeviceSignals(idx);
 }

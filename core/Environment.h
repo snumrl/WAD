@@ -13,6 +13,7 @@ class Environment
 {
 public:
 	Environment();
+	~Environment();
 
 	void SetUseMuscle(bool use_muscle){mUseMuscle = use_muscle;}
 	void SetUseDevice(bool use_device){mUseDevice = use_device;}
@@ -33,13 +34,10 @@ public:
 	void SetAction_Device(const Eigen::VectorXd& a);
 	void SetActivationLevels(const Eigen::VectorXd& a);
 	void SetNumSteps();
-	std::map<std::string,double> GetRewardSep();
 
 	Eigen::VectorXd GetState();
 	Eigen::VectorXd GetState_Device();
 
-	Eigen::VectorXd GetDesiredTorques();
-	Eigen::VectorXd GetMuscleTorques();
 	std::vector<MuscleTuple>& GetMuscleTuples();
 
 	const dart::simulation::WorldPtr& GetWorld(){return mWorld;}
@@ -47,7 +45,8 @@ public:
 	Character* GetCharacter(){return mCharacter;}
 
 	double GetReward();
-	
+	std::map<std::string,double> GetRewardSep();
+
 	int GetControlHz(){return mControlHz;}
 	int GetSimulationHz(){return mSimulationHz;}
 	int GetNumSteps(){return mNumSteps;}
@@ -63,6 +62,7 @@ public:
 	std::deque<double> GetDeviceSignals(int idx);
 	Eigen::VectorXd GetDeviceForce(){return mCharacter->GetDeviceForce();}
 	double GetPhase(){return mCharacter->GetPhase();}
+
 private:
 	dart::simulation::WorldPtr mWorld;
 	dart::dynamics::SkeletonPtr mGround;
@@ -79,7 +79,6 @@ private:
 
 	int mSimCount;
 	int mRandomSampleIndex;
-
 };
 };
 

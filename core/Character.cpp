@@ -14,9 +14,22 @@ Character()
 
 }
 
+Character::
+~Character()
+{
+	for(int i=0; i<mEndEffectors.size(); i++)
+		delete(mEndEffectors[i]);
+
+	for(int i=0; i<mMuscles.size(); i++)
+		delete(mMuscles[i]);
+
+	delete mBVH;
+	delete mDevice;
+}
+
 void
 Character::
-LoadSkeleton(const std::string& path,bool create_obj)
+LoadSkeleton(const std::string& path, bool create_obj)
 {
 	mSkeleton = BuildFromFile(path,create_obj);
 	std::map<std::string,std::string> bvh_map;
@@ -46,7 +59,7 @@ LoadSkeleton(const std::string& path,bool create_obj)
 
 void
 Character::
-LoadBVH(const std::string& path,bool cyclic)
+LoadBVH(const std::string& path, bool cyclic)
 {
 	if(mBVH == nullptr){
 		std::cout<<"Initialize BVH class first"<<std::endl;
@@ -107,20 +120,23 @@ void
 Character::
 Initialize()
 {
-	if(this->GetSkeleton() == nullptr)
+	if(mSkeleton == nullptr)
 	{
 		std::cout<<"Initialize Character First"<<std::endl;
 		exit(0);
 	}
 
-	if(this->GetSkeleton()->getRootBodyNode()->getParentJoint()->getType()=="FreeJoint")
+	const std::string& type =
+		mSkeleton->getRootBodyNode()->getParentJoint()->getType();
+
+	if(type == "FreeJoint")
 		mRootJointDof = 6;
-	else if(this->GetSkeleton()->getRootBodyNode()->getParentJoint()->getType()=="PlanarJoint")
+	else if(type == "PlanarJoint")
 		mRootJointDof = 3;
 	else
 		mRootJointDof = 0;
 
-	mNumActiveDof = this->GetSkeleton()->getNumDofs()-mRootJointDof;
+	mNumActiveDof = mSkeleton->getNumDofs()-mRootJointDof;
 	mNumState = this->GetState(0.0).rows();
 }
 
@@ -162,8 +178,6 @@ Initialize_Device(dart::simulation::WorldPtr& wPtr)
 	wPtr->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
 	wPtr->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
 	wPtr->addSkeleton(mDevice->GetSkeleton());
-
-	mTorqueMax_Device = 15.0;
 
 	mDesiredTorque_Device = Eigen::VectorXd::Zero(12);
 	mDeviceForce = Eigen::VectorXd::Zero(6);
@@ -282,7 +296,7 @@ Step_Muscles(int simCount, int randomSampleIndex)
 	int count = 0;
 	for(auto muscle : mMuscles)
 	{
-		muscle->activation = mActivationLevels[count++];
+		muscle->SetActivation(mActivationLevels[count++]);
 		muscle->Update();
 		muscle->ApplyForceToBody();
 	}
@@ -328,7 +342,7 @@ Step_Device(double t)
 
 	Eigen::Vector3d device_L_vec = mDesiredTorque_Device.segment(6,3);
 	Eigen::Vector3d device_R_vec = mDesiredTorque_Device.segment(9,3);
-	
+
 	double device_L = mDesiredTorque_Device.segment(6,3).norm();
 	double device_R = mDesiredTorque_Device.segment(9,3).norm();
 
@@ -340,10 +354,10 @@ Step_Device(double t)
 
 	if(mDesiredTorque_Device.segment(6,6).norm()!=0)
 		mDeviceForce = mDesiredTorque_Device.segment(6,6);
-	
+
 	mDevice->GetSkeleton()->setForces(mDesiredTorque_Device);
 }
-	
+
 void
 Character::
 SetAction(const Eigen::VectorXd& a)
@@ -356,8 +370,9 @@ Character::
 SetAction_Device(const Eigen::VectorXd& a)
 {
 	mAction_Device = a;
+	double torque_max = mDevice->GetTorqueMax();
 	for(int i=0; i<mAction_Device.size(); i++)
-		mAction_Device[i] *= mTorqueMax_Device;
+		mAction_Device[i] *= torque_max;
 }
 
 Eigen::VectorXd
@@ -521,7 +536,7 @@ double
 Character::
 GetReward_Device()
 {
-	return exp(-1.*(mDesiredTorque_Device/mTorqueMax_Device).squaredNorm());;
+	return exp(-1.*(mDesiredTorque_Device/mDevice->GetTorqueMax()).squaredNorm());;
 }
 
 Eigen::VectorXd
@@ -581,7 +596,7 @@ GetDesiredTorques_Device(double t)
 
 	mDesiredTorque_Device.head<6>().setZero();
 	mDesiredTorque_Device.segment<6>(6) = ratio * mAction_Device;
-	
+
 	return mDesiredTorque_Device;
 }
 
@@ -696,7 +711,7 @@ SetTargetPosAndVel(double t, int controlHz)
 	mTargetVelocities = pv.second;
 }
 
-std::deque<double> 
+std::deque<double>
 Character::
 GetDeviceSignals(int idx)
 {

@@ -48,7 +48,7 @@ np::ndarray toNumPyArray(const std::vector<Eigen::VectorXd>& val)
 		}
 	}
 
-	return array;	
+	return array;
 }
 np::ndarray toNumPyArray(const std::vector<Eigen::MatrixXd>& val)
 {
@@ -201,17 +201,17 @@ std::vector<Eigen::VectorXd> toEigenVectorVector(const np::ndarray& array)
 {
 	std::vector<Eigen::VectorXd> mat;
 	mat.resize(array.shape(0));
-	
+
 	float* srcs = reinterpret_cast<float*>(array.get_data());
 	int index = 0;
-	
+
 	for(int i=0;i<array.shape(0);i++){
 		mat[i].resize(array.shape(1));
 		for(int j=0;j<array.shape(1);j++)
 			mat[i][j] = srcs[index++];
 	}
 
-	return mat;	
+	return mat;
 }
 Eigen::MatrixXd toEigenMatrix(const np::ndarray& array)
 {
