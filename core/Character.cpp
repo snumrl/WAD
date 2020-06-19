@@ -100,7 +100,7 @@ Character::
 LoadDevice(const std::string& path)
 {
 	mDevice = new Device(BuildFromFile(path));
-	mOnDevice = true;
+	mOnDevice = true;	
 }
 
 void
@@ -122,7 +122,33 @@ Initialize()
 
 	mNumActiveDof = this->GetSkeleton()->getNumDofs()-mRootJointDof;
 	mNumState = this->GetState(0.0).rows();
+	
+	this->Initialize_Debug();
+	
+}
+
+void
+Character::
+Initialize_Debug()
+{	
 	mFemurForce_R.resize(80);
+
+	if(mUseDevice)
+	{
+		mEnergy_Device = new Energy();
+		mEnergy_Device->Init(mSkeleton); 
+	}
+
+	mEnergy = new Energy();
+	mEnergy->Init(mSkeleton); 
+
+	for(int i=0; i<33; i++)
+	{
+		mRewards.push_back(0.0);
+		mRewards_num.push_back(0);
+		mRewards_Device.push_back(0.0);
+		mRewards_Device_num.push_back(0);		
+	}
 }
 
 void
@@ -212,6 +238,7 @@ Reset(double worldTime, int controlHz)
 
 	mFemurForce_R.clear();
 	mFemurForce_R.resize(80);
+	mEnergy->Reset();
 
 	if(mUseMuscle)
 		Reset_Muscles();
@@ -276,14 +303,91 @@ Step()
 			mDesiredTorque[i] = -offset;
 	}
 
-	Eigen::Vector3d Femur_R_vec = mDesiredTorque.segment(6,3);
-		
-	double Femur_R = Femur_R_vec.norm();
+	// int n_body = mSkeleton->getNumBodyNodes();
+	// int n_joint = mSkeleton->getNumJoints();
+	// std::cout << "dofs : " << mSkeleton->getNumDofs() << std::endl;
+	// for(int i=0; i<n_joint; i++)
+	// {
+	// 	std::cout << i << " : " << mSkeleton->getJoint(i)->getName() << std::endl;	
+	// 	std::cout << "dof : " << mSkeleton->getJoint(i)->getNumDofs() << std::endl;	
+	// }
+	// for(int i=0; i<n_body; i++)
+	// {
+	// 	std::cout << i << " : " << mSkeleton->getBodyNode(i)->getName() << std::endl;
+	// }
 
+	SetEnergy();
+	SetRewards();
 	mFemurForce_R.pop_back();
-	mFemurForce_R.push_front(Femur_R);
+	mFemurForce_R.push_front(mDesiredTorque.segment(6,3).norm());
 	
 	mSkeleton->setForces(mDesiredTorque);
+}
+
+void
+Character::
+SetRewards()
+{
+	int phase_idx = (int)(mPhase/0.0303);
+	if(mOnDevice){
+		int n = mRewards_Device_num[phase_idx];
+		if(n == 0)
+		{
+			mRewards_Device[phase_idx] = mReward;
+		}
+		else
+		{
+			mRewards_Device[phase_idx] = mRewards_Device[phase_idx]*n+mReward;
+			mRewards_Device[phase_idx] = mRewards_Device[phase_idx]/(double)(n+1);
+		}
+		mRewards_Device_num[phase_idx] += 1;
+	}
+	else
+	{
+		int n = mRewards_num[phase_idx];
+		if(n == 0)
+		{
+			mRewards[phase_idx] = mReward;
+		}
+		else
+		{
+			mRewards[phase_idx] = mRewards[phase_idx]*n+mReward;
+			mRewards[phase_idx] = mRewards[phase_idx]/(double)(n+1);
+		}
+		mRewards_num[phase_idx] += 1;
+	}
+}
+
+void
+Character::
+SetEnergy()
+{
+	int offset = 6;
+	int n = mSkeleton->getNumJoints();
+	for(int i=1; i<n; i++)
+	{
+		std::string name = mSkeleton->getJoint(i)->getName();
+		int dof = mSkeleton->getJoint(i)->getNumDofs();
+		double torque = 0.0;
+		if(dof == 1)
+		{
+			torque = mDesiredTorque[offset];
+			if(torque<0)
+				torque *= -1;
+			offset += 1;
+		}
+		else if(dof == 3)
+		{
+			Eigen::Vector3d t_ = mDesiredTorque.segment(offset,3);
+			torque = t_.norm();
+			offset += 3;
+		}
+
+		if(mOnDevice)
+			mEnergy_Device->SetEnergy(name, (int)(mPhase/0.0303), torque);
+		else
+			mEnergy->SetEnergy(name, (int)(mPhase/0.0303), torque);
+	}
 }
 
 void
@@ -376,7 +480,7 @@ Character::
 GetState(double worldTime)
 {
 	dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
-	int num_body_nodes = mSkeleton->getNumBodyNodes()-1;
+	int num_body_nodes = mSkeleton->getNumBodyNodes() - 1;
 	Eigen::VectorXd p,v;
 
 	p.resize((num_body_nodes-1)*3);
@@ -444,14 +548,12 @@ SetRewardParameters_Device()
 double
 Character::
 GetReward()
-{
-	if(mUseDevice){
-		r_character = this->GetReward_Character();
-		return r_character;
-	}
-	else
-		r_character = this->GetReward_Character();
-		return r_character;
+{	
+	r_character = this->GetReward_Character();
+
+	mReward = r_character;
+
+	return mReward;	
 }
 
 std::map<std::string,double>
@@ -746,3 +848,83 @@ GetDeviceSignals(int idx)
 	else if(idx==2)
 		return mFemurForce_R;
 }
+
+std::vector<double>
+Character::
+GetReward_Graph(int idx)
+{
+	for(int i=0; i<mRewards.size(); i++)
+		std::cout << mRewards[i] << std::endl;
+	if(idx==0)
+		return mRewards;
+	else
+		return mRewards_Device;
+}
+
+std::map<std::string, std::vector<double>> 
+Character::
+GetEnergy(int idx)
+{
+	if(idx==0)
+		return mEnergy->Get();
+	else
+		return mEnergy_Device->Get();
+}
+
+Energy::Energy()
+{
+
+}
+
+void 
+Energy::
+Init(dart::dynamics::SkeletonPtr skel)
+{
+	int n = skel->getNumJoints();
+	for(int i=0; i<n; i++)
+	{
+		std::string name = skel->getJoint(i)->getName();
+		std::vector<double> e(33);
+		std::vector<int> e_num(33);
+		mE.insert({name, e});
+		mE_num.insert({name, e_num});
+	}
+}
+
+void 
+Energy::
+Reset()
+{
+	// for(auto it = mE.begin(); it != mE.end(); it++){
+	// 	it->second.clear();
+	// 	for(int i=0; i<33; i++)
+	// 		it->second.push_back(0.0);
+	// }
+
+	// for(auto it = mE_num.begin(); it != mE_num.end(); it++){
+	// 	it->second.clear();
+	// 	for(int i=0; i<33; i++)
+	// 		it->second.push_back(0);
+	// }
+}
+
+void 
+Energy::
+SetEnergy(std::string name, int t, double val)
+{
+	int n = (mE_num.find(name)->second).at(t);
+	if(n==0)
+		(mE.find(name)->second).at(t) = val;	
+	else
+		(mE.find(name)->second).at(t) = ((mE.find(name)->second).at(t)*n + val)/(double)(n+1);
+	
+	(mE_num.find(name)->second).at(t) += 1;
+}
+
+double 
+Energy::
+GetEnergy(std::string name, int t)
+{
+	return (mE.find(name)->second).at(t);
+}
+

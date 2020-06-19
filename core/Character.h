@@ -2,6 +2,7 @@
 #define __MASS_CHARACTER_H__
 #include "dart/dart.hpp"
 #include <deque>
+#include <map>
 
 namespace MASS
 {
@@ -18,6 +19,23 @@ struct MuscleTuple
 	Eigen::VectorXd tau_des;
 };
 
+class Energy
+{
+public:
+	Energy();
+
+	void Init(dart::dynamics::SkeletonPtr skel);
+	void Reset();
+	void SetEnergy(std::string name, int t, double val);
+	double GetEnergy(std::string name, int t);
+	std::map<std::string, std::vector<double>>& Get(){return mE;}
+	std::map<std::string, std::vector<int>>& GetNum(){return mE_num;}
+
+private:
+	std::map<std::string, std::vector<double>> mE;
+	std::map<std::string, std::vector<int>> mE_num;	
+};
+
 class Character
 {
 public:
@@ -29,6 +47,7 @@ public:
 	void LoadDevice(const std::string& path);
 
 	void Initialize();
+	void Initialize_Debug();
 	void Initialize_Muscles();
 	void Initialize_Device(dart::simulation::WorldPtr& wPtr);
 
@@ -92,8 +111,11 @@ public:
 	Eigen::VectorXd GetDeviceForce(){return mDeviceForce;}
 
 	double GetPhase(){return mPhase;}
+	void SetEnergy();
+	void SetRewards();
+	std::map<std::string, std::vector<double>> GetEnergy(int idx);
+	std::vector<double> GetReward_Graph(int idx);
 	
-
 public:
 	dart::dynamics::SkeletonPtr mSkeleton;
 	BVH* mBVH;
@@ -114,8 +136,7 @@ public:
 
 	double w_q,w_v,w_ee,w_com,w_character,w_device;
 	double r_q,r_v,r_ee,r_com,r_character,r_device;
-	double r_cur = 0.0;
-
+	double mReward;
 	double mPhase = 0.0;
 
 	Eigen::VectorXd mAction_;
@@ -135,9 +156,17 @@ public:
 	std::deque<double> mDeviceSignals_R;
 	std::deque<double> mFemurForce_R;
 	
+	std::vector<double> mRewards;
+	std::vector<int> mRewards_num;
+	std::vector<double> mRewards_Device;
+	std::vector<int> mRewards_Device_num;
+	
+	Energy* mEnergy;
+	Energy* mEnergy_Device;
+
 	MuscleTuple mCurrentMuscleTuple;
 	std::vector<MuscleTuple> mMuscleTuples;
-
+	
 	dart::constraint::WeldJointConstraintPtr mWeldJoint_Hip;
     dart::constraint::WeldJointConstraintPtr mWeldJoint_LeftLeg;
     dart::constraint::WeldJointConstraintPtr mWeldJoint_RightLeg;

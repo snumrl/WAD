@@ -37,6 +37,10 @@ public:
 
 	void DrawGround();
 	void DrawCharacter();
+	void DrawEnergy();
+	void DrawEnergyGraph(std::string name, double w, double h, double x, double y);
+	void DrawReward();
+	void DrawRewardGraph(std::string name, double w, double h, double x, double y);
 	void DrawDevice();
 	void DrawDeviceForce();
 	void DrawDeviceSignals();
@@ -56,6 +60,8 @@ public:
 	void DrawQuads(double x, double y, double w, double h, Eigen::Vector4d color);
 	void DrawString(double x, double y, std::string str);
 	void DrawLine(double p1_x, double p1_y, double p2_x, double p2_y, Eigen::Vector4d color, double line_width);
+	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::vector<double>& data);
+	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::vector<double>& data, Eigen::Vector4d color1, double line_width1, std::vector<double>& data1);
 	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::deque<double>& data);
 	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::deque<double>& data, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1);
 

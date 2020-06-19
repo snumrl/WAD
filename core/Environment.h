@@ -60,9 +60,12 @@ public:
 
 	bool GetUseMuscle(){return mUseMuscle;}
 	bool GetUseDevice(){return mUseDevice;}
+	std::map<std::string, std::vector<double>> GetEnergy(int idx){return mCharacter->GetEnergy(idx);}
+	std::vector<double> GetReward_Graph(int idx){return mCharacter->GetReward_Graph(idx);} 
 	std::deque<double> GetDeviceSignals(int idx);
 	Eigen::VectorXd GetDeviceForce(){return mCharacter->GetDeviceForce();}
 	double GetPhase(){return mCharacter->GetPhase();}
+
 private:
 	dart::simulation::WorldPtr mWorld;
 	dart::dynamics::SkeletonPtr mGround;

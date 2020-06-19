@@ -88,6 +88,7 @@ Window(Environment* env, const std::string& nn_path)
 
 	nn_module = p::eval("SimulationNN(num_state,num_action)", mns);
 
+
 	p::object load = nn_module.attr("load");
 	load(nn_path);
 }
@@ -100,7 +101,7 @@ Window(Environment* env,const std::string& nn_path, const std::string& nn_path2)
 		LoadMuscleNN(nn_path2);
 		
 	if(env->GetUseDevice())
-		LoadDeviceNN(nn_path2);
+		LoadDeviceNN(nn_path2);	
 }
 
 Window::
@@ -359,11 +360,138 @@ DrawCharacter()
 {
 	DrawSkeleton(mEnv->GetCharacter()->GetSkeleton());
 
+	DrawEnergy();
+	DrawReward();
+
 	if(mDrawTrajectory)
 		DrawTrajectory();
 
 	if(mEnv->GetUseMuscle())
 		DrawMuscles(mEnv->GetCharacter()->GetMuscles());
+}
+
+void
+Window::
+DrawRewardGraph(std::string name, double w, double h, double x, double y)
+{
+	std::cout << "rrr" << std::endl;
+	// graph
+	Eigen::Vector4d white(1.0, 1.0, 1.0, 1.0);
+	Eigen::Vector4d black(0.0, 0.0, 0.0, 1.0);
+	Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
+	Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
+	
+	double offset_x = 0.004;
+	double offset_y = 0.001;
+
+	DrawQuads(x, y, w, h, white);
+	DrawLine(x+0.005, y+0.01, x+w-0.005, y+0.01, black, 2.0);
+	DrawLine(x+0.005, y+0.01, x+0.005, y+h-0.01, black, 2.0);
+	DrawString(x+0.4*w, y-0.015, name);
+
+	std::vector<double> data_ = mEnv->GetReward_Graph(0);
+	std::vector<double> data_device_ = mEnv->GetReward_Graph(1);
+
+	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, red, 1.5, data_, blue, 2.0, data_device_);
+}
+
+void
+Window::
+DrawReward()
+{
+	std::cout <<"ggg" << std::endl;
+
+	GLint oldMode;
+	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
+	glMatrixMode(GL_PROJECTION);
+
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+
+	// graph coord & size
+	double p_w = 0.15;
+	double p_h = 0.13;
+	double p_x = 0.7;
+
+	DrawRewardGraph("Reward", p_w, p_h, p_x, 0.40);
+	
+	glDisable(GL_COLOR_MATERIAL);
+	glPopMatrix();
+	
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(oldMode);
+}
+
+void
+Window::
+DrawEnergyGraph(std::string name, double w, double h, double x, double y)
+{
+	// graph
+	Eigen::Vector4d white(1.0, 1.0, 1.0, 1.0);
+	Eigen::Vector4d black(0.0, 0.0, 0.0, 1.0);
+	Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
+	Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
+	
+	double offset_x = 0.004;
+	double offset_y = 0.001;
+
+	DrawQuads(x, y, w, h, white);
+	DrawLine(x+0.005, y+0.01, x+w-0.005, y+0.01, black, 2.0);
+	DrawLine(x+0.005, y+0.01, x+0.005, y+h-0.01, black, 2.0);
+	DrawString(x+0.4*w, y-0.015, name);
+
+	std::vector<double> data_ = mEnv->GetEnergy(0).at(name);
+	std::vector<double> data_device_ = mEnv->GetEnergy(1).at(name);
+
+	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, red, 1.5, data_, blue, 2.0, data_device_);
+}
+
+void 
+Window::
+DrawEnergy()
+{
+	GLint oldMode;
+	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
+	glMatrixMode(GL_PROJECTION);
+
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+
+	// graph coord & size
+	double p_w = 0.15;
+	double p_h = 0.13;
+	double p_x = 0.01;
+
+	DrawEnergyGraph("FemurR", p_w, p_h, p_x, 0.85);
+	DrawEnergyGraph("FemurL", p_w, p_h, p_x, 0.70);
+	DrawEnergyGraph("TibiaR", p_w, p_h, p_x, 0.55);
+	DrawEnergyGraph("TibiaL", p_w, p_h, p_x, 0.40);
+	DrawEnergyGraph("TalusR", p_w, p_h, p_x, 0.25);
+	DrawEnergyGraph("TalusL", p_w, p_h, p_x, 0.10);
+	
+	glDisable(GL_COLOR_MATERIAL);
+	glPopMatrix();
+	
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(oldMode);
 }
 
 void
@@ -928,6 +1056,40 @@ DrawString(double x, double y, std::string str)
 void
 Window::
 DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::deque<double>& data)
+{
+	mRI->setPenColor(color);
+	mRI->setLineWidth(line_width);
+
+	glBegin(GL_LINE_STRIP);
+	for(int i=0; i<data.size(); i++)
+		glVertex2f(x + offset_x*i, y + offset_y*data.at(i));
+	glEnd();
+}
+
+void 
+Window::
+DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::vector<double>& data, Eigen::Vector4d color1, double line_width1, std::vector<double>& data1)
+{
+	mRI->setPenColor(color);
+	mRI->setLineWidth(line_width);
+
+	glBegin(GL_LINE_STRIP);
+	for(int i=0; i<data.size(); i++)
+		glVertex2f(x + offset_x*i, y + offset_y*data.at(i));
+	glEnd();
+	
+	mRI->setPenColor(color1);
+	mRI->setLineWidth(line_width1);
+
+	glBegin(GL_LINE_STRIP);
+	for(int i=0; i<data1.size(); i++)
+		glVertex2f(x + offset_x*i, y + offset_y*data1.at(i));
+	glEnd();
+}
+
+void
+Window::
+DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::vector<double>& data)
 {
 	mRI->setPenColor(color);
 	mRI->setLineWidth(line_width);
