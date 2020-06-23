@@ -131,7 +131,7 @@ BVH::
 BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map)
 	:mSkeleton(skel),mBVHMap(bvh_map),mCyclic(true)
 {
-	
+
 }
 
 Eigen::VectorXd
@@ -187,7 +187,6 @@ GetMotion(double t)
 			p[idx] = val;
 		}
 	}
-
 	return p;
 }
 
