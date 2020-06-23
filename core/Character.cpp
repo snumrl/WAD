@@ -11,7 +11,6 @@ Character::
 Character()
 	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),w_q(0.75),w_v(0.1),w_ee(0.0),w_com(0.15),w_character(1.0),w_device(0.0),r_q(0.0),r_v(0.0),r_ee(0.0),r_com(0.0),r_character(0.0),r_device(0.0),mUseMuscle(false),mUseDevice(false),mOnDevice(false)
 {
-
 }
 
 void
