@@ -33,7 +33,7 @@ public:
 
 private:
 	std::map<std::string, std::vector<double>> mE;
-	std::map<std::string, std::vector<int>> mE_num;	
+	std::map<std::string, std::vector<int>> mE_num;
 };
 
 class Character
@@ -70,7 +70,7 @@ public:
 	void Step_Muscles(int simCount, int randomSampleIndex);
 	void Step_Device(double t);
 	void Step_Device(const Eigen::VectorXd& a_);
-	
+
 	void SetOnDevice(bool onDevice){mOnDevice = onDevice;}
 
 	void SetAction(const Eigen::VectorXd& a);
@@ -115,14 +115,14 @@ public:
 	void SetRewards();
 	std::map<std::string, std::vector<double>> GetEnergy(int idx);
 	std::vector<double> GetReward_Graph(int idx);
-	
+
 public:
 	dart::dynamics::SkeletonPtr mSkeleton;
 	BVH* mBVH;
 	Device* mDevice;
 	std::vector<Muscle*> mMuscles;
 	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
-	
+
 	int mNumState;
 	int mNumActiveDof;
 	int mRootJointDof;
@@ -150,23 +150,23 @@ public:
 	Eigen::VectorXd mTargetVelocities;
 	Eigen::VectorXd mDesiredTorque;
 	Eigen::VectorXd mDesiredTorque_Device;
-	
+
 	Eigen::VectorXd mDeviceForce;
 	std::deque<double> mDeviceSignals_L;
 	std::deque<double> mDeviceSignals_R;
 	std::deque<double> mFemurForce_R;
-	
+
 	std::vector<double> mRewards;
 	std::vector<int> mRewards_num;
 	std::vector<double> mRewards_Device;
 	std::vector<int> mRewards_Device_num;
-	
+
 	Energy* mEnergy;
 	Energy* mEnergy_Device;
 
 	MuscleTuple mCurrentMuscleTuple;
 	std::vector<MuscleTuple> mMuscleTuples;
-	
+
 	dart::constraint::WeldJointConstraintPtr mWeldJoint_Hip;
     dart::constraint::WeldJointConstraintPtr mWeldJoint_LeftLeg;
     dart::constraint::WeldJointConstraintPtr mWeldJoint_RightLeg;

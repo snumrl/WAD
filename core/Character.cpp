@@ -100,7 +100,7 @@ Character::
 LoadDevice(const std::string& path)
 {
 	mDevice = new Device(BuildFromFile(path));
-	mOnDevice = true;	
+	mOnDevice = true;
 }
 
 void
@@ -122,33 +122,32 @@ Initialize()
 
 	mNumActiveDof = this->GetSkeleton()->getNumDofs()-mRootJointDof;
 	mNumState = this->GetState(0.0).rows();
-	
+
 	this->Initialize_Debug();
-	
 }
 
 void
 Character::
 Initialize_Debug()
-{	
+{
 	mFemurForce_R.resize(80);
 
-	if(mUseDevice)
-	{
-		mEnergy_Device = new Energy();
-		mEnergy_Device->Init(mSkeleton); 
-	}
-
 	mEnergy = new Energy();
-	mEnergy->Init(mSkeleton); 
+	mEnergy->Init(mSkeleton);
 
 	for(int i=0; i<33; i++)
 	{
 		mRewards.push_back(0.0);
 		mRewards_num.push_back(0);
-		mRewards_Device.push_back(0.0);
-		mRewards_Device_num.push_back(0);		
 	}
+
+	// for(int i=0; i<33; i++)
+	// {
+	// 	mRewards.push_back(0.0);
+	// 	mRewards_num.push_back(0);
+	// 	mRewards_Device.push_back(0.0);
+	// 	mRewards_Device_num.push_back(0);
+	// }
 }
 
 void
@@ -196,6 +195,15 @@ Initialize_Device(dart::simulation::WorldPtr& wPtr)
 	mDeviceForce = Eigen::VectorXd::Zero(6);
 	mDeviceSignals_L.resize(80);
 	mDeviceSignals_R.resize(80);
+
+	mEnergy_Device = new Energy();
+	mEnergy_Device->Init(mSkeleton);
+
+	for(int i=0; i<33; i++)
+	{
+		mRewards_Device.push_back(0.0);
+		mRewards_Device_num.push_back(0);
+	}
 }
 
 void
@@ -308,8 +316,8 @@ Step()
 	// std::cout << "dofs : " << mSkeleton->getNumDofs() << std::endl;
 	// for(int i=0; i<n_joint; i++)
 	// {
-	// 	std::cout << i << " : " << mSkeleton->getJoint(i)->getName() << std::endl;	
-	// 	std::cout << "dof : " << mSkeleton->getJoint(i)->getNumDofs() << std::endl;	
+	// 	std::cout << i << " : " << mSkeleton->getJoint(i)->getName() << std::endl;
+	// 	std::cout << "dof : " << mSkeleton->getJoint(i)->getNumDofs() << std::endl;
 	// }
 	// for(int i=0; i<n_body; i++)
 	// {
@@ -318,9 +326,7 @@ Step()
 
 	SetEnergy();
 	SetRewards();
-	mFemurForce_R.pop_back();
-	mFemurForce_R.push_front(mDesiredTorque.segment(6,3).norm());
-	
+
 	mSkeleton->setForces(mDesiredTorque);
 }
 
@@ -328,32 +334,25 @@ void
 Character::
 SetRewards()
 {
+	this->GetReward();
 	int phase_idx = (int)(mPhase/0.0303);
 	if(mOnDevice){
 		int n = mRewards_Device_num[phase_idx];
 		if(n == 0)
-		{
 			mRewards_Device[phase_idx] = mReward;
-		}
 		else
-		{
-			mRewards_Device[phase_idx] = mRewards_Device[phase_idx]*n+mReward;
-			mRewards_Device[phase_idx] = mRewards_Device[phase_idx]/(double)(n+1);
-		}
+			mRewards_Device[phase_idx] = (mRewards_Device[phase_idx]*n+mReward)/(double)(n+1);
+
 		mRewards_Device_num[phase_idx] += 1;
 	}
 	else
 	{
 		int n = mRewards_num[phase_idx];
 		if(n == 0)
-		{
 			mRewards[phase_idx] = mReward;
-		}
 		else
-		{
-			mRewards[phase_idx] = mRewards[phase_idx]*n+mReward;
-			mRewards[phase_idx] = mRewards[phase_idx]/(double)(n+1);
-		}
+			mRewards[phase_idx] = (mRewards[phase_idx]*n+mReward)/(double)(n+1);
+
 		mRewards_num[phase_idx] += 1;
 	}
 }
@@ -362,6 +361,9 @@ void
 Character::
 SetEnergy()
 {
+	mFemurForce_R.pop_back();
+	mFemurForce_R.push_front(mDesiredTorque.segment(6,3).norm());
+
 	int offset = 6;
 	int n = mSkeleton->getNumJoints();
 	for(int i=1; i<n; i++)
@@ -443,7 +445,7 @@ Step_Device(double t)
 
 	Eigen::Vector3d device_L_vec = mDesiredTorque_Device.segment(6,3);
 	Eigen::Vector3d device_R_vec = mDesiredTorque_Device.segment(9,3);
-	
+
 	double device_L = mDesiredTorque_Device.segment(6,3).norm();
 	double device_R = mDesiredTorque_Device.segment(9,3).norm();
 
@@ -455,10 +457,10 @@ Step_Device(double t)
 
 	if(mDesiredTorque_Device.segment(6,6).norm()!=0)
 		mDeviceForce = mDesiredTorque_Device.segment(6,6);
-	
+
 	mDevice->GetSkeleton()->setForces(mDesiredTorque_Device);
 }
-	
+
 void
 Character::
 SetAction(const Eigen::VectorXd& a)
@@ -519,10 +521,12 @@ double exp_of_squared(const Eigen::VectorXd& vec,double w)
 {
 	return exp(-w*vec.squaredNorm());
 }
+
 double exp_of_squared(const Eigen::Vector3d& vec,double w)
 {
 	return exp(-w*vec.squaredNorm());
 }
+
 double exp_of_squared(double val,double w)
 {
 	return exp(-w*val*val);
@@ -548,12 +552,12 @@ SetRewardParameters_Device()
 double
 Character::
 GetReward()
-{	
+{
 	r_character = this->GetReward_Character();
 
 	mReward = r_character;
 
-	return mReward;	
+	return mReward;
 }
 
 std::map<std::string,double>
@@ -722,7 +726,7 @@ GetDesiredTorques_Device(double t)
 	mDesiredTorque_Device.head<6>().setZero();
 	mDesiredTorque_Device.segment<3>(6) = ratio_L * mAction_Device.head<3>();
 	mDesiredTorque_Device.segment<3>(9) = ratio_R * mAction_Device.segment<3>(3);
-	
+
 	return mDesiredTorque_Device;
 }
 
@@ -837,7 +841,7 @@ SetTargetPosAndVel(double t, int controlHz)
 	mTargetVelocities = pv.second;
 }
 
-std::deque<double> 
+std::deque<double>
 Character::
 GetDeviceSignals(int idx)
 {
@@ -853,15 +857,13 @@ std::vector<double>
 Character::
 GetReward_Graph(int idx)
 {
-	for(int i=0; i<mRewards.size(); i++)
-		std::cout << mRewards[i] << std::endl;
 	if(idx==0)
 		return mRewards;
 	else
 		return mRewards_Device;
 }
 
-std::map<std::string, std::vector<double>> 
+std::map<std::string, std::vector<double>>
 Character::
 GetEnergy(int idx)
 {
@@ -873,25 +875,24 @@ GetEnergy(int idx)
 
 Energy::Energy()
 {
-
 }
 
-void 
+void
 Energy::
 Init(dart::dynamics::SkeletonPtr skel)
 {
 	int n = skel->getNumJoints();
-	for(int i=0; i<n; i++)
+	for(int i=1; i<n; i++)
 	{
 		std::string name = skel->getJoint(i)->getName();
-		std::vector<double> e(33);
-		std::vector<int> e_num(33);
-		mE.insert({name, e});
-		mE_num.insert({name, e_num});
+		std::vector<double> e(33, 0.0);
+		std::vector<int> e_num(33, 0);
+		mE.insert(std::make_pair(name, e));
+		mE_num.insert(std::make_pair(name, e_num));
 	}
 }
 
-void 
+void
 Energy::
 Reset()
 {
@@ -908,20 +909,20 @@ Reset()
 	// }
 }
 
-void 
+void
 Energy::
 SetEnergy(std::string name, int t, double val)
 {
 	int n = (mE_num.find(name)->second).at(t);
 	if(n==0)
-		(mE.find(name)->second).at(t) = val;	
+		(mE.find(name)->second).at(t) = val;
 	else
 		(mE.find(name)->second).at(t) = ((mE.find(name)->second).at(t)*n + val)/(double)(n+1);
-	
+
 	(mE_num.find(name)->second).at(t) += 1;
 }
 
-double 
+double
 Energy::
 GetEnergy(std::string name, int t)
 {
