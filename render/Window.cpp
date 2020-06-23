@@ -327,6 +327,7 @@ draw()
 	SetFocusing();
 }
 
+
 void
 Window::
 DrawGround()
