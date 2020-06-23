@@ -139,14 +139,6 @@ Initialize_Debug()
 		mRewards.push_back(0.0);
 		mRewards_num.push_back(0);
 	}
-
-	// for(int i=0; i<33; i++)
-	// {
-	// 	mRewards.push_back(0.0);
-	// 	mRewards_num.push_back(0);
-	// 	mRewards_Device.push_back(0.0);
-	// 	mRewards_Device_num.push_back(0);
-	// }
 }
 
 void
@@ -383,7 +375,7 @@ SetEnergy()
 			torque = t_.norm();
 			offset += 3;
 		}
-
+		
 		if(mOnDevice)
 			mEnergy_Device->SetEnergy(name, (int)(mPhase/0.0303), torque);
 		else
@@ -481,7 +473,7 @@ Character::
 GetState(double worldTime)
 {
 	dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
-	int num_body_nodes = mSkeleton->getNumBodyNodes() - 1;
+	int num_body_nodes = mSkeleton->getNumBodyNodes();
 	Eigen::VectorXd p,v;
 
 	p.resize((num_body_nodes-1)*3);
@@ -717,14 +709,15 @@ GetDesiredTorques_Device(double t)
 
 	offset_R = 0.5 + offset_R/4.0;
 
-	// double ratio = Pulse_Constant(t);
+	double ratio = Pulse_Constant(t);
 	// double ratio = Pulse_Linear(t);
-	double ratio_L = Pulse_Period(t, offset_L);
-	double ratio_R = Pulse_Period(t, offset_R);
+	// double ratio_L = Pulse_Period(t, offset_L);
+	// double ratio_R = Pulse_Period(t, offset_R);
 
 	mDesiredTorque_Device.head<6>().setZero();
-	mDesiredTorque_Device.segment<3>(6) = ratio_L * mAction_Device.head<3>();
-	mDesiredTorque_Device.segment<3>(9) = ratio_R * mAction_Device.segment<3>(3);
+	mDesiredTorque_Device.segment<6>(6) = ratio * mAction_Device.head<6>();
+	// mDesiredTorque_Device.segment<3>(6) = ratio_L * mAction_Device.head<3>();
+	// mDesiredTorque_Device.segment<3>(9) = ratio_R * mAction_Device.segment<3>(3);
 
 	return mDesiredTorque_Device;
 }
@@ -884,8 +877,8 @@ Init(dart::dynamics::SkeletonPtr skel)
 	for(int i=1; i<n; i++)
 	{
 		std::string name = skel->getJoint(i)->getName();
-		std::vector<double> e(33, 0.0);
-		std::vector<int> e_num(33, 0);
+		std::vector<double> e(34, 0.0);
+		std::vector<int> e_num(34, 0);
 		mE.insert(std::make_pair(name, e));
 		mE_num.insert(std::make_pair(name, e_num));
 	}
