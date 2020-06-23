@@ -74,10 +74,10 @@ Window(Environment* env)
 	p::exec("from Model import *",mns);
 
 	// glutCreateSubWindow(0, 500,500,500,500);
-	
+
 
 	// mSubWindow = new dart::gui::GraphWindow();
-	// mSubWindow->initWindow(500, 500, "graph");	
+	// mSubWindow->initWindow(500, 500, "graph");
 }
 
 Window::
@@ -203,7 +203,7 @@ displayTimer(int _val)
 {
 	if(mSimulating)
 		Step();
-	glutPostRedisplay();	
+	glutPostRedisplay();
 	glutTimerFunc(mDisplayTimeout, refreshTimer, _val);
 }
 
@@ -310,7 +310,7 @@ draw()
 	SetFocusing();
 }
 
-void 
+void
 Window::
 DrawProgress()
 {
@@ -318,11 +318,11 @@ DrawProgress()
 
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
-	
+
 	Eigen::Vector4d color(0.5, 0.2, 0.2, 0.5);
 	mRI->setPenColor(color);
 	mRI->setLineWidth(3.0);
-	
+
 	dart::gui::drawProgressBar(phase*100, 100);
 
 	glDisable(GL_COLOR_MATERIAL);
@@ -343,14 +343,15 @@ DrawCharacter()
 		DrawMuscles(mEnv->GetCharacter()->GetMuscles());
 }
 
-void 
+
+void
 Window::
 Footprint()
 {
-	const SkeletonPtr& skel = mEnv->GetCharacter()->GetSkeleton();	
+	const SkeletonPtr& skel = mEnv->GetCharacter()->GetSkeleton();
 	const BodyNode* talusR = skel->getBodyNode(3);
 	const BodyNode* talusL = skel->getBodyNode(8);
-	
+
 	if(talusR->getCOM()[1] > 0.03)
 		mTalusR = false;
 	if(talusR->getCOM()[1] < 0.0255 && !mTalusR)
@@ -376,7 +377,7 @@ DrawDevice()
 	{
 		DrawSkeleton(mEnv->GetCharacter()->GetDevice()->GetSkeleton());
 		if(mDrawDeviceForce)
-			DrawDeviceForce();		
+			DrawDeviceForce();
 	}
 
 	DrawDeviceSignals();
@@ -388,11 +389,11 @@ DrawTrajectory()
 {
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
-	
+
 	Eigen::Vector4d color(0.5, 0.5, 0.5, 0.7);
 	mRI->setPenColor(color);
 	mRI->setLineWidth(8.0);
-	
+
 	glBegin(GL_LINE_STRIP);
 	for(int i=0; i<mTrajectory.size(); i++)
 	{
@@ -403,13 +404,13 @@ DrawTrajectory()
 	Eigen::Vector4d color1(0.5, 0.8, 0.5, 0.7);
 	mRI->setPenColor(color1);
 	for(int i=0; i<mFootprint.size(); i++)
-	{	
+	{
 		glPushMatrix();
 		glTranslatef(mFootprint[i][0], 0.0, mFootprint[i][2]);
 		glutSolidCube(0.05);
-		glPopMatrix();		
+		glPopMatrix();
 	}
-	
+
 	glDisable(GL_COLOR_MATERIAL);
 }
 
@@ -427,15 +428,15 @@ DrawDeviceForce()
 
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
-	
+
 	Eigen::Vector4d color(0.7, 0.1, 0.1, 0.7);
 	mRI->setPenColor(color);
-	
+
 	double rl_force = rodLeft_force.norm();
 	if(rl_force != 0)
 	{
 		rodLeft_force /= rl_force;
-		
+
 		mRI->pushMatrix();
 		rodLeft_force = rodLeft->getWorldTransform().rotation() * rodLeft_force;
 		dart::gui::drawArrow3D(rodLeft->getCOM(), rodLeft_force, rl_force*0.02, 0.03, 0.04);
@@ -452,11 +453,11 @@ DrawDeviceForce()
 		dart::gui::drawArrow3D(rodRight->getCOM(), rodRight_force, rr_force*0.02, 0.03, 0.04);
 		mRI->popMatrix();
 	}
-	
+
 	glDisable(GL_COLOR_MATERIAL);
 }
 
-void 
+void
 Window::
 DrawDeviceSignals()
 {
@@ -487,7 +488,7 @@ DrawDeviceSignals()
 	double pl_y = 0.83;
 
 	double pr_x = 0.68;
-	double pr_y = 0.65;	
+	double pr_y = 0.65;
 
 	// graph device l
 	glBegin(GL_QUADS);
@@ -522,11 +523,11 @@ DrawDeviceSignals()
 	glEnd();
 
 	glRasterPos2f(pl_x + 0.5*p_w, pl_y - 0.01);
-  	std::string l_name = "Device L"; 
+  	std::string l_name = "Device L";
 	unsigned int l_length = l_name.length();
   	for (unsigned int c = 0; c < l_length; c++)
 		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, l_name.at(c) );
-  
+
   	// base line device r
 	glBegin(GL_LINE_STRIP);
 	glVertex2f(pr_x + 0.01             , pr_y + 0.01);
@@ -539,11 +540,11 @@ DrawDeviceSignals()
 	glEnd();
 
 	glRasterPos2f(pr_x + 0.5*p_w, pr_y - 0.01);
-  	std::string r_name = "Device R"; 
+  	std::string r_name = "Device R";
 	unsigned int r_length = r_name.length();
   	for (unsigned int c = 0; c < r_length; c++)
 		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, r_name.at(c) );
-  
+
    	// graph value line
 	Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
 	mRI->setPenColor(red);
@@ -552,7 +553,7 @@ DrawDeviceSignals()
     std::deque<double> data = mEnv->GetDeviceSignals();
 	double offset_x = 0.003;
 	double offset_y = 0.002;
-		
+
 	glBegin(GL_LINE_STRIP);
 	for(int i=0; i<data.size()/2; i++)
 		glVertex2f(pl_x + offset_x*i + 0.01, pl_y + offset_y*data.at(i*2) + 0.01);
@@ -565,7 +566,7 @@ DrawDeviceSignals()
 
 	glDisable(GL_COLOR_MATERIAL);
 	glPopMatrix();
-	
+
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(oldMode);
