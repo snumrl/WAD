@@ -233,6 +233,7 @@ Parse(const std::string& file,bool cyclic)
 			mMotions.resize(mNumTotalFrames);
 			for(auto& m_t : mMotions)
 				m_t = Eigen::VectorXd::Zero(mNumTotalChannels);
+
 			double val;
 			for(int i=0;i<mNumTotalFrames;i++)
 			{
