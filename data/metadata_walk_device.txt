@@ -1,7 +1,7 @@
 use_muscle false
 use_device true
 con_hz 30
-sim_hz 600
+sim_hz 300
 skel_file /data/human.xml
 muscle_file /data/muscle284.xml
 device_file /data/device.xml
