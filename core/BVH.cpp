@@ -231,7 +231,8 @@ Parse(const std::string& file,bool cyclic)
 			is>>buffer; //Time:
 			is>>buffer; //time step
 			mTimeStep = atof(buffer);
-			mMotions.resize(mNumTotalFrames);
+			mTimeStep = 0.0333;
+			mMotions.resize(mNumTotalFrames/4 + mNumTotalFrames%4);
 			for(auto& m_t : mMotions)
 				m_t = Eigen::VectorXd::Zero(mNumTotalChannels);
 			double val;
@@ -240,9 +241,11 @@ Parse(const std::string& file,bool cyclic)
 				for(int j=0;j<mNumTotalChannels;j++)
 				{
 					is>>val;
-					mMotions[i][j]=val;
+					if(i%4==0)
+						mMotions[i/4][j]=val;
 				}
 			}
+			mNumTotalFrames = mNumTotalFrames/4 + mNumTotalFrames%4;
 		}
 	}
 	is.close();

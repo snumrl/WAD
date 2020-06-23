@@ -131,8 +131,8 @@ class PPO(object):
         if use_cuda:
             self.device_model.cuda()
 
-        self.buffer_size_device = 1024
-        self.batch_size_device = 64
+        self.buffer_size_device = 2048
+        self.batch_size_device = 128
         self.replay_buffer_device = ReplayBuffer(30000)
 
         self.gamma_device = 0.99
@@ -302,7 +302,7 @@ class PPO(object):
 
                     self.env.Reset(True,j)
 
-            if random.random() > 0.5:
+            if random.random() > 0.7:
                 self.onDevice = True
             else:
                 self.onDevice = False
