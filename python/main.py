@@ -201,7 +201,7 @@ class PPO(object):
 					activations = self.muscle_model(mt,dt).cpu().detach().numpy()
 					self.env.SetActivationLevels(activations)
 
-					self.env.Steps(1)
+					self.env.Steps(1, False)
 			else:
 				self.env.StepsAtOnce()
 

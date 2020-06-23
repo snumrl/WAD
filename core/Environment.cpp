@@ -314,3 +314,10 @@ GetMuscleTuples()
 {
 	return mCharacter->GetMuscleTuples();
 }
+
+std::deque<double> 
+Environment::
+GetDeviceSignals(int idx)
+{	
+	return mCharacter->GetDeviceSignals(idx);
+}
