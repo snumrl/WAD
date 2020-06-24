@@ -72,15 +72,6 @@ Window(Environment* env)
 	p::exec("import torchvision.transforms as T",mns);
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
-<<<<<<< HEAD
-
-	// glutCreateSubWindow(0, 500,500,500,500);
-
-
-	// mSubWindow = new dart::gui::GraphWindow();
-	// mSubWindow->initWindow(500, 500, "graph");
-=======
->>>>>>> pulseModelV1
 }
 
 Window::
@@ -378,33 +369,15 @@ DrawCharacter()
 		DrawMuscles(mEnv->GetCharacter()->GetMuscles());
 }
 
-<<<<<<< HEAD
-
-=======
->>>>>>> pulseModelV1
 void
 Window::
 DrawRewardGraph(std::string name, double w, double h, double x, double y)
 {
-<<<<<<< HEAD
-	const SkeletonPtr& skel = mEnv->GetCharacter()->GetSkeleton();
-	const BodyNode* talusR = skel->getBodyNode(3);
-	const BodyNode* talusL = skel->getBodyNode(8);
-
-	if(talusR->getCOM()[1] > 0.03)
-		mTalusR = false;
-	if(talusR->getCOM()[1] < 0.0255 && !mTalusR)
-	{
-		mFootprint.push_back(talusR->getCOM());
-		mTalusR = true;
-	}
-=======
 	// graph
 	Eigen::Vector4d white(1.0, 1.0, 1.0, 1.0);
 	Eigen::Vector4d black(0.0, 0.0, 0.0, 1.0);
 	Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
 	Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
->>>>>>> pulseModelV1
 
 	double offset_x = 0.004;
 	double offset_y = 0.1;
@@ -424,14 +397,6 @@ void
 Window::
 DrawReward()
 {
-<<<<<<< HEAD
-	if(mEnv->GetUseDevice() && mEnv->GetCharacter()->mOnDevice)
-	{
-		DrawSkeleton(mEnv->GetCharacter()->GetDevice()->GetSkeleton());
-		if(mDrawDeviceForce)
-			DrawDeviceForce();
-	}
-=======
 	GLint oldMode;
 	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
 	glMatrixMode(GL_PROJECTION);
@@ -497,7 +462,6 @@ DrawEnergy()
 	glPushMatrix();
 	glLoadIdentity();
 	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
->>>>>>> pulseModelV1
 
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
@@ -561,48 +525,13 @@ void
 Window::
 DrawDevice()
 {
-<<<<<<< HEAD
-	const SkeletonPtr& skel_device = mEnv->GetCharacter()->GetDevice()->GetSkeleton();
-	const BodyNode* rodLeft = skel_device->getBodyNode(4);
-	const BodyNode* rodRight = skel_device->getBodyNode(9);
-
-	Eigen::VectorXd device_force = mEnv->GetDeviceForce();
-	Eigen::Vector3d rodLeft_force = device_force.head(3);
-	Eigen::Vector3d rodRight_force = device_force.tail(3);
-
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
-
-	Eigen::Vector4d color(0.7, 0.1, 0.1, 0.7);
-	mRI->setPenColor(color);
-
-	double rl_force = rodLeft_force.norm();
-	if(rl_force != 0)
-	{
-		rodLeft_force /= rl_force;
-
-		mRI->pushMatrix();
-		rodLeft_force = rodLeft->getWorldTransform().rotation() * rodLeft_force;
-		dart::gui::drawArrow3D(rodLeft->getCOM(), rodLeft_force, rl_force*0.02, 0.03, 0.04);
-		mRI->popMatrix();
-	}
-
-	double rr_force = rodRight_force.norm();
-	if(rr_force != 0)
-=======
 	if(mEnv->GetCharacter()->mOnDevice)
->>>>>>> pulseModelV1
 	{
 		DrawSkeleton(mEnv->GetCharacter()->GetDevice()->GetSkeleton());
 		DrawDeviceSignals();
 		if(mDrawDeviceForce)
 			DrawDeviceForce();
 	}
-<<<<<<< HEAD
-
-	glDisable(GL_COLOR_MATERIAL);
-=======
->>>>>>> pulseModelV1
 }
 
 void
@@ -637,60 +566,11 @@ DrawDeviceSignals()
 	// graph
 	Eigen::Vector4d white(1.0, 1.0, 1.0, 1.0);
 	Eigen::Vector4d black(0.0, 0.0, 0.0, 1.0);
-<<<<<<< HEAD
-	mRI->setPenColor(black);
-	mRI->setLineWidth(1.0);
-
-	// base line device l
-	glBegin(GL_LINE_STRIP);
-	glVertex2f(pl_x + 0.01             , pl_y + 0.01);
-	glVertex2f(pl_x + 0.01 + p_w - 0.02, pl_y + 0.01);
-	glEnd();
-
-	glBegin(GL_LINE_STRIP);
-	glVertex2f(pl_x + 0.01, pl_y + 0.01);
-	glVertex2f(pl_x + 0.01, pl_y + 0.01 + p_h - 0.02);
-	glEnd();
-
-	glRasterPos2f(pl_x + 0.5*p_w, pl_y - 0.01);
-  	std::string l_name = "Device L";
-	unsigned int l_length = l_name.length();
-  	for (unsigned int c = 0; c < l_length; c++)
-		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, l_name.at(c) );
-
-  	// base line device r
-	glBegin(GL_LINE_STRIP);
-	glVertex2f(pr_x + 0.01             , pr_y + 0.01);
-	glVertex2f(pr_x + 0.01 + p_w - 0.02, pr_y + 0.01);
-	glEnd();
-
-	glBegin(GL_LINE_STRIP);
-	glVertex2f(pr_x + 0.01, pr_y + 0.01);
-	glVertex2f(pr_x + 0.01, pr_y + 0.01 + p_h - 0.02);
-	glEnd();
-
-	glRasterPos2f(pr_x + 0.5*p_w, pr_y - 0.01);
-  	std::string r_name = "Device R";
-	unsigned int r_length = r_name.length();
-  	for (unsigned int c = 0; c < r_length; c++)
-		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, r_name.at(c) );
-
-   	// graph value line
-=======
->>>>>>> pulseModelV1
 	Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
 	Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
 
 	double offset_x = 0.003;
 	double offset_y = 0.002;
-<<<<<<< HEAD
-
-	glBegin(GL_LINE_STRIP);
-	for(int i=0; i<data.size()/2; i++)
-		glVertex2f(pl_x + offset_x*i + 0.01, pl_y + offset_y*data.at(i*2) + 0.01);
-	glEnd();
-=======
->>>>>>> pulseModelV1
 
 	// device L
 	DrawQuads(pl_x, pl_y, p_w, p_h, white);
