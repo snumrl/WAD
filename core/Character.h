@@ -108,13 +108,15 @@ public:
 	int GetNumTotalRelatedDof(){return mNumTotalRelatedDof;}
 
 	std::deque<double> GetDeviceSignals(int idx);
-	Eigen::VectorXd GetDeviceForce(){return mDeviceForce;}
 
 	double GetPhase(){return mPhase;}
 	void SetEnergy();
 	void SetRewards();
 	std::map<std::string, std::vector<double>> GetEnergy(int idx);
 	std::vector<double> GetReward_Graph(int idx);
+
+	void SetSignals_Device();
+	double GetSinQ(int idx);
 
 public:
 	dart::dynamics::SkeletonPtr mSkeleton;
@@ -150,11 +152,10 @@ public:
 	Eigen::VectorXd mTargetVelocities;
 	Eigen::VectorXd mDesiredTorque;
 	Eigen::VectorXd mDesiredTorque_Device;
+	std::deque<Eigen::VectorXd> mDesiredTorque_Device_Buffer;
 
-	Eigen::VectorXd mDeviceForce;
 	std::deque<double> mDeviceSignals_L;
 	std::deque<double> mDeviceSignals_R;
-	std::deque<double> mFemurForce_R;
 
 	std::vector<double> mRewards;
 	std::vector<int> mRewards_num;
@@ -163,6 +164,8 @@ public:
 
 	Energy* mEnergy;
 	Energy* mEnergy_Device;
+
+	std::deque<double> mDevice_y;
 
 	MuscleTuple mCurrentMuscleTuple;
 	std::vector<MuscleTuple> mMuscleTuples;

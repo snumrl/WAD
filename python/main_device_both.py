@@ -119,7 +119,6 @@ class PPO(object):
         # ========== Device setting ========== #
         self.num_state_device = self.env.GetNumState_Device()
         self.num_action_device = self.env.GetNumAction_Device()
-
         self.num_epochs_device = 10
         self.num_tuple_so_far_device = 0
         self.num_episode_device = 0

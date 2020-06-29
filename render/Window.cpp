@@ -48,7 +48,7 @@ Eigen::Matrix3d R_z(double z)
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawBVH(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),mDrawDeviceForce(false),mDrawTrajectory(false),mDrawProgressBar(false)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawBVH(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),mDrawTrajectory(false),mDrawProgressBar(false)
 {
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
@@ -157,8 +157,11 @@ void
 Window::
 keyboard(unsigned char _key, int _x, int _y)
 {
+	Eigen::Vector3d force = Eigen::Vector3d::Zero();
 	switch (_key)
 	{
+	case '+': force[0] += 500.0;break;
+	case '-': force[0] -= 500.0;break;
 	case 's': this->Step();break;
 	case 'r': this->Reset();break;
 	case ' ': mSimulating = !mSimulating;break;
@@ -169,13 +172,36 @@ keyboard(unsigned char _key, int _x, int _y)
 		if(mEnv->GetUseDevice())
 			mOnDevice = !mOnDevice;
 		break;
-	case 'w': mDrawDeviceForce = !mDrawDeviceForce;break;
 	case 't': mDrawTrajectory = !mDrawTrajectory;break;
 	case 'p': mDrawProgressBar = !mDrawProgressBar;break;
+	case 'z':
+		coord_idx += 1;
+		if(coord_idx>22)
+			coord_idx=0;
+		break;
+	case 'x':
+		coord_idx -= 1;
+		if(coord_idx<0)
+			coord_idx=22;
+		break;
+	case 'c':
+		coord_idx2 += 1;
+		if(coord_idx2>13)
+			coord_idx2=0;
+		break;
+	case 'v':
+		coord_idx2 -= 1;
+		if(coord_idx2<0)
+			coord_idx2=13;
+		break;
 	case 27 : exit(0);break;
 	default:
 		Win3D::keyboard(_key,_x,_y);break;
 	}
+	Eigen::VectorXd f = Eigen::VectorXd::Zero(12);
+	f.segment<3>(6) = force;
+	f.segment<3>(9) = force;
+	mEnv->GetCharacter()->mDevice->GetSkeleton()->setForces(f);
 }
 
 void
@@ -308,12 +334,10 @@ draw()
 
 	if(mEnv->GetUseDevice())
 		DrawDevice();
-
 	if(mDrawProgressBar)
 		DrawProgressBar();
-
 	// if(mDrawBVH)
-		// DrawBVH(mEnv->GetCharacter()->GetBVH(), mEnv->GetTime());
+	// 	DrawBVH(mEnv->GetCharacter()->GetBVH());
 
 	SetFocusing();
 }
@@ -352,7 +376,6 @@ DrawGround()
 	glEnable(GL_LIGHTING);
 }
 
-
 void
 Window::
 DrawCharacter()
@@ -367,6 +390,52 @@ DrawCharacter()
 
 	if(mEnv->GetUseMuscle())
 		DrawMuscles(mEnv->GetCharacter()->GetMuscles());
+
+	SkeletonPtr skel = mEnv->GetCharacter()->GetSkeleton();
+
+	int n = skel->getNumBodyNodes();
+
+	int i = coord_idx;
+	// std::cout << "name : " << skel->getBodyNode(i)->getName() << std::endl;
+
+	glPushMatrix();
+
+	Eigen::Vector3d o(0.0, 0.0, 0.0);
+	Eigen::Vector3d x(0.2, 0.0, 0.0);
+	Eigen::Vector3d y(0.0, 0.2, 0.0);
+	Eigen::Vector3d z(0.0, 0.0, 0.2);
+
+	o = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * o;
+	x = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * x;
+	y = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * y;
+	z = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * z;
+
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+
+	Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
+	mRI->setPenColor(red);
+	glBegin(GL_LINES);
+	glVertex3f(o[0], o[1], o[2]);
+	glVertex3f(x[0], x[1], x[2]);
+	glEnd();
+
+	Eigen::Vector4d green(0.0, 1.0, 0.0, 1.0);
+	mRI->setPenColor(green);
+	glBegin(GL_LINES);
+	glVertex3f(o[0], o[1], o[2]);
+	glVertex3f(y[0], y[1], y[2]);
+	glEnd();
+
+	Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
+	mRI->setPenColor(blue);
+	glBegin(GL_LINES);
+	glVertex3f(o[0], o[1], o[2]);
+	glVertex3f(z[0], z[1], z[2]);
+	glEnd();
+
+	glDisable(GL_COLOR_MATERIAL);
+	glPopMatrix();
 }
 
 void
@@ -446,9 +515,21 @@ DrawEnergyGraph(std::string name, double w, double h, double x, double y)
 	DrawString(x+0.4*w, y-0.015, name);
 
 	std::vector<double> data_ = mEnv->GetEnergy(0).at(name);
-	std::vector<double> data_device_ = mEnv->GetEnergy(1).at(name);
+	// std::vector<double> data_device_ = mEnv->GetEnergy(1).at(name);
 
-	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, red, 1.5, data_, blue, 2.0, data_device_);
+	// DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, red, 1.5, data_, blue, 2.0, data_device_);
+	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, red, 1.5, data_);
+
+	double max = 0.0;
+	double mean = 0.0;
+	for(int i=0; i<data_.size(); i++)
+	{
+		mean += data_[i];
+		if(data_[i] > max)
+			max = data_[i];
+	}
+	mean /= data_.size();
+	// std::cout << name << " : " << max << " " << mean << std::endl;
 }
 
 void
@@ -529,9 +610,83 @@ DrawDevice()
 	{
 		DrawSkeleton(mEnv->GetCharacter()->GetDevice()->GetSkeleton());
 		DrawDeviceSignals();
-		if(mDrawDeviceForce)
-			DrawDeviceForce();
 	}
+
+	SkeletonPtr skel = mEnv->GetCharacter()->GetDevice()->GetSkeleton();
+
+	int i = coord_idx2;
+	glPushMatrix();
+
+	Eigen::Vector3d o(0.0, 0.0, 0.0);
+	Eigen::Vector3d x(0.2, 0.0, 0.0);
+	Eigen::Vector3d y(0.0, 0.2, 0.0);
+	Eigen::Vector3d z(0.0, 0.0, 0.2);
+
+	o = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * o;
+
+	x = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * x;
+
+	y = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * y;
+
+	z = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * z;
+
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+
+	Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
+	mRI->setPenColor(red);
+	glBegin(GL_LINES);
+	glVertex3f(o[0], o[1], o[2]);
+	glVertex3f(x[0], x[1], x[2]);
+	glEnd();
+
+	Eigen::Vector4d green(0.0, 1.0, 0.0, 1.0);
+	mRI->setPenColor(green);
+	glBegin(GL_LINES);
+	glVertex3f(o[0], o[1], o[2]);
+	glVertex3f(y[0], y[1], y[2]);
+	glEnd();
+
+	Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
+	mRI->setPenColor(blue);
+	glBegin(GL_LINES);
+	glVertex3f(o[0], o[1], o[2]);
+	glVertex3f(z[0], z[1], z[2]);
+	glEnd();
+	glDisable(GL_COLOR_MATERIAL);
+	glPopMatrix();
+
+	// std::cout << "name : " << sf->getName() << std::endl;
+	// if( sf->getName()=="Controller_ShapeNode_0" ||
+	// 	sf->getName()=="ControllerFront_ShapeNode_0" ||
+	// 	sf->getName()=="ControllerRight_ShapeNode_0" ||
+	// 	sf->getName()=="ControllerLeft_ShapeNode_0")
+	// {
+		// glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+		// glEnable(GL_COLOR_MATERIAL);
+
+		// Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
+		// mRI->setPenColor(red);
+		// glBegin(GL_LINES);
+		// glVertex3f(0.0, 0.0, 0.0);
+		// glVertex3f(0.5, 0.0, 0.0);
+		// glEnd();
+
+		// Eigen::Vector4d green(0.0, 1.0, 0.0, 1.0);
+		// mRI->setPenColor(green);
+		// glBegin(GL_LINES);
+		// glVertex3f(0.0, 0.0, 0.0);
+		// glVertex3f(0.0, 0.5, 0.0);
+		// glEnd();
+
+		// Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
+		// mRI->setPenColor(blue);
+		// glBegin(GL_LINES);
+		// glVertex3f(0.0, 0.0, 0.0);
+		// glVertex3f(0.0, 0.0, 0.5);
+		// glEnd();
+		// glDisable(GL_COLOR_MATERIAL);
+	// }
 }
 
 void
@@ -554,13 +709,13 @@ DrawDeviceSignals()
 	glEnable(GL_COLOR_MATERIAL);
 
 	// graph coord & size
-	double p_w = 0.27;
+	double p_w = 0.24;
 	double p_h = 0.15;
 
-	double pl_x = 0.68;
+	double pl_x = 0.70;
 	double pl_y = 0.83;
 
-	double pr_x = 0.68;
+	double pr_x = 0.70;
 	double pr_y = 0.65;
 
 	// graph
@@ -568,14 +723,16 @@ DrawDeviceSignals()
 	Eigen::Vector4d black(0.0, 0.0, 0.0, 1.0);
 	Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
 	Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
+	Eigen::Vector4d grey(0.6, 0.6, 0.6, 1.0);
 
-	double offset_x = 0.003;
+	double offset_x = 0.0003;
 	double offset_y = 0.002;
 
 	// device L
 	DrawQuads(pl_x, pl_y, p_w, p_h, white);
 	DrawLine(pl_x+0.01, pl_y+0.01, pl_x+p_w-0.01, pl_y+0.01, black, 1.0);
 	DrawLine(pl_x+0.01, pl_y+0.01, pl_x+0.01, pl_y+p_h-0.01, black, 1.0);
+	DrawLine(pl_x+0.01+offset_x*340, pl_y+0.01, pl_x+0.01+offset_x*340, pl_y+p_h-0.01, grey, 1.0);
 	DrawString(pl_x+0.5*p_w, pl_y-0.01, "Device L");
 
 	std::deque<double> data_L = mEnv->GetDeviceSignals(0);
@@ -585,12 +742,11 @@ DrawDeviceSignals()
 	DrawQuads(pr_x, pr_y, p_w, p_h, white);
 	DrawLine(pr_x+0.01, pr_y+0.01, pr_x+p_w-0.01, pr_y+0.01, black, 1.0);
 	DrawLine(pr_x+0.01, pr_y+0.01, pr_x+0.01, pr_y+p_h-0.01, black, 1.0);
+	DrawLine(pr_x+0.01+offset_x*340, pr_y+0.01, pr_x+0.01+offset_x*340, pr_y+p_h-0.01, grey, 1.0);
 	DrawString(pr_x+0.5*p_w, pr_y-0.01, "Device R");
 
 	std::deque<double> data_R = mEnv->GetDeviceSignals(1);
-	std::deque<double> Femur_R = mEnv->GetDeviceSignals(2);
-    // DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R);
-    DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R, blue, 2.0, Femur_R);
+	DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R);
 
 	glDisable(GL_COLOR_MATERIAL);
 	glPopMatrix();
@@ -598,43 +754,6 @@ DrawDeviceSignals()
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(oldMode);
-}
-
-void
-Window::
-DrawDeviceForce()
-{
-	const SkeletonPtr& skel_device = mEnv->GetCharacter()->GetDevice()->GetSkeleton();
-	const BodyNode* rodLeft = skel_device->getBodyNode(4);
-	const BodyNode* rodRight = skel_device->getBodyNode(9);
-
-	Eigen::VectorXd device_force = mEnv->GetDeviceForce();
-	Eigen::Vector3d rodLeft_force = device_force.head(3);
-	Eigen::Vector3d rodRight_force = device_force.tail(3);
-
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
-
-	Eigen::Vector4d color(0.7, 0.1, 0.1, 0.7);
-	mRI->setPenColor(color);
-
-	double rl_force = rodLeft_force.norm();
-	if(rl_force != 0)
-	{
-		rodLeft_force /= rl_force;
-		rodLeft_force = rodLeft->getWorldTransform().rotation() * rodLeft_force;
-		dart::gui::drawArrow3D(rodLeft->getCOM(), rodLeft_force, rl_force*0.02, 0.03, 0.04);
-	}
-
-	double rr_force = rodRight_force.norm();
-	if(rr_force != 0)
-	{
-		rodRight_force /= rr_force;
-		rodRight_force = rodRight->getWorldTransform().rotation() * rodRight_force;
-		dart::gui::drawArrow3D(rodRight->getCOM(), rodRight_force, rr_force*0.02, 0.03, 0.04);
-	}
-
-	glDisable(GL_COLOR_MATERIAL);
 }
 
 void

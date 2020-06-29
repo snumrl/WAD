@@ -65,7 +65,7 @@ class ReplayBuffer(object):
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
-		self.num_slaves = 16
+		self.num_slaves = 1
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
 		self.num_state = self.env.GetNumState()
@@ -203,7 +203,7 @@ class PPO(object):
 
 					self.env.Steps(1, False)
 			else:
-				self.env.StepsAtOnce()
+				self.env.StepsAtOnce(False)
 
 			for j in range(self.num_slaves):
 				nan_occur = False

@@ -7,6 +7,7 @@ EnvManager(std::string meta_file,int num_envs)
 	:mNumEnvs(num_envs)
 {
 	dart::math::seedRand();
+	std::cout << "manager 1" << std::endl;
 	omp_set_num_threads(mNumEnvs);
 	for(int i = 0;i<mNumEnvs;i++){
 		mEnvs.push_back(new MASS::Environment());
@@ -14,6 +15,7 @@ EnvManager(std::string meta_file,int num_envs)
 
 		env->Initialize(meta_file,false);
 	}
+	std::cout << "manager 2" << std::endl;
 }
 
 int

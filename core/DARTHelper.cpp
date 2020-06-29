@@ -157,12 +157,14 @@ MakeBodyNode(const SkeletonPtr& skeleton,BodyNode* parent,Joint::Properties* joi
 	bn->setInertia(inertia);
 	return bn;
 }
+
 Eigen::Vector3d Proj(const Eigen::Vector3d& u,const Eigen::Vector3d& v)
 {
 	Eigen::Vector3d proj;
 	proj = u.dot(v)/u.dot(u)*u;
 	return proj;
 }
+
 Eigen::Isometry3d Orthonormalize(const Eigen::Isometry3d& T_old)
 {
 	Eigen::Isometry3d T;
@@ -246,12 +248,12 @@ BuildFromFile(const std::string& path,bool create_obj)
 		return nullptr;
 	}
 
-	TiXmlElement *skeleton_elem = doc.FirstChildElement("Skeleton");
+	TiXmlElement* skeleton_elem = doc.FirstChildElement("Skeleton");
 	std::string skel_name = skeleton_elem->Attribute("name");
 	SkeletonPtr skel = Skeleton::create(skel_name);
 	std::cout << skel_name;
 
-	for(TiXmlElement* node = skeleton_elem->FirstChildElement("Node");node != nullptr;node = node->NextSiblingElement("Node"))
+	for(TiXmlElement* node=skeleton_elem->FirstChildElement("Node"); node!=nullptr; node=node->NextSiblingElement("Node"))
 	{
 		std::string name = node->Attribute("name");
 		std::string parent_str = node->Attribute("parent");
@@ -259,15 +261,15 @@ BuildFromFile(const std::string& path,bool create_obj)
 		if(parent_str != "None")
 			parent = skel->getBodyNode(parent_str);
 
-		ShapePtr shape;
-		Eigen::Isometry3d T_body = Eigen::Isometry3d::Identity();
 		TiXmlElement* body = node->FirstChildElement("Body");
 		std::string type = body->Attribute("type");
+		double mass = std::stod(body->Attribute("mass"));
+
 		std::string obj_file = "None";
 		if(body->Attribute("obj"))
 			obj_file = body->Attribute("obj");
-		double mass = std::stod(body->Attribute("mass"));
 
+		ShapePtr shape;
 		if(type == "Box")
 		{
 			Eigen::Vector3d size = string_to_vector3d(body->Attribute("size"));
@@ -284,20 +286,25 @@ BuildFromFile(const std::string& path,bool create_obj)
 			double height = std::stod(body->Attribute("height"));
 			shape = MASS::MakeCapsuleShape(radius,height);
 		}
+
 		bool contact = false;
 		if(body->Attribute("contact")!=nullptr){
 			std::string c = body->Attribute("contact");
 			if(c == "On")
 				contact = true;
 		}
+
 		Eigen::Vector4d color = Eigen::Vector4d::Constant(0.2);
 		if(body->Attribute("color")!=nullptr)
 			color = string_to_vector4d(body->Attribute("color"));
 
-		dart::dynamics::Inertia inertia = MakeInertia(shape,mass);
+		dart::dynamics::Inertia inertia = MakeInertia(shape, mass);
+
+		Eigen::Isometry3d T_body = Eigen::Isometry3d::Identity();
 		T_body.linear() = string_to_matrix3d(body->FirstChildElement("Transformation")->Attribute("linear"));
 		T_body.translation() = string_to_vector3d(body->FirstChildElement("Transformation")->Attribute("translation"));
 		T_body = Orthonormalize(T_body);
+
 		TiXmlElement* joint = node->FirstChildElement("Joint");
 		type = joint->Attribute("type");
 		Joint::Properties* props;
@@ -305,12 +312,15 @@ BuildFromFile(const std::string& path,bool create_obj)
 		T_joint.linear() = string_to_matrix3d(joint->FirstChildElement("Transformation")->Attribute("linear"));
 		T_joint.translation() = string_to_vector3d(joint->FirstChildElement("Transformation")->Attribute("translation"));
 		T_joint = Orthonormalize(T_joint);
+
 		Eigen::Isometry3d parent_to_joint;
 		if(parent==nullptr)
 			parent_to_joint = T_joint;
 		else
 			parent_to_joint = parent->getTransform().inverse()*T_joint;
+
 		Eigen::Isometry3d child_to_joint = T_body.inverse()*T_joint;
+
 		if(type == "Free")
 		{
 			props = MASS::MakeFreeJointProperties(name,parent_to_joint,child_to_joint);
