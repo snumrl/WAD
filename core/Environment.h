@@ -64,6 +64,7 @@ public:
 	std::vector<double> GetReward_Graph(int idx){return mCharacter->GetReward_Graph(idx);}
 	std::deque<double> GetDeviceSignals(int idx);
 	double GetPhase(){return mCharacter->GetPhase();}
+	std::deque<double> GetSignals(){return mCharacter->GetSignals();}
 
 private:
 	dart::simulation::WorldPtr mWorld;

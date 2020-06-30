@@ -122,6 +122,10 @@ Initialize()
 	mNumActiveDof = this->GetSkeleton()->getNumDofs()-mRootJointDof;
 	mNumState = this->GetState(0.0).rows();
 
+	mDevice_y.resize(600);
+	mDeviceSignals_L.resize(600);
+	mDeviceSignals_R.resize(600);
+
 	this->Initialize_Debug();
 }
 
@@ -236,6 +240,18 @@ Reset(double worldTime, int controlHz)
 	mSkeleton->setVelocities(mTargetVelocities);
 	mSkeleton->computeForwardKinematics(true,false,false);
 
+	qr = 0.0;
+	ql = 0.0;
+	qr_prev = 0.0;
+	ql_prev = 0.0;
+
+	mDevice_y.clear();
+    mDevice_y.resize(600);
+    mDeviceSignals_L.clear();
+    mDeviceSignals_R.clear();
+    mDeviceSignals_L.resize(600);
+    mDeviceSignals_R.resize(600);
+
 	mEnergy->Reset();
 
 	if(mUseMuscle)
@@ -342,7 +358,7 @@ Step()
 	SetEnergy();
 	SetRewards();
 
-	// mSkeleton->setForces(mDesiredTorque);
+	mSkeleton->setForces(mDesiredTorque);
 }
 
 void
@@ -653,7 +669,7 @@ GetReward_Character()
 	r_ee = exp_of_squared(ee_diff, 40.0);
 	r_com = exp_of_squared(com_diff, 10.0);
 
-	double r_ = r_ee*(w_q*r_q + w_v*r_v);
+	double r_ = r_ee*(w_q*r_q + w_v*r_v + w_com*r_com);
 	// std::cout << "r : " << r_ << std::endl;
 	// std::cout << "r_ee : " << r_ee << std::endl;
 	// std::cout << "r_q : " << w_q*r_q << std::endl;
@@ -677,6 +693,55 @@ GetDesiredTorques()
 	Eigen::VectorXd p_des = mTargetPositions;
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction_;
 	mDesiredTorque = this->GetSPDForces(p_des);
+
+	if(qr==0.0 && ql==0.0 && qr_prev==0.0 && ql_prev==0.0)
+	{
+		qr = GetAngleQ(1);
+		ql = GetAngleQ(6);
+		qr_prev = qr;
+		ql_prev = ql;
+	}
+	else{
+		qr = GetAngleQ(1);
+		ql = GetAngleQ(6);
+	}
+
+	double alpha = 0.05;
+	qr = (1-alpha)*qr_prev + alpha*qr;
+	ql = (1-alpha)*ql_prev + alpha*ql;
+
+	qr_prev = qr;
+	ql_prev = ql;
+
+	double y = sin(qr) - sin(ql);
+
+	mDevice_y.pop_back();
+	mDevice_y.push_front(k_*y);
+	// std::cout << "y : " << y << std::endl;
+	// std::cout << "qr : " << sin(qr) << std::endl;
+	// std::cout << "ql : " << sin(ql) << std::endl;
+
+	double torque = mDevice_y.at(delta_t);
+	// double torque = k_ * y_delta_t;
+	double des_torque_r = -1*torque*beta_R*beta_Rhip;
+	double des_torque_l =  1*torque*beta_L*beta_Lhip;
+
+	mDeviceSignals_L.pop_back();
+	mDeviceSignals_L.push_front(des_torque_l);
+
+	mDeviceSignals_R.pop_back();
+	mDeviceSignals_R.push_front(des_torque_r);
+
+	// int n = mSkeleton->getNumJoints();
+	// int offset = 0;
+	// for(int i=0; i<n; i++)
+	// {
+	// 	std::cout << mSkeleton->getJoint(i)->getName() << " : " << offset << " -> " << mSkeleton->getJoint(i)->getNumDofs() << std::endl;
+	// 	offset += mSkeleton->getJoint(i)->getNumDofs();
+	// }
+
+	mDesiredTorque[6] += des_torque_r;
+	mDesiredTorque[15] += des_torque_l;
 
 	return mDesiredTorque.tail(mDesiredTorque.rows()-mRootJointDof);
 }
@@ -725,7 +790,7 @@ double Pulse_Period(double t, double offset)
 
 double
 Character::
-GetSinQ(int idx)
+GetAngleQ(int idx)
 {
 	Eigen::Vector3d dir = mSkeleton->getBodyNode(0)->getCOMLinearVelocity();
 	dir /= dir.norm();
@@ -739,15 +804,15 @@ GetSinQ(int idx)
 
 	double sin = l2 / x;
 
-	return sin;
+	return asin(sin);
 }
 
 Eigen::VectorXd
 Character::
 GetDesiredTorques_Device(double t)
 {
-	// double sin_qr = GetSinQ(1);
-	// double sin_ql = GetSinQ(6);
+	// double sin_qr = GetAngleQ(1);
+	// double sin_ql = GetAngleQ(6);
 	// double y = sin_qr - sin_ql;
 
 	// std::cout << "qr : " << sin_qr << std::endl;

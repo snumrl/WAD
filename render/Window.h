@@ -38,6 +38,8 @@ public:
 
 	void DrawGround();
 	void DrawCharacter();
+	void DrawTarget();
+	void DrawSignals();
 	void DrawEnergy();
 	void DrawEnergyGraph(std::string name, double w, double h, double x, double y);
 	void DrawReward();
@@ -76,7 +78,7 @@ private:
 	Environment* mEnv;
 	bool mFocus;
 	bool mSimulating;
-	bool mDrawBVH;
+	bool mDrawTarget;
 	bool mDrawOBJ;
 	bool mDrawShadow;
 	bool mDrawTrajectory;
@@ -86,11 +88,9 @@ private:
 	bool mDeviceNNLoaded;
 	bool mOnDevice;
 
+	bool isDrawTarget = false;
 	bool mTalusL = false;
 	bool mTalusR = false;
-
-	int coord_idx = 0;
-	int coord_idx2 = 0;
 
 	Eigen::Affine3d mViewMatrix;
 	std::vector<Eigen::Vector3d> mTrajectory;

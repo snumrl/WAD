@@ -48,7 +48,7 @@ Eigen::Matrix3d R_z(double z)
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawBVH(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),mDrawTrajectory(false),mDrawProgressBar(false)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),mDrawTrajectory(false),mDrawProgressBar(false)
 {
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
@@ -160,48 +160,28 @@ keyboard(unsigned char _key, int _x, int _y)
 	Eigen::Vector3d force = Eigen::Vector3d::Zero();
 	switch (_key)
 	{
-	case '+': force[0] += 500.0;break;
-	case '-': force[0] -= 500.0;break;
+	// case '+': force[0] += 500.0;break;
+	// case '-': force[0] -= 500.0;break;
 	case 's': this->Step();break;
 	case 'r': this->Reset();break;
 	case ' ': mSimulating = !mSimulating;break;
 	case 'f': mFocus = !mFocus;break;
 	case 'o': mDrawOBJ = !mDrawOBJ;break;
-	case 'b': mDrawBVH = !mDrawBVH;break;
+	case 't': mDrawTarget = !mDrawTarget;break;
 	case 'd':
 		if(mEnv->GetUseDevice())
 			mOnDevice = !mOnDevice;
 		break;
-	case 't': mDrawTrajectory = !mDrawTrajectory;break;
+	// case 't': mDrawTrajectory = !mDrawTrajectory;break;
 	case 'p': mDrawProgressBar = !mDrawProgressBar;break;
-	case 'z':
-		coord_idx += 1;
-		if(coord_idx>22)
-			coord_idx=0;
-		break;
-	case 'x':
-		coord_idx -= 1;
-		if(coord_idx<0)
-			coord_idx=22;
-		break;
-	case 'c':
-		coord_idx2 += 1;
-		if(coord_idx2>13)
-			coord_idx2=0;
-		break;
-	case 'v':
-		coord_idx2 -= 1;
-		if(coord_idx2<0)
-			coord_idx2=13;
-		break;
 	case 27 : exit(0);break;
 	default:
 		Win3D::keyboard(_key,_x,_y);break;
 	}
-	Eigen::VectorXd f = Eigen::VectorXd::Zero(12);
-	f.segment<3>(6) = force;
-	f.segment<3>(9) = force;
-	mEnv->GetCharacter()->mDevice->GetSkeleton()->setForces(f);
+	// Eigen::VectorXd f = Eigen::VectorXd::Zero(12);
+	// f.segment<3>(6) = force;
+	// f.segment<3>(9) = force;
+	// mEnv->GetCharacter()->mDevice->GetSkeleton()->setForces(f);
 }
 
 void
@@ -336,8 +316,7 @@ draw()
 		DrawDevice();
 	if(mDrawProgressBar)
 		DrawProgressBar();
-	// if(mDrawBVH)
-	// 	DrawBVH(mEnv->GetCharacter()->GetBVH());
+
 
 	SetFocusing();
 }
@@ -380,62 +359,136 @@ void
 Window::
 DrawCharacter()
 {
-	DrawSkeleton(mEnv->GetCharacter()->GetSkeleton());
+	SkeletonPtr skeleton = mEnv->GetCharacter()->GetSkeleton();
+	DrawSkeleton(skeleton);
 
 	DrawEnergy();
 	DrawReward();
+	DrawSignals();
+	DrawDeviceSignals();
 
-	if(mDrawTrajectory)
-		DrawTrajectory();
+	if(mDrawTarget)
+		DrawTarget();
+
+	// if(mDrawTrajectory)
+	// 	DrawTrajectory();
 
 	if(mEnv->GetUseMuscle())
 		DrawMuscles(mEnv->GetCharacter()->GetMuscles());
 
-	SkeletonPtr skel = mEnv->GetCharacter()->GetSkeleton();
+	// SkeletonPtr skel = mEnv->GetCharacter()->GetSkeleton();
 
-	int n = skel->getNumBodyNodes();
 
-	int i = coord_idx;
-	// std::cout << "name : " << skel->getBodyNode(i)->getName() << std::endl;
+	// glPushMatrix();
+
+	// Eigen::Vector3d o(0.0, 0.0, 0.0);
+	// Eigen::Vector3d x(0.2, 0.0, 0.0);
+	// Eigen::Vector3d y(0.0, 0.2, 0.0);
+	// Eigen::Vector3d z(0.0, 0.0, 0.2);
+
+	// o = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * o;
+	// x = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * x;
+	// y = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * y;
+	// z = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * z;
+
+	// glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	// glEnable(GL_COLOR_MATERIAL);
+
+	// Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
+	// mRI->setPenColor(red);
+	// glBegin(GL_LINES);
+	// glVertex3f(o[0], o[1], o[2]);
+	// glVertex3f(x[0], x[1], x[2]);
+	// glEnd();
+
+	// Eigen::Vector4d green(0.0, 1.0, 0.0, 1.0);
+	// mRI->setPenColor(green);
+	// glBegin(GL_LINES);
+	// glVertex3f(o[0], o[1], o[2]);
+	// glVertex3f(y[0], y[1], y[2]);
+	// glEnd();
+
+	// Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
+	// mRI->setPenColor(blue);
+	// glBegin(GL_LINES);
+	// glVertex3f(o[0], o[1], o[2]);
+	// glVertex3f(z[0], z[1], z[2]);
+	// glEnd();
+
+	// glDisable(GL_COLOR_MATERIAL);
+	// glPopMatrix();
+}
+
+void
+Window::
+DrawTarget()
+{
+	isDrawTarget = true;
+	SkeletonPtr skeleton = mEnv->GetCharacter()->GetSkeleton();
+
+	Eigen::VectorXd cur_pos = skeleton->getPositions();
+	skeleton->setPositions(mEnv->GetCharacter()->GetTargetPositions());
 
 	glPushMatrix();
+	DrawBodyNode(skeleton->getRootBodyNode());
+	glPopMatrix();
 
-	Eigen::Vector3d o(0.0, 0.0, 0.0);
-	Eigen::Vector3d x(0.2, 0.0, 0.0);
-	Eigen::Vector3d y(0.0, 0.2, 0.0);
-	Eigen::Vector3d z(0.0, 0.0, 0.2);
+	skeleton->setPositions(cur_pos);
+	isDrawTarget = false;
+}
 
-	o = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * o;
-	x = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * x;
-	y = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * y;
-	z = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * z;
+void
+Window::
+DrawSignals()
+{
+	GLint oldMode;
+	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
+	glMatrixMode(GL_PROJECTION);
+
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
 
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
 
+	// graph coord & size
+	double w = 0.24;
+	double h = 0.15;
+	double x = 0.7;
+	double y = 0.2;
+
+	// graph
+	Eigen::Vector4d white(1.0, 1.0, 1.0, 1.0);
+	Eigen::Vector4d black(0.0, 0.0, 0.0, 1.0);
 	Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
-	mRI->setPenColor(red);
-	glBegin(GL_LINES);
-	glVertex3f(o[0], o[1], o[2]);
-	glVertex3f(x[0], x[1], x[2]);
-	glEnd();
-
-	Eigen::Vector4d green(0.0, 1.0, 0.0, 1.0);
-	mRI->setPenColor(green);
-	glBegin(GL_LINES);
-	glVertex3f(o[0], o[1], o[2]);
-	glVertex3f(y[0], y[1], y[2]);
-	glEnd();
-
 	Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
-	mRI->setPenColor(blue);
-	glBegin(GL_LINES);
-	glVertex3f(o[0], o[1], o[2]);
-	glVertex3f(z[0], z[1], z[2]);
-	glEnd();
+	Eigen::Vector4d grey(0.7, 0.7, 0.7, 1.0);
+
+	double offset_x = 0.0003;
+	double offset_y = 0.003;
+
+	DrawQuads(x, y, w, h, white);
+	DrawLine(x+0.005, y+0.01, x+w-0.005, y+0.01, black, 2.0);
+	DrawLine(x+0.005, y+0.01, x+0.005, y+h-0.01, black, 2.0);
+	DrawLine(x+0.005, y+0.01+h*0.6, x+w-0.005, y+0.01+h*0.6, grey, 2.0);
+	DrawString(x+0.4*w, y-0.015, "y");
+
+	std::deque<double> data_ = mEnv->GetSignals();
+
+	DrawLineStrip(x+0.005, y+0.01+h*0.6, offset_x, offset_y, blue, 1.5, data_);
 
 	glDisable(GL_COLOR_MATERIAL);
 	glPopMatrix();
+
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(oldMode);
+
 }
 
 void
@@ -614,47 +667,46 @@ DrawDevice()
 
 	SkeletonPtr skel = mEnv->GetCharacter()->GetDevice()->GetSkeleton();
 
-	int i = coord_idx2;
 	glPushMatrix();
 
-	Eigen::Vector3d o(0.0, 0.0, 0.0);
-	Eigen::Vector3d x(0.2, 0.0, 0.0);
-	Eigen::Vector3d y(0.0, 0.2, 0.0);
-	Eigen::Vector3d z(0.0, 0.0, 0.2);
+	// Eigen::Vector3d o(0.0, 0.0, 0.0);
+	// Eigen::Vector3d x(0.2, 0.0, 0.0);
+	// Eigen::Vector3d y(0.0, 0.2, 0.0);
+	// Eigen::Vector3d z(0.0, 0.0, 0.2);
 
-	o = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * o;
+	// o = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * o;
 
-	x = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * x;
+	// x = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * x;
 
-	y = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * y;
+	// y = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * y;
 
-	z = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * z;
+	// z = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * z;
 
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
+	// glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	// glEnable(GL_COLOR_MATERIAL);
 
-	Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
-	mRI->setPenColor(red);
-	glBegin(GL_LINES);
-	glVertex3f(o[0], o[1], o[2]);
-	glVertex3f(x[0], x[1], x[2]);
-	glEnd();
+	// Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
+	// mRI->setPenColor(red);
+	// glBegin(GL_LINES);
+	// glVertex3f(o[0], o[1], o[2]);
+	// glVertex3f(x[0], x[1], x[2]);
+	// glEnd();
 
-	Eigen::Vector4d green(0.0, 1.0, 0.0, 1.0);
-	mRI->setPenColor(green);
-	glBegin(GL_LINES);
-	glVertex3f(o[0], o[1], o[2]);
-	glVertex3f(y[0], y[1], y[2]);
-	glEnd();
+	// Eigen::Vector4d green(0.0, 1.0, 0.0, 1.0);
+	// mRI->setPenColor(green);
+	// glBegin(GL_LINES);
+	// glVertex3f(o[0], o[1], o[2]);
+	// glVertex3f(y[0], y[1], y[2]);
+	// glEnd();
 
-	Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
-	mRI->setPenColor(blue);
-	glBegin(GL_LINES);
-	glVertex3f(o[0], o[1], o[2]);
-	glVertex3f(z[0], z[1], z[2]);
-	glEnd();
-	glDisable(GL_COLOR_MATERIAL);
-	glPopMatrix();
+	// Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
+	// mRI->setPenColor(blue);
+	// glBegin(GL_LINES);
+	// glVertex3f(o[0], o[1], o[2]);
+	// glVertex3f(z[0], z[1], z[2]);
+	// glEnd();
+	// glDisable(GL_COLOR_MATERIAL);
+	// glPopMatrix();
 
 	// std::cout << "name : " << sf->getName() << std::endl;
 	// if( sf->getName()=="Controller_ShapeNode_0" ||
@@ -726,7 +778,9 @@ DrawDeviceSignals()
 	Eigen::Vector4d grey(0.6, 0.6, 0.6, 1.0);
 
 	double offset_x = 0.0003;
-	double offset_y = 0.002;
+	double offset_y = 0.003;
+
+	std::deque<double> data_y = mEnv->GetSignals();
 
 	// device L
 	DrawQuads(pl_x, pl_y, p_w, p_h, white);
@@ -736,7 +790,7 @@ DrawDeviceSignals()
 	DrawString(pl_x+0.5*p_w, pl_y-0.01, "Device L");
 
 	std::deque<double> data_L = mEnv->GetDeviceSignals(0);
-	DrawLineStrip(pl_x+0.01, pl_y+0.01, offset_x, offset_y, red, 2.0, data_L);
+	DrawLineStrip(pl_x+0.01, pl_y+0.01, offset_x, offset_y, red, 2.0, data_L, blue, 2.0, data_y);
 
  	// device R
 	DrawQuads(pr_x, pr_y, p_w, p_h, white);
@@ -746,7 +800,7 @@ DrawDeviceSignals()
 	DrawString(pr_x+0.5*p_w, pr_y-0.01, "Device R");
 
 	std::deque<double> data_R = mEnv->GetDeviceSignals(1);
-	DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R);
+	DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R, blue, 2.0, data_y);
 
 	glDisable(GL_COLOR_MATERIAL);
 	glPopMatrix();
@@ -819,7 +873,9 @@ void
 Window::
 DrawSkeleton(const SkeletonPtr& skel)
 {
+	glPushMatrix();
 	DrawBodyNode(skel->getRootBodyNode());
+	glPopMatrix();
 }
 
 void
@@ -840,7 +896,16 @@ DrawShapeFrame(const ShapeFrame* sf)
 	mRI->pushMatrix();
 	mRI->transform(sf->getRelativeTransform());
 
-	DrawShape(sf->getShape().get(),va->getRGBA());
+	Eigen::Vector4d color = va->getRGBA();
+	if(isDrawTarget)
+	{
+		color[0] = 1.0;
+		color[1] = 0.6;
+		color[2] = 0.6;
+		color[3] = 0.3;
+	}
+
+	DrawShape(sf->getShape().get(), color);
 	mRI->popMatrix();
 }
 
@@ -1235,13 +1300,13 @@ DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vecto
 		glVertex2f(x + offset_x*i, y + offset_y*data1.at(i));
 	glEnd();
 
-	Eigen::Vector4d blend((color[0]+color1[0])/2.0, (color[1]+color1[1])/2.0, (color[2]+color1[2])/2.0, (color[3]+color1[3])/2.0);
+	// Eigen::Vector4d blend((color[0]+color1[0])/2.0, (color[1]+color1[1])/2.0, (color[2]+color1[2])/2.0, (color[3]+color1[3])/2.0);
 
-	mRI->setPenColor(blend);
+	// mRI->setPenColor(blend);
 
-	glBegin(GL_LINE_STRIP);
-	for(int i=0; i<data1.size(); i++)
-		glVertex2f(x + offset_x*i, y + offset_y*(data.at(i)+data1.at(i)));
-	glEnd();
+	// glBegin(GL_LINE_STRIP);
+	// for(int i=0; i<data1.size(); i++)
+	// 	glVertex2f(x + offset_x*i, y + offset_y*(data.at(i)+data1.at(i)));
+	// glEnd();
 
 }

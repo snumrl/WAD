@@ -117,10 +117,10 @@ Initialize(const std::string& meta_file, bool load_obj)
 	// auto weld_talusr = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("TalusR"));
 
 	// mWorld->getConstraintSolver()->addConstraint(weld_pelvis);
-    // mWorld->getConstraintSolver()->addConstraint(weld_spine);
-    // mWorld->getConstraintSolver()->addConstraint(weld_handr);
-    // mWorld->getConstraintSolver()->addConstraint(weld_handl);
-    // mWorld->getConstraintSolver()->addConstraint(weld_talusr);
+ //    mWorld->getConstraintSolver()->addConstraint(weld_spine);
+ //    mWorld->getConstraintSolver()->addConstraint(weld_handr);
+ //    mWorld->getConstraintSolver()->addConstraint(weld_handl);
+ //    mWorld->getConstraintSolver()->addConstraint(weld_talusr);
 }
 
 void
