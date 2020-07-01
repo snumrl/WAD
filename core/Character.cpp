@@ -375,7 +375,7 @@ SetEnergy()
 			torque = t_.norm();
 			offset += 3;
 		}
-		
+
 		if(mOnDevice)
 			mEnergy_Device->SetEnergy(name, (int)(mPhase/0.0303), torque);
 		else
@@ -537,7 +537,6 @@ void
 Character::
 SetRewardParameters_Device()
 {
-
 }
 
 double
