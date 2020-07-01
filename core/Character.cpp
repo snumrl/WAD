@@ -13,6 +13,19 @@ Character()
 {
 }
 
+Character::
+~Character()
+{
+	for(int i=0; i<mEndEffectors.size(); i++)
+		delete(mEndEffectors[i]);
+
+	for(int i=0; i<mMuscles.size(); i++)
+		delete(mMuscles[i]);
+
+	delete mBVH;
+	delete mDevice;
+}
+
 void
 Character::
 LoadSkeleton(const std::string& path,bool create_obj)
@@ -106,20 +119,22 @@ void
 Character::
 Initialize()
 {
-	if(this->GetSkeleton() == nullptr)
+	if(mSkeleton == nullptr)
 	{
 		std::cout<<"Initialize Character First"<<std::endl;
 		exit(0);
 	}
 
-	if(this->GetSkeleton()->getRootBodyNode()->getParentJoint()->getType()=="FreeJoint")
+	const std::string& type =
+		mSkeleton->getRootBodyNode()->getParentJoint()->getType();
+	if(type == "FreeJoint")
 		mRootJointDof = 6;
-	else if(this->GetSkeleton()->getRootBodyNode()->getParentJoint()->getType()=="PlanarJoint")
+	else if(type == "PlanarJoint")
 		mRootJointDof = 3;
 	else
 		mRootJointDof = 0;
 
-	mNumActiveDof = this->GetSkeleton()->getNumDofs()-mRootJointDof;
+	mNumActiveDof = mSkeleton->getNumDofs()-mRootJointDof;
 	mNumState = this->GetState(0.0).rows();
 
 	mDevice_y.resize(600);
@@ -427,7 +442,7 @@ Step_Muscles(int simCount, int randomSampleIndex)
 	int count = 0;
 	for(auto muscle : mMuscles)
 	{
-		muscle->activation = mActivationLevels[count++];
+		muscle->SetActivation(mActivationLevels[count++]);
 		muscle->Update();
 		muscle->ApplyForceToBody();
 	}

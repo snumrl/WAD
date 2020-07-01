@@ -18,7 +18,6 @@ public:
 	void SetUseDevice(bool use_device){mUseDevice = use_device;}
 	void SetControlHz(int con_hz) {mControlHz = con_hz;}
 	void SetSimulationHz(int sim_hz) {mSimulationHz = sim_hz;}
-
 	void SetCharacter(Character* character) {mCharacter = character;}
 	void SetGround(const dart::dynamics::SkeletonPtr& ground) {mGround = ground;}
 
@@ -33,20 +32,17 @@ public:
 	void SetAction_Device(const Eigen::VectorXd& a);
 	void SetActivationLevels(const Eigen::VectorXd& a);
 	void SetNumSteps();
-	std::map<std::string,double> GetRewardSep();
-
-	Eigen::VectorXd GetState();
-	Eigen::VectorXd GetState_Device();
-
-	Eigen::VectorXd GetDesiredTorques();
-	Eigen::VectorXd GetMuscleTorques();
-	std::vector<MuscleTuple>& GetMuscleTuples();
 
 	const dart::simulation::WorldPtr& GetWorld(){return mWorld;}
 	const dart::dynamics::SkeletonPtr& GetGround(){return mGround;}
 	Character* GetCharacter(){return mCharacter;}
 
+	Eigen::VectorXd GetState();
+	Eigen::VectorXd GetState_Device();
+	std::vector<MuscleTuple>& GetMuscleTuples();
+
 	double GetReward();
+	std::map<std::string,double> GetRewardSep();
 
 	int GetControlHz(){return mControlHz;}
 	int GetSimulationHz(){return mSimulationHz;}
@@ -60,10 +56,11 @@ public:
 
 	bool GetUseMuscle(){return mUseMuscle;}
 	bool GetUseDevice(){return mUseDevice;}
+	double GetPhase(){return mCharacter->GetPhase();}
+
 	std::map<std::string, std::vector<double>> GetEnergy(int idx){return mCharacter->GetEnergy(idx);}
 	std::vector<double> GetReward_Graph(int idx){return mCharacter->GetReward_Graph(idx);}
 	std::deque<double> GetDeviceSignals(int idx);
-	double GetPhase(){return mCharacter->GetPhase();}
 	std::deque<double> GetSignals(){return mCharacter->GetSignals();}
 
 private:

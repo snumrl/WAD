@@ -987,7 +987,7 @@ DrawMuscles(const std::vector<Muscle*>& muscles)
 	{
 		auto aps = muscle->GetAnchors();
 		bool lower_body = true;
-		double a = muscle->activation;
+		double a = muscle->GetActivation();
 		Eigen::Vector4d color(0.4+(2.0*a),0.4,0.4,1.0);//0.7*(1.0-3.0*a));
 		mRI->setPenColor(color);
 		for(int i=0;i<aps.size();i++)
@@ -995,7 +995,7 @@ DrawMuscles(const std::vector<Muscle*>& muscles)
 			Eigen::Vector3d p = aps[i]->GetPoint();
 			mRI->pushMatrix();
 			mRI->translate(p);
-			mRI->drawSphere(0.005*sqrt(muscle->f0/1000.0));
+			mRI->drawSphere(0.005*sqrt(muscle->GetF0()/1000.0));
 			mRI->popMatrix();
 		}
 
@@ -1028,7 +1028,7 @@ DrawMuscles(const std::vector<Muscle*>& muscles)
 			T.translation() = mid;
 			mRI->pushMatrix();
 			mRI->transform(T);
-			mRI->drawCylinder(0.005*sqrt(muscle->f0/1000.0),len);
+			mRI->drawCylinder(0.005*sqrt(muscle->GetF0()/1000.0),len);
 			mRI->popMatrix();
 		}
 

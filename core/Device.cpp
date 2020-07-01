@@ -16,30 +16,37 @@ Device(dart::dynamics::SkeletonPtr device)
     mSkeleton = device;
 }
 
+Device::
+~Device()
+{
+
+}
+
 void
 Device::
 Initialize()
 {
-    if(this->GetSkeleton() == nullptr)
+    if(mSkeleton == nullptr)
     {
         std::cout<<"Initialize Device First"<<std::endl;
         exit(0);
     }
 
-    if(this->GetSkeleton()->getRootBodyNode()->getParentJoint()->getType()=="FreeJoint")
+    const std::string& type =
+        mSkeleton->getRootBodyNode()->getParentJoint()->getType();
+
+    if(type == "FreeJoint")
         mRootJointDof = 6;
-    else if(this->GetSkeleton()->getRootBodyNode()->getParentJoint()->getType()=="PlanarJoint")
+    else if(type == "PlanarJoint")
         mRootJointDof = 3;
     else
         mRootJointDof = 0;
 
-    mNumActiveDof = this->GetSkeleton()->getNumDofs()-mRootJointDof;
-    mNumState = this->GetState(0.0, 1.0).rows();
-
-    mTorqueMax_Device = 100.;
-
+    mNumActiveDof = mSkeleton->getNumDofs()-mRootJointDof;
     mNumAction = mNumActiveDof;
     mNumState = this->GetState(0.0, 1.0).rows();
+
+    mTorqueMax_Device = 15.0;
 }
 
 void

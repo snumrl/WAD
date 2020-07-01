@@ -40,6 +40,7 @@ class Character
 {
 public:
 	Character();
+	~Character();
 
 	void LoadSkeleton(const std::string& path,bool create_obj = false);
 	void LoadBVH(const std::string& path,bool cyclic=true);

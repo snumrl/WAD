@@ -6,20 +6,23 @@ namespace MASS
 {
 struct Anchor
 {
-	int num_related_bodies;
+	Anchor(std::vector<dart::dynamics::BodyNode*> bns,std::vector<Eigen::Vector3d> lps,std::vector<double> ws);
+	~Anchor();
 
+	Eigen::Vector3d GetPoint();
+
+	int num_related_bodies;
 	std::vector<dart::dynamics::BodyNode*> bodynodes;
 	std::vector<Eigen::Vector3d> local_positions;
 	std::vector<double> weights;
-
-	Anchor(std::vector<dart::dynamics::BodyNode*> bns,std::vector<Eigen::Vector3d> lps,std::vector<double> ws);
-	Eigen::Vector3d GetPoint();
 };
 
 class Muscle
 {
 public:
 	Muscle(std::string _name,double f0,double lm0,double lt0,double pen_angle,double lmax);
+	~Muscle();
+
 	void AddAnchor(const dart::dynamics::SkeletonPtr& skel,dart::dynamics::BodyNode* bn,const Eigen::Vector3d& glob_pos,int num_related_bodies);
 	void AddAnchor(dart::dynamics::BodyNode* bn,const Eigen::Vector3d& glob_pos);
 	const std::vector<Anchor*>& GetAnchors(){return mAnchors;}
@@ -40,7 +43,8 @@ public:
 	std::vector<dart::dynamics::BodyNode*> GetRelatedBodyNodes();
 	void ComputeJacobians();
 	Eigen::VectorXd Getdl_dtheta();
-public:
+
+private:
 	std::string name;
 	std::vector<Anchor*> mAnchors;
 	int num_related_dofs;
@@ -48,6 +52,7 @@ public:
 
 	std::vector<Eigen::Vector3d> mCachedAnchorPositions;
 	std::vector<Eigen::MatrixXd> mCachedJs;
+
 public:
 	//Dynamics
 	double g(double _l_m);
@@ -55,6 +60,13 @@ public:
 	double g_pl(double _l_m);
 	double g_al(double _l_m);
 
+	void SetActivation(double a){ activation = a;}
+	double GetActivation(){ return activation;}
+
+	void SetF0(double f){ f0 = f;}
+	double GetF0(){ return f0;}
+
+private:
 
 	double l_mt,l_mt_max;
 	double l_m;
