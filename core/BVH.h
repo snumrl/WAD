@@ -8,6 +8,7 @@
 #include <utility>
 #include <initializer_list>
 #include "dart/dart.hpp"
+#include "dart/gui/gui.hpp"
 
 namespace MASS
 {
@@ -77,6 +78,8 @@ public:
 
 	void SetSkeleton(const dart::dynamics::SkeletonPtr& skel){mSkeleton = skel;}
 	void SetBVHMap(const std::map<std::string,std::string>& bvh_map){mBVHMap = bvh_map;}
+	void Draw();
+	void DrawRecursive(BVHNode* node);
 
 private:
 	bool mCyclic;

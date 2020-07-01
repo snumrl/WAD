@@ -13,6 +13,7 @@ namespace MASS
 
 class Environment;
 class Muscle;
+class BVH;
 class Window : public dart::gui::Win3D
 {
 public:
@@ -27,7 +28,7 @@ public:
 	void draw() override;
 	void keyboard(unsigned char _key, int _x, int _y) override;
 	void displayTimer(int _val) override;
-	
+
 	void Step();
 	void Reset();
 
@@ -37,16 +38,17 @@ public:
 
 	void DrawGround();
 	void DrawCharacter();
+	void DrawTarget();
+	void DrawSignals();
 	void DrawEnergy();
 	void DrawEnergyGraph(std::string name, double w, double h, double x, double y);
 	void DrawReward();
 	void DrawRewardGraph(std::string name, double w, double h, double x, double y);
 	void DrawDevice();
-	void DrawDeviceForce();
 	void DrawDeviceSignals();
 	void DrawTrajectory();
 	void DrawProgressBar();
-	
+
 	void DrawEntity(const dart::dynamics::Entity* entity);
 	void DrawBodyNode(const dart::dynamics::BodyNode* bn);
 	void DrawSkeleton(const dart::dynamics::SkeletonPtr& skel);
@@ -56,7 +58,7 @@ public:
 	void DrawMuscles(const std::vector<Muscle*>& muscles);
 	void DrawShadow(const Eigen::Vector3d& scale, const aiScene* mesh,double y);
 	void DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine3d& M,double y);
-	
+
 	void DrawQuads(double x, double y, double w, double h, Eigen::Vector4d color);
 	void DrawString(double x, double y, std::string str);
 	void DrawLine(double p1_x, double p1_y, double p2_x, double p2_y, Eigen::Vector4d color, double line_width);
@@ -76,10 +78,9 @@ private:
 	Environment* mEnv;
 	bool mFocus;
 	bool mSimulating;
-	bool mDrawBVH;
+	bool mDrawTarget;
 	bool mDrawOBJ;
 	bool mDrawShadow;
-	bool mDrawDeviceForce;
 	bool mDrawTrajectory;
 	bool mDrawProgressBar;
 	bool mNNLoaded;
@@ -87,9 +88,10 @@ private:
 	bool mDeviceNNLoaded;
 	bool mOnDevice;
 
+	bool isDrawTarget = false;
 	bool mTalusL = false;
 	bool mTalusR = false;
-	
+
 	Eigen::Affine3d mViewMatrix;
 	std::vector<Eigen::Vector3d> mTrajectory;
 	std::vector<Eigen::Vector3d> mFootprint;

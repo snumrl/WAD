@@ -187,6 +187,7 @@ GetMotion(double t)
 			p[idx] = val;
 		}
 	}
+
 	return p;
 }
 
@@ -325,6 +326,38 @@ ReadHierarchy(BVHNode* parent,const std::string& name,int& channel_offset,std::i
 
 	return new_node;
 }
+
+void
+BVH::
+Draw()
+{
+	DrawRecursive(mRoot);
+}
+
+void
+BVH::
+DrawRecursive(BVHNode* node)
+{
+	Eigen::Vector3d offset = node->GetOffset()/6.0;
+	Eigen::AngleAxisd rotation = Eigen::AngleAxisd(node->Get());
+	Eigen::Vector3d rot_axis = rotation.axis();
+
+	std::vector<BVHNode*> children = node->GetChildren();
+	for(auto& c : children)
+	{
+		Eigen::Vector3d cOffset = c->GetOffset()/6.0;
+		glPushMatrix();
+		glTranslatef(offset[0], offset[1], offset[2]);
+		glRotatef(rotation.angle(), rot_axis[0], rot_axis[1], rot_axis[2]);
+		glBegin(GL_LINES);
+		glVertex3f(0.0, 0.0, 0.0);
+		glVertex3f(cOffset[0], cOffset[1], cOffset[2]);
+		glEnd();
+		DrawRecursive(c);
+	}
+	glPopMatrix();
+}
+
 std::map<std::string,MASS::BVHNode::CHANNEL> BVHNode::CHANNEL_NAME =
 {
 	{"Xposition",Xpos},

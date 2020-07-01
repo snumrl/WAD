@@ -108,8 +108,19 @@ Initialize(const std::string& meta_file, bool load_obj)
 	this->SetCharacter(character);
 	this->SetGround(MASS::BuildFromFile(std::string(MASS_ROOT_DIR)+std::string("/data/ground.xml")));
 	this->SetNumSteps();
-	
 	this->Initialize();
+
+	// auto weld_pelvis = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Pelvis"));
+	// auto weld_spine = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Spine"));
+	// auto weld_handr = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("HandR"));
+	// auto weld_handl = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("HandL"));
+	// auto weld_talusr = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("TalusR"));
+
+	// mWorld->getConstraintSolver()->addConstraint(weld_pelvis);
+ //    mWorld->getConstraintSolver()->addConstraint(weld_spine);
+ //    mWorld->getConstraintSolver()->addConstraint(weld_handr);
+ //    mWorld->getConstraintSolver()->addConstraint(weld_handl);
+ //    mWorld->getConstraintSolver()->addConstraint(weld_talusr);
 }
 
 void
@@ -122,8 +133,8 @@ Initialize()
 	if(mUseMuscle)
 		mCharacter->Initialize_Muscles();
 
-  	if(mUseDevice)
-  		mCharacter->Initialize_Device(mWorld);
+	if(mUseDevice)
+		mCharacter->Initialize_Device(mWorld);
 
 	mWorld->addSkeleton(mGround);
 	mWorld->setGravity(Eigen::Vector3d(0,-9.8,0.0));
@@ -153,7 +164,7 @@ void
 Environment::
 Step(bool onDevice)
 {
-	if(onDevice ^ mCharacter->mOnDevice)
+	if(onDevice^mCharacter->mOnDevice)
 	{
 		if(onDevice)
 			mCharacter->On_Device(mWorld);
@@ -315,9 +326,9 @@ GetMuscleTuples()
 	return mCharacter->GetMuscleTuples();
 }
 
-std::deque<double> 
+std::deque<double>
 Environment::
 GetDeviceSignals(int idx)
-{	
+{
 	return mCharacter->GetDeviceSignals(idx);
 }

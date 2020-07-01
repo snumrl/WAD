@@ -63,8 +63,8 @@ public:
 	std::map<std::string, std::vector<double>> GetEnergy(int idx){return mCharacter->GetEnergy(idx);}
 	std::vector<double> GetReward_Graph(int idx){return mCharacter->GetReward_Graph(idx);}
 	std::deque<double> GetDeviceSignals(int idx);
-	Eigen::VectorXd GetDeviceForce(){return mCharacter->GetDeviceForce();}
 	double GetPhase(){return mCharacter->GetPhase();}
+	std::deque<double> GetSignals(){return mCharacter->GetSignals();}
 
 private:
 	dart::simulation::WorldPtr mWorld;

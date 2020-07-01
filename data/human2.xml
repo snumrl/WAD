@@ -1,6 +1,6 @@
 <Skeleton name="Human">
     <Node name="Pelvis" parent="None" >
-        <Body type="Box" mass="15.0" size="0.2083 0.1454 0.1294" contact="Off" color="0.6 0.6 1.5 1.0" obj="Pelvis.obj">
+        <Body type="Box" mass="17.0" size="0.2083 0.1454 0.1294" contact="Off" color="0.6 0.6 1.5 1.0" obj="Pelvis.obj">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 0.9809 -0.0308 "/>
         </Body>
         <Joint type="Free" bvh="Character1_Hips">
@@ -8,7 +8,7 @@
         </Joint>
     </Node>
     <Node name="FemurR" parent="Pelvis" >
-        <Body type="Box" mass="7.0" size="0.1271 0.4043 0.1398" contact="Off" color="0.3 0.3 1.5 1.0" obj="R_Femur.obj">
+        <Body type="Box" mass="8.0" size="0.1271 0.4043 0.1398" contact="Off" color="0.3 0.3 1.5 1.0" obj="R_Femur.obj">
             <Transformation linear="0.9998 -0.0174 -0.0024 -0.0175 -0.9997 -0.0172 -0.21 0.0172 -0.9998 " translation="-0.0959 0.7241 -0.0227 "/>
         </Body>
         <Joint type="Ball" bvh="Character1_RightUpLeg" lower="-2.0 -2.0 -2.0" upper="2.0 2.0 2.0" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
@@ -48,7 +48,7 @@
         </Joint>
     </Node>
     <Node name="FemurL" parent="Pelvis" >
-        <Body type="Box" mass="7.0" size="0.1271 0.4043 0.1398" contact="Off" color="0.6 0.6 1.5 1.0"  obj="L_Femur.obj">
+        <Body type="Box" mass="8.0" size="0.1271 0.4043 0.1398" contact="Off" color="0.6 0.6 1.5 1.0"  obj="L_Femur.obj">
             <Transformation linear="0.9998 -0.0174 -0.0024 0.0175 0.9997 0.0172 0.21 -0.0172 0.9998 " translation="0.0959 0.7241 -0.0227 "/>
         </Body>
         <Joint type="Ball" bvh="Character1_LeftUpLeg" lower="-2.0 -2.0 -2.0" upper="2.0 2.0 2.0" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
