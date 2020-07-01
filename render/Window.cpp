@@ -513,6 +513,23 @@ DrawRewardGraph(std::string name, double w, double h, double x, double y)
 	std::vector<double> data_device_ = mEnv->GetReward_Graph(1);
 
 	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, red, 1.5, data_, blue, 2.0, data_device_);
+
+	double max = 0;
+	int idx = 0;
+	for(int i=0; i<data_.size(); i++)
+	{
+		if(data_[i] > max)
+		{
+			max = data_[i];
+			idx = i;
+		}
+	}
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+	mRI->setPenColor(black);
+	DrawString(x+0.005 + idx*offset_x, y+0.01+offset_y*max, std::to_string(max));
+	glDisable(GL_COLOR_MATERIAL);
+
 }
 
 void

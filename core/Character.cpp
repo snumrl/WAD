@@ -661,6 +661,9 @@ GetReward_Character()
 	for(int i=0;i<ees.size();i++)
 		ee_diff.segment<3>(i*3) -= ees[i]->getCOM()+com_diff;
 
+	// for(int i=0;i<ees.size();i++)
+	// 	ee_diff.segment<3>(i*3) -= ees[i]->getCOM();
+
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
@@ -669,11 +672,23 @@ GetReward_Character()
 	r_ee = exp_of_squared(ee_diff, 40.0);
 	r_com = exp_of_squared(com_diff, 10.0);
 
+	// double r_ = r_ee*(w_q*r_q + w_v*r_v);
+	w_q = 0.6;
+	w_v = 0.2;
+	w_com = 0.3;
 	double r_ = r_ee*(w_q*r_q + w_v*r_v + w_com*r_com);
+	// std::cout << "w_q : " << w_q << std::endl;
+	// std::cout << "w_v : " << w_v << std::endl;
+	// std::cout << "w_com : " << w_com << std::endl;
+
+	// std::cout << w_q*r_q << " " << (w_v*r_v)/(w_q*r_q) << " " << (w_com*r_com)/(w_q*r_q) << std::endl;
+	// std::cout << w_q*r_q << " " << (w_v*r_v)/(w_q*r_q) << std::endl;
+	// std::cout << std::endl;
 	// std::cout << "r : " << r_ << std::endl;
 	// std::cout << "r_ee : " << r_ee << std::endl;
 	// std::cout << "r_q : " << w_q*r_q << std::endl;
 	// std::cout << "r_v : " << w_v*r_v << std::endl;
+	// std::cout << "r_com : " << w_com*r_com << std::endl;
 	// std::cout << "v_diff : " << v_diff.squaredNorm() << std::endl;
 
 	return r_;
