@@ -12,26 +12,32 @@ using namespace MASS;
 
 Environment::
 Environment()
-	:mControlHz(30),mSimulationHz(900),mWorld(std::make_shared<World>()),mUseMuscle(true)
+	:mWorld(std::make_shared<World>())
 {
+}
 
+Environment::
+~Environment()
+{
+	delete mCharacter;
+	delete mDevice;
 }
 
 void
 Environment::
 Initialize(const std::string& meta_file, bool load_obj)
 {
-
 	std::ifstream ifs(meta_file);
 	if(!(ifs.is_open()))
 	{
-		std::cout<<"Can't read file "<<meta_file<<std::endl;
+		std::cout << "Can't read file " << meta_file << std::endl;
 		return;
 	}
 
 	std::string str, index;
 	std::stringstream ss;
 	MASS::Character* character = new MASS::Character();
+	MASS::Device* device;
 	while(!ifs.eof())
 	{
 		ss.clear();
@@ -54,10 +60,22 @@ Initialize(const std::string& meta_file, bool load_obj)
 		{
 			std::string str2;
 			ss>>str2;
-			if(!str2.compare("true"))
+			if(!str2.compare("true")){
 				this->SetUseDevice(true);
-			else
+				device = new MASS::Device();
+			}
+			else{
 				this->SetUseDevice(false);
+			}
+		}
+		else if(!index.compare("use_device_nn"))
+		{
+			std::string str2;
+			ss>>str2;
+			if(!str2.compare("true"))
+				this->SetUseDeviceNN(true);
+			else
+				this->SetUseDeviceNN(false);
 		}
 		else if(!index.compare("con_hz")){
 			int hz;
@@ -84,7 +102,7 @@ Initialize(const std::string& meta_file, bool load_obj)
 			std::string str2;
 			ss>>str2;
 			if(this->GetUseDevice())
-				character->LoadDevice(std::string(MASS_ROOT_DIR)+str2);
+				device->LoadSkeleton(std::string(MASS_ROOT_DIR)+str2);
 		}
 		else if(!index.compare("bvh_file")){
 			std::string str2,str3;
@@ -95,19 +113,14 @@ Initialize(const std::string& meta_file, bool load_obj)
 				cyclic = true;
 			character->LoadBVH(std::string(MASS_ROOT_DIR)+str2,cyclic);
 		}
-		else if(!index.compare("reward_param")){
-			double a,b,c,d;
-			ss>>a>>b>>c>>d;
-			character->SetRewardParameters(a,b,c,d);
-		}
 	}
 	ifs.close();
 
-	double kp = 300.0;
-	character->SetPDParameters(kp,sqrt(2*kp));
-	this->SetCharacter(character);
 	this->SetGround(MASS::BuildFromFile(std::string(MASS_ROOT_DIR)+std::string("/data/ground.xml")));
-	this->SetNumSteps();
+	this->SetCharacter(character);
+	if(mUseDevice)
+		this->SetDevice(device);
+
 	this->Initialize();
 
 	// auto weld_pelvis = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Pelvis"));
@@ -117,29 +130,37 @@ Initialize(const std::string& meta_file, bool load_obj)
 	// auto weld_talusr = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("TalusR"));
 
 	// mWorld->getConstraintSolver()->addConstraint(weld_pelvis);
- //    mWorld->getConstraintSolver()->addConstraint(weld_spine);
- //    mWorld->getConstraintSolver()->addConstraint(weld_handr);
- //    mWorld->getConstraintSolver()->addConstraint(weld_handl);
- //    mWorld->getConstraintSolver()->addConstraint(weld_talusr);
+	// mWorld->getConstraintSolver()->addConstraint(weld_spine);
+	// mWorld->getConstraintSolver()->addConstraint(weld_handr);
+	// mWorld->getConstraintSolver()->addConstraint(weld_handl);
+	// mWorld->getConstraintSolver()->addConstraint(weld_talusr);
 }
 
 void
 Environment::
 Initialize()
 {
-	mCharacter->Initialize();
-	mWorld->addSkeleton(mCharacter->GetSkeleton());
-
+	mCharacter->Initialize(mWorld, mControlHz, mSimulationHz);
 	if(mUseMuscle)
 		mCharacter->Initialize_Muscles();
 
 	if(mUseDevice)
-		mCharacter->Initialize_Device(mWorld);
+	{
+		mDevice->Initialize(mWorld, mUseDeviceNN);
 
-	mWorld->addSkeleton(mGround);
+		mDevice->SetCharacter(mCharacter);
+		mCharacter->SetDevice(mDevice);
+	}
+
+	mCharacter->Initialize_Analysis();
+
+	mNumSteps = mSimulationHz / mControlHz;
+
 	mWorld->setGravity(Eigen::Vector3d(0,-9.8,0.0));
 	mWorld->setTimeStep(1.0/mSimulationHz);
 	mWorld->getConstraintSolver()->setCollisionDetector(dart::collision::BulletCollisionDetector::create());
+
+	mWorld->addSkeleton(mGround);
 
 	Reset(false);
 }
@@ -154,32 +175,26 @@ Reset(bool RSI)
 
 	mWorld->reset();
 	mWorld->setTime(t);
-
-	mCharacter->Reset(mWorld->getTime(), mControlHz);
-
-	mAction.setZero();
+	mCharacter->Reset();
+	if(mUseDevice)
+		mDevice->Reset();
 }
 
 void
 Environment::
 Step(bool onDevice)
 {
-	if(onDevice^mCharacter->mOnDevice)
-	{
-		if(onDevice)
-			mCharacter->On_Device(mWorld);
-		else
-			mCharacter->Off_Device(mWorld);
-	}
-	mCharacter->SetOnDevice(onDevice);
-
 	if(mUseMuscle)
 		mCharacter->Step_Muscles(mSimCount, mRandomSampleIndex);
 	else
 		mCharacter->Step();
 
-	if(mUseDevice && onDevice)
-		mCharacter->Step_Device((double)mSimCount/(double)mNumSteps);
+	if(mUseDevice)
+	{
+		mCharacter->SetOnDevice(onDevice);
+		if(onDevice)
+			mDevice->Step((double)mSimCount/(double)mNumSteps);
+	}
 
 	mWorld->step();
 
@@ -204,11 +219,6 @@ IsEndOfEpisode()
 	else if(mWorld->getTime()>10.0)
 		isTerminal =true;
 
-	// if(mUseDevice)
-	// {
-
-	// }
-
 	return isTerminal;
 }
 
@@ -216,12 +226,7 @@ void
 Environment::
 SetAction(const Eigen::VectorXd& a)
 {
-	double action_scale = 0.1;
-	mAction = a*action_scale;
-	mCharacter->SetAction(mAction);
-
-	double t = mWorld->getTime();
-	mCharacter->SetTargetPosAndVel(t, mControlHz);
+	mCharacter->SetAction(a);
 
 	mSimCount = 0;
 	mRandomSampleIndex = rand()%(mNumSteps);
@@ -231,71 +236,21 @@ void
 Environment::
 SetAction_Device(const Eigen::VectorXd& a)
 {
-	double action_scale = 1.0;
-	mAction_Device = a*action_scale;
-	mCharacter->SetAction_Device(mAction_Device);
-
-	double t = mWorld->getTime();
-	mCharacter->SetTargetPosAndVel(t, mControlHz);
-
-	mSimCount = 0;
-	mRandomSampleIndex = rand()%(mNumSteps);
-}
-
-void
-Environment::
-SetActivationLevels(const Eigen::VectorXd& a)
-{
-	mCharacter->SetActivationLevels(a);
-}
-
-void
-Environment::
-SetNumSteps()
-{
-	mNumSteps = mSimulationHz/mControlHz;
+	mDevice->SetAction(a);
 }
 
 Eigen::VectorXd
 Environment::
 GetState()
 {
-	return mCharacter->GetState(mWorld->getTime());
+	return mCharacter->GetState();
 }
 
 Eigen::VectorXd
 Environment::
 GetState_Device()
 {
-	return mCharacter->GetState_Device(mWorld->getTime());
-}
-
-int
-Environment::
-GetNumState()
-{
-	return mCharacter->GetNumState();
-}
-
-int
-Environment::
-GetNumState_Device()
-{
-	return mCharacter->GetDevice()->GetNumState();
-}
-
-int
-Environment::
-GetNumAction()
-{
-	return mCharacter->GetNumActiveDof();
-}
-
-int
-Environment::
-GetNumAction_Device()
-{
-	return mCharacter->GetDevice()->GetNumAction();
+	return mDevice->GetState();
 }
 
 double
@@ -314,21 +269,28 @@ GetRewardSep()
 
 int
 Environment::
-GetNumTotalRelatedDofs()
+GetNumState()
 {
-	return (mCharacter->GetCurrentMuscleTuple()).JtA.rows();
+	return mCharacter->GetNumState();
 }
 
-std::vector<MuscleTuple>&
+int
 Environment::
-GetMuscleTuples()
+GetNumState_Device()
 {
-	return mCharacter->GetMuscleTuples();
+	return mDevice->GetNumState();
 }
 
-std::deque<double>
+int
 Environment::
-GetDeviceSignals(int idx)
+GetNumAction()
 {
-	return mCharacter->GetDeviceSignals(idx);
+	return mCharacter->GetNumActiveDof();
+}
+
+int
+Environment::
+GetNumAction_Device()
+{
+	return mDevice->GetNumAction();
 }

@@ -68,80 +68,101 @@ class PPO(object):
 		self.num_slaves = 16
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
+
+		# ========== Character setting ========== #
 		self.num_state = self.env.GetNumState()
 		self.num_action = self.env.GetNumAction()
-		self.num_muscles = self.env.GetNumMuscles()
 
 		self.num_epochs = 10
-		self.num_epochs_muscle = 3
-		self.num_evaluation = 0
 		self.num_tuple_so_far = 0
 		self.num_episode = 0
 		self.num_tuple = 0
-		self.num_simulation_Hz = self.env.GetSimulationHz()
-		self.num_control_Hz = self.env.GetControlHz()
-		self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
+
+		print("char state : ", self.num_state)
+		print("char action : ", self.num_action)
+		self.model = SimulationNN(self.num_state,self.num_action)
+		if use_cuda:
+			self.model.cuda()
+
+		self.buffer_size = 2048
+		self.batch_size = 128
+		self.replay_buffer = ReplayBuffer(30000)
 
 		self.gamma = 0.99
 		self.lb = 0.99
 
-		self.buffer_size = 2048
-		self.batch_size = 128
-		self.muscle_batch_size = 128
-		self.replay_buffer = ReplayBuffer(30000)
-		self.muscle_buffer = MuscleBuffer(30000)
-
-		print("state : ", self.num_state)
-		print("action : ", self.num_action)
-		self.model = SimulationNN(self.num_state,self.num_action)
-
-		self.muscle_model = MuscleNN(self.env.GetNumTotalMuscleRelatedDofs(),self.num_action,self.num_muscles)
-		if use_cuda:
-			self.model.cuda()
-			self.muscle_model.cuda()
-
-		self.default_learning_rate = 1E-4
 		self.default_clip_ratio = 0.2
-		self.learning_rate = self.default_learning_rate
+		self.default_learning_rate = 1E-4
 		self.clip_ratio = self.default_clip_ratio
+		self.learning_rate = self.default_learning_rate
+
 		self.optimizer = optim.Adam(self.model.parameters(),lr=self.learning_rate)
-		self.optimizer_muscle = optim.Adam(self.muscle_model.parameters(),lr=self.learning_rate)
-		self.max_iteration = 50000
 
 		self.w_entropy = -0.001
-
 		self.loss_actor = 0.0
 		self.loss_critic = 0.0
-		self.loss_muscle = 0.0
-		self.rewards = []
 		self.sum_return = 0.0
 		self.max_return = -1.0
 		self.max_return_epoch = 1
-		self.tic = time.time()
 
 		self.episodes = [None]*self.num_slaves
 		for j in range(self.num_slaves):
 			self.episodes[j] = EpisodeBuffer()
+
+		# ========== Muscle setting ========= #
+		if self.use_muscle:
+			self.num_muscles = self.env.GetNumMuscles()
+			self.num_action_muscle = self.env.GetNumAction()
+			self.muscle_model = MuscleNN(self.env.GetNumTotalMuscleRelatedDofs(), self.num_action_muscle,self.num_muscles)
+			self.muscle_buffer = MuscleBuffer(30000)
+
+			self.loss_muscle = 0.0
+			self.muscle_batch_size = 128
+			self.default_learning_rate_muscle = 1E-4
+			self.learning_rate_muscle = self.default_learning_rate_muscle
+			self.optimizer_muscle = optim.Adam(self.muscle_model.parameters(),lr=self.learning_rate_muscle)
+			self.num_epochs_muscle = 3
+			if use_cuda:
+				self.muscle_model.cuda()
+
+		# ========== Common setting ========== #
+		self.num_simulation_Hz = self.env.GetSimulationHz()
+		self.num_control_Hz = self.env.GetControlHz()
+		self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
+
+		self.max_iteration = 20000
+		self.num_evaluation = 0
+		self.rewards = []
+
+		self.tic = time.time()
 		self.env.Resets(True)
 
 	def SaveModel(self):
 		self.model.save('../nn/current.pt')
-		self.muscle_model.save('../nn/current_muscle.pt')
 
 		if self.max_return_epoch == self.num_evaluation:
 			self.model.save('../nn/max.pt')
-			self.muscle_model.save('../nn/max_muscle.pt')
 		if self.num_evaluation%100 == 0:
 			self.model.save('../nn/'+str(self.num_evaluation//100)+'.pt')
+
+	def SaveModel_Muscle(self):
+		self.muscle_model.save('../nn/current_muscle.pt')
+
+		if self.max_return_epoch == self.num_evaluation:
+			self.muscle_model.save('../nn/max_muscle.pt')
+		if self.num_evaluation%100 == 0:
 			self.muscle_model.save('../nn/'+str(self.num_evaluation//100)+'_muscle.pt')
 
 	def LoadModel(self,path):
 		self.model.load('../nn/'+path+'.pt')
+
+	def LoadModel_Muscle(self,path):
 		self.muscle_model.load('../nn/'+path+'_muscle.pt')
 
 	def ComputeTDandGAE(self):
 		self.replay_buffer.Clear()
-		self.muscle_buffer.Clear()
+		if self.use_muscle:
+			self.muscle_buffer.Clear()
 		self.sum_return = 0.0
 		for epi in self.total_episodes:
 			data = epi.GetData()
@@ -170,9 +191,10 @@ class PPO(object):
 		print('SIM : {}'.format(self.num_tuple))
 		self.num_tuple_so_far += self.num_tuple
 
-		muscle_tuples = self.env.GetMuscleTuples()
-		for i in range(len(muscle_tuples)):
-			self.muscle_buffer.Push(muscle_tuples[i][0],muscle_tuples[i][1],muscle_tuples[i][2],muscle_tuples[i][3])
+		if self.use_muscle:
+			muscle_tuples = self.env.GetMuscleTuples()
+			for i in range(len(muscle_tuples)):
+				self.muscle_buffer.Push(muscle_tuples[i][0],muscle_tuples[i][1],muscle_tuples[i][2],muscle_tuples[i][3])
 
 	def GenerateTransitions(self):
 		self.total_episodes = []
@@ -184,6 +206,7 @@ class PPO(object):
 		local_step = 0
 		terminated = [False]*self.num_slaves
 		counter = 0
+
 		while True:
 			counter += 1
 			if counter%10 == 0:
@@ -197,6 +220,7 @@ class PPO(object):
 			if self.use_muscle:
 				mt = Tensor(self.env.GetMuscleTorques())
 				for i in range(self.num_simulation_per_control):
+					self.env.SetDesiredTorques()
 					dt = Tensor(self.env.GetDesiredTorques())
 					activations = self.muscle_model(mt,dt).cpu().detach().numpy()
 					self.env.SetActivationLevels(activations)
@@ -341,7 +365,8 @@ class PPO(object):
 		print('# {} === {}h:{}m:{}s ==='.format(self.num_evaluation,h,m,s))
 		print('||Loss Actor               : {:.4f}'.format(self.loss_actor))
 		print('||Loss Critic              : {:.4f}'.format(self.loss_critic))
-		print('||Loss Muscle              : {:.4f}'.format(self.loss_muscle))
+		if self.use_muscle:
+			print('||Loss Muscle              : {:.4f}'.format(self.loss_muscle))
 		print('||Noise                    : {:.3f}'.format(self.model.log_std.exp().mean()))
 		print('||Num Transition So far    : {}'.format(self.num_tuple_so_far))
 		print('||Num Transition           : {}'.format(self.num_tuple))
@@ -389,8 +414,9 @@ import argparse
 import os
 if __name__=="__main__":
 	parser = argparse.ArgumentParser()
-	parser.add_argument('-m','--model',help='model path')
 	parser.add_argument('-d','--meta',help='meta file')
+	parser.add_argument('-m','--model',help='model path')
+	parser.add_argument('-u','--muscle',help='muscle path')
 
 	args =parser.parse_args()
 	if args.meta is None:
@@ -400,13 +426,27 @@ if __name__=="__main__":
 	ppo = PPO(args.meta)
 	nn_dir = '../nn'
 	if not os.path.exists(nn_dir):
-	    os.makedirs(nn_dir)
+		os.makedirs(nn_dir)
+
 	if args.model is not None:
 		ppo.LoadModel(args.model)
 	else:
 		ppo.SaveModel()
+
+	if args.muscle is not None:
+		if ppo.use_muscle is False:
+			print("Dont put : -u command")
+			sys.exit()
+		else:
+			ppo.LoadModel_Muscle(args.muscle)
+	else:
+		if ppo.use_muscle:
+			ppo.SaveModel_Muscle()
+
 	print('num states: {}, num actions: {}'.format(ppo.env.GetNumState(),ppo.env.GetNumAction()))
 	for i in range(ppo.max_iteration-5):
 		ppo.Train()
 		rewards = ppo.Evaluate()
 		Plot(rewards,'reward',0,False)
+
+

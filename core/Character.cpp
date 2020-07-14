@@ -7,9 +7,18 @@
 using namespace dart;
 using namespace dart::dynamics;
 using namespace MASS;
+
+double exp_of_squared(const Eigen::VectorXd& vec,double w);
+double exp_of_squared(const Eigen::Vector3d& vec,double w);
+double exp_of_squared(double val,double w);
+double Pulse_Constant(double t);
+double Pulse_Linear(double t);
+double Pulse_Period(double t);
+double Pulse_Period(double t, double offset);
+
 Character::
 Character()
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),w_q(0.75),w_v(0.1),w_ee(0.0),w_com(0.15),w_character(1.0),w_device(0.0),r_q(0.0),r_v(0.0),r_ee(0.0),r_com(0.0),r_character(0.0),r_device(0.0),mUseMuscle(false),mUseDevice(false),mOnDevice(false)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mPhase(0.0)
 {
 }
 
@@ -105,25 +114,28 @@ LoadMuscles(const std::string& path)
 			i++;
 		}
 	}
+
+	mNumMuscle = mMuscles.size();
 }
 
 void
 Character::
-LoadDevice(const std::string& path)
-{
-	mDevice = new Device(BuildFromFile(path));
-	mOnDevice = true;
-}
-
-void
-Character::
-Initialize()
+Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 {
 	if(mSkeleton == nullptr)
 	{
 		std::cout<<"Initialize Character First"<<std::endl;
 		exit(0);
 	}
+
+	this->SetWorld(wPtr);
+	mWorld->addSkeleton(mSkeleton);
+
+	mControlHz = conHz;
+	mSimulationHz = simHz;
+
+	double kp = 300.0;
+	this->SetPDParameters(kp, sqrt(2*kp));
 
 	const std::string& type =
 		mSkeleton->getRootBodyNode()->getParentJoint()->getType();
@@ -134,28 +146,10 @@ Initialize()
 	else
 		mRootJointDof = 0;
 
-	mNumActiveDof = mSkeleton->getNumDofs()-mRootJointDof;
-	mNumState = this->GetState(0.0).rows();
-
-	mDevice_y.resize(600);
-	mDeviceSignals_L.resize(600);
-	mDeviceSignals_R.resize(600);
-
-	this->Initialize_Debug();
-}
-
-void
-Character::
-Initialize_Debug()
-{
-	mEnergy = new Energy();
-	mEnergy->Init(mSkeleton);
-
-	for(int i=0; i<33; i++)
-	{
-		mRewards.push_back(0.0);
-		mRewards_num.push_back(0);
-	}
+	mNumDof = mSkeleton->getNumDofs();
+	mNumActiveDof = mNumDof - mRootJointDof;
+	mNumState = this->GetState().rows();
+	mAction.resize(mNumActiveDof);
 }
 
 void
@@ -175,41 +169,19 @@ Initialize_Muscles()
 
 void
 Character::
-Initialize_Device(dart::simulation::WorldPtr& wPtr)
+Initialize_Analysis()
 {
-	mUseDevice = true;
-	mDevice->Initialize();
+	mEnergy = new Energy();
+	mEnergy->Init(mSkeleton);
 
-	mWeldJoint_Hip = std::make_shared<dart::constraint::WeldJointConstraint>(
-        mSkeleton->getBodyNode(0), mDevice->GetSkeleton()->getBodyNode(0)
-        );
-
-	mWeldJoint_LeftLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
-        mSkeleton->getBodyNode("FemurL"), mDevice->GetSkeleton()->getBodyNode("FastenerLeftOut")
-        );
-
-	mWeldJoint_RightLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
-        mSkeleton->getBodyNode("FemurR"), mDevice->GetSkeleton()->getBodyNode("FastenerRightOut")
-        );
-
-    wPtr->getConstraintSolver()->addConstraint(mWeldJoint_Hip);
-	wPtr->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
-	wPtr->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
-	wPtr->addSkeleton(mDevice->GetSkeleton());
-
-	mTorqueMax_Device = 15.0;
-
-	mDesiredTorque_Device = Eigen::VectorXd::Zero(12);
-	mDesiredTorque_Device_Buffer.resize(600);
-	for(auto& t : mDesiredTorque_Device_Buffer)
-		t = Eigen::VectorXd::Zero(12);
-	mDevice_y.resize(600);
-	mDeviceSignals_L.resize(600);
-	mDeviceSignals_R.resize(600);
+	for(int i=0; i<33; i++)
+	{
+		mRewards.push_back(0.0);
+		mRewards_num.push_back(0);
+	}
 
 	mEnergy_Device = new Energy();
 	mEnergy_Device->Init(mSkeleton);
-
 	for(int i=0; i<33; i++)
 	{
 		mRewards_Device.push_back(0.0);
@@ -219,28 +191,7 @@ Initialize_Device(dart::simulation::WorldPtr& wPtr)
 
 void
 Character::
-On_Device(dart::simulation::WorldPtr& wPtr)
-{
-	Reset_Device();
-	wPtr->getConstraintSolver()->addConstraint(mWeldJoint_Hip);
-	wPtr->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
-	wPtr->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
-	wPtr->addSkeleton(mDevice->GetSkeleton());
-}
-
-void
-Character::
-Off_Device(dart::simulation::WorldPtr& wPtr)
-{
-	wPtr->getConstraintSolver()->removeConstraint(mWeldJoint_Hip);
-	wPtr->getConstraintSolver()->removeConstraint(mWeldJoint_LeftLeg);
-	wPtr->getConstraintSolver()->removeConstraint(mWeldJoint_RightLeg);
-	wPtr->removeSkeleton(mDevice->GetSkeleton());
-}
-
-void
-Character::
-Reset(double worldTime, int controlHz)
+Reset()
 {
 	mTc = mBVH->GetT0();
 	mTc.translation()[1] = 0.0;
@@ -249,103 +200,37 @@ Reset(double worldTime, int controlHz)
 	mSkeleton->clearInternalForces();
 	mSkeleton->clearExternalForces();
 
-	this->SetTargetPosAndVel(worldTime, controlHz);
+	double worldTime = mWorld->getTime();
+	this->SetTargetPosAndVel(worldTime, mControlHz);
 
 	mSkeleton->setPositions(mTargetPositions);
 	mSkeleton->setVelocities(mTargetVelocities);
 	mSkeleton->computeForwardKinematics(true,false,false);
 
-	qr = 0.0;
-	ql = 0.0;
-	qr_prev = 0.0;
-	ql_prev = 0.0;
-
-	mDevice_y.clear();
-    mDevice_y.resize(600);
-    mDeviceSignals_L.clear();
-    mDeviceSignals_R.clear();
-    mDeviceSignals_L.resize(600);
-    mDeviceSignals_R.resize(600);
+	mAction.setZero();
 
 	mEnergy->Reset();
 
 	if(mUseMuscle)
 		Reset_Muscles();
-
-	if(mUseDevice)
-		Reset_Device();
 }
 
 void
 Character::
 Reset_Muscles()
 {
-	int muscleSize = this->GetMuscles().size();
 	mCurrentMuscleTuple.JtA = Eigen::VectorXd::Zero(mNumTotalRelatedDof);
-	mCurrentMuscleTuple.L = Eigen::MatrixXd::Zero(mNumActiveDof, muscleSize);
+	mCurrentMuscleTuple.L = Eigen::MatrixXd::Zero(mNumActiveDof, mNumMuscle);
 	mCurrentMuscleTuple.b = Eigen::VectorXd::Zero(mNumActiveDof);
 	mCurrentMuscleTuple.tau_des = Eigen::VectorXd::Zero(mNumActiveDof);
-	mActivationLevels = Eigen::VectorXd::Zero(muscleSize);
-}
-
-void
-Character::
-Reset_Device()
-{
-	mDevice->Reset();
-
-	Eigen::VectorXd p(mDevice->GetSkeleton()->getNumDofs());
-    Eigen::VectorXd v(mDevice->GetSkeleton()->getNumDofs());
-    p.setZero();
-    v.setZero();
-    p.head(6) = mSkeleton->getPositions().head(6);
-    v.head(6) = mSkeleton->getVelocities().head(6);
-
-    // Eigen::Matrix3d m_l = dart::dynamics::BallJoint::convertToRotation(mSkeleton->getJoint("FemurL")->getPositions());
-
-    // Eigen::Quaterniond q_l(m_l);
-
-    // Eigen::Matrix3d m_l_ = mSkeleton->getBodyNode(6)->getWorldTransform().linear();
-    // Eigen::Vector3d axis_l(m_l_(0,0),m_l_(0,1),m_l_(0,2));
-    // double theta_l = 2*atan2(q_l.vec().dot(axis_l), q_l.w());
-
-    // Eigen::Matrix3d m_r = dart::dynamics::BallJoint::convertToRotation(mSkeleton->getJoint("FemurR")->getPositions());
-
-    // Eigen::Quaterniond q_r(m_r);
-
-    // Eigen::Matrix3d m_r_ = mSkeleton->getBodyNode(1)->getWorldTransform().linear();
-    // Eigen::Vector3d axis_r(m_r_(0,0),m_r_(0,1),m_r_(0,2));
-    // double theta_r = 2*atan2(q_r.vec().dot(axis_r), q_r.w());
-
-    // p[6] = theta_l;
-    // p[7] = theta_r;
-    // v[6] = 0.1;
-    // v[7] = 0.1;
-
-	p.segment<3>(6) = mSkeleton->getJoint("FemurL")->getPositions();
-    p.segment<3>(9) = mSkeleton->getJoint("FemurR")->getPositions();
-    v.segment<3>(6) = mSkeleton->getJoint("FemurL")->getVelocities();
-    v.segment<3>(9) = mSkeleton->getJoint("FemurR")->getVelocities();
-    mDevice->GetSkeleton()->setPositions(p);
-    mDevice->GetSkeleton()->setVelocities(v);
-    mDevice->GetSkeleton()->computeForwardKinematics(true, false, false);
-    mDevice_y.clear();
-    mDevice_y.resize(600);
-    mDesiredTorque_Device_Buffer.clear();
-    mDesiredTorque_Device_Buffer.resize(600);
-	for(auto& t : mDesiredTorque_Device_Buffer)
-		t = Eigen::VectorXd::Zero(12);
-    mDeviceSignals_L.clear();
-    mDeviceSignals_R.clear();
-    mDeviceSignals_L.resize(600);
-    mDeviceSignals_R.resize(600);
+	mActivationLevels = Eigen::VectorXd::Zero(mNumMuscle);
 }
 
 void
 Character::
 Step()
 {
-	GetDesiredTorques();
+	SetDesiredTorques();
 
 	// double offset = 30.0;
 
@@ -357,82 +242,10 @@ Step()
 	// 		mDesiredTorque[i] = -offset;
 	// }
 
-	// int n_body = mSkeleton->getNumBodyNodes();
-	// int n_joint = mSkeleton->getNumJoints();
-	// std::cout << "dofs : " << mSkeleton->getNumDofs() << std::endl;
-	// for(int i=0; i<n_joint; i++)
-	// {
-	// 	std::cout << i << " : " << mSkeleton->getJoint(i)->getName() << std::endl;
-	// 	std::cout << "dof : " << mSkeleton->getJoint(i)->getNumDofs() << std::endl;
-	// }
-	// for(int i=0; i<n_body; i++)
-	// {
-	// 	std::cout << i << " : " << mSkeleton->getBodyNode(i)->getName() << std::endl;
-	// }
-
 	SetEnergy();
-	SetRewards();
+	SetReward_Graph();
 
 	mSkeleton->setForces(mDesiredTorque);
-}
-
-void
-Character::
-SetRewards()
-{
-	this->GetReward();
-	int phase_idx = (int)(mPhase/0.0303);
-	if(mOnDevice){
-		int n = mRewards_Device_num[phase_idx];
-		if(n == 0)
-			mRewards_Device[phase_idx] = mReward;
-		else
-			mRewards_Device[phase_idx] = (mRewards_Device[phase_idx]*n+mReward)/(double)(n+1);
-
-		mRewards_Device_num[phase_idx] += 1;
-	}
-	else
-	{
-		int n = mRewards_num[phase_idx];
-		if(n == 0)
-			mRewards[phase_idx] = mReward;
-		else
-			mRewards[phase_idx] = (mRewards[phase_idx]*n+mReward)/(double)(n+1);
-
-		mRewards_num[phase_idx] += 1;
-	}
-}
-
-void
-Character::
-SetEnergy()
-{
-	int offset = 6;
-	int n = mSkeleton->getNumJoints();
-	for(int i=1; i<n; i++)
-	{
-		std::string name = mSkeleton->getJoint(i)->getName();
-		int dof = mSkeleton->getJoint(i)->getNumDofs();
-		double torque = 0.0;
-		if(dof == 1)
-		{
-			torque = mDesiredTorque[offset];
-			if(torque<0)
-				torque *= -1;
-			offset += 1;
-		}
-		else if(dof == 3)
-		{
-			Eigen::Vector3d t_ = mDesiredTorque.segment(offset,3);
-			torque = t_.norm();
-			offset += 3;
-		}
-
-		if(mOnDevice)
-			mEnergy_Device->SetEnergy(name, (int)(mPhase/0.0303), torque);
-		else
-			mEnergy->SetEnergy(name, (int)(mPhase/0.0303), torque);
-	}
 }
 
 void
@@ -473,63 +286,9 @@ Step_Muscles(int simCount, int randomSampleIndex)
 	}
 }
 
-void
-Character::
-Step_Device(const Eigen::VectorXd& a_)
-{
-	mDevice->GetSkeleton()->setForces(a_);
-}
-
-void
-Character::
-Step_Device(double t)
-{
-	GetDesiredTorques_Device(t);
-
-	SetSignals_Device();
-
-	// mDevice->GetSkeleton()->setForces(mDesiredTorque_Device);
-}
-
-void
-Character::
-SetSignals_Device()
-{
-	Eigen::Vector3d device_L_vec = mDesiredTorque_Device.segment(6,3);
-	Eigen::Vector3d device_R_vec = mDesiredTorque_Device.segment(9,3);
-
-	double device_L = mDesiredTorque_Device.segment(6,3).norm();
-	double device_R = mDesiredTorque_Device.segment(9,3).norm();
-
-	// double device_L = mDesiredTorque_Device[6];
-	// double device_R = mDesiredTorque_Device[7];
-
-	mDeviceSignals_L.pop_back();
-	mDeviceSignals_L.push_front(device_L);
-
-	mDeviceSignals_R.pop_back();
-	mDeviceSignals_R.push_front(device_R);
-}
-
-void
-Character::
-SetAction(const Eigen::VectorXd& a)
-{
-	mAction_ = a;
-}
-
-void
-Character::
-SetAction_Device(const Eigen::VectorXd& a)
-{
-	mAction_Device = a;
-	for(int i=0; i<mAction_Device.size()-2; i++)
-		mAction_Device[i] *= mTorqueMax_Device;
-}
-
 Eigen::VectorXd
 Character::
-GetState(double worldTime)
+GetState()
 {
 	dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
 	int num_body_nodes = mSkeleton->getNumBodyNodes();
@@ -543,59 +302,16 @@ GetState(double worldTime)
 		p.segment<3>(3*(i-1)) = mSkeleton->getBodyNode(i)->getCOM(root);
 		v.segment<3>(3*(i-1)) = mSkeleton->getBodyNode(i)->getCOMLinearVelocity();
 	}
-
 	v.tail<3>() = root->getCOMLinearVelocity();
-
-	double t_phase = mBVH->GetMaxTime();
-	double phi = std::fmod(worldTime, t_phase)/t_phase;
-	mPhase = phi;
 
 	p *= 0.8;
 	v *= 0.2;
 
 	Eigen::VectorXd state(p.rows()+v.rows()+1);
+	this->SetPhase();
 
-	state<<p,v,phi;
+	state<<p,v,mPhase;
 	return state;
-}
-
-Eigen::VectorXd
-Character::
-GetState_Device(double worldTime)
-{
-	double maxTime = mBVH->GetMaxTime();
-	return mDevice->GetState(worldTime, maxTime);
-}
-
-double exp_of_squared(const Eigen::VectorXd& vec,double w)
-{
-	return exp(-w*vec.squaredNorm());
-}
-
-double exp_of_squared(const Eigen::Vector3d& vec,double w)
-{
-	return exp(-w*vec.squaredNorm());
-}
-
-double exp_of_squared(double val,double w)
-{
-	return exp(-w*val*val);
-}
-
-void
-Character::
-SetRewardParameters(double w_q,double w_v,double w_ee,double w_com)
-{
-	this->w_q = w_q;
-	this->w_v = w_v;
-	this->w_ee = w_ee;
-	this->w_com = w_com;
-}
-
-void
-Character::
-SetRewardParameters_Device()
-{
 }
 
 double
@@ -607,26 +323,6 @@ GetReward()
 	mReward = r_character;
 
 	return mReward;
-}
-
-std::map<std::string,double>
-Character::
-GetRewardSep()
-{
-	std::map<std::string, double> r_sep;
-	if(mUseDevice)
-	{
-		r_sep["r_character"] = w_character*r_character;
-		r_sep["r_device"] = w_device*r_device;
-	}
-	else{
-		r_sep["r_q"] = w_q*r_q;
-		r_sep["r_v"] = w_v*r_v;
-		r_sep["r_ee"] = w_ee*r_ee;
-		r_sep["r_com"] = w_com*r_com;
-	}
-
-	return r_sep;
 }
 
 double
@@ -675,9 +371,6 @@ GetReward_Character()
 	for(int i=0;i<ees.size();i++)
 		ee_diff.segment<3>(i*3) -= ees[i]->getCOM()+com_diff;
 
-	// for(int i=0;i<ees.size();i++)
-	// 	ee_diff.segment<3>(i*3) -= ees[i]->getCOM();
-
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
@@ -708,202 +401,67 @@ GetReward_Character()
 	return r_;
 }
 
-double
+std::map<std::string,double>
 Character::
-GetReward_Device()
+GetRewardSep()
 {
-	return exp(-1.*(mDesiredTorque_Device/mTorqueMax_Device).squaredNorm());;
+	std::map<std::string, double> r_sep;
+	if(mUseDevice)
+	{
+		// r_sep["r_character"] = w_character*r_character;
+		// r_sep["r_device"] = w_device*r_device;
+	}
+	else{
+		r_sep["r_q"] = w_q*r_q;
+		r_sep["r_v"] = w_v*r_v;
+		r_sep["r_ee"] = w_ee*r_ee;
+		r_sep["r_com"] = w_com*r_com;
+	}
+
+	return r_sep;
+}
+
+void
+Character::
+SetAction(const Eigen::VectorXd& a)
+{
+	double action_scale = 0.1;
+	mAction = a*action_scale;
+
+	double t = mWorld->getTime();
+	this->SetTargetPosAndVel(t, mControlHz);
+}
+
+void
+Character::
+SetDesiredTorques()
+{
+	Eigen::VectorXd p_des = mTargetPositions;
+	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction;
+	mDesiredTorque = this->GetSPDForces(p_des);
+
+	// if(mUseDeviceNN){
+	// 	mDevice->SetDesiredTorques2();
+	// 	Eigen::VectorXd des = mDevice->GetDesiredTorques2();
+	// 	mDesiredTorque[6] += des[0];
+	// 	mDesiredTorque[15] += des[1];
+	// }
 }
 
 Eigen::VectorXd
 Character::
 GetDesiredTorques()
 {
-	Eigen::VectorXd p_des = mTargetPositions;
-	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction_;
-	mDesiredTorque = this->GetSPDForces(p_des);
-
-	if(qr==0.0 && ql==0.0 && qr_prev==0.0 && ql_prev==0.0)
-	{
-		qr = GetAngleQ(1);
-		ql = GetAngleQ(6);
-		qr_prev = qr;
-		ql_prev = ql;
-	}
-	else{
-		qr = GetAngleQ(1);
-		ql = GetAngleQ(6);
-	}
-
-	double alpha = 0.05;
-	qr = (1-alpha)*qr_prev + alpha*qr;
-	ql = (1-alpha)*ql_prev + alpha*ql;
-
-	qr_prev = qr;
-	ql_prev = ql;
-
-	double y = sin(qr) - sin(ql);
-
-	mDevice_y.pop_back();
-	mDevice_y.push_front(k_*y);
-	// std::cout << "y : " << y << std::endl;
-	// std::cout << "qr : " << sin(qr) << std::endl;
-	// std::cout << "ql : " << sin(ql) << std::endl;
-
-	double torque = mDevice_y.at(delta_t);
-	// double torque = k_ * y_delta_t;
-	double des_torque_r = -1*torque*beta_R*beta_Rhip;
-	double des_torque_l =  1*torque*beta_L*beta_Lhip;
-
-	mDeviceSignals_L.pop_back();
-	mDeviceSignals_L.push_front(des_torque_l);
-
-	mDeviceSignals_R.pop_back();
-	mDeviceSignals_R.push_front(des_torque_r);
-
-	// int n = mSkeleton->getNumJoints();
-	// int offset = 0;
-	// for(int i=0; i<n; i++)
-	// {
-	// 	std::cout << mSkeleton->getJoint(i)->getName() << " : " << offset << " -> " << mSkeleton->getJoint(i)->getNumDofs() << std::endl;
-	// 	offset += mSkeleton->getJoint(i)->getNumDofs();
-	// }
-
-	mDesiredTorque[6] += des_torque_r;
-	mDesiredTorque[15] += des_torque_l;
-
 	return mDesiredTorque.tail(mDesiredTorque.rows()-mRootJointDof);
 }
 
-double Pulse_Constant(double t)
-{
-	double ratio = 1.0;
-	return ratio;
-}
-
-double Pulse_Linear(double t)
-{
-	double ratio = 1.0;
-	if(t <= 0.5)
-		ratio = t/0.5;
-	else
-		ratio = (1.0-t)/0.5;
-	return ratio;
-}
-
-double Pulse_Period(double t)
-{
-	double ratio = 1.0;
-	if(t <= 0.5)
-		ratio = 1.0;
-	else
-		ratio = 0.0;
-	return ratio;
-}
-
-double Pulse_Period(double t, double offset)
-{
-	double ratio = 1.0;
-	if(t <= offset)
-		ratio = 1.0;
-	else
-		ratio = 0.0;
-	return ratio;
-}
-
-// void
-// Character::
-// GetDesiredTorques_Device_()
-// {
-// }
-
-double
+void
 Character::
-GetAngleQ(int idx)
+SetPDParameters(double kp, double kv)
 {
-	Eigen::Vector3d dir = mSkeleton->getBodyNode(0)->getCOMLinearVelocity();
-	dir /= dir.norm();
-
-	Eigen::Vector3d p12 = mSkeleton->getBodyNode(idx)->getCOM()-mSkeleton->getBodyNode(0)->getCOM();
-	double p12_len = p12.norm();
-
-	double l2 = dir[0]*p12[0] + dir[2]*p12[2];
-	double l1 = sqrt(p12[0]*p12[0]+p12[2]*p12[2] - l2*l2);
-	double x = sqrt(p12_len*p12_len - l1*l1);
-
-	double sin = l2 / x;
-
-	return asin(sin);
-}
-
-Eigen::VectorXd
-Character::
-GetDesiredTorques_Device(double t)
-{
-	// double sin_qr = GetAngleQ(1);
-	// double sin_ql = GetAngleQ(6);
-	// double y = sin_qr - sin_ql;
-
-	// std::cout << "qr : " << sin_qr << std::endl;
-	// std::cout << "ql : " << sin_ql << std::endl;
-
-	// mDevice_y.pop_back();
-	// mDevice_y.push_front(y);
-
-	// double y_delta_t = mDevice_y.at(35);
-	// double k = 10.0;
-	// double torque = k * y_delta_t;
-
-	double offset = 60.0;
-
-	for(int i=0; i<mAction_Device.size(); i++)
-	{
-		if(mAction_Device[i] > offset)
-			mAction_Device[i] = offset;
-		if(mAction_Device[i] < -offset)
-			mAction_Device[i] = -offset;
-	}
-
-	double ratio = Pulse_Constant(t);
-
-	Eigen::VectorXd cur_action;
-	cur_action.resize(12);
-	cur_action.head<6>().setZero();
-	cur_action.segment<3>(6) = ratio * mAction_Device.head<3>();
-	cur_action.segment<3>(9) = ratio * mAction_Device.segment<3>(3);
-	mDesiredTorque_Device_Buffer.pop_back();
-	mDesiredTorque_Device_Buffer.push_front(cur_action);
-
-	mDesiredTorque_Device = t*mDesiredTorque_Device_Buffer.at(340)+(1-t)*mDesiredTorque_Device_Buffer.at(360);
-
-	// double offset_L = mAction_Device[6];
-	// if(offset_L<-2.0)
-	// 	offset_L = -2.0;
-	// if(offset_L>2.0)
-	// 	offset_L = 2.0;
-
-	// offset_L = 0.5 + offset_L/4.0;
-
-	// double offset_R = mAction_Device[7];
-	// if(offset_R<-2.0)
-	// 	offset_R = -2.0;
-	// if(offset_R>2.0)
-	// 	offset_R = 2.0;
-
-	// offset_R = 0.5 + offset_R/4.0;
-
-
-	// double ratio = Pulse_Linear(t);
-	// double ratio_L = Pulse_Period(t, offset_L);
-	// double ratio_R = Pulse_Period(t, offset_R);
-
-	// mDesiredTorque_Device.head<6>().setZero();
-	// mDesiredTorque_Device.segment<3>(6) = ratio * mAction_Device.head<3>();
-	// mDesiredTorque_Device.segment<3>(9) = ratio * mAction_Device.segment<3>(3);
-	// mDesiredTorque_Device[6] = ratio * mAction_Device[0];
-	// mDesiredTorque_Device[7] = ratio * mAction_Device[1];
-
-	return mDesiredTorque_Device;
+	int dof = mSkeleton->getNumDofs();
+	mKp = Eigen::VectorXd::Constant(dof,kp);
+	mKv = Eigen::VectorXd::Constant(dof,kv);
 }
 
 Eigen::VectorXd
@@ -928,30 +486,25 @@ GetSPDForces(const Eigen::VectorXd& p_desired)
 	return tau;
 }
 
-Eigen::VectorXd
-Character::
-GetMuscleTorques()
-{
-	int index = 0;
-	mCurrentMuscleTuple.JtA.setZero();
-	for(auto muscle : mMuscles)
-	{
-		muscle->Update();
-		Eigen::VectorXd JtA_i = muscle->GetRelatedJtA();
-		mCurrentMuscleTuple.JtA.segment(index, JtA_i.rows()) = JtA_i;
-		index += JtA_i.rows();
-	}
-
-	return mCurrentMuscleTuple.JtA;
-}
-
 void
 Character::
-SetPDParameters(double kp, double kv)
+SetTargetPosAndVel(double t, int controlHz)
 {
-	int dof = mSkeleton->getNumDofs();
-	mKp = Eigen::VectorXd::Constant(dof,kp);
-	mKv = Eigen::VectorXd::Constant(dof,kv);
+	std::pair<Eigen::VectorXd,Eigen::VectorXd> pv = this->GetTargetPosAndVel(t, 1.0/controlHz);
+	mTargetPositions = pv.first;
+	mTargetVelocities = pv.second;
+}
+
+std::pair<Eigen::VectorXd,Eigen::VectorXd>
+Character::
+GetTargetPosAndVel(double t,double dt)
+{
+	Eigen::VectorXd p = this->GetTargetPositions(t,dt);
+	Eigen::Isometry3d Tc = mTc;
+	Eigen::VectorXd p1 = this->GetTargetPositions(t+dt,dt);
+	mTc = Tc;
+
+	return std::make_pair(p,(p1-p)/dt);
 }
 
 Eigen::VectorXd
@@ -996,44 +549,170 @@ GetTargetPositions(double t,double dt)
 	return p;
 }
 
-std::pair<Eigen::VectorXd,Eigen::VectorXd>
+Eigen::VectorXd
 Character::
-GetTargetPosAndVel(double t,double dt)
+GetMuscleTorques()
 {
-	Eigen::VectorXd p = this->GetTargetPositions(t,dt);
-	Eigen::Isometry3d Tc = mTc;
-	Eigen::VectorXd p1 = this->GetTargetPositions(t+dt,dt);
-	mTc = Tc;
+	int index = 0;
+	mCurrentMuscleTuple.JtA.setZero();
+	for(auto muscle : mMuscles)
+	{
+		muscle->Update();
+		Eigen::VectorXd JtA_i = muscle->GetRelatedJtA();
+		mCurrentMuscleTuple.JtA.segment(index, JtA_i.rows()) = JtA_i;
+		index += JtA_i.rows();
+	}
 
-	return std::make_pair(p,(p1-p)/dt);
+	return mCurrentMuscleTuple.JtA;
 }
 
 void
 Character::
-SetTargetPosAndVel(double t, int controlHz)
+SetDevice(Device* device)
 {
-	std::pair<Eigen::VectorXd,Eigen::VectorXd> pv = this->GetTargetPosAndVel(t, 1.0/controlHz);
-	mTargetPositions = pv.first;
-	mTargetVelocities = pv.second;
+	mDevice = device;
+	mUseDevice = true;
+	mOnDevice = true;
+	this->SetConstraints();
 }
 
-std::deque<double>
+void
 Character::
-GetDeviceSignals(int idx)
+SetConstraints()
 {
-	if(idx==0)
-		return mDeviceSignals_L;
-	else if(idx==1)
-		return mDeviceSignals_R;
+	mWeldJoint_Hip = std::make_shared<dart::constraint::WeldJointConstraint>(
+        mSkeleton->getBodyNode(0), mDevice->GetSkeleton()->getBodyNode(0)
+        );
+
+	mWeldJoint_LeftLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
+       mSkeleton->getBodyNode("FemurL"), mDevice->GetSkeleton()->getBodyNode("FastenerLeftOut")
+        );
+
+	mWeldJoint_RightLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
+        mSkeleton->getBodyNode("FemurR"), mDevice->GetSkeleton()->getBodyNode("FastenerRightOut")
+        );
+
+    mWorld->getConstraintSolver()->addConstraint(mWeldJoint_Hip);
+	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
+	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
+}
+
+void
+Character::
+SetOnDevice(bool onDevice)
+{
+	if(onDevice ^ mOnDevice)
+	{
+		if(onDevice)
+			this->On_Device();
+		else
+			this->Off_Device();
+	}
+
+	mOnDevice = onDevice;
+}
+
+void
+Character::
+On_Device()
+{
+	mDevice->Reset();
+
+	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_Hip);
+	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
+	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
+	mWorld->addSkeleton(mDevice->GetSkeleton());
+}
+
+void
+Character::
+Off_Device()
+{
+	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_Hip);
+	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_LeftLeg);
+	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_RightLeg);
+	mWorld->removeSkeleton(mDevice->GetSkeleton());
+}
+
+void
+Character::
+SetEnergy()
+{
+	int offset = 6;
+	int n = mSkeleton->getNumJoints();
+	for(int i=1; i<n; i++)
+	{
+		std::string name = mSkeleton->getJoint(i)->getName();
+		int dof = mSkeleton->getJoint(i)->getNumDofs();
+		double torque = 0.0;
+		if(dof == 1)
+		{
+			torque = mDesiredTorque[offset];
+			if(torque<0)
+				torque *= -1;
+			offset += 1;
+		}
+		else if(dof == 3)
+		{
+			Eigen::Vector3d t_ = mDesiredTorque.segment(offset,3);
+			torque = t_.norm();
+			offset += 3;
+		}
+
+		if(mOnDevice)
+			mEnergy_Device->SetEnergy(name, (int)(mPhase/0.0303), torque);
+		else
+			mEnergy->SetEnergy(name, (int)(mPhase/0.0303), torque);
+	}
+}
+
+void
+Character::
+SetReward_Graph()
+{
+	this->GetReward();
+	int phase_idx = (int)(mPhase/0.0303);
+	if(mOnDevice){
+		int n = mRewards_Device_num[phase_idx];
+		if(n == 0)
+			mRewards_Device[phase_idx] = mReward;
+		else
+			mRewards_Device[phase_idx] = (mRewards_Device[phase_idx]*n+mReward)/(double)(n+1);
+
+		mRewards_Device_num[phase_idx] += 1;
+	}
+	else
+	{
+		int n = mRewards_num[phase_idx];
+		if(n == 0)
+			mRewards[phase_idx] = mReward;
+		else
+			mRewards[phase_idx] = (mRewards[phase_idx]*n+mReward)/(double)(n+1);
+
+		mRewards_num[phase_idx] += 1;
+	}
+}
+
+void
+Character::
+SetPhase()
+{
+	double worldTime = mWorld->getTime();
+	double t_phase = mBVH->GetMaxTime();
+	double phi = std::fmod(worldTime, t_phase)/t_phase;
+	mPhase = phi;
+
+	if(mUseDevice)
+		mDevice->SetPhase(mPhase);
 }
 
 std::vector<double>
 Character::
 GetReward_Graph(int idx)
 {
-	if(idx==0)
+	if(idx==0) // OFF Device
 		return mRewards;
-	else
+	else // ON Device
 		return mRewards_Device;
 }
 
@@ -1070,17 +749,6 @@ void
 Energy::
 Reset()
 {
-	// for(auto it = mE.begin(); it != mE.end(); it++){
-	// 	it->second.clear();
-	// 	for(int i=0; i<33; i++)
-	// 		it->second.push_back(0.0);
-	// }
-
-	// for(auto it = mE_num.begin(); it != mE_num.end(); it++){
-	// 	it->second.clear();
-	// 	for(int i=0; i<33; i++)
-	// 		it->second.push_back(0);
-	// }
 }
 
 void
@@ -1103,3 +771,53 @@ GetEnergy(std::string name, int t)
 	return (mE.find(name)->second).at(t);
 }
 
+double exp_of_squared(const Eigen::VectorXd& vec,double w)
+{
+	return exp(-w*vec.squaredNorm());
+}
+
+double exp_of_squared(const Eigen::Vector3d& vec,double w)
+{
+	return exp(-w*vec.squaredNorm());
+}
+
+double exp_of_squared(double val,double w)
+{
+	return exp(-w*val*val);
+}
+
+double Pulse_Constant(double t)
+{
+	double ratio = 1.0;
+	return ratio;
+}
+
+double Pulse_Linear(double t)
+{
+	double ratio = 1.0;
+	if(t <= 0.5)
+		ratio = t/0.5;
+	else
+		ratio = (1.0-t)/0.5;
+	return ratio;
+}
+
+double Pulse_Period(double t)
+{
+	double ratio = 1.0;
+	if(t <= 0.5)
+		ratio = 1.0;
+	else
+		ratio = 0.0;
+	return ratio;
+}
+
+double Pulse_Period(double t, double offset)
+{
+	double ratio = 1.0;
+	if(t <= offset)
+		ratio = 1.0;
+	else
+		ratio = 0.0;
+	return ratio;
+}

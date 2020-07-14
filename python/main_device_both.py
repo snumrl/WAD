@@ -253,6 +253,7 @@ class PPO(object):
             if self.use_muscle:
                 mt = Tensor(self.env.GetMuscleTorques())
                 for i in range(self.num_simulation_per_control):
+                    self.env.SetDesiredTorques()
                     dt = Tensor(self.env.GetDesiredTorques())
                     activations = self.muscle_model(mt,dt).cpu().detach().numpy()
                     self.env.SetActivationLevels(activations)

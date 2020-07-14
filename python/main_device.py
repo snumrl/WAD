@@ -77,7 +77,7 @@ class PPO(object):
         self.num_state_device = self.env.GetNumState_Device()
         self.num_action = self.env.GetNumAction()
         self.num_action_device = self.env.GetNumAction_Device()
-        
+
         self.num_simulation_Hz = self.env.GetSimulationHz()
         self.num_control_Hz = self.env.GetControlHz()
         self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
@@ -95,14 +95,14 @@ class PPO(object):
         self.batch_size = 128
         self.muscle_batch_size = 128
         self.replay_buffer = ReplayBuffer(30000)
-        
+
         print("char state : ", self.num_state)
         print("char action : ", self.num_action)
         self.model = SimulationNN(self.num_state,self.num_action)
         print("device state : ", self.num_state_device)
         print("device action : ", self.num_action_device)
-        self.device_model = SimulationNN(self.num_state_device, self.num_action_device)        
-        
+        self.device_model = SimulationNN(self.num_state_device, self.num_action_device)
+
         if use_cuda:
             self.model.cuda()
             self.device_model.cuda()
@@ -112,7 +112,7 @@ class PPO(object):
         self.learning_rate = self.default_learning_rate
         self.clip_ratio = self.default_clip_ratio
         self.optimizer = optim.Adam(self.model.parameters(),lr=self.learning_rate)
-        
+
         self.max_iteration = 50000
         self.w_entropy = -0.001
         self.loss_actor = 0.0
@@ -129,7 +129,7 @@ class PPO(object):
             self.loss_muscle = 0.0
             if self.use_muscle:
                 self.muscle_model.cuda()
-        
+
         self.sum_return = 0.0
         self.max_return = -1.0
         self.max_return_epoch = 1
@@ -142,12 +142,12 @@ class PPO(object):
 
     def SaveModel(self):
         self.model.save('../nn/current.pt')
-    
+
         if self.max_return_epoch == self.num_evaluation:
             self.model.save('../nn/max.pt')
         if self.num_evaluation%100 == 0:
             self.model.save('../nn/'+str(self.num_evaluation//100)+'.pt')
-       
+
     def SaveModel_Muscle(self):
         self.muscle_model.save('../nn/current_muscle.pt')
 
@@ -165,13 +165,13 @@ class PPO(object):
 
     def LoadModel(self,path):
         self.model.load('../nn/'+path+'.pt')
-        
+
     def LoadModel_Muscle(self,path):
         self.muscle_model.load('../nn/'+path+'_muscle.pt')
-        
+
     def LoadModel_Device(self,path):
-        self.device_model.load('../nn/'+path+'_device.pt')        
-    
+        self.device_model.load('../nn/'+path+'_device.pt')
+
     def ComputeTDandGAE(self):
         self.replay_buffer.Clear()
         self.muscle_buffer.Clear()
@@ -196,17 +196,17 @@ class PPO(object):
             for i in reversed(range(len(data))):
                 epi_return += rewards[i]
                 for k in epi_return_sep_keys:
-                    epi_return_sep[k] += rewards_sep[i][k] 
+                    epi_return_sep[k] += rewards_sep[i][k]
                 delta = rewards[i] + values[i+1] * self.gamma - values[i]
                 ad_t = delta + self.gamma * self.lb * ad_t
                 advantages[i] = ad_t
-            
+
             self.sum_return += epi_return
             for k in epi_return_sep_keys:
                 if k not in self.sum_return_sep:
-                    self.sum_return_sep[k] = 0.0   
+                    self.sum_return_sep[k] = 0.0
                 self.sum_return_sep[k] += epi_return_sep[k]
-            
+
             TD = values[:size] + advantages
 
             for i in range(size):
@@ -219,13 +219,13 @@ class PPO(object):
         muscle_tuples = self.env.GetMuscleTuples()
         for i in range(len(muscle_tuples)):
             self.muscle_buffer.Push(muscle_tuples[i][0],muscle_tuples[i][1],muscle_tuples[i][2],muscle_tuples[i][3])
-   
+
     def GenerateTransitions_Device(self):
         self.total_episodes = []
 
         states = [None]*self.num_slaves
         states_device = [None]*self.num_slaves
-        
+
         actions = [None]*self.num_slaves
         actions_device = [None]*self.num_slaves
 
@@ -245,18 +245,19 @@ class PPO(object):
                 print('SIM : {}'.format(local_step),end='\r')
             a_dist,v = self.model(Tensor(states))
             actions = a_dist.sample().cpu().detach().numpy()
-            
+
             a_dist_device,v_device = self.device_model(Tensor(states_device))
             actions_device = a_dist_device.sample().cpu().detach().numpy()
-            
+
             logprobs = a_dist_device.log_prob(Tensor(actions_device)).cpu().detach().numpy().reshape(-1)
             values = v_device.cpu().detach().numpy().reshape(-1)
-            
+
             self.env.SetActions(actions)
             self.env.SetActions_Device(actions_device)
             if self.use_muscle:
                 mt = Tensor(self.env.GetMuscleTorques())
                 for i in range(self.num_simulation_per_control):
+                    self.env.SetDesiredTorques()
                     dt = Tensor(self.env.GetDesiredTorques())
                     activations = self.muscle_model(mt,dt).cpu().detach().numpy()
                     self.env.SetActivationLevels(activations)
@@ -333,12 +334,12 @@ class PPO(object):
                 if self.use_device:
                     for param in self.device_model.parameters():
                         if param.grad is not None:
-                           param.grad.data.clamp_(-0.5,0.5)    
+                           param.grad.data.clamp_(-0.5,0.5)
                 else:
                     for param in self.model.parameters():
                         if param.grad is not None:
-                           param.grad.data.clamp_(-0.5,0.5)    
-                
+                           param.grad.data.clamp_(-0.5,0.5)
+
                 self.optimizer.step()
             print('Optimizing sim nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
         print('')
@@ -388,7 +389,7 @@ class PPO(object):
         self.OptimizeSimulationNN()
         if self.use_muscle:
             self.OptimizeMuscleNN()
-        
+
     def Train(self):
         self.GenerateTransitions_Device()
         self.OptimizeModel()
@@ -421,16 +422,16 @@ class PPO(object):
         print('||Avg Reward per transition: {:.3f}'.format(self.sum_return/self.num_tuple))
         print('||Avg Step per episode     : {:.1f}'.format(self.num_tuple/self.num_episode))
         print('||Max Avg Retun So far     : {:.3f} at #{}'.format(self.max_return,self.max_return_epoch))
-      
+
         self.rewards.append(self.sum_return/self.num_episode)
         keys_ = list(self.sum_return_sep.keys())
         for key in keys_:
             if key not in self.rewards_sep:
                 self.rewards_sep[key] = []
             self.rewards_sep[key].append(self.sum_return_sep[key]/self.num_episode)
-            
+
         self.SaveModel_Device()
-        
+
         print('=============================================')
         return np.array(self.rewards), self.rewards_sep
 
@@ -481,7 +482,7 @@ if __name__=="__main__":
     parser.add_argument('-m','--model',help='model path')
     parser.add_argument('-a','--device',help='device path')
     parser.add_argument('-u','--muscle',help='muscle path')
-    
+
 
     args =parser.parse_args()
     if args.meta is None:
@@ -509,13 +510,13 @@ if __name__=="__main__":
     else:
         if ppo.use_muscle:
             print("Missing : -u path/to/muscle network")
-            sys.exit()           
+            sys.exit()
 
-    if args.device is not None:        
+    if args.device is not None:
         ppo.LoadModel_Device(args.device)
     else:
         ppo.SaveModel_Device()
-    
+
     print('num states: {}, num actions: {}'.format(ppo.env.GetNumState(),ppo.env.GetNumAction()))
     for i in range(ppo.max_iteration-5):
         ppo.Train()

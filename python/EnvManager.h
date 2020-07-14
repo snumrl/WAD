@@ -12,12 +12,13 @@ public:
 	void Step(int id);
 	void Steps(int num, bool onDevice);
 	void StepsAtOnce(bool onDevice);
-	
-	void Reset(bool RSI,int id);
+
+	void Reset(bool RSI, int id);
 	void Resets(bool RSI);
 
 	np::ndarray GetState(int id);
 	np::ndarray GetStates();
+	np::ndarray GetState_Device(int id);
 	np::ndarray GetStates_Device();
 
 	double GetReward(int id);
@@ -42,12 +43,14 @@ public:
 
 	bool UseMuscle();
 	bool UseDevice();
+	bool UseDeviceNN();
 
-	//For Muscle Transitions
-	int GetNumTotalMuscleRelatedDofs(){return mEnvs[0]->GetNumTotalRelatedDofs();};
-	int GetNumMuscles(){return mEnvs[0]->GetCharacter()->GetMuscles().size();}
-	np::ndarray GetMuscleTorques();
+	void SetDesiredTorques();
 	np::ndarray GetDesiredTorques();
+	//For Muscle Transitions
+	int GetNumTotalMuscleRelatedDofs();
+	int GetNumMuscles();
+	np::ndarray GetMuscleTorques();
 	p::list GetMuscleTuples();
 
 private:
