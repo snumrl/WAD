@@ -20,6 +20,7 @@ import numpy as np
 from pymss import EnvManager
 from IPython import embed
 from Model import *
+from RunningMeanStd import *
 use_cuda = torch.cuda.is_available()
 FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
@@ -72,6 +73,7 @@ class PPO(object):
 		# ========== Character setting ========== #
 		self.num_state = self.env.GetNumState()
 		self.num_action = self.env.GetNumAction()
+		self.rms = RunningMeanStd(shape=(self.num_state))
 
 		self.num_epochs = 10
 		self.num_tuple_so_far = 0
@@ -88,11 +90,11 @@ class PPO(object):
 		self.batch_size = 128
 		self.replay_buffer = ReplayBuffer(30000)
 
-		self.gamma = 0.99
-		self.lb = 0.99
+		self.gamma = 0.95
+		self.lb = 0.95
 
 		self.default_clip_ratio = 0.2
-		self.default_learning_rate = 1E-4
+		self.default_learning_rate = 2.5*1E-6
 		self.clip_ratio = self.default_clip_ratio
 		self.learning_rate = self.default_learning_rate
 
@@ -139,11 +141,14 @@ class PPO(object):
 
 	def SaveModel(self):
 		self.model.save('../nn/current.pt')
+		self.rms.save('current')
 
 		if self.max_return_epoch == self.num_evaluation:
 			self.model.save('../nn/max.pt')
+			self.rms.save('max')
 		if self.num_evaluation%100 == 0:
 			self.model.save('../nn/'+str(self.num_evaluation//100)+'.pt')
+			self.rms.save(str(self.num_evaluation//100))
 
 	def SaveModel_Muscle(self):
 		self.muscle_model.save('../nn/current_muscle.pt')
@@ -153,8 +158,9 @@ class PPO(object):
 		if self.num_evaluation%100 == 0:
 			self.muscle_model.save('../nn/'+str(self.num_evaluation//100)+'_muscle.pt')
 
-	def LoadModel(self,path):
+	def LoadModel(self, path):
 		self.model.load('../nn/'+path+'.pt')
+		self.rms.load('../nn/'+path)
 
 	def LoadModel_Muscle(self,path):
 		self.muscle_model.load('../nn/'+path+'_muscle.pt')
@@ -254,6 +260,7 @@ class PPO(object):
 				break
 
 			states = self.env.GetStates()
+			states = self.rms.apply(states)
 
 	def OptimizeSimulationNN(self):
 		all_transitions = np.array(self.replay_buffer.buffer)

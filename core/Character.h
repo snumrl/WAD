@@ -51,6 +51,12 @@ public:
 	void Initialize_Muscles();
 	void Initialize_Analysis();
 
+	Eigen::VectorXd GetKp(){return mKp;}
+	Eigen::VectorXd GetKv(){return mKv;}
+
+	void SetKp(double kp);
+	void SetKv(double kv);
+
 	void Reset();
 	void Reset_Muscles();
 
@@ -110,6 +116,9 @@ public:
 	double GetPhase(){return mPhase;}
 	std::map<std::string, std::vector<double>> GetEnergy(int idx);
 	std::vector<double> GetReward_Graph(int idx);
+	std::deque<double> GetSignals(int idx);
+
+
 
 	// std::deque<double> GetDeviceSignals(int idx);
 	// void SetSignals_Device();
@@ -158,8 +167,15 @@ private:
 	std::vector<double> mRewards_Device;
 	std::vector<int> mRewards_Device_num;
 
+	std::deque<double> mFemurSignals_L;
+    std::deque<double> mFemurSignals_R;
+
 	Energy* mEnergy;
 	Energy* mEnergy_Device;
+
+	Eigen::Vector3d prev_p;
+
+	Eigen::VectorXd mJointWeights;
 
 	MuscleTuple mCurrentMuscleTuple;
 	std::vector<MuscleTuple> mMuscleTuples;

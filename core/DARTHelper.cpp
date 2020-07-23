@@ -297,6 +297,7 @@ BuildFromFile(const std::string& path,bool create_obj)
 		Eigen::Vector4d color = Eigen::Vector4d::Constant(0.2);
 		if(body->Attribute("color")!=nullptr)
 			color = string_to_vector4d(body->Attribute("color"));
+		color[3] = 0.8;
 
 		dart::dynamics::Inertia inertia = MakeInertia(shape, mass);
 
@@ -351,6 +352,10 @@ BuildFromFile(const std::string& path,bool create_obj)
 			props = MASS::MakeWeldJointProperties(name,parent_to_joint,child_to_joint);
 		}
 
+		ShapePtr shape_joint;
+		double radius = 0.03;
+		shape_joint = MASS::MakeSphereShape(radius);
+
 		auto bn = MakeBodyNode(skel,parent,props,type,inertia);
 		if(contact)
 			bn->createShapeNodeWith<VisualAspect,CollisionAspect,DynamicsAspect>(shape);
@@ -358,6 +363,14 @@ BuildFromFile(const std::string& path,bool create_obj)
 			bn->createShapeNodeWith<VisualAspect, DynamicsAspect>(shape);
 
 		bn->getShapeNodesWith<VisualAspect>().back()->getVisualAspect()->setColor(color);
+
+		bn->createShapeNodeWith<VisualAspect>(shape_joint);
+
+		Eigen::Vector4d color_joint(0.8,0.2,0.8,1.0);
+		bn->getShapeNodesWith<VisualAspect>().back()->getVisualAspect()->setColor(color_joint);
+		bn->getShapeNodesWith<VisualAspect>().back()->setRelativeTransform(child_to_joint);
+
+
 
 		if(obj_file!="None" && create_obj)
 		{

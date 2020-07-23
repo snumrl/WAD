@@ -212,11 +212,11 @@ IsEndOfEpisode()
 
 	double root_y = mCharacter->GetSkeleton()->getBodyNode(0)->getTransform().translation()[1] - mGround->getRootBodyNode()->getCOM()[1];
 
-	if(root_y<1.3)
+	if(root_y < 1.3)
 		isTerminal =true;
 	else if (dart::math::isNan(p) || dart::math::isNan(v))
 		isTerminal =true;
-	else if(mWorld->getTime()>10.0)
+	else if(mWorld->getTime() > 5.0)
 		isTerminal =true;
 
 	return isTerminal;

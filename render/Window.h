@@ -22,13 +22,9 @@ public:
 	Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_path);
 	Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_path,const std::string& device_nn_path);
 
-	void LoadMuscleNN(const std::string& muscle_nn_path);
-	void LoadDeviceNN(const std::string& device_nn_path);
-
 	void draw() override;
 	void keyboard(unsigned char _key, int _x, int _y) override;
 	void displayTimer(int _val) override;
-
 	void Step();
 	void Reset();
 
@@ -36,10 +32,16 @@ public:
 	void SetViewMatrix();
 	void SetTrajectory();
 
+	void LoadMuscleNN(const std::string& muscle_nn_path);
+	void LoadDeviceNN(const std::string& device_nn_path);
+
+	Eigen::VectorXd GetActionFromNN();
+	Eigen::VectorXd GetActionFromNN_Device();
+	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt);
+
 	void DrawGround();
 	void DrawCharacter();
 	void DrawTarget();
-	void DrawSignals();
 	void DrawEnergy();
 	void DrawEnergyGraph(std::string name, double w, double h, double x, double y);
 	void DrawReward();
@@ -69,17 +71,14 @@ public:
 	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::deque<double>& data);
 	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::deque<double>& data, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1);
 
-	Eigen::VectorXd GetActionFromNN();
-	Eigen::VectorXd GetActionFromNN_Device();
-	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt);
-
 private:
 
-	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module;
+	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module,rms_module;
 
 	Environment* mEnv;
 	bool mFocus;
 	bool mSimulating;
+	bool mDrawCharacter;
 	bool mDrawTarget;
 	bool mDrawOBJ;
 	bool mDrawShadow;
@@ -90,9 +89,11 @@ private:
 	bool mDeviceNNLoaded;
 	bool mOnDevice;
 
-	bool isDrawTarget = false;
-	bool mTalusL = false;
-	bool mTalusR = false;
+	bool mTalusL;
+	bool mTalusR;
+	bool isDrawTarget;
+
+	double mGain;
 
 	Eigen::Affine3d mViewMatrix;
 	std::vector<Eigen::Vector3d> mTrajectory;
