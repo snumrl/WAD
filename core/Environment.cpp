@@ -5,6 +5,7 @@
 #include "Muscle.h"
 #include "Device.h"
 #include "dart/collision/bullet/bullet.hpp"
+#include <regex>
 using namespace dart;
 using namespace dart::simulation;
 using namespace dart::dynamics;
@@ -115,14 +116,13 @@ Initialize(const std::string& meta_file, bool load_obj)
 		}
 	}
 	ifs.close();
-
 	this->SetGround(MASS::BuildFromFile(std::string(MASS_ROOT_DIR)+std::string("/data/ground.xml")));
 	this->SetCharacter(character);
 	if(mUseDevice)
 		this->SetDevice(device);
-
 	this->Initialize();
 
+	this->parseJSONtoBVH();
 	// auto weld_pelvis = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Pelvis"));
 	// auto weld_spine = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Spine"));
 	// auto weld_handr = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("HandR"));
@@ -134,6 +134,17 @@ Initialize(const std::string& meta_file, bool load_obj)
 	// mWorld->getConstraintSolver()->addConstraint(weld_handr);
 	// mWorld->getConstraintSolver()->addConstraint(weld_handl);
 	// mWorld->getConstraintSolver()->addConstraint(weld_talusr);
+}
+
+void
+Environment::
+parseJSONtoBVH()
+{
+	std::string name = "humanoid3d_walk";
+	std::string file = std::string(MASS_ROOT_DIR)+"/data/motion/"+name+".txt";
+	std::ifstream is(file);
+
+	std::ofstream output(std::string(MASS_ROOT_DIR)+"/data/motion/"+name+".bvh");
 }
 
 void

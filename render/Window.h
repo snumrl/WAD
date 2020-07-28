@@ -98,6 +98,9 @@ private:
 	Eigen::Affine3d mViewMatrix;
 	std::vector<Eigen::Vector3d> mTrajectory;
 	std::vector<Eigen::Vector3d> mFootprint;
+
+	Eigen::VectorXd mOffset;
+	int offsetIdx=0;
 };
 };
 

@@ -90,11 +90,11 @@ class PPO(object):
 		self.batch_size = 128
 		self.replay_buffer = ReplayBuffer(30000)
 
-		self.gamma = 0.95
-		self.lb = 0.95
+		self.gamma = 0.99
+		self.lb = 0.99
 
 		self.default_clip_ratio = 0.2
-		self.default_learning_rate = 2.5*1E-6
+		self.default_learning_rate = 1.0*1E-5
 		self.clip_ratio = self.default_clip_ratio
 		self.learning_rate = self.default_learning_rate
 
@@ -278,6 +278,13 @@ class PPO(object):
 
 				a_dist,v = self.model(Tensor(stack_s))
 				'''Critic Loss'''
+				# loss_critic1 = ((v-Tensor(stack_td)).pow(2)).mean()
+
+				# vf_loss1 = torch.pow(value_fn - value_targets, 2.0)
+    #         	vf_clipped = vf_preds + torch.clamp(value_fn - vf_preds,
+    #                                             -vf_clip_param, vf_clip_param)
+    #         	vf_loss2 = torch.pow(vf_clipped - value_targets, 2.0)
+    #         	vf_loss = torch.max(vf_loss1, vf_loss2)
 				loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
 
 				'''Actor Loss'''

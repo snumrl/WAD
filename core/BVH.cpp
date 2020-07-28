@@ -45,7 +45,6 @@ BVHNode::
 BVHNode(const std::string& name,BVHNode* parent)
 	:mParent(parent),mName(name),mChannelOffset(0),mNumChannels(0)
 {
-
 }
 
 void
@@ -131,7 +130,8 @@ BVH::
 BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map)
 	:mSkeleton(skel),mBVHMap(bvh_map),mCyclic(true)
 {
-
+	motionOffset.resize(6);
+	motionOffset.setZero();
 }
 
 Eigen::VectorXd
@@ -145,6 +145,21 @@ GetMotion(double t)
 	double dt = t/mTimeStep - std::floor(t/mTimeStep);
 	Eigen::VectorXd m_t = mMotions[k];
 
+	// for(int i=0; i<6; i++)
+	// 	m_t[i] += motionOffset[i];
+	m_t[1] -= 0.6;
+
+	// if(t==0){
+	// 	m_t.setZero();
+	// 	m_t[0] = -30.5073;
+	// 	m_t[1] = 104.521;
+	// 	m_t[2] = -237.413;
+	// 	// m_t[3] = 3.43058;
+	// 	// m_t[4] = -2.8926;
+	// 	// m_t[5] = -8.40971;
+	// 	// make
+	// }
+
 	for(auto& bn: mMap)
 		bn.second->Set(m_t);
 
@@ -156,19 +171,23 @@ GetMotion(double t)
 		BodyNode* bn = mSkeleton->getBodyNode(ss.first);
 		Eigen::Matrix3d R = this->Get(ss.second);
 		Joint* jn = bn->getParentJoint();
-		int idx = jn->getIndexInSkeleton(0);
+
 
 		if(jn->getType()=="FreeJoint")
 		{
+			int idx = jn->getIndexInSkeleton(0);
 			Eigen::Isometry3d T;
 			T.translation() = 0.01*m_t.segment<3>(0);
 			T.linear() = R;
 			p.segment<6>(idx) = FreeJoint::convertToPositions(T);
 		}
-		else if(jn->getType()=="BallJoint")
+		else if(jn->getType()=="BallJoint"){
+			int idx = jn->getIndexInSkeleton(0);
 			p.segment<3>(idx) = BallJoint::convertToPositions(R);
+		}
 		else if(jn->getType()=="RevoluteJoint")
 		{
+			int idx = jn->getIndexInSkeleton(0);
 			Eigen::Vector3d u =dynamic_cast<RevoluteJoint*>(jn)->getAxis();
 			Eigen::Vector3d aa = BallJoint::convertToPositions(R);
 			double val;
@@ -244,6 +263,8 @@ Parse(const std::string& file,bool cyclic)
 					is>>val;
 					if(i%4==0)
 						mMotions[i/4][j]=val;
+					if(j==1)
+						mMotions[i/4][j]-=5;
 				}
 			}
 			mNumTotalFrames = mNumTotalFrames/4 + mNumTotalFrames%4;
@@ -264,9 +285,8 @@ Parse(const std::string& file,bool cyclic)
 	mMap[root_bvh_name]->Set(m);
 	T1.linear() = this->Get(root_bvh_name);
 	T1.translation() = 0.01*m.segment<3>(0);
-
-
 }
+
 BVHNode*
 BVH::
 ReadHierarchy(BVHNode* parent,const std::string& name,int& channel_offset,std::ifstream& is)

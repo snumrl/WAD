@@ -55,7 +55,7 @@ namespace Utils
     Eigen::Vector3d CalcQuaternionVel(const Eigen::Vector3d& v0, const Eigen::Vector3d& v1, double dt);
     Eigen::Vector3d CalcQuaternionVelRel(const Eigen::Quaterniond& q0, const Eigen::Quaterniond& q1, double dt);
     Eigen::Vector3d CalcQuaternionVelRel(const Eigen::Vector3d& v0, const Eigen::Vector3d& v1, double dt);
-    Eigen::Quaterniond VecToQuat(const Eigen::Vector3d& v);
+    Eigen::Quaterniond VecToQuat(const Eigen::Vector4d& v);
     Eigen::Vector4d QuatToVec(const Eigen::Quaterniond& q);
     Eigen::Quaterniond QuatDiff(const Eigen::Quaterniond& q0, const Eigen::Quaterniond& q1);
     double QuatDiffTheta(const Eigen::Quaterniond& q0, const Eigen::Quaterniond& q1);

@@ -157,6 +157,7 @@ private:
 
 	Eigen::Isometry3d mTc;
 	Eigen::VectorXd mKp, mKv;
+	Eigen::VectorXd maxForces;
 
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;
@@ -169,6 +170,12 @@ private:
 
 	std::deque<double> mFemurSignals_L;
     std::deque<double> mFemurSignals_R;
+
+    std::deque<double> pose_;
+    std::deque<double> vel_;
+    std::deque<double> root_;
+    std::deque<double> com_;
+    std::deque<double> ee_;
 
 	Energy* mEnergy;
 	Energy* mEnergy_Device;

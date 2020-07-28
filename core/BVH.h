@@ -81,6 +81,12 @@ public:
 	void Draw();
 	void DrawRecursive(BVHNode* node);
 
+	void SetMotionOffset(const Eigen::VectorXd& offset){
+		for(int i=0;i<6;i++)
+			motionOffset[i] = offset[i];
+	}
+	Eigen::VectorXd GetMotionOffset(){return motionOffset;}
+
 private:
 	bool mCyclic;
 	std::vector<Eigen::VectorXd> mMotions;
@@ -96,6 +102,8 @@ private:
 
 	Eigen::Isometry3d T0,T1;
 	BVHNode* ReadHierarchy(BVHNode* parent,const std::string& name,int& channel_offset,std::ifstream& is);
+
+	Eigen::VectorXd motionOffset;
 };
 
 };

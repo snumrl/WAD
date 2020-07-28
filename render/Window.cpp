@@ -84,6 +84,9 @@ Window(Environment* env)
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
 	p::exec("from RunningMeanStd import *",mns);
+
+	mOffset.resize(6);
+	mOffset.setZero();
 }
 
 Window::
@@ -178,20 +181,28 @@ keyboard(unsigned char _key, int _x, int _y)
 	{
 	// case '+': force[0] += 500.0;break;
 	// case '-': force[0] -= 500.0;break;
-	case '+':
-		mGain += 50.0;
-		mEnv->GetCharacter()->SetKp(mGain);
-		mEnv->GetCharacter()->SetKv(mGain*0.1);
-		std::cout << "kp : " << mGain << std::endl;
-		std::cout << "kv : " << mGain*0.1 << std::endl;
-		break;
-	case '-':
-		mGain -= 50.0;
-		mEnv->GetCharacter()->SetKp(mGain);
-		mEnv->GetCharacter()->SetKv(mGain*0.1);
-		std::cout << "kp : " << mGain << std::endl;
-		std::cout << "kv : " << mGain*0.1 << std::endl;
-		break;
+	// case '+':
+	// 	mGain += 50.0;
+	// 	mEnv->GetCharacter()->SetKp(mGain);
+	// 	mEnv->GetCharacter()->SetKv(mGain*0.1);
+	// 	std::cout << "kp : " << mGain << std::endl;
+	// 	std::cout << "kv : " << mGain*0.1 << std::endl;
+	// 	break;
+	// case '-':
+	// 	mGain -= 50.0;
+	// 	mEnv->GetCharacter()->SetKp(mGain);
+	// 	mEnv->GetCharacter()->SetKv(mGain*0.1);
+	// 	std::cout << "kp : " << mGain << std::endl;
+	// 	std::cout << "kv : " << mGain*0.1 << std::endl;
+	// 	break;
+	case '+': mOffset[offsetIdx]+=0.2;break;
+	case '-': mOffset[offsetIdx]-=0.2;break;
+	case '1': offsetIdx = 0;break;
+	case '2': offsetIdx = 1;break;
+	case '3': offsetIdx = 2;break;
+	case '4': offsetIdx = 3;break;
+	case '5': offsetIdx = 4;break;
+	case '6': offsetIdx = 5;break;
 	case 's': this->Step();break;
 	case 'r': this->Reset();break;
 	case ' ': mSimulating = !mSimulating;break;
@@ -210,6 +221,8 @@ keyboard(unsigned char _key, int _x, int _y)
 		Win3D::keyboard(_key,_x,_y);break;
 	}
 
+	// std::cout << mOffset[0] << " " << mOffset[1] << " " << mOffset[2] << " " << mOffset[3] << " " << mOffset[4] << " " << mOffset[5] << std::endl;
+	// mEnv->GetCharacter()->GetBVH()->SetMotionOffset(mOffset);
 	// Eigen::VectorXd f = Eigen::VectorXd::Zero(12);
 	// f.segment<3>(6) = force;
 	// f.segment<3>(9) = force;
@@ -272,6 +285,7 @@ Step()
 	}
 
 	SetTrajectory();
+	glutPostRedisplay();
 }
 
 void
