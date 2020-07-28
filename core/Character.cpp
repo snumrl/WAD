@@ -648,7 +648,8 @@ GetReward_Character()
     double root_reward = exp(-err_scale * root_scale * root_err);
     double com_reward = exp(-err_scale * com_scale * com_err);
 
-    double r_ = pose_w * pose_reward + vel_w * vel_reward + end_eff_w * end_eff_reward + root_w * root_reward + com_w * com_reward;
+    // double r_ = pose_w * pose_reward + vel_w * vel_reward + end_eff_w * end_eff_reward + root_w * root_reward + com_w * com_reward;
+    double r_ = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
 
     // std::cout << pose_w * pose_reward << " / " << pose_w << "  " << pose_w * (pose_reward - 1.0) << " pose" << std::endl;
     // std::cout << vel_w * vel_reward << " / " << vel_w << "  " << vel_w * (vel_reward - 1.0) << " vel" << std::endl;

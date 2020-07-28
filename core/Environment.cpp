@@ -122,7 +122,7 @@ Initialize(const std::string& meta_file, bool load_obj)
 		this->SetDevice(device);
 	this->Initialize();
 
-	this->parseJSONtoBVH();
+	// this->parseJSONtoBVH();
 	// auto weld_pelvis = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Pelvis"));
 	// auto weld_spine = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Spine"));
 	// auto weld_handr = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("HandR"));
