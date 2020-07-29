@@ -33,7 +33,7 @@ class RunningMeanStd(object):
 		self.mean = np.load(path+'_mean.npy')
 		print('load rms {}_var.npy'.format(path))
 		self.var = np.load(path+'_var.npy')
-		self.count = 444
+		self.count = 392
 
 	def update(self, x):
 		batch_mean = np.mean(x, axis=0)

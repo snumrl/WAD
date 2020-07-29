@@ -148,7 +148,7 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	mFemurSignals_L.resize(600);
 	mFemurSignals_R.resize(600);
 
-	mJointWeights.resize(17);
+	mJointWeights.resize(15);
     mJointWeights[0] = 0.10;
     mJointWeights[1] = 0.10;
     mJointWeights[2] = 0.06;
@@ -161,16 +161,13 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
     mJointWeights[9] = 0.10;
     mJointWeights[10] = 0.06;
     mJointWeights[11] = 0.04;
-    mJointWeights[12] = 0.03;
-    mJointWeights[13] = 0.10;
-    mJointWeights[14] = 0.06;
-    mJointWeights[15] = 0.04;
-    mJointWeights[16] = 0.03;
+    mJointWeights[12] = 0.10;
+    mJointWeights[13] = 0.06;
+    mJointWeights[14] = 0.04;
 
-    mJointWeights /= 1.10;
-    // mJointWeights /= 1.14;
+    mJointWeights /= 1.14;
 
-    maxForces.resize(46);
+    maxForces.resize(40);
     maxForces <<
           0, 0, 0, 0, 0, 0,
           200, 200, 200,
@@ -182,10 +179,8 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
           200, 200, 200,
           150, 150, 150,
           100, 100, 100,
-          100, 100, 100,
           60,
           0, 0, 0,
-          100, 100, 100,
           100, 100, 100,
           60,
           0, 0, 0;
@@ -522,7 +517,7 @@ GetReward_Character()
     double end_eff_scale = 40;
     double root_scale = 5;
     double com_scale = 10;
-    double err_scale = 1;  // error scale
+    double err_scale = 2;  // error scale
 
     double reward = 0;
 
@@ -704,7 +699,8 @@ SetDesiredTorques()
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction;
 	mDesiredTorque = this->GetSPDForces(p_des);
 
-	for(int i=0; i<46; i++)
+	// for(int i=0; i<46; i++)
+	for(int i=0; i<40; i++)
 	{
 		if(mDesiredTorque[i] > maxForces[i])
 			mDesiredTorque[i] = maxForces[i];
@@ -751,10 +747,8 @@ SetPDParameters(double kp, double kv)
 		1000, 1000, 1000,
 		100, 100, 100,
 		400, 400, 400,
-		400, 400, 400,
 		300,
 		100, 100, 100,
-		400, 400, 400,
 		400, 400, 400,
 		300,
 		100, 100, 100;
@@ -769,15 +763,11 @@ SetPDParameters(double kp, double kv)
 		100, 100, 100,
 		10, 10, 10,
 		40, 40, 40,
-		40, 40, 40,
 		30,
 		10, 10, 10,
 		40, 40, 40,
-		40, 40, 40,
 		30,
-		10, 10, 10;
-	// mKp = Eigen::VectorXd::Constant(dof,kp);
-	// mKv = Eigen::VectorXd::Constant(dof,kv);
+		10, 10, 10;	
 }
 
 void
