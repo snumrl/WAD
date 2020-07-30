@@ -161,7 +161,8 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	mReward_map.insert(std::make_pair("ee", ee_));
 	mReward_map.insert(std::make_pair("com", com_));
 
-	mJointWeights.resize(15);
+	int num_joint = mSkeleton->getNumJoints();
+	mJointWeights.resize(num_joint);
 	mJointWeights <<
 			1.0,
 			0.5, 0.3, 0.2,
@@ -170,9 +171,10 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 			0.3, 0.2, 0.1,
 			0.3, 0.2, 0.1;
 
-	mJointWeights /= 5.0;
+	mJointWeights /= mJointWeights.sum();
 
-	maxForces.resize(40);
+	int dof = mSkeleton->getNumDofs();
+	maxForces.resize(dof);
 	maxForces <<
 			0, 0, 0, 0, 0, 0,
 			200, 200, 200,
@@ -189,6 +191,63 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 			100, 100, 100,
 			60,
 			0, 0, 0;
+}
+
+void
+Character::
+SetPDParameters()
+{
+	int dof = mSkeleton->getNumDofs();
+	mKp.resize(dof);
+	mKv.resize(dof);
+
+	mKp << 0, 0, 0, 0, 0, 0,
+		500, 500, 500,
+		500,
+		400, 400, 400,
+		500, 500, 500,
+		500,
+		400, 400, 400,
+		1000, 1000, 1000,
+		100, 100, 100,
+		400, 400, 400,
+		300,
+		100, 100, 100,
+		400, 400, 400,
+		300,
+		100, 100, 100;
+
+	mKv << 0, 0, 0, 0, 0, 0,
+		50, 50, 50,
+		50,
+		40, 40, 40,
+		50, 50, 50,
+		50,
+		40, 40, 40,
+		100, 100, 100,
+		10, 10, 10,
+		40, 40, 40,
+		30,
+		10, 10, 10,
+		40, 40, 40,
+		30,
+		10, 10, 10;
+}
+
+void
+Character::
+SetKp(double kp)
+{
+	int dof = mSkeleton->getNumDofs();
+	mKp = Eigen::VectorXd::Constant(dof,kp);
+}
+
+void
+Character::
+SetKv(double kv)
+{
+	int dof = mSkeleton->getNumDofs();
+	mKv = Eigen::VectorXd::Constant(dof,kv);
 }
 
 void
@@ -651,14 +710,7 @@ SetDesiredTorques()
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction;
 	mDesiredTorque = this->GetSPDForces(p_des);
 
-	// for(int i=0; i<46; i++)
-	for(int i=0; i<40; i++)
-	{
-		if(mDesiredTorque[i] > maxForces[i])
-			mDesiredTorque[i] = maxForces[i];
-		if(mDesiredTorque[i] < -maxForces[i])
-			mDesiredTorque[i] = -maxForces[i];
-	}
+	Utils::Clamp(mDesiredTorque, -maxForces, maxForces);
 
 	mFemurSignals_R.pop_back();
 	mFemurSignals_R.push_front(0.1*mDesiredTorque[6]);
@@ -679,63 +731,6 @@ Character::
 GetDesiredTorques()
 {
 	return mDesiredTorque.tail(mDesiredTorque.rows()-mRootJointDof);
-}
-
-void
-Character::
-SetPDParameters()
-{
-	int dof = mSkeleton->getNumDofs();
-	mKp.resize(dof);
-	mKv.resize(dof);
-
-	mKp << 0, 0, 0, 0, 0, 0,
-		500, 500, 500,
-		500,
-		400, 400, 400,
-		500, 500, 500,
-		500,
-		400, 400, 400,
-		1000, 1000, 1000,
-		100, 100, 100,
-		400, 400, 400,
-		300,
-		100, 100, 100,
-		400, 400, 400,
-		300,
-		100, 100, 100;
-
-	mKv << 0, 0, 0, 0, 0, 0,
-		50, 50, 50,
-		50,
-		40, 40, 40,
-		50, 50, 50,
-		50,
-		40, 40, 40,
-		100, 100, 100,
-		10, 10, 10,
-		40, 40, 40,
-		30,
-		10, 10, 10,
-		40, 40, 40,
-		30,
-		10, 10, 10;
-}
-
-void
-Character::
-SetKp(double kp)
-{
-	int dof = mSkeleton->getNumDofs();
-	mKp = Eigen::VectorXd::Constant(dof,kp);
-}
-
-void
-Character::
-SetKv(double kv)
-{
-	int dof = mSkeleton->getNumDofs();
-	mKv = Eigen::VectorXd::Constant(dof,kv);
 }
 
 Eigen::VectorXd
