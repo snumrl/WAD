@@ -60,50 +60,52 @@ class BVH
 public:
 	BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map);
 
-	Eigen::VectorXd GetMotion(double t);
+	BVHNode* ReadHierarchy(BVHNode* parent,const std::string& name,int& channel_offset,std::ifstream& is);
+	void Parse(const std::string& file,bool cyclic=true);
 
 	Eigen::Matrix3d Get(const std::string& bvh_node);
+	// Eigen::VectorXd GetMotion(double t);
+	Eigen::VectorXd GetMotion(int k);
+	Eigen::VectorXd GetMotionVel(int k);
 
+	void SetSkeleton(const dart::dynamics::SkeletonPtr& skel){mSkeleton = skel;}
+	void SetBVHMap(const std::map<std::string,std::string>& bvh_map){mBVHMap = bvh_map;}
+
+	void SetMotionTransform();
+	void SetMotionFrames();
+	void SetMotionVelFrames();
+
+	void Draw();
+	void DrawRecursive(BVHNode* node);
+
+	int GetNumTotalFrames(){return mNumTotalFrames;}
 	double GetMaxTime(){return (mNumTotalFrames)*mTimeStep;}
 	double GetTimeStep(){return mTimeStep;}
-	void Parse(const std::string& file,bool cyclic=true);
 
 	const dart::dynamics::SkeletonPtr& GetSkeleton(){return mSkeleton;}
 	const std::map<std::string,std::string>& GetBVHMap(){return mBVHMap;}
 	const Eigen::Isometry3d& GetT0(){return T0;}
 	const Eigen::Isometry3d& GetT1(){return T1;}
 	bool IsCyclic(){return mCyclic;}
-
-	BVHNode* GetRoot(){return mRoot;}
-
-	void SetSkeleton(const dart::dynamics::SkeletonPtr& skel){mSkeleton = skel;}
-	void SetBVHMap(const std::map<std::string,std::string>& bvh_map){mBVHMap = bvh_map;}
-	void Draw();
-	void DrawRecursive(BVHNode* node);
-
-	void SetMotionOffset(const Eigen::VectorXd& offset){
-		for(int i=0;i<6;i++)
-			motionOffset[i] = offset[i];
-	}
-	Eigen::VectorXd GetMotionOffset(){return motionOffset;}
+	Eigen::VectorXd GetCycleOffset(){return mCycleOffset;}
 
 private:
 	bool mCyclic;
-	std::vector<Eigen::VectorXd> mMotions;
-	std::map<std::string,BVHNode*> mMap;
 	double mTimeStep;
 	int mNumTotalChannels;
 	int mNumTotalFrames;
 
 	BVHNode* mRoot;
-
 	dart::dynamics::SkeletonPtr mSkeleton;
+
+	std::map<std::string, BVHNode*> mMap;
 	std::map<std::string,std::string> mBVHMap;
 
 	Eigen::Isometry3d T0,T1;
-	BVHNode* ReadHierarchy(BVHNode* parent,const std::string& name,int& channel_offset,std::ifstream& is);
-
-	Eigen::VectorXd motionOffset;
+	std::vector<Eigen::VectorXd> mMotions;
+	std::vector<Eigen::VectorXd> mMotionFrames;
+	Eigen::MatrixXd mMotionVelFrames;
+	Eigen::Vector3d mCycleOffset;
 };
 
 };

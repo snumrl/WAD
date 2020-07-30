@@ -45,6 +45,7 @@ public:
 	void DrawEnergy();
 	void DrawEnergyGraph(std::string name, double w, double h, double x, double y);
 	void DrawReward();
+	void DrawRewardMap();
 	void DrawRewardGraph(std::string name, double w, double h, double x, double y);
 	void DrawDevice();
 	void DrawDeviceSignals();

@@ -52,7 +52,7 @@ Eigen::Vector4d black(0.0, 0.0, 0.0, 1.0);
 Eigen::Vector4d grey(0.6, 0.6, 0.6, 1.0);
 
 Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
-Eigen::Vector4d green(0.0, 1.0, 0.0, 1.0);
+Eigen::Vector4d green(0.2, 0.8, 0.2, 1.0);
 Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
 
 Window::
@@ -428,6 +428,7 @@ DrawCharacter()
 
 	DrawEnergy();
 	DrawReward();
+	DrawRewardMap();
 
 	if(mEnv->GetUseMuscle())
 		DrawMuscles(mEnv->GetCharacter()->GetMuscles());
@@ -1064,6 +1065,90 @@ DrawReward()
 	glPopMatrix();
 	glMatrixMode(oldMode);
 }
+
+void
+Window::
+DrawRewardMap()
+{
+	GLint oldMode;
+	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
+	glMatrixMode(GL_PROJECTION);
+
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+
+	// graph coord & size
+	double w = 0.125;
+	double h = 0.101;
+	double x = 0.86;
+	double y = 0.405;
+
+	double offset_x = 0.0004;
+	double offset_y = 0.1;
+
+	std::map<std::string, std::deque<double>> map = mEnv->GetRewardMap();
+
+	y = 0.404;
+	DrawQuads(x, y, w, h, white);
+	DrawLine(x+0.005, y+0.01, x+w-0.005, y+0.01, black, 1.5);
+	DrawLine(x+0.005, y+0.01, x+0.005, y+h+0.01, black, 1.5);
+	DrawString(x+0.4*w, y+0.015, "pose");
+
+	std::deque<double> pose = map.at("pose");
+	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.0, pose);
+
+	y = 0.303;
+	DrawQuads(x, y, w, h, white);
+	DrawLine(x+0.005, y+0.01, x+w-0.005, y+0.01, black, 1.5);
+	DrawLine(x+0.005, y+0.01, x+0.005, y+h+0.01, black, 1.5);
+	DrawString(x+0.4*w, y+0.015, "vel");
+
+	std::deque<double> vel = map.at("vel");
+	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.0, vel);
+
+	y = 0.202;
+	DrawQuads(x, y, w, h, white);
+	DrawLine(x+0.005, y+0.01, x+w-0.005, y+0.01, black, 1.5);
+	DrawLine(x+0.005, y+0.01, x+0.005, y+h+0.01, black, 1.5);
+	DrawString(x+0.4*w, y+0.015, "ee");
+
+	std::deque<double> ee = map.at("ee");
+	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.0, ee);
+
+	y = 0.101;
+	DrawQuads(x, y, w, h, white);
+	DrawLine(x+0.005, y+0.01, x+w-0.005, y+0.01, black, 1.5);
+	DrawLine(x+0.005, y+0.01, x+0.005, y+h+0.01, black, 1.5);
+	DrawString(x+0.4*w, y+0.015, "root");
+
+	std::deque<double> root = map.at("root");
+	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.0, root);
+
+	y = 0.0;
+	DrawQuads(x, y, w, h, white);
+	DrawLine(x+0.005, y+0.01, x+w-0.005, y+0.01, black, 1.5);
+	DrawLine(x+0.005, y+0.01, x+0.005, y+h+0.01, black, 1.5);
+	DrawString(x+0.4*w, y+0.015, "com");
+
+	std::deque<double> com = map.at("com");
+	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.0, com);
+
+	glDisable(GL_COLOR_MATERIAL);
+	glPopMatrix();
+
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(oldMode);
+}
+
 
 void
 Window::

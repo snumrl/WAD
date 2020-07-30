@@ -271,13 +271,6 @@ GetReward()
 	return mCharacter->GetReward();
 }
 
-std::map<std::string,double>
-Environment::
-GetRewardSep()
-{
-	return mCharacter->GetRewardSep();
-}
-
 int
 Environment::
 GetNumState()

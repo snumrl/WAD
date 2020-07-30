@@ -77,6 +77,44 @@ double Pulse_Period(double t, double offset)
     return ratio;
 }
 
+double QuatDotQuat(const Eigen::Quaterniond& _a, const Eigen::Quaterniond& _b)
+{
+    return _a.w()*_b.w() + _a.x()*_b.x() + _a.y()*_b.y() + _a.z()*_b.z();
+}
+
+Eigen::Quaterniond Slerp(const Eigen::Quaterniond& _a, const Eigen::Quaterniond& _b, double interp)
+{
+    Eigen::Quaterniond a = _a;
+    Eigen::Quaterniond b = _b;
+
+    double d = QuatDotQuat(a, b);
+    if (d < 0.0)
+        QuatNormalize(a);
+    if (d >= 1.0)
+        return a;
+
+    float theta = acosf(d);
+    if (theta == 0.0f)
+        return a;
+
+    float coeff_a = (sinf(theta - interp * theta) / sinf(theta));
+    float coeff_b = (sinf(interp * theta) / sinf(theta));
+
+    return VecToQuat(QuatToVec(a)*coeff_a + QuatToVec(b)*coeff_b);
+}
+
+Eigen::Quaterniond GetQuaternionSlerp(const Eigen::Quaterniond& _a, const Eigen::Quaterniond& _b, double interp)
+{
+    return Slerp(_a, _b, interp);
+}
+
+Eigen::Vector3d GetQuaternionSlerp(const Eigen::Vector3d& _a, const Eigen::Vector3d& _b, double interp)
+{
+    Eigen::Quaterniond q_a = Utils::AxisAngleToQuaternion(_a);
+    Eigen::Quaterniond q_b = Utils::AxisAngleToQuaternion(_b);
+    return QuaternionToAxisAngle(Slerp(q_a, q_b, interp));
+}
+
 Eigen::Vector4d GetPoint4d(Eigen::Vector3d v)
 {
     Eigen::Vector4d p;
@@ -100,6 +138,22 @@ Eigen::Vector3d GetVector3d(Eigen::Vector4d v)
     Eigen::Vector3d p;
     p = v.segment(0,3);
     return p;
+}
+
+Eigen::Vector3d AffineTransPoint(Eigen::Isometry3d t, Eigen::Vector3d p)
+{
+    Eigen::Vector4d p4 = GetPoint4d(p);
+    p4 = t * p4;
+    p = p4.segment(0,3);
+    return p;
+}
+
+Eigen::Vector3d AffineTransVector(Eigen::Isometry3d t, Eigen::Vector3d v)
+{
+    Eigen::Vector4d v4 = GetVector4d(v);
+    v4 = t * v4;
+    v = v4.segment(0,3);
+    return v;
 }
 
 Eigen::Isometry3d GetOriginTrans(const dart::dynamics::SkeletonPtr& skeleton)
@@ -482,6 +536,29 @@ void QuaternionToAxisAngle(const Eigen::Quaterniond& q, Eigen::Vector3d& out_axi
     }
 }
 
+Eigen::Vector3d QuaternionToAxisAngle(const Eigen::Quaterniond& q)
+{
+    double out_theta = 0;
+    Eigen::Vector3d out_axis = Eigen::Vector3d(0, 0, 1);
+
+    Eigen::Quaterniond q1 = q;
+    QuatNormalize(q1);
+    if (q1.w() > 1)
+    {
+        q1.normalize();
+    }
+
+    double sin_theta = std::sqrt(1 - q1.w() * q1.w());
+    if (sin_theta > 0.000001)
+    {
+        out_theta = 2 * std::acos(q1.w());
+        out_theta = NormalizeAngle(out_theta);
+        out_axis = Eigen::Vector3d(q1.x(), q1.y(), q1.z()) / sin_theta;
+    }
+
+    return out_theta*out_axis;
+}
+
 Eigen::Vector3d CalcQuaternionVel(const Eigen::Quaterniond& q0, const Eigen::Quaterniond& q1, double dt)
 {
     Eigen::Quaterniond q_diff = QuatDiff(q0, q1);
@@ -587,6 +664,56 @@ Eigen::Vector3d QuatRotVec(const Eigen::Quaterniond& q, const Eigen::Vector3d& d
     Eigen::Vector3d rot_dir = Eigen::Vector3d::Zero();
     rot_dir  = q * dir;
     return rot_dir;
+}
+
+void ButterworthFilter(double dt, double cutoff, Eigen::VectorXd& out_x)
+{
+    double sampling_rate = 1 / dt;
+    int n = static_cast<int>(out_x.size());
+
+    double wc = std::tan(cutoff * M_PI / sampling_rate);
+    double k1 = std::sqrt(2) * wc;
+    double k2 = wc * wc;
+    double a = k2 / (1 + k1 + k2);
+    double b = 2 * a;
+    double c = a;
+    double k3 = b / k2;
+    double d = -2 * a + k3;
+    double e = 1 - (2 * a) - k3;
+
+    double xm2 = out_x[0];
+    double xm1 = out_x[0];
+    double ym2 = out_x[0];
+    double ym1 = out_x[0];
+
+    for (int s = 0; s < n; ++s)
+    {
+        double x = out_x[s];
+        double y = a * x + b * xm1 + c * xm2 + d * ym1 + e * ym2;
+
+        out_x[s] = y;
+        xm2 = xm1;
+        xm1 = x;
+        ym2 = ym1;
+        ym1 = y;
+    }
+
+    double yp2 = out_x[n - 1];
+    double yp1 = out_x[n - 1];
+    double zp2 = out_x[n - 1];
+    double zp1 = out_x[n - 1];
+
+    for (int t = n - 1; t >= 0; --t)
+    {
+        double y = out_x[t];
+        double z = a * y + b * yp1 + c * yp2 + d * zp1 + e * zp2;
+
+        out_x[t] = z;
+        yp2 = yp1;
+        yp1 = y;
+        zp2 = zp1;
+        zp1 = z;
+    }
 }
 
 }

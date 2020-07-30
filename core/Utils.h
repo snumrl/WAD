@@ -18,9 +18,17 @@ namespace Utils
     double Pulse_Period(double t);
     double Pulse_Period(double t, double offset);
 
+    double QuatDotQuat(const Eigen::Quaterniond& _a, const Eigen::Quaterniond& _b);
+
+    Eigen::Quaterniond Slerp(const Eigen::Quaterniond& _a, const Eigen::Quaterniond& _b, double interp);
+    Eigen::Quaterniond GetQuaternionSlerp(const Eigen::Quaterniond& _a, const Eigen::Quaterniond& _b, double interp);
+    Eigen::Vector3d GetQuaternionSlerp(const Eigen::Vector3d& _a, const Eigen::Vector3d& _b, double interp);
+
     Eigen::Vector4d GetPoint4d(Eigen::Vector3d v);
     Eigen::Vector4d GetVector4d(Eigen::Vector3d v);
     Eigen::Vector3d GetVector3d(Eigen::Vector4d v);
+    Eigen::Vector3d AffineTransPoint(Eigen::Isometry3d t,Eigen::Vector3d p);
+    Eigen::Vector3d AffineTransVector(Eigen::Isometry3d t,Eigen::Vector3d v);
 
     Eigen::Isometry3d GetOriginTrans(const dart::dynamics::SkeletonPtr& skeleton);
     Eigen::Isometry3d GetJointTransform(dart::dynamics::BodyNode* body);
@@ -50,6 +58,7 @@ namespace Utils
     Eigen::Quaterniond AxisAngleToQuaternion(const Eigen::Vector3d& in);
     Eigen::Quaterniond AxisAngleToQuaternion(const Eigen::Vector3d& axis, double theta);
     void QuaternionToAxisAngle(const Eigen::Quaterniond& q, Eigen::Vector3d& out_axis, double& out_theta);
+    Eigen::Vector3d QuaternionToAxisAngle(const Eigen::Quaterniond& q);
     Eigen::Matrix3d BuildQuaternionDiffMat(const Eigen::Quaterniond& q);
     Eigen::Vector3d CalcQuaternionVel(const Eigen::Quaterniond& q0, const Eigen::Quaterniond& q1, double dt);
     Eigen::Vector3d CalcQuaternionVel(const Eigen::Vector3d& v0, const Eigen::Vector3d& v1, double dt);
@@ -61,6 +70,7 @@ namespace Utils
     double QuatDiffTheta(const Eigen::Quaterniond& q0, const Eigen::Quaterniond& q1);
     double QuatTheta(const Eigen::Quaterniond& dq);
     void QuatNormalize(Eigen::Quaterniond& in);
+    void ButterworthFilter(double dt, double cutoff, Eigen::VectorXd& out_x);
 }
 }
 #endif
