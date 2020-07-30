@@ -165,42 +165,15 @@ class PPO(object):
 	def LoadModel_Muscle(self,path):
 		self.muscle_model.load('../nn/'+path+'_muscle.pt')
 
-	def ComputeTDandGAE(self):
-		self.replay_buffer.Clear()
+	def Train(self):
+		self.GenerateTransitions()
+		self.OptimizeModel()
+
+	def OptimizeModel(self):
+		self.ComputeTDandGAE()
+		self.OptimizeSimulationNN()
 		if self.use_muscle:
-			self.muscle_buffer.Clear()
-		self.sum_return = 0.0
-		for epi in self.total_episodes:
-			data = epi.GetData()
-			size = len(data)
-			if size == 0:
-				continue
-			states, actions, rewards, values, logprobs = zip(*data)
-
-			values = np.concatenate((values, np.zeros(1)), axis=0)
-			advantages = np.zeros(size)
-			ad_t = 0
-
-			epi_return = 0.0
-			for i in reversed(range(len(data))):
-				epi_return += rewards[i]
-				delta = rewards[i] + values[i+1] * self.gamma - values[i]
-				ad_t = delta + self.gamma * self.lb * ad_t
-				advantages[i] = ad_t
-			self.sum_return += epi_return
-			TD = values[:size] + advantages
-
-			for i in range(size):
-				self.replay_buffer.Push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
-		self.num_episode = len(self.total_episodes)
-		self.num_tuple = len(self.replay_buffer.buffer)
-		print('SIM : {}'.format(self.num_tuple))
-		self.num_tuple_so_far += self.num_tuple
-
-		if self.use_muscle:
-			muscle_tuples = self.env.GetMuscleTuples()
-			for i in range(len(muscle_tuples)):
-				self.muscle_buffer.Push(muscle_tuples[i][0],muscle_tuples[i][1],muscle_tuples[i][2],muscle_tuples[i][3])
+			self.OptimizeMuscleNN()
 
 	def GenerateTransitions(self):
 		self.total_episodes = []
@@ -261,6 +234,43 @@ class PPO(object):
 
 			states = self.env.GetStates()
 			states = self.rms.apply(states)
+
+	def ComputeTDandGAE(self):
+		self.replay_buffer.Clear()
+		if self.use_muscle:
+			self.muscle_buffer.Clear()
+		self.sum_return = 0.0
+		for epi in self.total_episodes:
+			data = epi.GetData()
+			size = len(data)
+			if size == 0:
+				continue
+			states, actions, rewards, values, logprobs = zip(*data)
+
+			values = np.concatenate((values, np.zeros(1)), axis=0)
+			advantages = np.zeros(size)
+			ad_t = 0
+
+			epi_return = 0.0
+			for i in reversed(range(len(data))):
+				epi_return += rewards[i]
+				delta = rewards[i] + values[i+1] * self.gamma - values[i]
+				ad_t = delta + self.gamma * self.lb * ad_t
+				advantages[i] = ad_t
+			self.sum_return += epi_return
+			TD = values[:size] + advantages
+
+			for i in range(size):
+				self.replay_buffer.Push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
+		self.num_episode = len(self.total_episodes)
+		self.num_tuple = len(self.replay_buffer.buffer)
+		print('SIM : {}'.format(self.num_tuple))
+		self.num_tuple_so_far += self.num_tuple
+
+		if self.use_muscle:
+			muscle_tuples = self.env.GetMuscleTuples()
+			for i in range(len(muscle_tuples)):
+				self.muscle_buffer.Push(muscle_tuples[i][0],muscle_tuples[i][1],muscle_tuples[i][2],muscle_tuples[i][3])
 
 	def OptimizeSimulationNN(self):
 		all_transitions = np.array(self.replay_buffer.buffer)
@@ -351,15 +361,6 @@ class PPO(object):
 		self.loss_muscle = loss.cpu().detach().numpy().tolist()
 		print('')
 
-	def OptimizeModel(self):
-		self.ComputeTDandGAE()
-		self.OptimizeSimulationNN()
-		if self.use_muscle:
-			self.OptimizeMuscleNN()
-
-	def Train(self):
-		self.GenerateTransitions()
-		self.OptimizeModel()
 
 	def Evaluate(self):
 		self.num_evaluation = self.num_evaluation + 1
