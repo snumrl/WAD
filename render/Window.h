@@ -28,6 +28,7 @@ public:
 	void Step();
 	void Reset();
 
+	void record();
 	void SetFocus();
 	void SetViewMatrix();
 	void SetTrajectory();

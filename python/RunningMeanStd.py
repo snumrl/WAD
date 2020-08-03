@@ -18,22 +18,25 @@ class RunningMeanStd(object):
 		np.save('../nn/'+path+'_mean.npy', self.mean)
 		print('save rms ../nn/{}_var.npy'.format(path))
 		np.save('../nn/'+path+'_var.npy', self.var)
+		print('save rms ../nn/{}_count.npy'.format(path))
+		np.save('../nn/'+path+'_count.npy', self.count)
 
 	def load(self, path):
 		print('load rms ../nn/{}_mean.npy'.format(path))
 		self.mean = np.load('../nn/'+path+'_mean.npy')
 		print('load rms ../nn/{}_var.npy'.format(path))
 		self.var = np.load('../nn/'+path+'_var.npy')
-		self.count = 200000000
+		print('load rms ../nn/{}_count.npy'.format(path))
+		self.count = np.load('../nn/'+path+'_count.npy')
 
 	def load2(self, path):
 		path = path[:-3]
-		print("path : ", path)
 		print('load rms {}_mean.npy'.format(path))
 		self.mean = np.load(path+'_mean.npy')
 		print('load rms {}_var.npy'.format(path))
 		self.var = np.load(path+'_var.npy')
-		self.count = 392
+		print('load rms ../nn/{}_count.npy'.format(path))
+		self.count = np.load('../nn/'+path+'_count.npy')
 
 	def update(self, x):
 		batch_mean = np.mean(x, axis=0)
@@ -46,8 +49,7 @@ class RunningMeanStd(object):
 			self.mean, self.var, self.count, batch_mean, batch_var, batch_count)
 
 	def apply(self, x, update=True):
-		if update:
-			self.update(x)
+		self.update(x)
 		x = np.clip((x - self.mean) / np.sqrt(self.var + self.epsilon), -self.clip, self.clip)
 		return x
 

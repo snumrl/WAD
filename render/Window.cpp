@@ -174,6 +174,25 @@ LoadDeviceNN(const std::string& device_nn_path)
 
 void
 Window::
+record()
+{
+	std::vector<double> dataR = mEnv->GetCharacter()->GetEnergy(0).at("FemurR");
+	std::ofstream output_file_R("./FemurR.txt");
+	for(int i = 0; i < dataR.size(); i++)
+	{
+		output_file_R << dataR[i] << std::endl;
+	}
+
+    std::vector<double> dataL = mEnv->GetCharacter()->GetEnergy(0).at("FemurL");
+    std::ofstream output_file_L("./FemurL.txt");
+    for(int i = 0; i < dataL.size(); i++)
+	{
+		output_file_L << dataL[i] << std::endl;
+	}
+}
+
+void
+Window::
 keyboard(unsigned char _key, int _x, int _y)
 {
 	Eigen::Vector3d force = Eigen::Vector3d::Zero();
@@ -210,6 +229,7 @@ keyboard(unsigned char _key, int _x, int _y)
 	case 'o': mDrawOBJ = !mDrawOBJ;break;
 	case 't': mDrawTarget = !mDrawTarget;break;
 	case 'c': mDrawCharacter = !mDrawCharacter;break;
+	case 'w': this->record();break;
 	case 'd':
 		if(mEnv->GetUseDevice())
 			mOnDevice = !mOnDevice;
@@ -1167,6 +1187,16 @@ DrawEnergyGraph(std::string name, double w, double h, double x, double y)
 	std::vector<double> data_device_ = mEnv->GetCharacter()->GetEnergy(1).at(name);
 
 	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, red, 1.5, data_, blue, 2.0, data_device_);
+
+	std::vector<double> avg;
+	if(name == "FemurL"){
+		avg = mEnv->GetCharacter()->getFemurLavg();
+		DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.5, avg);
+	}
+	if(name == "FemurR"){
+		avg = mEnv->GetCharacter()->getFemurRavg();
+		DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.5, avg);
+	}
 
 	DrawStringMax(x+0.005, y+0.01, offset_x, offset_y, data_, red);
 	DrawStringMax(x+0.005, y+0.01, offset_x, offset_y, data_device_, blue);

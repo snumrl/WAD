@@ -66,6 +66,7 @@ public:
 	Eigen::VectorXd GetState();
 	double GetReward();
 	double GetReward_Character();
+	double GetTorqueReward();
 
 	void SetAction(const Eigen::VectorXd& a);
 	void SetDesiredTorques();
@@ -121,6 +122,10 @@ public:
 	std::deque<double> GetSignals(int idx);
 	std::map<std::string, std::deque<double>> GetRewardMap(){return mReward_map;}
 
+	void get_record();
+	std::vector<double> getFemurLavg(){return mFemur_L_Avg;}
+	std::vector<double> getFemurRavg(){return mFemur_R_Avg;}
+
 	Eigen::VectorXd GetPoseSlerp(double timeStep, double frameFraction, const Eigen::VectorXd& frameData, const Eigen::VectorXd& frameDataNext);
 
 private:
@@ -169,6 +174,9 @@ private:
 
 	std::deque<double> mFemurSignals_L;
     std::deque<double> mFemurSignals_R;
+
+    std::vector<double> mFemur_L_Avg;
+    std::vector<double> mFemur_R_Avg;
 
     std::map<std::string, std::deque<double>> mReward_map;
 

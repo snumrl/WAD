@@ -191,6 +191,8 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 			100, 100, 100,
 			60,
 			0, 0, 0;
+
+	this->get_record();
 }
 
 void
@@ -263,6 +265,38 @@ Initialize_Muscles()
 	}
 
 	Reset_Muscles();
+}
+
+void
+Character::
+get_record()
+{
+	// mFemur_L_Avg.resize(34);
+ //    mFemur_R_Avg.resize(34);
+	std::ifstream fileIn("../build/FemurL.txt");
+    if(!fileIn.is_open())
+    {
+        std::cout << "Failed to open file!\n";
+        return ;
+    }
+
+    std::string data;
+    while (fileIn >> data)
+    {
+        mFemur_L_Avg.push_back(std::stod(data));
+    }
+
+    std::ifstream fileIn2("../build/FemurR.txt");
+    if(!fileIn2.is_open())
+    {
+        std::cout << "Failed to open file!\n";
+        return ;
+    }
+
+    while (fileIn2 >> data)
+    {
+        mFemur_R_Avg.push_back(std::stod(data));
+    }
 }
 
 void
@@ -545,7 +579,7 @@ GetReward_Character()
 
 	double pose_scale = 2;
 	double vel_scale = 0.1;
-	double end_eff_scale = 10;
+	double end_eff_scale = 40;
 	double root_scale = 5;
 	double com_scale = 10;
 	double err_scale = 2;  // error scale
@@ -674,8 +708,10 @@ GetReward_Character()
 	root_reward = exp(-err_scale * root_scale * root_err);
 	com_reward = exp(-err_scale * com_scale * com_err);
 
+	double torque_reward = this->GetTorqueReward();
+
 	// double r_ = pose_w * pose_reward + vel_w * vel_reward + end_eff_w * end_eff_reward + root_w * root_reward + com_w * com_reward;
-	double r_ = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
+	double r_ = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward * torque_reward;
 
 	// std::cout << pose_w * pose_reward << " / " << pose_w << "  " << pose_w * (pose_reward - 1.0) << " pose" << std::endl;
 	// std::cout << vel_w * vel_reward << " / " << vel_w << "  " << vel_w * (vel_reward - 1.0) << " vel" << std::endl;
@@ -689,6 +725,33 @@ GetReward_Character()
 	mSkeleton->computeForwardKinematics(true, false, false);
 
 	return r_;
+}
+
+double
+Character::
+GetTorqueReward()
+{
+	int phase_idx = (int)(mPhase/0.0303);
+	double reward = 1.0;
+	double diff_L = 0.0;
+	double diff_R = 0.0;
+	if(phase_idx >= 0 && phase_idx < 33)
+	{
+		diff_L = mFemurSignals_L[0]/mFemur_L_Avg[phase_idx];
+		diff_R = mFemurSignals_R[0]/mFemur_R_Avg[phase_idx];
+	}
+
+	if(diff_L > 1.1)
+		reward *= 1.0;
+	else
+		reward *= 0.9;
+
+	if(diff_R > 1.1)
+		reward *= 1.0;
+	else
+		reward *= 0.9;
+
+	return reward;
 }
 
 void
@@ -713,10 +776,10 @@ SetDesiredTorques()
 	Utils::Clamp(mDesiredTorque, -maxForces, maxForces);
 
 	mFemurSignals_R.pop_back();
-	mFemurSignals_R.push_front(0.1*mDesiredTorque[6]);
+	mFemurSignals_R.push_front(mDesiredTorque[6]);
 
 	mFemurSignals_L.pop_back();
-	mFemurSignals_L.push_front(0.1*mDesiredTorque[13]);
+	mFemurSignals_L.push_front(mDesiredTorque[13]);
 
 	// if(mUseDeviceNN){
 	//  mDevice->SetDesiredTorques2();
