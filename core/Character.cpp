@@ -65,6 +65,7 @@ LoadSkeleton(const std::string& path,bool create_obj)
 	mBVH = new BVH(mSkeleton, bvh_map);
 }
 
+
 void
 Character::
 LoadBVH(const std::string& path,bool cyclic)
