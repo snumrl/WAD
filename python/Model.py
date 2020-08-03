@@ -121,7 +121,7 @@ class SimulationNN(nn.Module):
 		p_out = F.relu(self.p_fc2(p_out))
 		p_out = self.p_fc3(p_out)
 
-		p_out = MultiVariateNormal(p_out,self.log_std.exp())
+		p_out = MultiVariateNormal(p_out, self.log_std.exp())
 
 		v_out = F.relu(self.v_fc1(x))
 		v_out = F.relu(self.v_fc2(v_out))

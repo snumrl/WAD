@@ -28,12 +28,13 @@ public:
 	Eigen::VectorXd GetState_Device();
 
 	double GetReward();
-	std::map<std::string,double> GetRewardSep();
 
 	int GetNumState();
 	int GetNumState_Device();
 	int GetNumAction();
 	int GetNumAction_Device();
+
+	void parseJSONtoBVH();
 
 public:
 	void SetUseMuscle(bool use_muscle){mUseMuscle = use_muscle;}
@@ -55,6 +56,8 @@ public:
 	Device* GetDevice(){return mDevice;}
 	const dart::dynamics::SkeletonPtr& GetGround(){return mGround;}
 	const dart::simulation::WorldPtr& GetWorld(){return mWorld;}
+
+	std::map<std::string, std::deque<double>> GetRewardMap(){return mCharacter->GetRewardMap();}
 
 	// double GetPhase(){return mCharacter->GetPhase();}
 	// std::map<std::string, std::vector<double>> GetEnergy(int idx){return mCharacter->GetEnergy(idx);}

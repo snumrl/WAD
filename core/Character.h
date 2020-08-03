@@ -51,6 +51,12 @@ public:
 	void Initialize_Muscles();
 	void Initialize_Analysis();
 
+	Eigen::VectorXd GetKp(){return mKp;}
+	Eigen::VectorXd GetKv(){return mKv;}
+
+	void SetKp(double kp);
+	void SetKv(double kv);
+
 	void Reset();
 	void Reset_Muscles();
 
@@ -60,17 +66,20 @@ public:
 	Eigen::VectorXd GetState();
 	double GetReward();
 	double GetReward_Character();
-	std::map<std::string,double> GetRewardSep();
+	double GetTorqueReward();
 
 	void SetAction(const Eigen::VectorXd& a);
 	void SetDesiredTorques();
 	Eigen::VectorXd GetDesiredTorques();
 
-	void SetPDParameters(double kp, double kv);
+	void SetPDParameters();
 	void SetTargetPosAndVel(double t, int controlHz);
 	Eigen::VectorXd GetSPDForces(const Eigen::VectorXd& p_desired);
 	std::pair<Eigen::VectorXd,Eigen::VectorXd> GetTargetPosAndVel(double t,double dt);
-	Eigen::VectorXd GetTargetPositions(double t,double dt);
+	// Eigen::VectorXd GetTargetPositions(double t,double dt);
+	Eigen::VectorXd GetTargetPositions(double t,double dt,int frame,int frameNext, double frameFraction);
+	Eigen::VectorXd GetTargetVelocities(double t,double dt,int frame,int frameNext, double frameFraction);
+
 	Eigen::VectorXd GetTargetPositions(){return mTargetPositions;}
 	Eigen::VectorXd GetTargetVelocities(){return mTargetVelocities;}
 
@@ -110,11 +119,14 @@ public:
 	double GetPhase(){return mPhase;}
 	std::map<std::string, std::vector<double>> GetEnergy(int idx);
 	std::vector<double> GetReward_Graph(int idx);
+	std::deque<double> GetSignals(int idx);
+	std::map<std::string, std::deque<double>> GetRewardMap(){return mReward_map;}
 
-	// std::deque<double> GetDeviceSignals(int idx);
-	// void SetSignals_Device();
-	// double GetAngleQ(int idx);
-	// std::deque<double> GetSignals(){return mDevice_y;}
+	void get_record();
+	std::vector<double> getFemurLavg(){return mFemur_L_Avg;}
+	std::vector<double> getFemurRavg(){return mFemur_R_Avg;}
+
+	Eigen::VectorXd GetPoseSlerp(double timeStep, double frameFraction, const Eigen::VectorXd& frameData, const Eigen::VectorXd& frameDataNext);
 
 private:
 	dart::dynamics::SkeletonPtr mSkeleton;
@@ -148,6 +160,8 @@ private:
 
 	Eigen::Isometry3d mTc;
 	Eigen::VectorXd mKp, mKv;
+	Eigen::VectorXd maxForces;
+	Eigen::VectorXd mJointWeights;
 
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;
@@ -157,6 +171,26 @@ private:
 	std::vector<int> mRewards_num;
 	std::vector<double> mRewards_Device;
 	std::vector<int> mRewards_Device_num;
+
+	std::deque<double> mFemurSignals_L;
+    std::deque<double> mFemurSignals_R;
+
+    std::vector<double> mFemur_L_Avg;
+    std::vector<double> mFemur_R_Avg;
+
+    std::map<std::string, std::deque<double>> mReward_map;
+
+    std::deque<double> pose_;
+    std::deque<double> vel_;
+    std::deque<double> root_;
+    std::deque<double> com_;
+    std::deque<double> ee_;
+
+    double pose_reward = 0;
+    double vel_reward = 0;
+    double end_eff_reward = 0;
+    double root_reward = 0;
+    double com_reward = 0;
 
 	Energy* mEnergy;
 	Energy* mEnergy_Device;

@@ -113,13 +113,6 @@ GetReward(int id)
 	return mEnvs[id]->GetReward();
 }
 
-p::dict
-EnvManager::
-GetRewardSep(int id)
-{
-	return toPythonDict(mEnvs[id]->GetRewardSep());
-}
-
 np::ndarray
 EnvManager::
 GetRewards()
@@ -354,7 +347,6 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("GetState_Device",&EnvManager::GetState_Device)
 		.def("GetStates_Device",&EnvManager::GetStates_Device)
 		.def("GetReward",&EnvManager::GetReward)
-		.def("GetRewardSep",&EnvManager::GetRewardSep)
 		.def("GetRewards",&EnvManager::GetRewards)
 		.def("SetAction",&EnvManager::SetAction)
 		.def("SetActions",&EnvManager::SetActions)
