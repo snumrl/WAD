@@ -19,9 +19,9 @@ R_x(double x)
 	double cosa = cos(x*3.141592/180.0);
 	double sina = sin(x*3.141592/180.0);
 	Eigen::Matrix3d R;
-	R<<	1,0		,0	  ,
-		0,cosa	,-sina,
-		0,sina	,cosa ;
+	R<< 1,0     ,0    ,
+		0,cosa  ,-sina,
+		0,sina  ,cosa ;
 	return R;
 }
 
@@ -41,7 +41,7 @@ Eigen::Matrix3d R_z(double z)
 	double cosa = cos(z*3.141592/180.0);
 	double sina = sin(z*3.141592/180.0);
 	Eigen::Matrix3d R;
-	R<<	cosa,-sina,0,
+	R<< cosa,-sina,0,
 		sina,cosa ,0,
 		0   ,0    ,1;
 	return R;
@@ -183,9 +183,9 @@ record()
 		output_file_R << dataR[i] << std::endl;
 	}
 
-    std::vector<double> dataL = mEnv->GetCharacter()->GetEnergy(0).at("FemurL");
-    std::ofstream output_file_L("./FemurL.txt");
-    for(int i = 0; i < dataL.size(); i++)
+	std::vector<double> dataL = mEnv->GetCharacter()->GetEnergy(0).at("FemurL");
+	std::ofstream output_file_L("./FemurL.txt");
+	for(int i = 0; i < dataL.size(); i++)
 	{
 		output_file_L << dataL[i] << std::endl;
 	}
@@ -201,19 +201,19 @@ keyboard(unsigned char _key, int _x, int _y)
 	// case '+': force[0] += 500.0;break;
 	// case '-': force[0] -= 500.0;break;
 	// case '+':
-	// 	mGain += 50.0;
-	// 	mEnv->GetCharacter()->SetKp(mGain);
-	// 	mEnv->GetCharacter()->SetKv(mGain*0.1);
-	// 	std::cout << "kp : " << mGain << std::endl;
-	// 	std::cout << "kv : " << mGain*0.1 << std::endl;
-	// 	break;
+	//  mGain += 50.0;
+	//  mEnv->GetCharacter()->SetKp(mGain);
+	//  mEnv->GetCharacter()->SetKv(mGain*0.1);
+	//  std::cout << "kp : " << mGain << std::endl;
+	//  std::cout << "kv : " << mGain*0.1 << std::endl;
+	//  break;
 	// case '-':
-	// 	mGain -= 50.0;
-	// 	mEnv->GetCharacter()->SetKp(mGain);
-	// 	mEnv->GetCharacter()->SetKv(mGain*0.1);
-	// 	std::cout << "kp : " << mGain << std::endl;
-	// 	std::cout << "kv : " << mGain*0.1 << std::endl;
-	// 	break;
+	//  mGain -= 50.0;
+	//  mEnv->GetCharacter()->SetKp(mGain);
+	//  mEnv->GetCharacter()->SetKv(mGain*0.1);
+	//  std::cout << "kp : " << mGain << std::endl;
+	//  std::cout << "kv : " << mGain*0.1 << std::endl;
+	//  break;
 	case '+': mOffset[offsetIdx]+=0.2;break;
 	case '-': mOffset[offsetIdx]-=0.2;break;
 	case '1': offsetIdx = 0;break;
@@ -383,7 +383,6 @@ draw()
 	if(mDrawProgressBar)
 		DrawProgressBar();
 
-
 	SetFocus();
 }
 
@@ -421,17 +420,6 @@ DrawGround()
 	glEnable(GL_LIGHTING);
 }
 
-Eigen::Matrix3d
-QuatToMat(Eigen::Quaterniond q)
-{
-	Eigen::Matrix3d m;
-	m << 1-2*q.y()*q.y()-2*q.z()*q.z(), 2*(q.x()*q.y() + q.w()*q.z()), 2*(q.x()*q.z() - q.w()*q.y()),
-		2*(q.x()*q.y() - q.w()*q.z()), 1-2*q.x()*q.x()-2*q.z()*q.z(), 2*(q.y()*q.z() + q.w()*q.x()),
-		2*(q.x()*q.z() + q.w()*q.y()), 2*(q.y()*q.z() + q.w()*q.x()), 1-2*q.x()*q.x()-2*q.y()*q.y();
-
-	return m;
-}
-
 void
 Window::
 DrawCharacter()
@@ -444,7 +432,7 @@ DrawCharacter()
 		DrawTarget();
 
 	// if(mDrawTrajectory)
-	// 	DrawTrajectory();
+	//  DrawTrajectory();
 
 	DrawEnergy();
 	DrawReward();
@@ -453,564 +441,7 @@ DrawCharacter()
 	if(mEnv->GetUseMuscle())
 		DrawMuscles(mEnv->GetCharacter()->GetMuscles());
 
- // 	dart::dynamics::SkeletonPtr skel = mEnv->GetCharacter()->GetSkeleton();
-	// dart::dynamics::BodyNode* root = skel->getBodyNode(0);
-	// Eigen::Isometry3d trans = Utils::GetBodyTransform(root);
-
-	// Eigen::Isometry3d origin_trans = Utils::GetOriginTrans(skel);
-	// Eigen::Quaterniond origin_quat(origin_trans.rotation());
-
-	// int body_num = skel->getNumBodyNodes();
-	// for(int i=0; i<body_num; i++)
-	// {
-	// 	dart::dynamics::BodyNode* body = skel->getBodyNode(i);
-	// 	Eigen::Vector3d lin_vel = body->getCOMLinearVelocity();
-	// 	Eigen::Vector4d lin_vel4;
-	// 	lin_vel4.segment(0,3) = lin_vel;
-	// 	lin_vel4 = trans * lin_vel4;
-	// 	lin_vel = lin_vel4.segment(0,3);
-
-	// 	Eigen::Vector3d o = Utils::GetBodyTransform(body).translation();
-	// 	// Eigen::Vector4d o4;
-	// 	// o4.segment(0,3) = o;
-	// 	// o4[3] = 1.0;
-	// 	// o4 = origin_trans * o4;
-	// 	// o = o4.segment(0,3);
-
-	// 	glPushMatrix();
-
-	// 	glBegin(GL_LINES);
-	// 	glColor3f(1.0, 0.0, 0.0);
-	// 	glVertex3f(o[0], o[1], o[2]);
-	// 	glVertex3f(o[0]+0.1*lin_vel[0], o[1]+0.1*lin_vel[1], o[2]+0.1*lin_vel[2]);
-	// 	glEnd();
-
-	// 	glPopMatrix();
-	// }
 }
-	// dart::dynamics::BodyNode* root = skeleton->getBodyNode(0);
-
-	// glLineWidth(3.0);
-
-	// glPushMatrix();
-
-	// glBegin(GL_LINES);
-	// glColor3f(1.0, 0.0, 0.0);
-	// glVertex3f(0.0, 0.0, 0.0);
-	// glVertex3f(1.0, 0.0, 0.0);
-	// glEnd();
-
-	// glBegin(GL_LINES);
-	// glColor3f(0.0, 1.0, 0.0);
-	// glVertex3f(0.0, 0.0, 0.0);
-	// glVertex3f(0.0, 1.0, 0.0);
-	// glEnd();
-
-	// glBegin(GL_LINES);
-	// glColor3f(0.0, 0.0, 1.0);
-	// glVertex3f(0.0, 0.0, 0.0);
-	// glVertex3f(0.0, 0.0, 1.0);
-	// glEnd();
-
-	// glPopMatrix();
-
-	// Eigen::Isometry3d origin_trans = mEnv->GetCharacter()->GetOriginTrans();
-	// Eigen::Quaterniond origin_quat(origin_trans.rotation());
-	// int body_num = skeleton->getNumBodyNodes();
-	// for(int i=0; i<body_num; i++)
-	// {
-	// 	dart::dynamics::BodyNode* body = skeleton->getBodyNode(i);
-	// 	Eigen::Isometry3d trans = body->getTransform() * body->getParentJoint()->getJointProperties().mT_ChildBodyToJoint;
-	// 	Eigen::Vector3d pos = trans.translation();
-	// 	Eigen::Matrix3d ori = trans.rotation();
-
-	// 	Eigen::Vector3d o_ = pos;
-	// 	Eigen::Vector3d x_ = pos + ori.col(0)*0.1;
-	// 	Eigen::Vector3d y_ = pos + ori.col(1)*0.1;
-	// 	Eigen::Vector3d z_ = pos + ori.col(2)*0.1;
-
-	// 	glBegin(GL_LINES);
-	// 	glColor3f(1.0, 0.0, 0.0);
-	// 	glVertex3f(o_[0], o_[1], o_[2]);
-	// 	glVertex3f(x_[0], x_[1], x_[2]);
-	// 	glEnd();
-
-	// 	glBegin(GL_LINES);
-	// 	glColor3f(0.0, 1.0, 0.0);
-	// 	glVertex3f(o_[0], o_[1], o_[2]);
-	// 	glVertex3f(y_[0], y_[1], y_[2]);
-	// 	glEnd();
-
-	// 	glBegin(GL_LINES);
-	// 	glColor3f(0.0, 0.0, 1.0);
-	// 	glVertex3f(o_[0], o_[1], o_[2]);
-	// 	glVertex3f(z_[0], z_[1], z_[2]);
-	// 	glEnd();
-	// }
-
-	// int joint_num = skeleton->getNumJoints();
-	// int body_num = skeleton->getNumBodyNodes();
-	// for(int i=0; i<joint_num; i++)
-	// {
-	// 	dart::dynamics::BodyNode* body = skeleton->getBodyNode(i);
-	// 	Eigen::Isometry3d transform = body->getTransform()*body->getParentJoint()->getJointProperties().mT_ChildBodyToJoint;
-
-	// 	Eigen::Vector4d o(0,0,0,1);
-	// 	Eigen::Vector4d x(0.1,0,0,1);
-	// 	Eigen::Vector4d y(0,0.1,0,1);
-	// 	Eigen::Vector4d z(0,0,0.1,1);
-
-	// 	Eigen::Vector4d o1 = transform * o;
-	// 	// Eigen::Vector4d x1 = transform * x;
-	// 	// Eigen::Vector4d y1 = transform * y;
-	// 	// Eigen::Vector4d z1 = transform * z;
-
-	// 	// glBegin(GL_LINES);
-	// 	// glColor3f(1.0, 0.0, 0.0);
-	// 	// glVertex3f(o1[0], o1[1], o1[2]);
-	// 	// glVertex3f(x1[0], x1[1], x1[2]);
-	// 	// glEnd();
-
-	// 	// glBegin(GL_LINES);
-	// 	// glColor3f(0.0, 1.0, 0.0);
-	// 	// glVertex3f(o1[0], o1[1], o1[2]);
-	// 	// glVertex3f(y1[0], y1[1], y1[2]);
-	// 	// glEnd();
-
-	// 	// glBegin(GL_LINES);
-	// 	// glColor3f(0.0, 0.0, 1.0);
-	// 	// glVertex3f(o1[0], o1[1], o1[2]);
-	// 	// glVertex3f(z1[0], z1[1], z1[2]);
-	// 	// glEnd();
-
-
-	// 	// Eigen::Vector3d axis = skeleton->getJoint(i)->getAxis();
-
-	// 	// glBegin(GL_LINES);
-	// 	// glColor3f(1.0, 0.0, 0.0);
-	// 	// glVertex3f(o1[0], o1[1], o1[2]);
-	// 	// glVertex3f(o1[0] + 0.1* axis[0], o1[1] + 0.1* axis[1], o1[2] + 0.1* axis[2]);
-	// 	// glEnd();
-
-
-	// 	// std::cout << "i : " << i << std::endl;
-	// 	// std::cout << "v size " << v.size() << std::endl;
-
-	// 	// Eigen::Vector4d o2 = R * o;
-	// 	// Eigen::Vector4d x2 = R * x;
-	// 	// Eigen::Vector4d y2 = R * y;
-	// 	// Eigen::Vector4d z2 = R * z;
-
-	// 	// glBegin(GL_LINES);
-	// 	// glColor3f(1.0, 0.0, 0.0);
-	// 	// glVertex3f(o2[0], o2[1], o2[2]);
-	// 	// glVertex3f(x2[0], x2[1], x2[2]);
-	// 	// glEnd();
-
-	// 	// glBegin(GL_LINES);
-	// 	// glColor3f(0.0, 1.0, 0.0);
-	// 	// glVertex3f(o2[0], o2[1], o2[2]);
-	// 	// glVertex3f(y2[0], y2[1], y2[2]);
-	// 	// glEnd();
-
-	// 	// glBegin(GL_LINES);
-	// 	// glColor3f(0.0, 0.0, 1.0);
-	// 	// glVertex3f(o2[0], o2[1], o2[2]);
-	// 	// glVertex3f(z2[0], z2[1], z2[2]);
-	// 	// glEnd();
-
-	// }
-
-
-	// Eigen::Isometry3d origin_trans = mEnv->GetCharacter()->GetOriginTrans();
-	// Eigen::Quaterniond origin_quat(origin_trans.rotation());
-	// int body_num = skeleton->getNumBodyNodes();
-	// for(int i=0; i<body_num; i++)
-	// {
-	// 	dart::dynamics::BodyNode* body = skeleton->getBodyNode(i);
-	// 	Eigen::Isometry3d trans = body->getTransform() * body->getParentJoint()->getJointProperties().mT_ChildBodyToJoint;
-	// 	Eigen::Vector3d pos = trans.translation();
-	// 	Eigen::Matrix3d ori = trans.rotation();
-
-	// 	// Eigen::Vector3d o_cur;
-	// 	// o_cur[0] = o_point[0];
-	// 	// o_cur[1] = o_point[1];
-	// 	// o_cur[2] = o_point[2];
-
-	// 	Eigen::Vector3d o_ = pos;
-	// 	Eigen::Vector3d x_ = pos + ori_.col(0)*0.1;
-	// 	Eigen::Vector3d y_ = pos + ori_.col(1)*0.1;
-	// 	Eigen::Vector3d z_ = pos + ori_.col(2)*0.1;
-
-	// 	glBegin(GL_LINES);
-	// 	glColor3f(0.0, 1.0, 0.0);
-	// 	glVertex3f(o_[0], o_[1], o_[2]);
-	// 	glVertex3f(x_[0], x_[1], x_[2]);
-	// 	glEnd();
-
-	// 	glBegin(GL_LINES);
-	// 	glColor3f(0.0, 1.0, 0.0);
-	// 	glVertex3f(o_[0], o_[1], o_[2]);
-	// 	glVertex3f(y_[0], y_[1], y_[2]);
-	// 	glEnd();
-
-	// 	glBegin(GL_LINES);
-	// 	glColor3f(0.0, 0.0, 1.0);
-	// 	glVertex3f(o_[0], o_[1], o_[2]);
-	// 	glVertex3f(z_[0], z_[1], z_[2]);
-	// 	glEnd();
-
-
-		// dart::dynamics::BodyNode* body = skeleton->getBodyNode(i);
-		// Eigen::Isometry3d trans = body->getTransform()*body->getParentJoint()->getJointProperties().mT_ChildBodyToJoint;
-		// Eigen::Vector3d pos = trans.translation();
-		// Eigen::Matrix3d ori = trans.rotation();
-		// Eigen::Quaterniond ori_quat(ori);
-
-
-
-	// 	Eigen::Vector3d lin_vel = body->getCOMLinearVelocity();
-	// 	Eigen::Vector4d lin_vel_vector;
-	// 	lin_vel_vector[0] = lin_vel[0];
-	// 	lin_vel_vector[1] = lin_vel[1];
-	// 	lin_vel_vector[2] = lin_vel[2];
-	// 	lin_vel_vector[3] = 0.0;
-	// 	lin_vel_vector = origin_trans * lin_vel_vector;
-	// 	lin_vel[0] = lin_vel_vector[0];
-	// 	lin_vel[1] = lin_vel_vector[1];
-	// 	lin_vel[2] = lin_vel_vector[2];
-
-	// 	Eigen::Vector3d o = pos;
-	// 	Eigen::Vector4d o_point;
-	// 	o_point[0] = o[0];
-	// 	o_point[1] = o[1];
-	// 	o_point[2] = o[2];
-	// 	o_point[3] = 1.0;
-	// 	o_point = origin_trans * o_point;
-	// 	pos[0] = o_point[0];
-	// 	pos[1] = o_point[1];
-	// 	pos[2] = o_point[2];
-
-	// 	glPushMatrix();
-
-	// 	glBegin(GL_LINES);
-	// 	glColor3f(1.0, 0.0, 0.0);
-	// 	glVertex3f(pos[0], pos[1], pos[2]);
-	// 	glVertex3f(pos[0] + lin_vel[0], pos[1] + lin_vel[1], pos[2] + lin_vel[2]);
-	// 	glEnd();
-
-	// 	glPopMatrix();
-
-	// }
-
-		// ori_quat = origin_quat * ori_quat;
-		// if(ori_quat.w() < 0)
-		// {
-		// 	ori_quat.w() *= -1;
-		// 	ori_quat.x() *= -1;
-		// 	ori_quat.y() *= -1;
-		// 	ori_quat.z() *= -1;
-		// }
-
-		// Eigen::Matrix3d ori_ = QuatToMat(ori_quat);
-
-		// dart::dynamics::BodyNode* body = skeleton->getBodyNode(i);
-		// Eigen::Isometry3d trans = body->getTransform() * body->getParentJoint()->getJointProperties().mT_ChildBodyToJoint;
-		// Eigen::Vector3d pos = trans.translation();
-		// Eigen::Matrix3d ori = trans.rotation();
-
-		// Eigen::Vector3d o_cur;
-		// o_cur[0] = o_point[0];
-		// o_cur[1] = o_point[1];
-		// o_cur[2] = o_point[2];
-
-		// Eigen::Vector3d o_ = o_cur;
-		// Eigen::Vector3d x_ = o_cur + ori_.col(0)*0.1;
-		// Eigen::Vector3d y_ = o_cur + ori_.col(1)*0.1;
-		// Eigen::Vector3d z_ = o_cur + ori_.col(2)*0.1;
-
-
-		// glBegin(GL_LINES);
-		// glColor3f(0.0, 1.0, 0.0);
-		// glVertex3f(o_[0], o_[1], o_[2]);
-		// glVertex3f(y_[0], y_[1], y_[2]);
-		// glEnd();
-
-		// glBegin(GL_LINES);
-		// glColor3f(0.0, 0.0, 1.0);
-		// glVertex3f(o_[0], o_[1], o_[2]);
-		// glVertex3f(z_[0], z_[1], z_[2]);
-		// glEnd();
-
-		// Eigen::Vector3d o_ = pos;
-		// Eigen::Vector3d x_ = pos + ori.col(0)*0.1;
-		// Eigen::Vector3d y_ = pos + ori.col(1)*0.1;
-		// Eigen::Vector3d z_ = pos + ori.col(2)*0.1;
-
-		// Eigen::Vector4d o_prj;
-		// o_prj[0] = o_[0];
-		// o_prj[1] = o_[1];
-		// o_prj[2] = o_[2];
-		// o_prj[3] = 1.0;
-		// o_prj = origin_trans * o_prj;
-
-		// Eigen::Vector4d x_prj;
-		// x_prj[0] = x_[0];
-		// x_prj[1] = x_[1];
-		// x_prj[2] = x_[2];
-		// x_prj[3] = 1.0;
-		// x_prj = origin_trans * x_prj;
-
-		// Eigen::Vector4d y_prj;
-		// y_prj[0] = y_[0];
-		// y_prj[1] = y_[1];
-		// y_prj[2] = y_[2];
-		// y_prj[3] = 1.0;
-		// y_prj = origin_trans * y_prj;
-
-		// Eigen::Vector4d z_prj;
-		// z_prj[0] = z_[0];
-		// z_prj[1] = z_[1];
-		// z_prj[2] = z_[2];
-		// z_prj[3] = 1.0;
-		// z_prj = origin_trans * z_prj;
-
-		// glPushMatrix();
-
-		// glBegin(GL_LINES);
-		// glColor3f(1.0, 0.0, 0.0);
-		// glVertex3f(o_[0], o_[1], o_[2]);
-		// glVertex3f(x_[0], x_[1], x_[2]);
-		// glEnd();
-
-		// glBegin(GL_LINES);
-		// glColor3f(0.0, 1.0, 0.0);
-		// glVertex3f(o_[0], o_[1], o_[2]);
-		// glVertex3f(y_[0], y_[1], y_[2]);
-		// glEnd();
-
-		// glBegin(GL_LINES);
-		// glColor3f(0.0, 0.0, 1.0);
-		// glVertex3f(o_[0], o_[1], o_[2]);
-		// glVertex3f(z_[0], z_[1], z_[2]);
-		// glEnd();
-
-		// glBegin(GL_LINES);
-		// glColor3f(1.0, 0.0, 0.0);
-		// glVertex3f(o_prj[0], o_prj[1], o_prj[2]);
-		// glVertex3f(x_prj[0], x_prj[1], x_prj[2]);
-		// glEnd();
-
-		// glBegin(GL_LINES);
-		// glColor3f(0.0, 1.0, 0.0);
-		// glVertex3f(o_prj[0], o_prj[1], o_prj[2]);
-		// glVertex3f(y_prj[0], y_prj[1], y_prj[2]);
-		// glEnd();
-
-		// glBegin(GL_LINES);
-		// glColor3f(0.0, 0.0, 1.0);
-		// glVertex3f(o_prj[0], o_prj[1], o_prj[2]);
-		// glVertex3f(z_prj[0], z_prj[1], z_prj[2]);
-		// glEnd();
-
-		// glPopMatrix();
-	// }
-
-
-
-
-	// SkeletonPtr skel = mEnv->GetCharacter()->GetSkeleton();
-
-	// glPushMatrix();
-
-	// Eigen::Vector3d o(0.0, 0.0, 0.0);
-	// Eigen::Vector3d x(0.2, 0.0, 0.0);
-	// Eigen::Vector3d y(0.0, 0.2, 0.0);
-	// Eigen::Vector3d z(0.0, 0.0, 0.2);
-
-	// o = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * o;
-	// x = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * x;
-	// y = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * y;
-	// z = skel->getBodyNode(i)->getWorldTransform()* skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint  * z;
-
-	// glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	// glEnable(GL_COLOR_MATERIAL);
-
-	// Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
-	// mRI->setPenColor(red);
-	// glBegin(GL_LINES);
-	// glVertex3f(o[0], o[1], o[2]);
-	// glVertex3f(x[0], x[1], x[2]);
-	// glEnd();
-
-	// Eigen::Vector4d green(0.0, 1.0, 0.0, 1.0);
-	// mRI->setPenColor(green);
-	// glBegin(GL_LINES);
-	// glVertex3f(o[0], o[1], o[2]);
-	// glVertex3f(y[0], y[1], y[2]);
-	// glEnd();
-
-	// Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
-	// mRI->setPenColor(blue);
-	// glBegin(GL_LINES);
-	// glVertex3f(o[0], o[1], o[2]);
-	// glVertex3f(z[0], z[1], z[2]);
-	// glEnd();
-
-	// glDisable(GL_COLOR_MATERIAL);
-	// glPopMatrix();
-// }
-
-// void
-// Window::
-// DrawRelativeCoor()
-// {
-// 	dart::dynamics::BodyNode* root = skeleton->getBodyNode(0);
-
-// 	glLineWidth(3.0);
-
-// 	glPushMatrix();
-
-// 	glBegin(GL_LINES);
-// 	glColor3f(1.0, 0.0, 0.0);
-// 	glVertex3f(0.0, 0.0, 0.0);
-// 	glVertex3f(1.0, 0.0, 0.0);
-// 	glEnd();
-
-// 	glBegin(GL_LINES);
-// 	glColor3f(0.0, 1.0, 0.0);
-// 	glVertex3f(0.0, 0.0, 0.0);
-// 	glVertex3f(0.0, 1.0, 0.0);
-// 	glEnd();
-
-// 	glBegin(GL_LINES);
-// 	glColor3f(0.0, 0.0, 1.0);
-// 	glVertex3f(0.0, 0.0, 0.0);
-// 	glVertex3f(0.0, 0.0, 1.0);
-// 	glEnd();
-
-// 	glPopMatrix();
-
-// 	Eigen::Isometry3d origin_trans = mEnv->GetCharacter()->GetOriginTrans();
-// 	Eigen::Quaterniond origin_quat(origin_trans.rotation());
-// 	int body_num = skeleton->getNumBodyNodes();
-// 	for(int i=0; i<body_num; i++)
-// 	{
-// 		dart::dynamics::BodyNode* body = skeleton->getBodyNode(i);
-// 		Eigen::Isometry3d trans = body->getTransform() * body->getParentJoint()->getJointProperties().mT_ChildBodyToJoint;
-// 		Eigen::Vector3d pos = trans.translation();
-// 		Eigen::Matrix3d ori = trans.rotation();
-// 		Eigen::Quaterniond ori_quat(ori);
-
-// 		Eigen::Vector3d o = pos;
-// 		Eigen::Vector4d o_point;
-// 		o_point[0] = o[0];
-// 		o_point[1] = o[1];
-// 		o_point[2] = o[2];
-// 		o_point[3] = 1.0;
-// 		o_point = origin_trans * o_point;
-
-// 		ori_quat = origin_quat * ori_quat;
-// 		if(ori_quat.w() < 0)
-// 		{
-// 			ori_quat.w() *= -1;
-// 			ori_quat.x() *= -1;
-// 			ori_quat.y() *= -1;
-// 			ori_quat.z() *= -1;
-// 		}
-
-// 		Eigen::Matrix3d ori_ = QuatToMat(ori_quat);
-
-// 		// dart::dynamics::BodyNode* body = skeleton->getBodyNode(i);
-// 		// Eigen::Isometry3d trans = body->getTransform() * body->getParentJoint()->getJointProperties().mT_ChildBodyToJoint;
-// 		// Eigen::Vector3d pos = trans.translation();
-// 		// Eigen::Matrix3d ori = trans.rotation();
-
-// 		Eigen::Vector3d o_cur;
-// 		o_cur[0] = o_point[0];
-// 		o_cur[1] = o_point[1];
-// 		o_cur[2] = o_point[2];
-
-// 		Eigen::Vector3d o_ = o_cur;
-// 		Eigen::Vector3d x_ = o_cur + ori_.col(0)*0.1;
-// 		Eigen::Vector3d y_ = o_cur + ori_.col(1)*0.1;
-// 		Eigen::Vector3d z_ = o_cur + ori_.col(2)*0.1;
-
-// 		// Eigen::Vector3d o_ = pos;
-// 		// Eigen::Vector3d x_ = pos + ori.col(0)*0.1;
-// 		// Eigen::Vector3d y_ = pos + ori.col(1)*0.1;
-// 		// Eigen::Vector3d z_ = pos + ori.col(2)*0.1;
-
-// 		// Eigen::Vector4d o_prj;
-// 		// o_prj[0] = o_[0];
-// 		// o_prj[1] = o_[1];
-// 		// o_prj[2] = o_[2];
-// 		// o_prj[3] = 1.0;
-// 		// o_prj = origin_trans * o_prj;
-
-// 		// Eigen::Vector4d x_prj;
-// 		// x_prj[0] = x_[0];
-// 		// x_prj[1] = x_[1];
-// 		// x_prj[2] = x_[2];
-// 		// x_prj[3] = 1.0;
-// 		// x_prj = origin_trans * x_prj;
-
-// 		// Eigen::Vector4d y_prj;
-// 		// y_prj[0] = y_[0];
-// 		// y_prj[1] = y_[1];
-// 		// y_prj[2] = y_[2];
-// 		// y_prj[3] = 1.0;
-// 		// y_prj = origin_trans * y_prj;
-
-// 		// Eigen::Vector4d z_prj;
-// 		// z_prj[0] = z_[0];
-// 		// z_prj[1] = z_[1];
-// 		// z_prj[2] = z_[2];
-// 		// z_prj[3] = 1.0;
-// 		// z_prj = origin_trans * z_prj;
-
-// 		glPushMatrix();
-
-// 		glBegin(GL_LINES);
-// 		glColor3f(1.0, 0.0, 0.0);
-// 		glVertex3f(o_[0], o_[1], o_[2]);
-// 		glVertex3f(x_[0], x_[1], x_[2]);
-// 		glEnd();
-
-// 		glBegin(GL_LINES);
-// 		glColor3f(0.0, 1.0, 0.0);
-// 		glVertex3f(o_[0], o_[1], o_[2]);
-// 		glVertex3f(y_[0], y_[1], y_[2]);
-// 		glEnd();
-
-// 		glBegin(GL_LINES);
-// 		glColor3f(0.0, 0.0, 1.0);
-// 		glVertex3f(o_[0], o_[1], o_[2]);
-// 		glVertex3f(z_[0], z_[1], z_[2]);
-// 		glEnd();
-
-// 		// glBegin(GL_LINES);
-// 		// glColor3f(1.0, 0.0, 0.0);
-// 		// glVertex3f(o_prj[0], o_prj[1], o_prj[2]);
-// 		// glVertex3f(x_prj[0], x_prj[1], x_prj[2]);
-// 		// glEnd();
-
-// 		// glBegin(GL_LINES);
-// 		// glColor3f(0.0, 1.0, 0.0);
-// 		// glVertex3f(o_prj[0], o_prj[1], o_prj[2]);
-// 		// glVertex3f(y_prj[0], y_prj[1], y_prj[2]);
-// 		// glEnd();
-
-// 		// glBegin(GL_LINES);
-// 		// glColor3f(0.0, 0.0, 1.0);
-// 		// glVertex3f(o_prj[0], o_prj[1], o_prj[2]);
-// 		// glVertex3f(z_prj[0], z_prj[1], z_prj[2]);
-// 		// glEnd();
-
-// 		glPopMatrix();
-// 	}
-
-// }
 
 void
 Window::
@@ -1169,7 +600,6 @@ DrawRewardMap()
 	glMatrixMode(oldMode);
 }
 
-
 void
 Window::
 DrawEnergyGraph(std::string name, double w, double h, double x, double y)
@@ -1281,81 +711,6 @@ DrawDevice()
 		DrawSkeleton(mEnv->GetDevice()->GetSkeleton());
 		DrawDeviceSignals();
 	}
-
-	// SkeletonPtr skel = mEnv->GetCharacter()->GetDevice()->GetSkeleton();
-
-	// glPushMatrix();
-
-	// Eigen::Vector3d o(0.0, 0.0, 0.0);
-	// Eigen::Vector3d x(0.2, 0.0, 0.0);
-	// Eigen::Vector3d y(0.0, 0.2, 0.0);
-	// Eigen::Vector3d z(0.0, 0.0, 0.2);
-
-	// o = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * o;
-
-	// x = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * x;
-
-	// y = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * y;
-
-	// z = skel->getBodyNode(i)->getParentJoint()->getJointProperties().mT_ChildBodyToJoint * skel->getBodyNode(i)->getWorldTransform() * z;
-
-	// glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	// glEnable(GL_COLOR_MATERIAL);
-
-	// Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
-	// mRI->setPenColor(red);
-	// glBegin(GL_LINES);
-	// glVertex3f(o[0], o[1], o[2]);
-	// glVertex3f(x[0], x[1], x[2]);
-	// glEnd();
-
-	// Eigen::Vector4d green(0.0, 1.0, 0.0, 1.0);
-	// mRI->setPenColor(green);
-	// glBegin(GL_LINES);
-	// glVertex3f(o[0], o[1], o[2]);
-	// glVertex3f(y[0], y[1], y[2]);
-	// glEnd();
-
-	// Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
-	// mRI->setPenColor(blue);
-	// glBegin(GL_LINES);
-	// glVertex3f(o[0], o[1], o[2]);
-	// glVertex3f(z[0], z[1], z[2]);
-	// glEnd();
-	// glDisable(GL_COLOR_MATERIAL);
-	// glPopMatrix();
-
-	// std::cout << "name : " << sf->getName() << std::endl;
-	// if( sf->getName()=="Controller_ShapeNode_0" ||
-	// 	sf->getName()=="ControllerFront_ShapeNode_0" ||
-	// 	sf->getName()=="ControllerRight_ShapeNode_0" ||
-	// 	sf->getName()=="ControllerLeft_ShapeNode_0")
-	// {
-		// glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-		// glEnable(GL_COLOR_MATERIAL);
-
-		// Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
-		// mRI->setPenColor(red);
-		// glBegin(GL_LINES);
-		// glVertex3f(0.0, 0.0, 0.0);
-		// glVertex3f(0.5, 0.0, 0.0);
-		// glEnd();
-
-		// Eigen::Vector4d green(0.0, 1.0, 0.0, 1.0);
-		// mRI->setPenColor(green);
-		// glBegin(GL_LINES);
-		// glVertex3f(0.0, 0.0, 0.0);
-		// glVertex3f(0.0, 0.5, 0.0);
-		// glEnd();
-
-		// Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
-		// mRI->setPenColor(blue);
-		// glBegin(GL_LINES);
-		// glVertex3f(0.0, 0.0, 0.0);
-		// glVertex3f(0.0, 0.0, 0.5);
-		// glEnd();
-		// glDisable(GL_COLOR_MATERIAL);
-	// }
 }
 
 void
@@ -1405,7 +760,7 @@ DrawDeviceSignals()
 	// DrawLineStrip(pl_x+0.01, pl_y+0.01, offset_x, offset_y, red, 2.0, data_L, blue, 2.0, data_L_femur);
 	DrawLineStrip(pl_x+0.01, pl_y+0.01, offset_x, offset_y, red, 2.0, data_L, blue, 2.0, data_y);
 
- 	// device R
+	// device R
 	DrawQuads(pr_x, pr_y, p_w, p_h, white);
 	DrawLine(pr_x+0.01, pr_y+0.01, pr_x+p_w-0.01, pr_y+0.01, black, 1.0);
 	DrawLine(pr_x+0.01, pr_y+0.01, pr_x+0.01, pr_y+p_h-0.01, black, 1.0);
@@ -1440,6 +795,7 @@ DrawProgressBar()
 
 	glDisable(GL_COLOR_MATERIAL);
 }
+
 
 void
 Window::
@@ -1670,52 +1026,52 @@ Window::
 DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine3d& M,double y)
 {
 	unsigned int i;
-    unsigned int n = 0, t;
-    Eigen::Vector3d v;
-    Eigen::Vector3d dir(0.4,0,-0.4);
-    glColor3f(0.3,0.3,0.3);
+	unsigned int n = 0, t;
+	Eigen::Vector3d v;
+	Eigen::Vector3d dir(0.4,0,-0.4);
+	glColor3f(0.3,0.3,0.3);
 
-    // update transform
+	// update transform
 
-    // draw all meshes assigned to this node
-    for (; n < nd->mNumMeshes; ++n) {
-        const struct aiMesh* mesh = sc->mMeshes[nd->mMeshes[n]];
+	// draw all meshes assigned to this node
+	for (; n < nd->mNumMeshes; ++n) {
+		const struct aiMesh* mesh = sc->mMeshes[nd->mMeshes[n]];
 
-        for (t = 0; t < mesh->mNumFaces; ++t) {
-            const struct aiFace* face = &mesh->mFaces[t];
-            GLenum face_mode;
+		for (t = 0; t < mesh->mNumFaces; ++t) {
+			const struct aiFace* face = &mesh->mFaces[t];
+			GLenum face_mode;
 
-            switch(face->mNumIndices) {
-                case 1: face_mode = GL_POINTS; break;
-                case 2: face_mode = GL_LINES; break;
-                case 3: face_mode = GL_TRIANGLES; break;
-                default: face_mode = GL_POLYGON; break;
-            }
-            glBegin(face_mode);
-        	for (i = 0; i < face->mNumIndices; i++)
-        	{
-        		int index = face->mIndices[i];
+			switch(face->mNumIndices) {
+				case 1: face_mode = GL_POINTS; break;
+				case 2: face_mode = GL_LINES; break;
+				case 3: face_mode = GL_TRIANGLES; break;
+				default: face_mode = GL_POLYGON; break;
+			}
+			glBegin(face_mode);
+			for (i = 0; i < face->mNumIndices; i++)
+			{
+				int index = face->mIndices[i];
 
-        		v[0] = (&mesh->mVertices[index].x)[0];
-        		v[1] = (&mesh->mVertices[index].x)[1];
-        		v[2] = (&mesh->mVertices[index].x)[2];
-        		v = M*v;
-        		double h = v[1]-y;
+				v[0] = (&mesh->mVertices[index].x)[0];
+				v[1] = (&mesh->mVertices[index].x)[1];
+				v[2] = (&mesh->mVertices[index].x)[2];
+				v = M*v;
+				double h = v[1]-y;
 
-        		v += h*dir;
+				v += h*dir;
 
-        		v[1] = y+0.001;
-        		glVertex3f(v[0],v[1],v[2]);
-        	}
-            glEnd();
-        }
+				v[1] = y+0.001;
+				glVertex3f(v[0],v[1],v[2]);
+			}
+			glEnd();
+		}
 
-    }
+	}
 
-    // draw all children
-    for (n = 0; n < nd->mNumChildren; ++n) {
-        DrawAiMesh(sc, nd->mChildren[n],M,y);
-    }
+	// draw all children
+	for (n = 0; n < nd->mNumChildren; ++n) {
+		DrawAiMesh(sc, nd->mChildren[n],M,y);
+	}
 }
 
 np::ndarray toNumPyArray(const Eigen::VectorXd& vec)
@@ -1764,58 +1120,6 @@ GetActionFromNN()
 	return action;
 }
 
-Eigen::VectorXd
-Window::
-GetActionFromNN_Device()
-{
-	p::object get_action_device;
-	get_action_device = device_nn_module.attr("get_action");
-	Eigen::VectorXd state = mEnv->GetCharacter()->GetDevice()->GetState();
-	p::tuple shape = p::make_tuple(state.rows());
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray state_np = np::empty(shape,dtype);
-
-	float* dest = reinterpret_cast<float*>(state_np.get_data());
-	for(int i =0;i<state.rows();i++)
-		dest[i] = state[i];
-
-	p::object temp = get_action_device(state_np);
-	np::ndarray action_np = np::from_object(temp);
-
-	float* srcs = reinterpret_cast<float*>(action_np.get_data());
-
-	Eigen::VectorXd action(mEnv->GetCharacter()->GetDevice()->GetNumAction());
-	for(int i=0;i<action.rows();i++)
-		action[i] = srcs[i];
-
-	return action;
-}
-
-Eigen::VectorXd
-Window::
-GetActivationFromNN(const Eigen::VectorXd& mt)
-{
-	if(!mMuscleNNLoaded)
-	{
-		mEnv->GetCharacter()->GetDesiredTorques();
-		return Eigen::VectorXd::Zero(mEnv->GetCharacter()->GetMuscles().size());
-	}
-	p::object get_activation = muscle_nn_module.attr("get_activation");
-	Eigen::VectorXd dt = mEnv->GetCharacter()->GetDesiredTorques();
-	np::ndarray mt_np = toNumPyArray(mt);
-	np::ndarray dt_np = toNumPyArray(dt);
-
-	p::object temp = get_activation(mt_np,dt_np);
-	np::ndarray activation_np = np::from_object(temp);
-
-	Eigen::VectorXd activation(mEnv->GetCharacter()->GetMuscles().size());
-	float* srcs = reinterpret_cast<float*>(activation_np.get_data());
-	for(int i=0;i<activation.rows();i++)
-		activation[i] = srcs[i];
-
-	return activation;
-}
-
 void
 Window::
 DrawQuads(double x, double y, double w, double h, Eigen::Vector4d color)
@@ -1851,8 +1155,8 @@ DrawString(double x, double y, std::string str)
 	mRI->setPenColor(black);
 
 	glRasterPos2f(x, y);
-  	unsigned int length = str.length();
-  	for (unsigned int c = 0; c < length; c++)
+	unsigned int length = str.length();
+	for (unsigned int c = 0; c < length; c++)
 		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, str.at(c));
 }
 
@@ -1863,8 +1167,8 @@ DrawString(double x, double y, std::string str, Eigen::Vector4d color)
 	mRI->setPenColor(color);
 
 	glRasterPos2f(x, y);
-  	unsigned int length = str.length();
-  	for (unsigned int c = 0; c < length; c++)
+	unsigned int length = str.length();
+	for (unsigned int c = 0; c < length; c++)
 		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, str.at(c));
 }
 
@@ -1959,7 +1263,59 @@ DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vecto
 
 	// glBegin(GL_LINE_STRIP);
 	// for(int i=0; i<data1.size(); i++)
-	// 	glVertex2f(x + offset_x*i, y + offset_y*(data.at(i)+data1.at(i)));
+	//  glVertex2f(x + offset_x*i, y + offset_y*(data.at(i)+data1.at(i)));
 	// glEnd();
 
+}
+
+Eigen::VectorXd
+Window::
+GetActionFromNN_Device()
+{
+	p::object get_action_device;
+	get_action_device = device_nn_module.attr("get_action");
+	Eigen::VectorXd state = mEnv->GetCharacter()->GetDevice()->GetState();
+	p::tuple shape = p::make_tuple(state.rows());
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::ndarray state_np = np::empty(shape,dtype);
+
+	float* dest = reinterpret_cast<float*>(state_np.get_data());
+	for(int i =0;i<state.rows();i++)
+		dest[i] = state[i];
+
+	p::object temp = get_action_device(state_np);
+	np::ndarray action_np = np::from_object(temp);
+
+	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+
+	Eigen::VectorXd action(mEnv->GetCharacter()->GetDevice()->GetNumAction());
+	for(int i=0;i<action.rows();i++)
+		action[i] = srcs[i];
+
+	return action;
+}
+
+Eigen::VectorXd
+Window::
+GetActivationFromNN(const Eigen::VectorXd& mt)
+{
+	if(!mMuscleNNLoaded)
+	{
+		mEnv->GetCharacter()->GetDesiredTorques();
+		return Eigen::VectorXd::Zero(mEnv->GetCharacter()->GetMuscles().size());
+	}
+	p::object get_activation = muscle_nn_module.attr("get_activation");
+	Eigen::VectorXd dt = mEnv->GetCharacter()->GetDesiredTorques();
+	np::ndarray mt_np = toNumPyArray(mt);
+	np::ndarray dt_np = toNumPyArray(dt);
+
+	p::object temp = get_activation(mt_np,dt_np);
+	np::ndarray activation_np = np::from_object(temp);
+
+	Eigen::VectorXd activation(mEnv->GetCharacter()->GetMuscles().size());
+	float* srcs = reinterpret_cast<float*>(activation_np.get_data());
+	for(int i=0;i<activation.rows();i++)
+		activation[i] = srcs[i];
+
+	return activation;
 }

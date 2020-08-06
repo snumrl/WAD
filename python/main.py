@@ -273,7 +273,7 @@ class PPO(object):
 				self.muscle_buffer.Push(muscle_tuples[i][0],muscle_tuples[i][1],muscle_tuples[i][2],muscle_tuples[i][3])
 
 	def OptimizeSimulationNN(self):
-		all_transitions = np.array(self.replay_buffer.buffer)
+		all_transitions = np.array(self.replay_buffer.buffer, dtype=object)
 		for j in range(self.num_epochs):
 			np.random.shuffle(all_transitions)
 			for i in range(len(all_transitions)//self.batch_size):

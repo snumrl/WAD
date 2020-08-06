@@ -193,7 +193,7 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 			60,
 			0, 0, 0;
 
-	this->get_record();
+	// this->get_record();
 }
 
 void
@@ -736,11 +736,11 @@ GetTorqueReward()
 	double reward = 1.0;
 	double diff_L = 0.0;
 	double diff_R = 0.0;
-	if(phase_idx >= 0 && phase_idx < 33)
-	{
-		diff_L = mFemurSignals_L[0]/mFemur_L_Avg[phase_idx];
-		diff_R = mFemurSignals_R[0]/mFemur_R_Avg[phase_idx];
-	}
+	// if(phase_idx >= 0 && phase_idx < 33)
+	// {
+	// 	diff_L = mFemurSignals_L[0]/mFemur_L_Avg[phase_idx];
+	// 	diff_R = mFemurSignals_R[0]/mFemur_R_Avg[phase_idx];
+	// }
 
 	if(diff_L > 1.1)
 		reward *= 1.0;
