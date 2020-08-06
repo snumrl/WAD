@@ -19,22 +19,47 @@ struct MuscleTuple
 	Eigen::VectorXd tau_des;
 };
 
-class Energy
+class Torques
 {
 public:
-	Energy();
+	Torques();
 
 	void Init(dart::dynamics::SkeletonPtr skel);
 	void Reset();
-	void SetEnergy(std::string name, int t, double val);
-	double GetEnergy(std::string name, int t);
-	std::map<std::string, std::vector<double>>& Get(){return mE;}
-	std::map<std::string, std::vector<int>>& GetNum(){return mE_num;}
+	void Set();
+	void SetTorque(int dof, int phase, double val);
+	double GetTorque(int dof, int phase);
+	std::vector<double>& GetTorquesCur(){return mTorques_cur;}
+	std::vector<double>& GetTorquesAvg(){return mTorques_avg;}
+	std::vector<std::vector<double>>& GetTorquesDofsCur(){return mTorques_dofs_cur;}
+	std::vector<std::vector<double>>& GetTorquesDofsAvg(){return mTorques_dofs_cur;}
 
 private:
-	std::map<std::string, std::vector<double>> mE;
-	std::map<std::string, std::vector<int>> mE_num;
+	int num_dofs;
+	int num_phase;
+	std::vector<double> mTorques_cur;
+	std::vector<double> mTorques_avg;
+	std::vector<std::vector<double>> mTorques_dofs_cur;
+	std::vector<std::vector<double>> mTorques_dofs_avg;
+	std::vector<std::vector<int>> mTorques_dofs_num;
 };
+
+// class Energy
+// {
+// public:
+// 	Energy();
+
+// 	void Init(dart::dynamics::SkeletonPtr skel);
+// 	void Reset();
+// 	void SetEnergy(std::string name, int t, double val);
+// 	double GetEnergy(std::string name, int t);
+// 	std::map<std::string, std::vector<double>>& Get(){return mE;}
+// 	std::map<std::string, std::vector<int>>& GetNum(){return mE_num;}
+
+// private:
+// 	std::map<std::string, std::vector<double>> mE;
+// 	std::map<std::string, std::vector<int>> mE_num;
+// };
 
 class Character
 {
@@ -101,6 +126,7 @@ public:
 	const std::vector<dart::dynamics::BodyNode*>& GetEndEffectors(){return mEndEffectors;}
 	Device* GetDevice(){return mDevice;}
 	BVH* GetBVH(){return mBVH;}
+	Torques* GetTorques(){return mTorques;}
 
 	int GetNumMuscles(){return mNumMuscle;}
 	int GetNumState(){return mNumState;}
@@ -112,12 +138,13 @@ public:
 
 	void SetUseMuscle(bool b);
 	void SetPhase();
-	void SetEnergy();
+	void SetTorques();
+	// void SetEnergy();
 	void SetReward_Graph();
 
 	bool GetUseMuscle(){return mUseMuscle;}
 	double GetPhase(){return mPhase;}
-	std::map<std::string, std::vector<double>> GetEnergy(int idx);
+	// std::map<std::string, std::vector<double>> GetEnergy(int idx);
 	std::vector<double> GetReward_Graph(int idx);
 	std::deque<double> GetSignals(int idx);
 	std::map<std::string, std::deque<double>> GetRewardMap(){return mReward_map;}
@@ -192,8 +219,9 @@ private:
     double root_reward = 0;
     double com_reward = 0;
 
-	Energy* mEnergy;
-	Energy* mEnergy_Device;
+	// Energy* mEnergy;
+	// Energy* mEnergy_Device;
+	Torques* mTorques;
 
 	MuscleTuple mCurrentMuscleTuple;
 	std::vector<MuscleTuple> mMuscleTuples;

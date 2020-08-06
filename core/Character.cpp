@@ -138,6 +138,9 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	else
 		mRootJointDof = 0;
 
+	mTorques = new Torques();
+	mTorques->Init(mSkeleton);
+
 	this->Reset();
 
 	mNumDof = mSkeleton->getNumDofs();
@@ -149,11 +152,11 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	mFemurSignals_L.resize(600);
 	mFemurSignals_R.resize(600);
 
-	std::deque<double> pose_(300, 0);
-	std::deque<double> vel_(300, 0);
-	std::deque<double> root_(300, 0);
-	std::deque<double> ee_(300, 0);
-	std::deque<double> com_(300, 0);
+	std::deque<double> pose_(60, 0);
+	std::deque<double> vel_(60, 0);
+	std::deque<double> root_(60, 0);
+	std::deque<double> ee_(60, 0);
+	std::deque<double> com_(60, 0);
 
 	mReward_map;
 	mReward_map.insert(std::make_pair("pose", pose_));
@@ -178,10 +181,10 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	maxForces.resize(dof);
 	maxForces <<
 			0, 0, 0, 0, 0, 0,
-			200, 200, 200,
+			200, 100, 100,
 			150,
 			90, 90, 90,
-			200, 200, 200,
+			200, 100, 100,
 			150,
 			90, 90, 90,
 			200, 200, 200,
@@ -304,8 +307,11 @@ void
 Character::
 Initialize_Analysis()
 {
-	mEnergy = new Energy();
-	mEnergy->Init(mSkeleton);
+	mTorques = new Torques();
+	mTorques->Init(mSkeleton);
+
+	// mEnergy = new Energy();
+	// mEnergy->Init(mSkeleton);
 
 	for(int i=0; i<33; i++)
 	{
@@ -313,8 +319,8 @@ Initialize_Analysis()
 		mRewards_num.push_back(0);
 	}
 
-	mEnergy_Device = new Energy();
-	mEnergy_Device->Init(mSkeleton);
+	// mEnergy_Device = new Energy();
+	// mEnergy_Device->Init(mSkeleton);
 	for(int i=0; i<33; i++)
 	{
 		mRewards_Device.push_back(0.0);
@@ -341,7 +347,8 @@ Reset()
 	mSkeleton->computeForwardKinematics(true,false,false);
 
 	mAction.setZero();
-	mEnergy->Reset();
+	mTorques->Reset();
+	// mEnergy->Reset();
 
 	mFemurSignals_L.clear();
 	mFemurSignals_R.clear();
@@ -379,8 +386,8 @@ Step()
 	//      mDesiredTorque[i] = -offset;
 	// }
 
-	SetEnergy();
-	SetReward_Graph();
+	// SetEnergy();
+	this->SetTorques();
 
 	mSkeleton->setForces(mDesiredTorque);
 }
@@ -712,7 +719,12 @@ GetReward_Character()
 	double torque_reward = this->GetTorqueReward();
 
 	// double r_ = pose_w * pose_reward + vel_w * vel_reward + end_eff_w * end_eff_reward + root_w * root_reward + com_w * com_reward;
-	double r_ = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward * torque_reward;
+	double r_imitation = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
+	double r_torque_min = torque_reward;
+
+	// std::cout << "torque min : " << r_torque_min << std::endl;
+
+	double r_ = 0.8 * r_imitation + 0.2 * r_torque_min;
 
 	// std::cout << pose_w * pose_reward << " / " << pose_w << "  " << pose_w * (pose_reward - 1.0) << " pose" << std::endl;
 	// std::cout << vel_w * vel_reward << " / " << vel_w << "  " << vel_w * (vel_reward - 1.0) << " vel" << std::endl;
@@ -725,6 +737,8 @@ GetReward_Character()
 	mSkeleton->setVelocities(cur_vel);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
+	this->SetReward_Graph();
+
 	return r_;
 }
 
@@ -732,27 +746,21 @@ double
 Character::
 GetTorqueReward()
 {
-	int phase_idx = (int)(mPhase/0.0303);
-	double reward = 1.0;
-	double diff_L = 0.0;
-	double diff_R = 0.0;
-	// if(phase_idx >= 0 && phase_idx < 33)
-	// {
-	// 	diff_L = mFemurSignals_L[0]/mFemur_L_Avg[phase_idx];
-	// 	diff_R = mFemurSignals_R[0]/mFemur_R_Avg[phase_idx];
-	// }
+	mTorques->Set();
+	std::vector<double> torques = mTorques->GetTorquesCur();
 
-	if(diff_L > 1.1)
-		reward *= 1.0;
-	else
-		reward *= 0.9;
-
-	if(diff_R > 1.1)
-		reward *= 1.0;
-	else
-		reward *= 0.9;
-
-	return reward;
+	double sum = 0;
+	int idx = 0;
+	for(int i=0; i<torques.size(); i++)
+	{
+		if(maxForces[i] != 0){
+			sum += torques[i]/maxForces[i];
+			idx++;
+		}
+	}
+	sum /= (double)(idx);
+	sum /= 33.0;
+	return exp(-1.0 * 10.0 * sum);
 }
 
 void
@@ -774,7 +782,11 @@ SetDesiredTorques()
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction;
 	mDesiredTorque = this->GetSPDForces(p_des);
 
-	Utils::Clamp(mDesiredTorque, -maxForces, maxForces);
+	for(int i=0; i<mDesiredTorque.size(); i++)
+	{
+		mDesiredTorque[i] = Utils::Clamp(mDesiredTorque[i], -maxForces[i], maxForces[i]);
+	}
+	// Utils::Clamp(mDesiredTorque, -maxForces, maxForces);
 
 	mFemurSignals_R.pop_back();
 	mFemurSignals_R.push_front(mDesiredTorque[6]);
@@ -1015,43 +1027,44 @@ Off_Device()
 	mWorld->removeSkeleton(mDevice->GetSkeleton());
 }
 
-void
-Character::
-SetEnergy()
-{
-	int offset = 6;
-	int n = mSkeleton->getNumJoints();
-	for(int i=1; i<n; i++)
-	{
-		std::string name = mSkeleton->getJoint(i)->getName();
-		int dof = mSkeleton->getJoint(i)->getNumDofs();
-		double torque = 0.0;
-		if(dof == 1)
-		{
-			torque = mDesiredTorque[offset];
-			if(torque<0)
-				torque *= -1;
-			offset += 1;
-		}
-		else if(dof == 3)
-		{
-			Eigen::Vector3d t_ = mDesiredTorque.segment(offset,3);
-			torque = t_.norm();
-			offset += 3;
-		}
 
-		if(mOnDevice)
-			mEnergy_Device->SetEnergy(name, (int)(mPhase/0.0303), torque);
-		else
-			mEnergy->SetEnergy(name, (int)(mPhase/0.0303), torque);
-	}
-}
+
+// void
+// Character::
+// SetEnergy()
+// {
+// 	int offset = 6;
+// 	int n = mSkeleton->getNumJoints();
+// 	for(int i=1; i<n; i++)
+// 	{
+// 		std::string name = mSkeleton->getJoint(i)->getName();
+// 		int dof = mSkeleton->getJoint(i)->getNumDofs();
+// 		double torque = 0.0;
+// 		if(dof == 1)
+// 		{
+// 			torque = mDesiredTorque[offset];
+// 			if(torque<0)
+// 				torque *= -1;
+// 			offset += 1;
+// 		}
+// 		else if(dof == 3)
+// 		{
+// 			Eigen::Vector3d t_ = mDesiredTorque.segment(offset,3);
+// 			torque = t_.norm();
+// 			offset += 3;
+// 		}
+
+// 		if(mOnDevice)
+// 			mEnergy_Device->SetEnergy(name, (int)(mPhase/0.0303), torque);
+// 		else
+// 			mEnergy->SetEnergy(name, (int)(mPhase/0.0303), torque);
+// 	}
+// }
 
 void
 Character::
 SetReward_Graph()
 {
-	this->GetReward();
 	int phase_idx = (int)(mPhase/0.0303);
 	if(mOnDevice){
 		int n = mRewards_Device_num[phase_idx];
@@ -1109,58 +1122,115 @@ GetReward_Graph(int idx)
 		return mRewards_Device;
 }
 
-std::map<std::string, std::vector<double>>
-Character::
-GetEnergy(int idx)
-{
-	if(idx==0)
-		return mEnergy->Get();
-	else
-		return mEnergy_Device->Get();
-}
+// std::map<std::string, std::vector<double>>
+// Character::
+// GetEnergy(int idx)
+// {
+// 	if(idx==0)
+// 		return mEnergy->Get();
+// 	else
+// 		return mEnergy_Device->Get();
+// }
 
-Energy::Energy()
+Torques::Torques()
 {
 }
 
 void
-Energy::
+Torques::
 Init(dart::dynamics::SkeletonPtr skel)
 {
-	int n = skel->getNumJoints();
-	for(int i=1; i<n; i++)
+	num_dofs = skel->getNumDofs();
+	num_phase = 33;
+
+	mTorques_cur.resize(num_dofs);
+	mTorques_avg.resize(num_dofs);
+	for(int i=0; i<num_dofs; i++)
 	{
-		std::string name = skel->getJoint(i)->getName();
-		std::vector<double> e(34, 0.0);
-		std::vector<int> e_num(34, 0);
-		mE.insert(std::make_pair(name, e));
-		mE_num.insert(std::make_pair(name, e_num));
+		mTorques_dofs_cur.push_back(std::vector<double>(num_phase));
+		mTorques_dofs_avg.push_back(std::vector<double>(num_phase));
+		mTorques_dofs_num.push_back(std::vector<int>(num_phase));
 	}
 }
 
 void
-Energy::
+Torques::
 Reset()
 {
+	std::fill(mTorques_cur.begin(), mTorques_cur.end(), 0);
+	std::fill(mTorques_avg.begin(), mTorques_avg.end(), 0);
+	for(int i=0; i<num_dofs; i++)
+	{
+		for(int j=0; j<num_phase; j++)
+		{
+			mTorques_dofs_cur[i][j] = mTorques_dofs_avg[i][j];
+		}
+	}
 }
 
 void
-Energy::
-SetEnergy(std::string name, int t, double val)
+Character::
+SetTorques()
 {
-	int n = (mE_num.find(name)->second).at(t);
-	if(n==0)
-		(mE.find(name)->second).at(t) = val;
-	else
-		(mE.find(name)->second).at(t) = ((mE.find(name)->second).at(t)*n + val)/(double)(n+1);
+	int num_dofs = mSkeleton->getNumDofs();
+	for(int i=0; i<num_dofs; i++)
+	{
+		mTorques->SetTorque(i,(int)(mPhase/0.0303),mDesiredTorque[i]);
+	}
+}
 
-	(mE_num.find(name)->second).at(t) += 1;
+void
+Torques::
+Set()
+{
+	for(int i=0; i<num_dofs; i++)
+	{
+		double sum = 0;
+		for(int j=0; j<num_phase; j++)
+			sum += mTorques_dofs_cur[i][j];
+		mTorques_cur[i] = sum;
+	}
+}
+
+void
+Torques::
+SetTorque(int dof, int phase, double val)
+{
+	if(val<0)
+		val *= -1;
+
+	mTorques_dofs_cur[dof][phase] = val;
+
+	int n = mTorques_dofs_num[dof][phase];
+	mTorques_dofs_avg[dof][phase] = (mTorques_dofs_avg[dof][phase]*n + val)/(double)(n+1);
+
+	mTorques_dofs_num[dof][phase] += 1;
 }
 
 double
-Energy::
-GetEnergy(std::string name, int t)
+Torques::
+GetTorque(int dof, int phase)
 {
-	return (mE.find(name)->second).at(t);
+	return mTorques_dofs_cur[dof][phase];
 }
+
+// void
+// Energy::
+// SetEnergy(std::string name, int t, double val)
+// {
+// 	int n = (mE_num.find(name)->second).at(t);
+// 	if(n==0)
+// 		(mE.find(name)->second).at(t) = val;
+// 	else
+// 		(mE.find(name)->second).at(t) = ((mE.find(name)->second).at(t)*n + val)/(double)(n+1);
+
+// 	(mE_num.find(name)->second).at(t) += 1;
+// }
+
+// double
+// Energy::
+// GetEnergy(std::string name, int t)
+// {
+// 	return (mE.find(name)->second).at(t);
+// }
 

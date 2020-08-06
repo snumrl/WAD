@@ -14,6 +14,7 @@ namespace MASS
 class Environment;
 class Muscle;
 class BVH;
+class Torques;
 class Window : public dart::gui::Win3D
 {
 public:
@@ -43,8 +44,10 @@ public:
 	void DrawGround();
 	void DrawCharacter();
 	void DrawTarget();
-	void DrawEnergy();
-	void DrawEnergyGraph(std::string name, double w, double h, double x, double y);
+	void DrawTorques();
+	void DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double y);
+	// void DrawEnergy();
+	// void DrawEnergyGraph(std::string name, double w, double h, double x, double y);
 	void DrawReward();
 	void DrawRewardMap();
 	void DrawRewardGraph(std::string name, double w, double h, double x, double y);
@@ -78,6 +81,7 @@ private:
 	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module,rms_module;
 
 	Environment* mEnv;
+	Torques* mTorques;
 	bool mFocus;
 	bool mSimulating;
 	bool mDrawCharacter;

@@ -15,6 +15,7 @@ Environment::
 Environment()
 	:mWorld(std::make_shared<World>())
 {
+	std::srand(std::time(nullptr));
 }
 
 Environment::
@@ -182,7 +183,12 @@ Reset(bool RSI)
 {
 	double t = 0.0;
 	if(RSI)
-		t = dart::math::random(0.0, mCharacter->GetBVH()->GetMaxTime()*0.9);
+	{
+		int random_variable = std::rand();
+		int t_idx = random_variable%33;
+		t = t_idx * 0.0333;
+		// t = dart::math::random(0.0, mCharacter->GetBVH()->GetMaxTime()*0.9);
+	}
 
 	mWorld->reset();
 	mWorld->setTime(t);

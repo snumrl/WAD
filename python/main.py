@@ -307,6 +307,7 @@ class PPO(object):
 				'''Entropy Loss'''
 				loss_entropy = - self.w_entropy * a_dist.entropy().mean()
 
+
 				self.loss_actor = loss_actor.cpu().detach().numpy().tolist()
 				self.loss_critic = loss_critic.cpu().detach().numpy().tolist()
 
