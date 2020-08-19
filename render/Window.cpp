@@ -630,12 +630,12 @@ DrawTorques()
 	double p_x = 0.01;
 	double p_y = 0.85;
 
-	DrawTorqueGraph("FemurR_x", 6, p_w, p_h, p_x, p_y);
-	DrawTorqueGraph("FemurR_y", 7, p_w, p_h, p_x, p_y-0.15);
-	DrawTorqueGraph("FemurR_z", 8, p_w, p_h, p_x, p_y-0.30);
-	DrawTorqueGraph("FemurL_x", 13, p_w, p_h, p_x, p_y-0.45);
-	DrawTorqueGraph("FemurL_y", 14, p_w, p_h, p_x, p_y-0.60);
-	DrawTorqueGraph("FemurL_z", 15, p_w, p_h, p_x, p_y-0.75);
+	DrawTorqueGraph("FemurR_x", 0, p_w, p_h, p_x, p_y);
+	DrawTorqueGraph("FemurR_y", 1, p_w, p_h, p_x, p_y-0.15);
+	DrawTorqueGraph("FemurR_z", 2, p_w, p_h, p_x, p_y-0.30);
+	DrawTorqueGraph("FemurL_x", 7, p_w, p_h, p_x, p_y-0.45);
+	DrawTorqueGraph("FemurL_y", 8, p_w, p_h, p_x, p_y-0.60);
+	DrawTorqueGraph("FemurL_z", 9, p_w, p_h, p_x, p_y-0.75);
 
 	glDisable(GL_COLOR_MATERIAL);
 	glPopMatrix();
@@ -1175,7 +1175,6 @@ GetActionFromNN()
 	get_action = nn_module.attr("get_action");
 	p::object temp = get_action(state_np_);
 	np::ndarray action_np = np::from_object(temp);
-
 	float* srcs = reinterpret_cast<float*>(action_np.get_data());
 
 	Eigen::VectorXd action(mEnv->GetCharacter()->GetNumAction());

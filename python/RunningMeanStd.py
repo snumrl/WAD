@@ -14,11 +14,11 @@ class RunningMeanStd(object):
 		self.count = count
 
 	def save(self, path):
-		print('save rms ../nn/{}_mean.npy'.format(path))
+		# print('save rms ../nn/{}_mean.npy'.format(path))
 		np.save('../nn/'+path+'_mean.npy', self.mean)
-		print('save rms ../nn/{}_var.npy'.format(path))
+		# print('save rms ../nn/{}_var.npy'.format(path))
 		np.save('../nn/'+path+'_var.npy', self.var)
-		print('save rms ../nn/{}_count.npy'.format(path))
+		# print('save rms ../nn/{}_count.npy'.format(path))
 		np.save('../nn/'+path+'_count.npy', self.count)
 
 	def load(self, path):

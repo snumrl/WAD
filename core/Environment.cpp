@@ -185,8 +185,8 @@ Reset(bool RSI)
 	if(RSI)
 	{
 		int random_variable = std::rand();
-		int t_idx = random_variable%33;
-		t = t_idx * 0.0333;
+		int t_idx = random_variable%90;
+		t = t_idx * 0.01;
 		// t = dart::math::random(0.0, mCharacter->GetBVH()->GetMaxTime()*0.9);
 	}
 

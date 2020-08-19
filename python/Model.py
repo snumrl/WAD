@@ -89,10 +89,14 @@ class SimulationNN(nn.Module):
 		num_h1 = 256
 		num_h2 = 256
 
+		self.num_states = num_states
+		self.num_actions = num_actions
+		self.num_actions2 = num_actions*2
+
 		self.p_fc1 = nn.Linear(num_states,num_h1)
 		self.p_fc2 = nn.Linear(num_h1,num_h2)
-		self.p_fc3 = nn.Linear(num_h2,num_actions)
-		self.log_std = nn.Parameter(torch.zeros(num_actions))
+		self.p_fc3 = nn.Linear(num_h2,self.num_actions)
+		self.log_std = nn.Parameter(torch.zeros(self.num_actions))
 
 		self.v_fc1 = nn.Linear(num_states,num_h1)
 		self.v_fc2 = nn.Linear(num_h1,num_h2)
@@ -121,11 +125,21 @@ class SimulationNN(nn.Module):
 		p_out = F.relu(self.p_fc2(p_out))
 		p_out = self.p_fc3(p_out)
 
+		# if p_out.dim() == 1:
+		# 	p_out_ = torch.split(p_out, self.num_actions, dim=0)
+		# else:
+		# 	p_out_ = torch.split(p_out, self.num_actions, dim=1)
+
+		# p_out_mean = p_out_[0]
+		# self.p_out_std = torch.clamp_(p_out_[1], -1.0, 1.0)
+
+		# p_out = MultiVariateNormal(p_out_mean, self.p_out_std.exp())
 		p_out = MultiVariateNormal(p_out, self.log_std.exp())
 
 		v_out = F.relu(self.v_fc1(x))
 		v_out = F.relu(self.v_fc2(v_out))
 		v_out = self.v_fc3(v_out)
+
 		return p_out,v_out
 
 	def load(self,path):

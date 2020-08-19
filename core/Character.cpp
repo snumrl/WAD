@@ -148,6 +148,7 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	mNumState = this->GetState().rows();
 
 	mAction.resize(mNumActiveDof);
+	mAction_prev.resize(mNumActiveDof);
 
 	mFemurSignals_L.resize(600);
 	mFemurSignals_R.resize(600);
@@ -167,34 +168,63 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 
 	int num_joint = mSkeleton->getNumJoints();
 	mJointWeights.resize(num_joint);
+	// mJointWeights <<
+	// 		1.0,
+	// 		0.5, 0.3, 0.2,
+	// 		0.5, 0.3, 0.2,
+	// 		0.5, 0.3,
+	// 		0.3, 0.2, 0.1,
+	// 		0.3, 0.2, 0.1;
 	mJointWeights <<
 			1.0,
-			0.5, 0.3, 0.2,
-			0.5, 0.3, 0.2,
-			0.5, 0.3,
-			0.3, 0.2, 0.1,
-			0.3, 0.2, 0.1;
+			0.5, 0.3, 0.2, 0.1, 0.1,
+			0.5, 0.3, 0.2, 0.1, 0.1,
+			0.5, 0.5, 0.3, 0.2,
+			0.5, 0.4, 0.3, 0.2,
+			0.5, 0.4, 0.3, 0.2;
 
 	mJointWeights /= mJointWeights.sum();
 
 	int dof = mSkeleton->getNumDofs();
 	maxForces.resize(dof);
+	// maxForces <<
+	// 		0, 0, 0, 0, 0, 0,
+	// 		200, 200, 200,
+	// 		150,
+	// 		90, 90, 90,
+	// 		200, 200, 200,
+	// 		150,
+	// 		90, 90, 90,
+	// 		200, 200, 200,
+	// 		30, 30, 30,
+	// 		100, 100, 100,
+	// 		60,
+	// 		0, 0, 0,
+	// 		100, 100, 100,
+	// 		60,
+	// 		0, 0, 0;
 	maxForces <<
 			0, 0, 0, 0, 0, 0,
-			200, 100, 100,
-			150,
-			90, 90, 90,
-			200, 100, 100,
-			150,
-			90, 90, 90,
-			200, 200, 200,
-			50, 50, 50,
-			100, 100, 100,
-			60,
-			0, 0, 0,
-			100, 100, 100,
-			60,
-			0, 0, 0;
+			200, 200, 200, //femur
+			150, // tibia
+			90, 90, 90, // talus
+			90, 90, // thumb 1,2
+			200, 200, 200, // femur
+			150, // tibia
+			90, 90, 90, // talus
+			90, 90, // thumb 1,2
+			200, 200, 200, //spine
+			200, 200, 200, //torso
+			150, 150, 150, //neck
+			90, 90, 90, // head
+			150, 150, 150, //shoulder
+			100, 100, 100, //arm
+			100, // forearm
+			30, 30, 30, // hand
+			150, 150, 150, //shoulder
+			100, 100, 100, //arm
+			100, // forearm
+			30, 30, 30; // hand
 
 	// this->get_record();
 }
@@ -207,18 +237,56 @@ SetPDParameters()
 	mKp.resize(dof);
 	mKv.resize(dof);
 
+	// mKp << 0, 0, 0, 0, 0, 0,
+	// 	500, 500, 500,
+	// 	500,
+	// 	400, 400, 400,
+	// 	500, 500, 500,
+	// 	500,
+	// 	400, 400, 400,
+	// 	1000, 1000, 1000,
+	// 	100, 100, 100,
+	// 	400, 400, 400,
+	// 	300,
+	// 	100, 100, 100,
+	// 	400, 400, 400,
+	// 	300,
+	// 	100, 100, 100;
+
+	// mKv << 0, 0, 0, 0, 0, 0,
+	// 	50, 50, 50,
+	// 	50,
+	// 	40, 40, 40,
+	// 	50, 50, 50,
+	// 	50,
+	// 	40, 40, 40,
+	// 	100, 100, 100,
+	// 	10, 10, 10,
+	// 	40, 40, 40,
+	// 	30,
+	// 	10, 10, 10,
+	// 	40, 40, 40,
+	// 	30,
+	// 	10, 10, 10;
+
 	mKp << 0, 0, 0, 0, 0, 0,
 		500, 500, 500,
 		500,
 		400, 400, 400,
+		100, 100,
 		500, 500, 500,
 		500,
 		400, 400, 400,
-		1000, 1000, 1000,
+		100, 100,
+		500, 500, 500,
+		400, 400, 400,
+		200, 200, 200,
 		100, 100, 100,
+		400, 400, 400,
 		400, 400, 400,
 		300,
 		100, 100, 100,
+		400, 400, 400,
 		400, 400, 400,
 		300,
 		100, 100, 100;
@@ -227,14 +295,20 @@ SetPDParameters()
 		50, 50, 50,
 		50,
 		40, 40, 40,
+		10, 10,
 		50, 50, 50,
 		50,
 		40, 40, 40,
-		100, 100, 100,
+		10, 10,
+		50, 50, 50,
+		40, 40, 40,
+		20, 20, 20,
 		10, 10, 10,
+		40, 40, 40,
 		40, 40, 40,
 		30,
 		10, 10, 10,
+		40, 40, 40,
 		40, 40, 40,
 		30,
 		10, 10, 10;
@@ -310,17 +384,12 @@ Initialize_Analysis()
 	mTorques = new Torques();
 	mTorques->Init(mSkeleton);
 
-	// mEnergy = new Energy();
-	// mEnergy->Init(mSkeleton);
-
 	for(int i=0; i<33; i++)
 	{
 		mRewards.push_back(0.0);
 		mRewards_num.push_back(0);
 	}
 
-	// mEnergy_Device = new Energy();
-	// mEnergy_Device->Init(mSkeleton);
 	for(int i=0; i<33; i++)
 	{
 		mRewards_Device.push_back(0.0);
@@ -347,8 +416,8 @@ Reset()
 	mSkeleton->computeForwardKinematics(true,false,false);
 
 	mAction.setZero();
+	mAction_prev.setZero();
 	mTorques->Reset();
-	// mEnergy->Reset();
 
 	mFemurSignals_L.clear();
 	mFemurSignals_R.clear();
@@ -376,17 +445,6 @@ Step()
 {
 	SetDesiredTorques();
 
-	// double offset = 30.0;
-
-	// for(int i=6; i<10; i++)
-	// {
-	//  if(mDesiredTorque[i] > offset)
-	//      mDesiredTorque[i] = offset;
-	//  if(mDesiredTorque[i] < -offset)
-	//      mDesiredTorque[i] = -offset;
-	// }
-
-	// SetEnergy();
 	this->SetTorques();
 
 	mSkeleton->setForces(mDesiredTorque);
@@ -505,9 +563,7 @@ GetState()
 	Eigen::Vector3d root_pos_kin = trans_kin.translation();
 	Eigen::Vector3d root_pos_rel_kin = root_pos_kin;
 
-	Eigen::Vector4d root_pos_rel4_kin = Utils::GetPoint4d(root_pos_rel_kin);
-	root_pos_rel4_kin = origin_trans * root_pos_rel4_kin;
-	root_pos_rel_kin = root_pos_rel4_kin.segment(0,3);
+	root_pos_rel_kin = Utils::AffineTransPoint(origin_trans, root_pos_rel_kin);
 
 	pos_diff(0) = root_pos_rel_kin[1] - pos(0);
 	int idx_pos_diff = 1;
@@ -572,25 +628,25 @@ double
 Character::
 GetReward_Character()
 {
-	double pose_w = 0.50;
-	double vel_w = 0.05;
-	double end_eff_w = 0.15;
-	double root_w = 0.20;
-	double com_w = 0.10;
+	// double pose_w = 0.50;
+	// double vel_w = 0.05;
+	// double end_eff_w = 0.15;
+	// double root_w = 0.20;
+	// double com_w = 0.10;
 
-	double total_w = pose_w + vel_w + end_eff_w + root_w + com_w;
-	pose_w /= total_w;
-	vel_w /= total_w;
-	end_eff_w /= total_w;
-	root_w /= total_w;
-	com_w /= total_w;
+	// double total_w = pose_w + vel_w + end_eff_w + root_w + com_w;
+	// pose_w /= total_w;
+	// vel_w /= total_w;
+	// end_eff_w /= total_w;
+	// root_w /= total_w;
+	// com_w /= total_w;
 
-	double pose_scale = 2;
+	double pose_scale = 2.0;
 	double vel_scale = 0.1;
-	double end_eff_scale = 40;
-	double root_scale = 5;
-	double com_scale = 10;
-	double err_scale = 2;  // error scale
+	double end_eff_scale = 40.0;
+	double root_scale = 5.0;
+	double com_scale = 10.0;
+	double err_scale = 2.0;  // error scale
 
 	double reward = 0;
 
@@ -660,7 +716,6 @@ GetReward_Character()
 			curr_vel_err = (cur_v-tar_v).squaredNorm();
 		}
 		else if(joint->getType()=="WeldJoint"){
-
 		}
 
 		pose_err += w * curr_pose_err;
@@ -716,15 +771,22 @@ GetReward_Character()
 	root_reward = exp(-err_scale * root_scale * root_err);
 	com_reward = exp(-err_scale * com_scale * com_err);
 
-	double torque_reward = this->GetTorqueReward();
+	// double torque_reward = this->GetTorqueReward();
 
 	// double r_ = pose_w * pose_reward + vel_w * vel_reward + end_eff_w * end_eff_reward + root_w * root_reward + com_w * com_reward;
 	double r_imitation = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
-	double r_torque_min = torque_reward;
+	// if(r_imitation < 0.7)
+	// 	r_imitation += 0.3;
+	// else
+	// 	r_imitation = 1.0;
+
+	// r_imitation *= 0.7;
+	// r_torque_min = torque_reward * 0.3;
 
 	// std::cout << "torque min : " << r_torque_min << std::endl;
 
-	double r_ = 0.8 * r_imitation + 0.2 * r_torque_min;
+	// double r_ = r_imitation + r_torque_min;
+	double r_ = r_imitation;
 
 	// std::cout << pose_w * pose_reward << " / " << pose_w << "  " << pose_w * (pose_reward - 1.0) << " pose" << std::endl;
 	// std::cout << vel_w * vel_reward << " / " << vel_w << "  " << vel_w * (vel_reward - 1.0) << " vel" << std::endl;
@@ -760,7 +822,7 @@ GetTorqueReward()
 	}
 	sum /= (double)(idx);
 	sum /= 33.0;
-	return exp(-1.0 * 10.0 * sum);
+	return exp(-1.0 * 40.0 * sum);
 }
 
 void
@@ -769,6 +831,8 @@ SetAction(const Eigen::VectorXd& a)
 {
 	double action_scale = 0.1;
 	mAction = a*action_scale;
+	mAction = mAction*0.8 + mAction_prev*0.2;
+	mAction_prev = mAction;
 
 	double t = mWorld->getTime();
 	this->SetTargetPosAndVel(t, mControlHz);
@@ -1068,22 +1132,21 @@ SetReward_Graph()
 	int phase_idx = (int)(mPhase/0.0303);
 	if(mOnDevice){
 		int n = mRewards_Device_num[phase_idx];
-		if(n == 0)
-			mRewards_Device[phase_idx] = mReward;
-		else
-			mRewards_Device[phase_idx] = (mRewards_Device[phase_idx]*n+mReward)/(double)(n+1);
+		mRewards_Device[phase_idx] = (mRewards_Device[phase_idx]*n+mReward)/(double)(n+1);
 
 		mRewards_Device_num[phase_idx] += 1;
 	}
 	else
 	{
 		int n = mRewards_num[phase_idx];
-		if(n == 0)
-			mRewards[phase_idx] = mReward;
-		else
-			mRewards[phase_idx] = (mRewards[phase_idx]*n+mReward)/(double)(n+1);
+		mRewards[phase_idx] = (mRewards[phase_idx]*n+mReward)/(double)(n+1);
 
 		mRewards_num[phase_idx] += 1;
+
+		n = mRewards_Device_num[phase_idx];
+		mRewards_Device[phase_idx] = (mRewards_Device[phase_idx]*n+r_torque_min)/(double)(n+1);
+
+		mRewards_Device_num[phase_idx] += 1;
 	}
 
 	mReward_map;
@@ -1122,16 +1185,6 @@ GetReward_Graph(int idx)
 		return mRewards_Device;
 }
 
-// std::map<std::string, std::vector<double>>
-// Character::
-// GetEnergy(int idx)
-// {
-// 	if(idx==0)
-// 		return mEnergy->Get();
-// 	else
-// 		return mEnergy_Device->Get();
-// }
-
 Torques::Torques()
 {
 }
@@ -1143,9 +1196,9 @@ Init(dart::dynamics::SkeletonPtr skel)
 	num_dofs = skel->getNumDofs();
 	num_phase = 33;
 
-	mTorques_cur.resize(num_dofs);
-	mTorques_avg.resize(num_dofs);
-	for(int i=0; i<num_dofs; i++)
+	mTorques_cur.resize(17);
+	mTorques_avg.resize(17);
+	for(int i=0; i<17; i++)
 	{
 		mTorques_dofs_cur.push_back(std::vector<double>(num_phase));
 		mTorques_dofs_avg.push_back(std::vector<double>(num_phase));
@@ -1159,7 +1212,7 @@ Reset()
 {
 	std::fill(mTorques_cur.begin(), mTorques_cur.end(), 0);
 	std::fill(mTorques_avg.begin(), mTorques_avg.end(), 0);
-	for(int i=0; i<num_dofs; i++)
+	for(int i=0; i<17; i++)
 	{
 		for(int j=0; j<num_phase; j++)
 		{
@@ -1173,9 +1226,9 @@ Character::
 SetTorques()
 {
 	int num_dofs = mSkeleton->getNumDofs();
-	for(int i=0; i<num_dofs; i++)
+	for(int i=0; i<17; i++)
 	{
-		mTorques->SetTorque(i,(int)(mPhase/0.0303),mDesiredTorque[i]);
+		mTorques->SetTorque(i,(int)(mPhase/0.0303),mDesiredTorque[i+6]);
 	}
 }
 
@@ -1183,7 +1236,7 @@ void
 Torques::
 Set()
 {
-	for(int i=0; i<num_dofs; i++)
+	for(int i=0; i<17; i++)
 	{
 		double sum = 0;
 		for(int j=0; j<num_phase; j++)
@@ -1196,6 +1249,9 @@ void
 Torques::
 SetTorque(int dof, int phase, double val)
 {
+	if(phase >= 33)
+		return;
+
 	if(val<0)
 		val *= -1;
 

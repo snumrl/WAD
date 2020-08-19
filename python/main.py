@@ -38,6 +38,8 @@ class EpisodeBuffer(object):
 		self.data.pop()
 	def GetData(self):
 		return self.data
+	def Size(self):
+		return len(self.data)
 
 MuscleTransition = namedtuple('MuscleTransition',('JtA','tau_des','L','b'))
 class MuscleBuffer(object):
@@ -132,7 +134,7 @@ class PPO(object):
 		self.num_control_Hz = self.env.GetControlHz()
 		self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
 
-		self.max_iteration = 20000
+		self.max_iteration = 30000
 		self.num_evaluation = 0
 		self.rewards = []
 
@@ -214,6 +216,7 @@ class PPO(object):
 
 				if np.any(np.isnan(states[j])) or np.any(np.isnan(actions[j])) or np.any(np.isnan(states[j])) or np.any(np.isnan(values[j])) or np.any(np.isnan(logprobs[j])):
 					nan_occur = True
+					print("nan occur!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
 				elif self.env.IsEndOfEpisode(j) is False:
 					terminated_state = False
@@ -223,8 +226,10 @@ class PPO(object):
 
 				if terminated_state or (nan_occur is True):
 					if (nan_occur is True):
+						print("episodes size : ", self.episodes.size())
 						self.episodes[j].Pop()
-					self.total_episodes.append(self.episodes[j])
+					else:
+						self.total_episodes.append(self.episodes[j])
 					self.episodes[j] = EpisodeBuffer()
 
 					self.env.Reset(True,j)
@@ -287,14 +292,7 @@ class PPO(object):
 				stack_gae = np.vstack(batch.GAE).astype(np.float32)
 
 				a_dist,v = self.model(Tensor(stack_s))
-				'''Critic Loss'''
-				# loss_critic1 = ((v-Tensor(stack_td)).pow(2)).mean()
 
-				# vf_loss1 = torch.pow(value_fn - value_targets, 2.0)
-    #         	vf_clipped = vf_preds + torch.clamp(value_fn - vf_preds,
-    #                                             -vf_clip_param, vf_clip_param)
-    #         	vf_loss2 = torch.pow(vf_clipped - value_targets, 2.0)
-    #         	vf_loss = torch.max(vf_loss1, vf_loss2)
 				loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
 
 				'''Actor Loss'''
@@ -362,7 +360,6 @@ class PPO(object):
 		self.loss_muscle = loss.cpu().detach().numpy().tolist()
 		print('')
 
-
 	def Evaluate(self):
 		self.num_evaluation = self.num_evaluation + 1
 		h = int((time.time() - self.tic)//3600.0)
@@ -371,6 +368,7 @@ class PPO(object):
 		m = m - h*60
 		s = int((time.time() - self.tic))
 		s = s - h*3600 - m*60
+
 		if self.num_episode is 0:
 			self.num_episode = 1
 		if self.num_tuple is 0:
@@ -378,15 +376,18 @@ class PPO(object):
 		if self.max_return < self.sum_return/self.num_episode:
 			self.max_return = self.sum_return/self.num_episode
 			self.max_return_epoch = self.num_evaluation
+
 		print('# {} === {}h:{}m:{}s ==='.format(self.num_evaluation,h,m,s))
 		print('||Loss Actor               : {:.4f}'.format(self.loss_actor))
 		print('||Loss Critic              : {:.4f}'.format(self.loss_critic))
 		if self.use_muscle:
 			print('||Loss Muscle              : {:.4f}'.format(self.loss_muscle))
 		print('||Noise                    : {:.3f}'.format(self.model.log_std.exp().mean()))
+		# print('||Noise                    : {:.3f}'.format(self.model.p_out_std.exp().mean()))
 		print('||Num Transition So far    : {}'.format(self.num_tuple_so_far))
 		print('||Num Transition           : {}'.format(self.num_tuple))
 		print('||Num Episode              : {}'.format(self.num_episode))
+		print('||Avg Transition / episode : {}'.format(int(self.num_tuple/self.num_episode)))
 		print('||Avg Return per episode   : {:.3f}'.format(self.sum_return/self.num_episode))
 		print('||Avg Reward per transition: {:.3f}'.format(self.sum_return/self.num_tuple))
 		print('||Avg Step per episode     : {:.1f}'.format(self.num_tuple/self.num_episode))
@@ -394,7 +395,6 @@ class PPO(object):
 		self.rewards.append(self.sum_return/self.num_episode)
 
 		self.SaveModel()
-
 		print('=============================================')
 
 		return np.array(self.rewards)
@@ -403,7 +403,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 plt.ion()
-
 def Plot(y,title,num_fig=1,ylim=True):
 	temp_y = np.zeros(y.shape)
 	if y.shape[0]>5:

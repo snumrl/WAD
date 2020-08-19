@@ -239,8 +239,8 @@ Parse(const std::string& file,bool cyclic)
 					is>>val;
 					if(i%4==0)
 						mMotions[i/4][j] = val;
-					if(j==1)
-						mMotions[i/4][j] -= 5.7;
+						// if(j==1)
+						// 	mMotions[i/4][j] += 2.453;
 				}
 			}
 			mNumTotalFrames = mNumTotalFrames/4 + mNumTotalFrames%4;
@@ -339,6 +339,15 @@ Eigen::VectorXd
 BVH::
 GetMotion(int k)
 {
+	// Eigen::VectorXd v =  Eigen::VectorXd::Zero(mMotionFrames[0].size());
+	// // v[0] = -30.5073;
+	// // v[1] = 104.521;
+	// // v[2] = -237.413;
+	// v[3] = 3.43058;
+	// v[4] = -2.8926;
+	// v[5] = -8.40971;
+
+	// return v;
 	return mMotionFrames[k];
 }
 

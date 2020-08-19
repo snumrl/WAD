@@ -183,6 +183,7 @@ private:
 	double mPhase;
 
 	Eigen::VectorXd mAction;
+	Eigen::VectorXd mAction_prev;
 	Eigen::VectorXd mActivationLevels;
 
 	Eigen::Isometry3d mTc;
@@ -194,6 +195,7 @@ private:
 	Eigen::VectorXd mTargetVelocities;
 	Eigen::VectorXd mDesiredTorque;
 
+	double r_torque_min;
 	std::vector<double> mRewards;
 	std::vector<int> mRewards_num;
 	std::vector<double> mRewards_Device;
