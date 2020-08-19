@@ -112,8 +112,8 @@
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0. 1.4844 -0.0436 "/>
         </Joint>
     </Node>
-    <!-- <Node name="Head" parent="Neck" endeffector="True"> -->
-    <Node name="Head" parent="Neck">
+    <!-- <Node name="Head" parent="Neck"> -->
+    <Node name="Head" parent="Neck" endeffector="True">
         <Body type="Box" mass="2.0" size="0.1129 0.1144 0.1166" contact="Off" color="0.6 0.6 1.5 1.0" obj="Skull.obj">
             <Transformation linear="1.0 0.0 0.0 0.0 0.9895 -0.1447 0.0 0.1447 0.9895 " translation="0.0 1.6527 -0.0123 "/>
         </Body>
