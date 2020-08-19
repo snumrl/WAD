@@ -216,8 +216,6 @@ class PPO(object):
 
 				if np.any(np.isnan(states[j])) or np.any(np.isnan(actions[j])) or np.any(np.isnan(states[j])) or np.any(np.isnan(values[j])) or np.any(np.isnan(logprobs[j])):
 					nan_occur = True
-					print("nan occur!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-
 				elif self.env.IsEndOfEpisode(j) is False:
 					terminated_state = False
 					rewards[j] = self.env.GetReward(j)
@@ -226,7 +224,6 @@ class PPO(object):
 
 				if terminated_state or (nan_occur is True):
 					if (nan_occur is True):
-						print("episodes size : ", self.episodes.size())
 						self.episodes[j].Pop()
 					else:
 						self.total_episodes.append(self.episodes[j])

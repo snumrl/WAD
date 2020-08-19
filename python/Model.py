@@ -91,11 +91,11 @@ class SimulationNN(nn.Module):
 
 		self.num_states = num_states
 		self.num_actions = num_actions
-		self.num_actions2 = num_actions*2
+		self.num_actions2 = num_actions
 
 		self.p_fc1 = nn.Linear(num_states,num_h1)
 		self.p_fc2 = nn.Linear(num_h1,num_h2)
-		self.p_fc3 = nn.Linear(num_h2,self.num_actions)
+		self.p_fc3 = nn.Linear(num_h2,self.num_actions2)
 		self.log_std = nn.Parameter(torch.zeros(self.num_actions))
 
 		self.v_fc1 = nn.Linear(num_states,num_h1)
