@@ -168,27 +168,27 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 
 	int num_joint = mSkeleton->getNumJoints();
 	mJointWeights.resize(num_joint);
-	// mJointWeights <<
-	// 		1.0,
-	// 		0.5, 0.3, 0.2,
-	// 		0.5, 0.3, 0.2,
-	// 		0.5, 0.3,
-	// 		0.3, 0.2, 0.1,
-	// 		0.3, 0.2, 0.1;
-	// mJointWeights <<
-	// 		0.8,
-	// 		0.5, 0.3, 0.2, 0.1, 0.1,
-	// 		0.5, 0.3, 0.2, 0.1, 0.1,
-	// 		0.5, 0.5, 0.5, 0.5,
-	// 		0.5, 0.4, 0.3, 0.2,
-	// 		0.5, 0.4, 0.3, 0.2;
 	mJointWeights <<
-			0.1,
-			0.1, 0.1, 0.1, 0.1, 0.1,
-			0.1, 0.1, 0.1, 0.1, 0.1,
-			0.1, 0.1, 0.1, 0.1, 0.1,
-			0.1, 0.1, 0.1, 0.1, 0.1,
-			0.1, 0.1;
+			1.0,
+			0.5, 0.3, 0.2,
+			0.5, 0.3, 0.2,
+			0.5, 0.3,
+			0.3, 0.2, 0.1,
+			0.3, 0.2, 0.1;
+	// mJointWeights <<
+	// 		0.1,
+	// 		0.1, 0.1, 0.1,
+	// 		0.1, 0.1, 0.1,
+	// 		0.1, 0.1,
+	// 		0.1, 0.1, 0.1,
+	// 		0.1, 0.1, 0.1;
+	// mJointWeights <<
+	// 		0.1,
+	// 		0.1, 0.1, 0.1, 0.1, 0.1,
+	// 		0.1, 0.1, 0.1, 0.1, 0.1,
+	// 		0.1, 0.1, 0.1, 0.1, 0.1,
+	// 		0.1, 0.1, 0.1, 0.1, 0.1,
+	// 		0.1, 0.1;
 
 	mJointWeights /= mJointWeights.sum();
 
@@ -213,26 +213,43 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 
 	maxForces <<
 			0, 0, 0, 0, 0, 0,
-			200, 200, 200, //femur
-			200, // tibia
-			200, 200, 200, // talus
-			200, 200, // thumb 1,2
-			200, 200, 200, // femur
-			200, // tibia
-			200, 200, 200, // talus
-			200, 200, // thumb 1,2
-			200, 200, 200, //spine
-			200, 200, 200, //torso
-			200, 200, 200, //neck
-			200, 200, 200, // head
-			200, 200, 200, //shoulder
-			200, 200, 200, //arm
-			200, // forearm
-			200, 200, 200, // hand
-			200, 200, 200, //shoulder
-			200, 200, 200, //arm
-			200, // forearm
-			200, 200, 200; // hand
+			200, 200, 200,
+			200,
+			200, 200, 200,
+			200, 200, 200,
+			200,
+			200, 200, 200,
+			200, 200, 200,
+			200, 200, 200,
+			200, 200, 200,
+			200,
+			200, 200, 200,
+			200, 200, 200,
+			200,
+			200, 200, 200;
+
+	// maxForces <<
+	// 		0, 0, 0, 0, 0, 0,
+	// 		200, 200, 200, //femur
+	// 		200, // tibia
+	// 		200, 200, 200, // talus
+	// 		200, 200, // thumb 1,2
+	// 		200, 200, 200, // femur
+	// 		200, // tibia
+	// 		200, 200, 200, // talus
+	// 		200, 200, // thumb 1,2
+	// 		200, 200, 200, //spine
+	// 		200, 200, 200, //torso
+	// 		200, 200, 200, //neck
+	// 		200, 200, 200, // head
+	// 		200, 200, 200, //shoulder
+	// 		200, 200, 200, //arm
+	// 		200, // forearm
+	// 		200, 200, 200, // hand
+	// 		200, 200, 200, //shoulder
+	// 		200, 200, 200, //arm
+	// 		200, // forearm
+	// 		200, 200, 200; // hand
 
 	// this->get_record();
 }
@@ -242,10 +259,13 @@ Character::
 SetPDParameters()
 {
 	int dof = mSkeleton->getNumDofs();
-	// mKp.resize(dof);
-	// mKv.resize(dof);
+
 	mKp = Eigen::VectorXd::Constant(dof,500);
 	mKv = Eigen::VectorXd::Constant(dof,50);
+
+	// mKp.resize(dof);
+	// mKv.resize(dof);
+
 	// mKp << 0, 0, 0, 0, 0, 0,
 	// 	500, 500, 500,
 	// 	500,
@@ -784,6 +804,7 @@ GetReward_Character()
 
 	// double r_ = pose_w * pose_reward + vel_w * vel_reward + end_eff_w * end_eff_reward + root_w * root_reward + com_w * com_reward;
 	double r_imitation = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
+	// double r_imitation = pose_reward * end_eff_reward * root_reward * com_reward;
 	// if(r_imitation < 0.7)
 	// 	r_imitation += 0.3;
 	// else
@@ -840,7 +861,7 @@ SetAction(const Eigen::VectorXd& a)
 {
 	double action_scale = 0.1;
 	mAction = a*action_scale;
-	// mAction = mAction*0.8 + mAction_prev*0.2;
+	// mAction = mAction*0.5 + mAction_prev*0.5;
 	// mAction_prev = mAction;
 
 	double t = mWorld->getTime();
