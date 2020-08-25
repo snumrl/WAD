@@ -302,10 +302,10 @@ BuildFromFile(const std::string& path,bool create_obj)
 				contact = true;
 		}
 
-		Eigen::Vector4d color = Eigen::Vector4d::Constant(0.2);
+		Eigen::Vector4d color = Eigen::Vector4d::Constant(0.0);
 		if(body->Attribute("color")!=nullptr)
 			color = string_to_vector4d(body->Attribute("color"));
-		color[3] = 0.8;
+		// color[3] = 0.8;
 
 		dart::dynamics::Inertia inertia = MakeInertia(shape, mass);
 

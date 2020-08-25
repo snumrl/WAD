@@ -63,9 +63,9 @@ Initialize(dart::simulation::WorldPtr& wPtr, bool nn)
     else
         mRootJointDof = 0;
 
-    mDeviceSignals_y = std::deque<double>(1200,0);
-    mDeviceSignals_L = std::deque<double>(1200,0);
-    mDeviceSignals_R = std::deque<double>(1200,0);
+    mDeviceSignals_y = std::deque<double>(1800,0);
+    mDeviceSignals_L = std::deque<double>(1800,0);
+    mDeviceSignals_R = std::deque<double>(1800,0);
 
     mNumDof = mSkeleton->getNumDofs();
     mNumActiveDof = mNumDof-mRootJointDof;
@@ -76,7 +76,7 @@ Initialize(dart::simulation::WorldPtr& wPtr, bool nn)
     mTorqueMax = 15.0;
 
     mDesiredTorque = Eigen::VectorXd::Zero(mNumDof);
-    mDesiredTorque_Buffer.resize(1200);
+    mDesiredTorque_Buffer.resize(1800);
     for(auto& t : mDesiredTorque_Buffer)
         t = Eigen::VectorXd::Zero(mNumDof);
 }
@@ -107,16 +107,16 @@ Reset()
     mSkeleton->computeForwardKinematics(true, false, false);
 
     mDesiredTorque_Buffer.clear();
-    mDesiredTorque_Buffer.resize(1200);
+    mDesiredTorque_Buffer.resize(1800);
     for(auto& t : mDesiredTorque_Buffer)
         t = Eigen::VectorXd::Zero(12);
 
     mDeviceSignals_y.clear();
-    mDeviceSignals_y.resize(1200);
+    mDeviceSignals_y.resize(1800);
     mDeviceSignals_L.clear();
-    mDeviceSignals_L.resize(1200);
+    mDeviceSignals_L.resize(1800);
     mDeviceSignals_R.clear();
-    mDeviceSignals_R.resize(1200);
+    mDeviceSignals_R.resize(1800);
 
     qr = 0.0;
     ql = 0.0;

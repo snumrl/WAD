@@ -47,27 +47,26 @@ Eigen::Matrix3d R_z(double z)
 	return R;
 }
 
-Eigen::Vector4d white(1.0, 1.0, 1.0, 1.0);
-Eigen::Vector4d black(0.0, 0.0, 0.0, 1.0);
+Eigen::Vector4d white(0.9, 0.9, 0.9, 1.0);
+Eigen::Vector4d black(0.1, 0.1, 0.1, 1.0);
 Eigen::Vector4d grey(0.6, 0.6, 0.6, 1.0);
 
-Eigen::Vector4d red(1.0, 0.0, 0.0, 1.0);
+Eigen::Vector4d red(0.8, 0.2, 0.2, 1.0);
 Eigen::Vector4d green(0.2, 0.8, 0.2, 1.0);
-Eigen::Vector4d blue(0.0, 0.0, 1.0, 1.0);
+Eigen::Vector4d blue(0.2, 0.2, 0.8, 1.0);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),mDrawTrajectory(false),mDrawProgressBar(false),mTalusL(false),mTalusR(false),isDrawTarget(false)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),mDrawTrajectory(false),mDrawProgressBar(false),mTalusL(false),mTalusR(false),isDrawTarget(false),mDrawArrow(false)
 {
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
-	mBackground[2] = 1.0;
-	mBackground[3] = 1.0;
+	mBackground[2] = 0.9;
+	mBackground[3] = 0.5;
 	SetFocus();
 	mZoom = 0.25;
 	mFocus = false;
 	mNNLoaded = false;
-	mGain = 300;
 	mOnDevice = env->GetCharacter()->GetOnDevice();
 
 	mm = p::import("__main__");
@@ -211,6 +210,7 @@ keyboard(unsigned char _key, int _x, int _y)
 	case 'o': mDrawOBJ = !mDrawOBJ;break;
 	case 't': mDrawTarget = !mDrawTarget;break;
 	case 'c': mDrawCharacter = !mDrawCharacter;break;
+	case 'a': mDrawArrow = !mDrawArrow;break;
 	case 'w': this->record();break;
 	case 'd':
 		if(mEnv->GetUseDevice())
@@ -417,9 +417,11 @@ DrawCharacter()
 	// if(mDrawTrajectory)
 	//  DrawTrajectory();
 
+	glDisable(GL_LIGHTING);
 	DrawTorques();
 	DrawReward();
 	DrawRewardMap();
+	glEnable(GL_LIGHTING);
 
 	if(mEnv->GetUseMuscle())
 		DrawMuscles(mEnv->GetCharacter()->GetMuscles());
@@ -460,10 +462,10 @@ DrawRewardGraph(std::string name, double w, double h, double x, double y)
 	std::vector<double> data_ = mEnv->GetCharacter()->GetReward_Graph(0);
 	std::vector<double> data_device_ = mEnv->GetCharacter()->GetReward_Graph(1);
 
-	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, red, 1.5, data_, blue, 2.0, data_device_);
+	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, red, 1.5, data_, green, 2.0, data_device_);
 
 	DrawStringMax(x+0.005, y+0.01, offset_x, offset_y, data_, red);
-	DrawStringMax(x+0.005, y+0.01, offset_x, offset_y, data_device_, blue);
+	DrawStringMax(x+0.005, y+0.01, offset_x, offset_y, data_device_, green);
 }
 
 void
@@ -490,7 +492,7 @@ DrawReward()
 	double p_h = 0.13;
 	double p_x = 0.7;
 
-	DrawRewardGraph("Reward", p_w, p_h, p_x, 0.40);
+	DrawRewardGraph("Reward", p_w, p_h, p_x, 0.38);
 
 	glDisable(GL_COLOR_MATERIAL);
 	glPopMatrix();
@@ -521,59 +523,59 @@ DrawRewardMap()
 
 	// graph coord & size
 	double w = 0.125;
-	double h = 0.101;
+	double h = 0.102;
 	double x = 0.86;
-	double y = 0.405;
+	double y = 0.409;
 
 	double offset_x = 0.002;
 	double offset_y = 0.1;
 
 	std::map<std::string, std::deque<double>> map = mEnv->GetRewardMap();
 
-	y = 0.404;
+	y = 0.409;
 	DrawQuads(x, y, w, h, white);
-	DrawLine(x+0.005, y+0.01, x+w-0.005, y+0.01, black, 1.5);
-	DrawLine(x+0.005, y+0.01, x+0.005, y+h+0.01, black, 1.5);
+	DrawLine(x+0.005, y+0.01, x+w, y+0.01, black, 1.5);
+	DrawLine(x+0.005, y+0.01, x+0.005, y+h, black, 1.5);
 	DrawString(x+0.4*w, y+0.015, "pose");
 
 	std::deque<double> pose = map.at("pose");
-	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.0, pose);
+	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.5, pose);
 
-	y = 0.303;
+	y = 0.307;
 	DrawQuads(x, y, w, h, white);
-	DrawLine(x+0.005, y+0.01, x+w-0.005, y+0.01, black, 1.5);
-	DrawLine(x+0.005, y+0.01, x+0.005, y+h+0.01, black, 1.5);
+	DrawLine(x+0.005, y+0.01, x+w, y+0.01, black, 1.5);
+	DrawLine(x+0.005, y+0.01, x+0.005, y+h, black, 1.5);
 	DrawString(x+0.4*w, y+0.015, "vel");
 
 	std::deque<double> vel = map.at("vel");
-	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.0, vel);
+	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.5, vel);
 
-	y = 0.202;
+	y = 0.205;
 	DrawQuads(x, y, w, h, white);
-	DrawLine(x+0.005, y+0.01, x+w-0.005, y+0.01, black, 1.5);
-	DrawLine(x+0.005, y+0.01, x+0.005, y+h+0.01, black, 1.5);
+	DrawLine(x+0.005, y+0.01, x+w, y+0.01, black, 1.5);
+	DrawLine(x+0.005, y+0.01, x+0.005, y+h, black, 1.5);
 	DrawString(x+0.4*w, y+0.015, "ee");
 
 	std::deque<double> ee = map.at("ee");
-	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.0, ee);
+	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.5, ee);
 
-	y = 0.101;
+	y = 0.103;
 	DrawQuads(x, y, w, h, white);
-	DrawLine(x+0.005, y+0.01, x+w-0.005, y+0.01, black, 1.5);
-	DrawLine(x+0.005, y+0.01, x+0.005, y+h+0.01, black, 1.5);
+	DrawLine(x+0.005, y+0.01, x+w, y+0.01, black, 1.5);
+	DrawLine(x+0.005, y+0.01, x+0.005, y+h, black, 1.5);
 	DrawString(x+0.4*w, y+0.015, "root");
 
 	std::deque<double> root = map.at("root");
-	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.0, root);
+	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.5, root);
 
-	y = 0.0;
+	y = 0.001;
 	DrawQuads(x, y, w, h, white);
-	DrawLine(x+0.005, y+0.01, x+w-0.005, y+0.01, black, 1.5);
-	DrawLine(x+0.005, y+0.01, x+0.005, y+h+0.01, black, 1.5);
+	DrawLine(x+0.005, y+0.01, x+w, y+0.01, black, 1.5);
+	DrawLine(x+0.005, y+0.01, x+0.005, y+h, black, 1.5);
 	DrawString(x+0.4*w, y+0.015, "com");
 
 	std::deque<double> com = map.at("com");
-	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.0, com);
+	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.5, com);
 
 	glDisable(GL_COLOR_MATERIAL);
 	glPopMatrix();
@@ -606,7 +608,7 @@ DrawTorques()
 	double p_w = 0.15;
 	double p_h = 0.13;
 	double p_x = 0.01;
-	double p_y = 0.85;
+	double p_y = 0.82;
 
 	mTorques = mEnv->GetCharacter()->GetTorques();
 	DrawTorqueGraph("FemurR_x", 0, p_w, p_h, p_x, p_y);
@@ -681,8 +683,11 @@ DrawDevice()
 	if(mEnv->GetCharacter()->GetOnDevice())
 	{
 		DrawSkeleton(mEnv->GetDevice()->GetSkeleton());
+		glDisable(GL_LIGHTING);
 		DrawDeviceSignals();
-		DrawArrow();
+		glEnable(GL_LIGHTING);
+		if(mDrawArrow)
+			DrawArrow();
 	}
 }
 
@@ -693,19 +698,32 @@ DrawArrow()
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
 
-	Eigen::Vector4d color(0.2, 0.8, 0.2, 0.5);
+	Eigen::Vector4d color(0.6, 1.2, 0.6, 0.8);
 	mRI->setPenColor(color);
 
-	Eigen::Vector3d p = mEnv->GetCharacter()->GetSkeleton()->getBodyNode(1)->getTransform().translation();
-	Eigen::Vector3d dir = mEnv->GetCharacter()->GetSkeleton()->getBodyNode(1)->getTransform().rotation().col(2);
-	Eigen::Vector3d dir2 = mEnv->GetCharacter()->GetSkeleton()->getBodyNode(1)->getTransform().rotation().col(2);
-	dir2[2] *= -1;
+	Eigen::Vector3d p_L = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurL")->getTransform().translation();
+	Eigen::Matrix3d rot_L = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurL")->getTransform().rotation();
+	Eigen::Vector3d dir_L1 = rot_L.col(2);
+	Eigen::Vector3d dir_L2 = rot_L.col(2);
+	dir_L2[2] *= -1;
 
 	Eigen::VectorXd f = mEnv->GetDevice()->GetDesiredTorques2();
+
 	if(f[6] < 0)
-		drawArrow3D(p, dir2, -0.08*f[6], 0.01, 0.03);
+		drawArrow3D(p_L, dir_L2,-0.04*f[6], 0.01, 0.03);
 	else
-		drawArrow3D(p, dir, 0.08*f[6], 0.01, 0.03);
+		drawArrow3D(p_L, dir_L1, 0.04*f[6], 0.01, 0.03);
+
+	Eigen::Vector3d p_R = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurR")->getTransform().translation();
+	Eigen::Matrix3d rot_R = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurR")->getTransform().rotation();
+	Eigen::Vector3d dir_R1 = rot_R.col(2);
+	Eigen::Vector3d dir_R2 = rot_R.col(2);
+	dir_R2[2] *= -1;
+
+	if(f[7] < 0)
+		drawArrow3D(p_R, dir_R2,-0.04*f[7], 0.015, 0.03);
+	else
+		drawArrow3D(p_R, dir_R1, 0.04*f[7], 0.015, 0.03);
 
 	glDisable(GL_COLOR_MATERIAL);
 }
@@ -729,7 +747,7 @@ DrawDeviceSignals()
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
 
-	double p_w = 0.24;
+	double p_w = 0.30;
 	double p_h = 0.15;
 
 	double pl_x = 0.70;
@@ -742,7 +760,7 @@ DrawDeviceSignals()
 
 	// std::deque<double> data_y = mEnv->GetDevice()->GetSignals(0);
 
-	DrawString(pl_x+0.5*p_w, pl_y-0.01, "Device L");
+	DrawString(pl_x+0.5*p_w, pl_y-0.02, "Device L");
 	DrawQuads(pl_x, pl_y, p_w, p_h, white);
 	DrawLine(pl_x+0.01, pl_y+0.01, pl_x+p_w-0.01, pl_y+0.01, black, 1.0);
 	DrawLine(pl_x+0.01, pl_y+0.01, pl_x+0.01, pl_y+p_h-0.01, black, 1.0);
@@ -750,10 +768,10 @@ DrawDeviceSignals()
 
 	std::deque<double> data_L = mEnv->GetDevice()->GetSignals(1);
 	std::deque<double> data_L_femur = mEnv->GetCharacter()->GetSignals(1);
-	DrawLineStrip(pl_x+0.01, pl_y+0.01, offset_x, offset_y, red, 2.0, data_L, blue, 2.0, data_L_femur);
+	DrawLineStrip(pl_x+0.01, pl_y+0.01, offset_x, offset_y, blue, 2.0, data_L, red, 2.0, data_L_femur);
 	// DrawLineStrip(pl_x+0.01, pl_y+0.01, offset_x, offset_y, red, 2.0, data_L, blue, 2.0, data_y);
 
-	DrawString(pr_x+0.5*p_w, pr_y-0.01, "Device R");
+	DrawString(pr_x+0.5*p_w, pr_y-0.02, "Device R");
 	DrawQuads(pr_x, pr_y, p_w, p_h, white);
 	DrawLine(pr_x+0.01, pr_y+0.01, pr_x+p_w-0.01, pr_y+0.01, black, 1.0);
 	DrawLine(pr_x+0.01, pr_y+0.01, pr_x+0.01, pr_y+p_h-0.01, black, 1.0);
@@ -761,7 +779,7 @@ DrawDeviceSignals()
 
 	std::deque<double> data_R = mEnv->GetDevice()->GetSignals(2);
 	std::deque<double> data_R_femur = mEnv->GetCharacter()->GetSignals(0);
-	DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R, blue, 2.0, data_R_femur);
+	DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, blue, 2.0, data_R, red, 2.0, data_R_femur);
 	// DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R, blue, 2.0, data_y);
 
 	glDisable(GL_COLOR_MATERIAL);
@@ -836,9 +854,7 @@ void
 Window::
 DrawSkeleton(const SkeletonPtr& skel)
 {
-	glPushMatrix();
 	DrawBodyNode(skel->getRootBodyNode());
-	glPopMatrix();
 }
 
 void
@@ -1245,7 +1261,7 @@ DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vecto
 
 	glBegin(GL_LINE_STRIP);
 	for(int i=0; i<data1.size(); i++)
-		glVertex2f(x + offset_x*i, y + 0.7*offset_y*data1.at(i));
+		glVertex2f(x + offset_x*i, y + 0.5*offset_y*data1.at(i));
 	glEnd();
 
 	// Eigen::Vector4d blend((color[0]+color1[0])/2.0, (color[1]+color1[1])/2.0, (color[2]+color1[2])/2.0, (color[3]+color1[3])/2.0);

@@ -177,6 +177,7 @@ private:
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;
 	Eigen::VectorXd mDesiredTorque;
+	Eigen::VectorXd mDesiredTorque_prev;
 
 	double r_torque_min;
 	std::vector<double> mRewards;

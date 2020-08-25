@@ -151,8 +151,11 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	mAction.resize(mNumActiveDof);
 	mAction_prev.resize(mNumActiveDof);
 
-	mFemurSignals_L.resize(1200);
-	mFemurSignals_R.resize(1200);
+	mDesiredTorque.resize(mNumDof);
+	mDesiredTorque_prev.resize(mNumDof);
+
+	mFemurSignals_L.resize(1800);
+	mFemurSignals_R.resize(1800);
 
 	std::deque<double> pose_(60, 0);
 	std::deque<double> vel_(60, 0);
@@ -348,8 +351,8 @@ Reset()
 
 	mFemurSignals_L.clear();
 	mFemurSignals_R.clear();
-	mFemurSignals_L.resize(1200);
-	mFemurSignals_R.resize(1200);
+	mFemurSignals_L.resize(1800);
+	mFemurSignals_R.resize(1800);
 
 	if(mUseMuscle)
 		Reset_Muscles();
@@ -748,8 +751,8 @@ SetAction(const Eigen::VectorXd& a)
 {
 	double action_scale = 0.1;
 	mAction = a*action_scale;
-	mAction = mAction*0.5 + mAction_prev*0.5;
-	mAction_prev = mAction;
+	// mAction = mAction*0.5 + mAction_prev*0.5;
+	// mAction_prev = mAction;
 
 	double t = mWorld->getTime();
 	this->SetTargetPosAndVel(t, mControlHz);
@@ -759,12 +762,17 @@ void
 Character::
 SetDesiredTorques()
 {
+	for(int i=0; i<mDesiredTorque.size(); i++){
+		mDesiredTorque_prev[i] = mDesiredTorque[i];
+	}
+
 	Eigen::VectorXd p_des = mTargetPositions;
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction;
 	mDesiredTorque = this->GetSPDForces(p_des);
 
 	for(int i=0; i<mDesiredTorque.size(); i++){
 		mDesiredTorque[i] = Utils::Clamp(mDesiredTorque[i], -maxForces[i], maxForces[i]);
+		mDesiredTorque[i] = 0.2*mDesiredTorque[i]+0.8*mDesiredTorque_prev[i];
 	}
 
 	mFemurSignals_L.pop_back();

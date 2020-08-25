@@ -88,6 +88,7 @@ private:
 	bool mSimulating;
 	bool mDrawCharacter;
 	bool mDrawTarget;
+	bool mDrawArrow;
 	bool mDrawOBJ;
 	bool mDrawShadow;
 	bool mDrawTrajectory;
@@ -100,8 +101,6 @@ private:
 	bool mTalusL;
 	bool mTalusR;
 	bool isDrawTarget;
-
-	double mGain;
 
 	Eigen::Affine3d mViewMatrix;
 	std::vector<Eigen::Vector3d> mTrajectory;

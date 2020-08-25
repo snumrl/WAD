@@ -45,7 +45,7 @@
     </Node>
 
     <Node name="FastenerLeftOut" parent="RodLeft" >
-        <Body type="Box" mass="0.05" size="0.03 0.03 0.20" contact="Off" color="0.3 0.3 0.3 1.0">
+        <Body type="Box" mass="0.05" size="0.03 0.03 0.18" contact="Off" color="0.3 0.3 0.3 1.0">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.175 0.74 -0.0 "/>
         </Body>
         <Joint type="Weld">
@@ -58,13 +58,13 @@
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.09 0.74 0.075 "/>
         </Body>
         <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.09 0.74 0.075 "/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.74 0.075 "/>
         </Joint>
     </Node>
 
     <Node name="FastenerLeftBack" parent="FastenerLeftOut" >
         <Body type="Box" mass="0.05" size="0.16 0.03 0.03" contact="Off" color="0.3 0.3 0.3 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.74 -0.075"/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.09 0.74 -0.075"/>
         </Body>
         <Joint type="Weld">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.74 -0.075"/>
@@ -81,7 +81,7 @@
     </Node>
 
     <Node name="FastenerRightOut" parent="RodRight" >
-        <Body type="Box" mass="0.05" size="0.03 0.03 0.20" contact="Off" color="0.3 0.3 0.3 1.0">
+        <Body type="Box" mass="0.05" size="0.03 0.03 0.18" contact="Off" color="0.3 0.3 0.3 1.0">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.175 0.74 -0.0 "/>
         </Body>
         <Joint type="Weld">
@@ -94,7 +94,7 @@
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.09 0.74 0.08 "/>
         </Body>
         <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.175 0.74 0.08 "/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.1 0.74 0.08 "/>
         </Joint>
     </Node>
 
@@ -103,7 +103,7 @@
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.09 0.74 -0.075 "/>
         </Body>
         <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.18 0.74 -0.075 "/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.1 0.74 -0.075 "/>
         </Joint>
     </Node>
 </Skeleton>
