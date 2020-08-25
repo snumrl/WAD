@@ -682,7 +682,32 @@ DrawDevice()
 	{
 		DrawSkeleton(mEnv->GetDevice()->GetSkeleton());
 		DrawDeviceSignals();
+		DrawArrow();
 	}
+}
+
+void
+Window::
+DrawArrow()
+{
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+
+	Eigen::Vector4d color(0.2, 0.8, 0.2, 0.5);
+	mRI->setPenColor(color);
+
+	Eigen::Vector3d p = mEnv->GetCharacter()->GetSkeleton()->getBodyNode(1)->getTransform().translation();
+	Eigen::Vector3d dir = mEnv->GetCharacter()->GetSkeleton()->getBodyNode(1)->getTransform().rotation().col(2);
+	Eigen::Vector3d dir2 = mEnv->GetCharacter()->GetSkeleton()->getBodyNode(1)->getTransform().rotation().col(2);
+	dir2[2] *= -1;
+
+	Eigen::VectorXd f = mEnv->GetDevice()->GetDesiredTorques2();
+	if(f[6] < 0)
+		drawArrow3D(p, dir2, -0.08*f[6], 0.01, 0.03);
+	else
+		drawArrow3D(p, dir, 0.08*f[6], 0.01, 0.03);
+
+	glDisable(GL_COLOR_MATERIAL);
 }
 
 void
@@ -710,7 +735,7 @@ DrawDeviceSignals()
 	double pl_x = 0.70;
 	double pl_y = 0.83;
 	double pr_x = 0.70;
-	double pr_y = 0.65;
+	double pr_y = 0.60;
 
 	double offset_x = 0.00015;
 	double offset_y = 0.001;

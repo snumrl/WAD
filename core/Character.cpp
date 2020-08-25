@@ -767,11 +767,11 @@ SetDesiredTorques()
 		mDesiredTorque[i] = Utils::Clamp(mDesiredTorque[i], -maxForces[i], maxForces[i]);
 	}
 
-	mFemurSignals_R.pop_back();
-	mFemurSignals_R.push_front(mDesiredTorque[6]);
-
 	mFemurSignals_L.pop_back();
-	mFemurSignals_L.push_front(mDesiredTorque[13]);
+	mFemurSignals_L.push_front(mDesiredTorque[6]);
+
+	mFemurSignals_R.pop_back();
+	mFemurSignals_R.push_front(mDesiredTorque[13]);
 
 	// if(mUseDeviceNN){
 	//  mDevice->SetDesiredTorques2();
