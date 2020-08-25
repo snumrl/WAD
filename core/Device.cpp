@@ -63,6 +63,10 @@ Initialize(dart::simulation::WorldPtr& wPtr, bool nn)
     else
         mRootJointDof = 0;
 
+    mDeviceSignals_y = std::deque<double>(1800,0);
+    mDeviceSignals_L = std::deque<double>(1800,0);
+    mDeviceSignals_R = std::deque<double>(1800,0);
+
     mNumDof = mSkeleton->getNumDofs();
     mNumActiveDof = mNumDof-mRootJointDof;
     mNumState = this->GetState().rows();
@@ -72,16 +76,9 @@ Initialize(dart::simulation::WorldPtr& wPtr, bool nn)
     mTorqueMax = 15.0;
 
     mDesiredTorque = Eigen::VectorXd::Zero(mNumDof);
-    mDesiredTorque_Buffer.resize(600);
+    mDesiredTorque_Buffer.resize(1800);
     for(auto& t : mDesiredTorque_Buffer)
         t = Eigen::VectorXd::Zero(mNumDof);
-    mDeviceSignals_y.resize(600);
-    mDeviceSignals_L.resize(600);
-    mDeviceSignals_R.resize(600);
-
-    // this->Reset();
-    // auto weld_controller = std::make_shared<dart::constraint::WeldJointConstraint>(mSkeleton->getBodyNode("Controller"), mCharacter->GetSkeleton()->getBodyNode("Pelvis"));
-    // mWorld->getConstraintSolver()->addConstraint(weld_controller);
 }
 
 void
@@ -110,16 +107,16 @@ Reset()
     mSkeleton->computeForwardKinematics(true, false, false);
 
     mDesiredTorque_Buffer.clear();
-    mDesiredTorque_Buffer.resize(600);
+    mDesiredTorque_Buffer.resize(1800);
     for(auto& t : mDesiredTorque_Buffer)
         t = Eigen::VectorXd::Zero(12);
 
     mDeviceSignals_y.clear();
-    mDeviceSignals_y.resize(600);
+    mDeviceSignals_y.resize(1800);
     mDeviceSignals_L.clear();
-    mDeviceSignals_L.resize(600);
+    mDeviceSignals_L.resize(1800);
     mDeviceSignals_R.clear();
-    mDeviceSignals_R.resize(600);
+    mDeviceSignals_R.resize(1800);
 
     qr = 0.0;
     ql = 0.0;
@@ -174,14 +171,15 @@ GetState()
     //             root_linvel / 10., root_angvel/10., positions.tail<6>(), velocities.tail<6>()/10.;
 
     Eigen::VectorXd state(8);
-    // int delta_t = 180;
-    // for(int i=0; i<4; i++)
-    // {
-    //     double torque = mDeviceSignals_y.at(delta_t-i*60);
-    //     double des_torque_l =  1*torque;
-    //     double des_torque_r = -1*torque;
-    //     state<< des_torque_l, des_torque_r;
-    // }
+    int delta_t = 180;
+    for(int i=0; i<4; i++)
+    {
+        double torque = mDeviceSignals_y.at(delta_t-i*60);
+        double des_torque_l =  1*torque;
+        double des_torque_r = -1*torque;
+        state[i*2] = des_torque_l/15.0;
+        state[i*2+1] = des_torque_r/15.0 ;
+    }
 
     return state;
 }

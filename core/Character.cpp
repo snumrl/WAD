@@ -145,13 +145,14 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 
 	mNumDof = mSkeleton->getNumDofs();
 	mNumActiveDof = mNumDof - mRootJointDof;
-	mNumState = this->GetState().rows();
+	// mNumState = this->GetState().rows();
+	mNumState = 400;
 
 	mAction.resize(mNumActiveDof);
 	mAction_prev.resize(mNumActiveDof);
 
-	mFemurSignals_L.resize(600);
-	mFemurSignals_R.resize(600);
+	mFemurSignals_L.resize(1800);
+	mFemurSignals_R.resize(1800);
 
 	std::deque<double> pose_(60, 0);
 	std::deque<double> vel_(60, 0);
@@ -175,20 +176,6 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 			0.5, 0.3,
 			0.3, 0.2, 0.1,
 			0.3, 0.2, 0.1;
-	// mJointWeights <<
-	// 		0.1,
-	// 		0.1, 0.1, 0.1,
-	// 		0.1, 0.1, 0.1,
-	// 		0.1, 0.1,
-	// 		0.1, 0.1, 0.1,
-	// 		0.1, 0.1, 0.1;
-	// mJointWeights <<
-	// 		0.1,
-	// 		0.1, 0.1, 0.1, 0.1, 0.1,
-	// 		0.1, 0.1, 0.1, 0.1, 0.1,
-	// 		0.1, 0.1, 0.1, 0.1, 0.1,
-	// 		0.1, 0.1, 0.1, 0.1, 0.1,
-	// 		0.1, 0.1;
 
 	mJointWeights /= mJointWeights.sum();
 
@@ -211,46 +198,6 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 			60,
 			0, 0, 0;
 
-	// maxForces <<
-	// 		0, 0, 0, 0, 0, 0,
-	// 		200, 200, 200,
-	// 		200,
-	// 		200, 200, 200,
-	// 		200, 200, 200,
-	// 		200,
-	// 		200, 200, 200,
-	// 		200, 200, 200,
-	// 		200, 200, 200,
-	// 		200, 200, 200,
-	// 		200,
-	// 		200, 200, 200,
-	// 		200, 200, 200,
-	// 		200,
-	// 		200, 200, 200;
-
-	// maxForces <<
-	// 		0, 0, 0, 0, 0, 0,
-	// 		200, 200, 200, //femur
-	// 		200, // tibia
-	// 		200, 200, 200, // talus
-	// 		200, 200, // thumb 1,2
-	// 		200, 200, 200, // femur
-	// 		200, // tibia
-	// 		200, 200, 200, // talus
-	// 		200, 200, // thumb 1,2
-	// 		200, 200, 200, //spine
-	// 		200, 200, 200, //torso
-	// 		200, 200, 200, //neck
-	// 		200, 200, 200, // head
-	// 		200, 200, 200, //shoulder
-	// 		200, 200, 200, //arm
-	// 		200, // forearm
-	// 		200, 200, 200, // hand
-	// 		200, 200, 200, //shoulder
-	// 		200, 200, 200, //arm
-	// 		200, // forearm
-	// 		200, 200, 200; // hand
-
 	// this->get_record();
 }
 
@@ -259,10 +206,6 @@ Character::
 SetPDParameters()
 {
 	int dof = mSkeleton->getNumDofs();
-
-	// mKp = Eigen::VectorXd::Constant(dof,500);
-	// mKv = Eigen::VectorXd::Constant(dof,50);
-
 	mKp.resize(dof);
 	mKv.resize(dof);
 
@@ -297,50 +240,6 @@ SetPDParameters()
 		40, 40, 40,
 		30,
 		10, 10, 10;
-
-	// mKp << 0, 0, 0, 0, 0, 0,
-	// 	500, 500, 500,
-	// 	500,
-	// 	400, 400, 400,
-	// 	300, 300,
-	// 	500, 500, 500,
-	// 	500,
-	// 	400, 400, 400,
-	// 	300, 300,
-	// 	500, 500, 500,
-	// 	400, 400, 400,
-	// 	300, 300, 300,
-	// 	300, 300, 300,
-	// 	400, 400, 400,
-	// 	400, 400, 400,
-	// 	300,
-	// 	100, 100, 100,
-	// 	400, 400, 400,
-	// 	400, 400, 400,
-	// 	300,
-	// 	100, 100, 100;
-
-	// mKv << 0, 0, 0, 0, 0, 0,
-	// 	50, 50, 50,
-	// 	50,
-	// 	40, 40, 40,
-	// 	30, 30,
-	// 	50, 50, 50,
-	// 	50,
-	// 	40, 40, 40,
-	// 	30, 30,
-	// 	50, 50, 50,
-	// 	40, 40, 40,
-	// 	30, 30, 30,
-	// 	30, 30, 30,
-	// 	40, 40, 40,
-	// 	40, 40, 40,
-	// 	30,
-	// 	10, 10, 10,
-	// 	40, 40, 40,
-	// 	40, 40, 40,
-	// 	30,
-	// 	10, 10, 10;
 }
 
 void
@@ -364,7 +263,6 @@ Character::
 Initialize_Muscles()
 {
 	mUseMuscle = true;
-
 	mNumTotalRelatedDof = 0;
 	for(auto m : this->GetMuscles()){
 		m->Update();
@@ -450,8 +348,8 @@ Reset()
 
 	mFemurSignals_L.clear();
 	mFemurSignals_R.clear();
-	mFemurSignals_L.resize(600);
-	mFemurSignals_R.resize(600);
+	mFemurSignals_L.resize(1800);
+	mFemurSignals_R.resize(1800);
 
 	if(mUseMuscle)
 		Reset_Muscles();
@@ -473,9 +371,7 @@ Character::
 Step()
 {
 	SetDesiredTorques();
-
 	this->SetTorques();
-
 	mSkeleton->setForces(mDesiredTorque);
 }
 
@@ -631,16 +527,18 @@ GetState()
 		idx_angv_diff += 3;
 	}
 
-	// Eigen::VectorXd device_state = mDevice->GetState();
+	Eigen::VectorXd device_state = mDevice->GetState();
 
-	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
+	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+device_state.rows());
+
 	this->SetPhase();
 
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
-	state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
+	state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,device_state;
+
 	return state;
 }
 
@@ -659,19 +557,6 @@ double
 Character::
 GetReward_Character()
 {
-	// double pose_w = 0.50;
-	// double vel_w = 0.05;
-	// double end_eff_w = 0.15;
-	// double root_w = 0.20;
-	// double com_w = 0.10;
-
-	// double total_w = pose_w + vel_w + end_eff_w + root_w + com_w;
-	// pose_w /= total_w;
-	// vel_w /= total_w;
-	// end_eff_w /= total_w;
-	// root_w /= total_w;
-	// com_w /= total_w;
-
 	double pose_scale = 2.0;
 	double vel_scale = 0.1;
 	double end_eff_scale = 40.0;
@@ -679,13 +564,13 @@ GetReward_Character()
 	double com_scale = 10.0;
 	double err_scale = 2.0;  // error scale
 
-	double reward = 0;
-
 	double pose_err = 0;
 	double vel_err = 0;
 	double end_eff_err = 0;
 	double root_err = 0;
 	double com_err = 0;
+
+	double reward = 0;
 
 	Eigen::VectorXd cur_pos = mSkeleton->getPositions();
 	Eigen::VectorXd cur_vel = mSkeleton->getVelocities();
@@ -696,7 +581,7 @@ GetReward_Character()
 
 	int num_joints = mSkeleton->getNumJoints();
 
-	double root_rot_w = mJointWeights[0]; // mJointWeights
+	double root_rot_w = mJointWeights[0];
 
 	dart::dynamics::BodyNode* rootSim = mSkeleton->getBodyNode(0);
 	Eigen::Isometry3d rootTransSim = Utils::GetJointTransform(rootSim);
@@ -806,7 +691,7 @@ GetReward_Character()
 
 	// double r_ = pose_w * pose_reward + vel_w * vel_reward + end_eff_w * end_eff_reward + root_w * root_reward + com_w * com_reward;
 	double r_imitation = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
-	// double r_imitation = pose_reward * end_eff_reward * root_reward * com_reward;
+
 	// if(r_imitation < 0.7)
 	// 	r_imitation += 0.3;
 	// else
@@ -1068,17 +953,17 @@ SetConstraints()
 		mSkeleton->getBodyNode(0), mDevice->GetSkeleton()->getBodyNode(0)
 		);
 
-	// mWeldJoint_LeftLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
-	//    mSkeleton->getBodyNode("FemurL"), mDevice->GetSkeleton()->getBodyNode("FastenerLeftOut")
-	// 	);
+	mWeldJoint_LeftLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
+	   mSkeleton->getBodyNode("FemurL"), mDevice->GetSkeleton()->getBodyNode("FastenerLeftOut")
+		);
 
-	// mWeldJoint_RightLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
-	// 	mSkeleton->getBodyNode("FemurR"), mDevice->GetSkeleton()->getBodyNode("FastenerRightOut")
-	// 	);
+	mWeldJoint_RightLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
+		mSkeleton->getBodyNode("FemurR"), mDevice->GetSkeleton()->getBodyNode("FastenerRightOut")
+		);
 
 	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_Hip);
-	// mWorld->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
-	// mWorld->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
+	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
+	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
 }
 
 void
@@ -1103,8 +988,8 @@ On_Device()
 	mDevice->Reset();
 
 	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_Hip);
-	// mWorld->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
-	// mWorld->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
+	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
+	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
 	mWorld->addSkeleton(mDevice->GetSkeleton());
 }
 
@@ -1113,8 +998,8 @@ Character::
 Off_Device()
 {
 	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_Hip);
-	// mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_LeftLeg);
-	// mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_RightLeg);
+	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_LeftLeg);
+	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_RightLeg);
 	mWorld->removeSkeleton(mDevice->GetSkeleton());
 }
 
