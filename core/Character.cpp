@@ -151,8 +151,8 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	mAction.resize(mNumActiveDof);
 	mAction_prev.resize(mNumActiveDof);
 
-	mFemurSignals_L.resize(1800);
-	mFemurSignals_R.resize(1800);
+	mFemurSignals_L.resize(1200);
+	mFemurSignals_R.resize(1200);
 
 	std::deque<double> pose_(60, 0);
 	std::deque<double> vel_(60, 0);
@@ -348,8 +348,8 @@ Reset()
 
 	mFemurSignals_L.clear();
 	mFemurSignals_R.clear();
-	mFemurSignals_L.resize(1800);
-	mFemurSignals_R.resize(1800);
+	mFemurSignals_L.resize(1200);
+	mFemurSignals_R.resize(1200);
 
 	if(mUseMuscle)
 		Reset_Muscles();

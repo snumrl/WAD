@@ -63,9 +63,9 @@ Initialize(dart::simulation::WorldPtr& wPtr, bool nn)
     else
         mRootJointDof = 0;
 
-    mDeviceSignals_y = std::deque<double>(1800,0);
-    mDeviceSignals_L = std::deque<double>(1800,0);
-    mDeviceSignals_R = std::deque<double>(1800,0);
+    mDeviceSignals_y = std::deque<double>(1200,0);
+    mDeviceSignals_L = std::deque<double>(1200,0);
+    mDeviceSignals_R = std::deque<double>(1200,0);
 
     mNumDof = mSkeleton->getNumDofs();
     mNumActiveDof = mNumDof-mRootJointDof;
@@ -76,7 +76,7 @@ Initialize(dart::simulation::WorldPtr& wPtr, bool nn)
     mTorqueMax = 15.0;
 
     mDesiredTorque = Eigen::VectorXd::Zero(mNumDof);
-    mDesiredTorque_Buffer.resize(1800);
+    mDesiredTorque_Buffer.resize(1200);
     for(auto& t : mDesiredTorque_Buffer)
         t = Eigen::VectorXd::Zero(mNumDof);
 }
@@ -107,16 +107,16 @@ Reset()
     mSkeleton->computeForwardKinematics(true, false, false);
 
     mDesiredTorque_Buffer.clear();
-    mDesiredTorque_Buffer.resize(1800);
+    mDesiredTorque_Buffer.resize(1200);
     for(auto& t : mDesiredTorque_Buffer)
         t = Eigen::VectorXd::Zero(12);
 
     mDeviceSignals_y.clear();
-    mDeviceSignals_y.resize(1800);
+    mDeviceSignals_y.resize(1200);
     mDeviceSignals_L.clear();
-    mDeviceSignals_L.resize(1800);
+    mDeviceSignals_L.resize(1200);
     mDeviceSignals_R.clear();
-    mDeviceSignals_R.resize(1800);
+    mDeviceSignals_R.resize(1200);
 
     qr = 0.0;
     ql = 0.0;
@@ -148,7 +148,6 @@ Step(double t)
         Eigen::VectorXd tmp = Eigen::VectorXd::Zero(mDesiredTorque.size());
         tmp[6] = mDesiredTorque[6];
         tmp[9] = mDesiredTorque[7];
-
         mSkeleton->setForces(tmp);
     }
 }
@@ -198,54 +197,6 @@ void
 Device::
 SetDesiredTorques(double t)
 {
-    double offset = 60.0;
-
-    for(int i=0; i<mAction.size(); i++)
-    {
-        if(mAction[i] > offset)
-            mAction[i] = offset;
-        if(mAction[i] < -offset)
-            mAction[i] = -offset;
-    }
-
-    // double ratio = Pulse_Constant(t);
-    double ratio = 1.0;
-
-    Eigen::VectorXd cur_action;
-    cur_action.resize(12);
-    cur_action.head<6>().setZero();
-    cur_action.segment<3>(6) = ratio * mAction.head<3>();
-    cur_action.segment<3>(9) = ratio * mAction.segment<3>(3);
-    mDesiredTorque_Buffer.pop_back();
-    mDesiredTorque_Buffer.push_front(cur_action);
-
-    mDesiredTorque = mDesiredTorque_Buffer.at(180);
-
-    // double offset_L = mAction_Device[6];
-    // if(offset_L<-2.0)
-    //  offset_L = -2.0;
-    // if(offset_L>2.0)
-    //  offset_L = 2.0;
-
-    // offset_L = 0.5 + offset_L/4.0;
-
-    // double offset_R = mAction_Device[7];
-    // if(offset_R<-2.0)
-    //  offset_R = -2.0;
-    // if(offset_R>2.0)
-    //  offset_R = 2.0;
-
-    // offset_R = 0.5 + offset_R/4.0;
-
-    // double ratio = Pulse_Linear(t);
-    // double ratio_L = Pulse_Period(t, offset_L);
-    // double ratio_R = Pulse_Period(t, offset_R);
-
-    // mDesiredTorque_Device.head<6>().setZero();
-    // mDesiredTorque_Device.segment<3>(6) = ratio * mAction_Device.head<3>();
-    // mDesiredTorque_Device.segment<3>(9) = ratio * mAction_Device.segment<3>(3);
-    // mDesiredTorque_Device[6] = ratio * mAction_Device[0];
-    // mDesiredTorque_Device[7] = ratio * mAction_Device[1];
 }
 
 double
@@ -260,14 +211,14 @@ SetDesiredTorques2()
 {
     if(qr==0.0 && ql==0.0 && qr_prev==0.0 && ql_prev==0.0)
     {
-        ql = GetAngleQ(6);
-        qr = GetAngleQ(1);
+        ql = GetAngleQ("FemurL");
+        qr = GetAngleQ("FemurR");
         ql_prev = ql;
         qr_prev = qr;
     }
     else{
-        ql = GetAngleQ(6);
-        qr = GetAngleQ(1);
+        ql = GetAngleQ("FemurL");
+        qr = GetAngleQ("FemurR");
     }
 
     double alpha = 0.05;
@@ -303,6 +254,26 @@ SetDesiredTorques2()
     mDesiredTorque[7] = des_torque_r;
 }
 
+double
+Device::
+GetAngleQ(const std::string& name)
+{
+    dart::dynamics::SkeletonPtr skel_char = mCharacter->GetSkeleton();
+    Eigen::Vector3d dir = skel_char->getBodyNode(0)->getCOMLinearVelocity();
+    dir /= dir.norm();
+
+    Eigen::Vector3d p12 = skel_char->getBodyNode(name)->getCOM()-skel_char->getBodyNode(0)->getCOM();
+    double p12_len = p12.norm();
+
+    double l2 = dir[0]*p12[0] + dir[2]*p12[2];
+    double l1 = sqrt(p12[0]*p12[0]+p12[2]*p12[2] - l2*l2);
+    double x = sqrt(p12_len*p12_len - l1*l1);
+
+    double sin = l2 / x;
+
+    return asin(sin);
+}
+
 Eigen::VectorXd
 Device::
 GetDesiredTorques()
@@ -315,26 +286,6 @@ Device::
 GetDesiredTorques2()
 {
     return mDesiredTorque;
-}
-
-double
-Device::
-GetAngleQ(int idx)
-{
-    dart::dynamics::SkeletonPtr skel_char = mCharacter->GetSkeleton();
-    Eigen::Vector3d dir = skel_char->getBodyNode(0)->getCOMLinearVelocity();
-    dir /= dir.norm();
-
-    Eigen::Vector3d p12 = skel_char->getBodyNode(idx)->getCOM()-skel_char->getBodyNode(0)->getCOM();
-    double p12_len = p12.norm();
-
-    double l2 = dir[0]*p12[0] + dir[2]*p12[2];
-    double l1 = sqrt(p12[0]*p12[0]+p12[2]*p12[2] - l2*l2);
-    double x = sqrt(p12_len*p12_len - l1*l1);
-
-    double sin = l2 / x;
-
-    return asin(sin);
 }
 
 std::deque<double>

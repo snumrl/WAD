@@ -223,9 +223,12 @@ keyboard(unsigned char _key, int _x, int _y)
 		Win3D::keyboard(_key,_x,_y);break;
 	}
 
-	// Eigen::VectorXd f = Eigen::VectorXd::Zero(10);
+	// Eigen::VectorXd f = Eigen::VectorXd::Zero(12);
+	// f[6] = f_;
 	// Eigen::VectorXd f = Eigen::VectorXd::Constant(10,500);
 	// mEnv->GetDevice()->GetSkeleton()->setForces(f);
+
+
 }
 
 void
@@ -709,7 +712,7 @@ DrawDeviceSignals()
 	double pr_x = 0.70;
 	double pr_y = 0.65;
 
-	double offset_x = 0.0001;
+	double offset_x = 0.00015;
 	double offset_y = 0.001;
 
 	// std::deque<double> data_y = mEnv->GetDevice()->GetSignals(0);
@@ -1208,8 +1211,8 @@ DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vecto
 	mRI->setLineWidth(line_width);
 
 	glBegin(GL_LINE_STRIP);
-	for(int i=0; i<data.size(); i++)
-		glVertex2f(x + offset_x*i, y + offset_y*data.at(i));
+	for(int i=180; i<data.size(); i++)
+		glVertex2f(x + offset_x*(i-180), y + offset_y*data.at(i));
 	glEnd();
 
 	mRI->setPenColor(color1);

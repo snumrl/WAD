@@ -45,7 +45,7 @@ public:
     void SetTorqueMax(double m){ mTorqueMax = m;}
     double GetTorqueMax(){ return mTorqueMax;}
 
-    double GetAngleQ(int idx);
+    double GetAngleQ(const std::string& name);
     // void SetSignals();
     std::deque<double> GetSignals(int idx);
 
