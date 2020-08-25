@@ -71,13 +71,17 @@ Initialize(dart::simulation::WorldPtr& wPtr, bool nn)
 
     mTorqueMax = 15.0;
 
-    mDesiredTorque = Eigen::VectorXd::Zero(12);
+    mDesiredTorque = Eigen::VectorXd::Zero(mNumDof);
     mDesiredTorque_Buffer.resize(600);
     for(auto& t : mDesiredTorque_Buffer)
-        t = Eigen::VectorXd::Zero(12);
+        t = Eigen::VectorXd::Zero(mNumDof);
     mDeviceSignals_y.resize(600);
     mDeviceSignals_L.resize(600);
     mDeviceSignals_R.resize(600);
+
+    // this->Reset();
+    // auto weld_controller = std::make_shared<dart::constraint::WeldJointConstraint>(mSkeleton->getBodyNode("Controller"), mCharacter->GetSkeleton()->getBodyNode("Pelvis"));
+    // mWorld->getConstraintSolver()->addConstraint(weld_controller);
 }
 
 void
@@ -144,15 +148,10 @@ Step(double t)
     {
         SetDesiredTorques2();
 
-        int dof = mCharacter->GetNumDof();
-        int root_dof = mCharacter->GetRootJointDof();
-        Eigen::VectorXd char_torques = Eigen::VectorXd::Zero(dof);
-        char_torques.tail(dof-root_dof) = mCharacter->GetDesiredTorques();
-        char_torques[6] += mDesiredTorque[6];
-        char_torques[15] += mDesiredTorque[7];
-        mCharacter->GetSkeleton()->setForces(char_torques);
-
         Eigen::VectorXd tmp = Eigen::VectorXd::Zero(mDesiredTorque.size());
+        tmp[6] = mDesiredTorque[6];
+        tmp[9] = mDesiredTorque[7];
+
         mSkeleton->setForces(tmp);
     }
 }
@@ -162,17 +161,28 @@ Device::
 GetState()
 {
     // root Pos & Vel
-    Eigen::VectorXd positions = mSkeleton->getPositions();
-    Eigen::VectorXd velocities = mSkeleton->getVelocities();
+    // Eigen::VectorXd positions = mSkeleton->getPositions();
+    // Eigen::VectorXd velocities = mSkeleton->getVelocities();
 
-    dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
-    Eigen::Quaterniond rotation(root->getWorldTransform().rotation());
-    Eigen::Vector3d root_linvel = root->getCOMLinearVelocity();
-    Eigen::Vector3d root_angvel = root->getAngularVelocity();
-    Eigen::VectorXd state(23);
+    // dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
+    // Eigen::Quaterniond rotation(root->getWorldTransform().rotation());
+    // Eigen::Vector3d root_linvel = root->getCOMLinearVelocity();
+    // Eigen::Vector3d root_angvel = root->getAngularVelocity();
+    // Eigen::VectorXd state(23);
 
-    state << mPhase, rotation.w(), rotation.x(), rotation.y(), rotation.z(),
-                root_linvel / 10., root_angvel/10., positions.tail<6>(), velocities.tail<6>()/10.;
+    // state << mPhase, rotation.w(), rotation.x(), rotation.y(), rotation.z(),
+    //             root_linvel / 10., root_angvel/10., positions.tail<6>(), velocities.tail<6>()/10.;
+
+    Eigen::VectorXd state(8);
+    // int delta_t = 180;
+    // for(int i=0; i<4; i++)
+    // {
+    //     double torque = mDeviceSignals_y.at(delta_t-i*60);
+    //     double des_torque_l =  1*torque;
+    //     double des_torque_r = -1*torque;
+    //     state<< des_torque_l, des_torque_r;
+    // }
+
     return state;
 }
 
@@ -252,43 +262,38 @@ SetDesiredTorques2()
 {
     if(qr==0.0 && ql==0.0 && qr_prev==0.0 && ql_prev==0.0)
     {
-        qr = GetAngleQ(1);
         ql = GetAngleQ(6);
-        qr_prev = qr;
+        qr = GetAngleQ(1);
         ql_prev = ql;
+        qr_prev = qr;
     }
     else{
-        qr = GetAngleQ(1);
         ql = GetAngleQ(6);
+        qr = GetAngleQ(1);
     }
 
     double alpha = 0.05;
-    qr = lp_filter(qr, qr_prev, alpha);
     ql = lp_filter(ql, ql_prev, alpha);
-
-    qr_prev = qr;
+    qr = lp_filter(qr, qr_prev, alpha);
     ql_prev = ql;
+    qr_prev = qr;
 
     double y = sin(qr) - sin(ql);
 
-    // std::cout << "y : " << y << std::endl;
-    // std::cout << "qr : " << sin(qr) << std::endl;
-    // std::cout << "ql : " << sin(ql) << std::endl;
-
     int delta_t = 180;
-    double k_ = 10.0;
-    double beta_R = 1.0;
-    double beta_Rhip = 1.0;
+    double k_ = 30.0;
     double beta_L = 1.0;
     double beta_Lhip = 1.0;
+    double beta_R = 1.0;
+    double beta_Rhip = 1.0;
 
     mDeviceSignals_y.pop_back();
     mDeviceSignals_y.push_front(k_*y);
 
     // double torque = k_ * y_delta_t;
     double torque = mDeviceSignals_y.at(delta_t);
-    double des_torque_r = -1*torque*beta_R*beta_Rhip;
     double des_torque_l =  1*torque*beta_L*beta_Lhip;
+    double des_torque_r = -1*torque*beta_R*beta_Rhip;
 
     mDeviceSignals_L.pop_back();
     mDeviceSignals_L.push_front(des_torque_l);
@@ -296,8 +301,8 @@ SetDesiredTorques2()
     mDeviceSignals_R.pop_back();
     mDeviceSignals_R.push_front(des_torque_r);
 
-    mDesiredTorque[6] = des_torque_r;
-    mDesiredTorque[7] = des_torque_l;
+    mDesiredTorque[6] = des_torque_l;
+    mDesiredTorque[7] = des_torque_r;
 }
 
 Eigen::VectorXd

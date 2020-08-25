@@ -195,11 +195,15 @@ void
 Window::
 keyboard(unsigned char _key, int _x, int _y)
 {
-	Eigen::Vector3d force = Eigen::Vector3d::Zero();
+	// Eigen::Vector3d force = Eigen::Vector3d::Zero();
+	double f_ = 0.0;
 	switch (_key)
 	{
-	// case '+': force[0] += 500.0;break;
-	// case '-': force[0] -= 500.0;break;
+	case '+':
+		f_ += 1000.0;
+		std::cout << "force : " << f_ << std::endl;
+		break;
+	case '-': f_ -= 500.0;break;
 	// case '+':
 	//  mGain += 50.0;
 	//  mEnv->GetCharacter()->SetKp(mGain);
@@ -214,14 +218,14 @@ keyboard(unsigned char _key, int _x, int _y)
 	//  std::cout << "kp : " << mGain << std::endl;
 	//  std::cout << "kv : " << mGain*0.1 << std::endl;
 	//  break;
-	case '+': mOffset[offsetIdx]+=0.2;break;
-	case '-': mOffset[offsetIdx]-=0.2;break;
-	case '1': offsetIdx = 0;break;
-	case '2': offsetIdx = 1;break;
-	case '3': offsetIdx = 2;break;
-	case '4': offsetIdx = 3;break;
-	case '5': offsetIdx = 4;break;
-	case '6': offsetIdx = 5;break;
+	// case '+': mOffset[offsetIdx]+=0.2;break;
+	// case '-': mOffset[offsetIdx]-=0.2;break;
+	// case '1': offsetIdx = 0;break;
+	// case '2': offsetIdx = 1;break;
+	// case '3': offsetIdx = 2;break;
+	// case '4': offsetIdx = 3;break;
+	// case '5': offsetIdx = 4;break;
+	// case '6': offsetIdx = 5;break;
 	case 's': this->Step();break;
 	case 'r': this->Reset();break;
 	case ' ': mSimulating = !mSimulating;break;
@@ -243,10 +247,10 @@ keyboard(unsigned char _key, int _x, int _y)
 
 	// std::cout << mOffset[0] << " " << mOffset[1] << " " << mOffset[2] << " " << mOffset[3] << " " << mOffset[4] << " " << mOffset[5] << std::endl;
 	// mEnv->GetCharacter()->GetBVH()->SetMotionOffset(mOffset);
-	// Eigen::VectorXd f = Eigen::VectorXd::Zero(12);
-	// f.segment<3>(6) = force;
-	// f.segment<3>(9) = force;
+	// Eigen::VectorXd f = Eigen::VectorXd::Zero(10);
+	// Eigen::VectorXd f = Eigen::VectorXd::Constant(10,500);
 
+	// mEnv->GetDevice()->GetSkeleton()->setForces(f);
 }
 
 void
@@ -704,6 +708,7 @@ DrawDevice()
 	{
 		DrawSkeleton(mEnv->GetDevice()->GetSkeleton());
 		DrawDeviceSignals();
+		// DrawDeviceSignals2();
 	}
 }
 
@@ -773,6 +778,73 @@ DrawDeviceSignals()
 	glPopMatrix();
 	glMatrixMode(oldMode);
 }
+
+// void
+// Window::
+// DrawDeviceSignals2()
+// {
+// 	GLint oldMode;
+// 	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
+// 	glMatrixMode(GL_PROJECTION);
+
+// 	glPushMatrix();
+// 	glLoadIdentity();
+// 	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
+
+// 	glMatrixMode(GL_MODELVIEW);
+// 	glPushMatrix();
+// 	glLoadIdentity();
+
+// 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+// 	glEnable(GL_COLOR_MATERIAL);
+
+// 	// graph coord & size
+// 	double p_w = 0.15;
+// 	double p_h = 0.13;
+
+// 	double pl_x = 0.01;
+// 	double pl_y = 0.85;
+
+// 	double pr_x = 0.01;
+// 	double pr_y = 0.45;
+
+// 	// graph
+// 	double offset_x = 0.0003;
+// 	double offset_y = 0.003;
+
+// 	std::deque<double> data_y = mEnv->GetDevice()->GetSignals(0);
+
+// 	// device L
+// 	DrawQuads(pl_x, pl_y, p_w, p_h, white);
+// 	DrawLine(pl_x+0.01, pl_y+0.01, pl_x+p_w-0.01, pl_y+0.01, black, 1.0);
+// 	DrawLine(pl_x+0.01, pl_y+0.01, pl_x+0.01, pl_y+p_h-0.01, black, 1.0);
+// 	DrawLine(pl_x+0.01+offset_x*340, pl_y+0.01, pl_x+0.01+offset_x*340, pl_y+p_h-0.01, grey, 1.0);
+// 	DrawString(pl_x+0.5*p_w, pl_y-0.01, "Device L");
+
+// 	std::deque<double> data_L = mEnv->GetDevice()->GetSignals(1);
+// 	// std::deque<double> data_L_femur = mEnv->GetCharacter()->GetSignals(1);
+// 	// DrawLineStrip(pl_x+0.01, pl_y+0.01, offset_x, offset_y, red, 2.0, data_L, blue, 2.0, data_L_femur);
+// 	DrawLineStrip(pl_x+0.01, pl_y+0.01, offset_x, offset_y, red, 2.0, data_L, blue, 2.0, data_y);
+
+// 	// device R
+// 	DrawQuads(pr_x, pr_y, p_w, p_h, white);
+// 	DrawLine(pr_x+0.01, pr_y+0.01, pr_x+p_w-0.01, pr_y+0.01, black, 1.0);
+// 	DrawLine(pr_x+0.01, pr_y+0.01, pr_x+0.01, pr_y+p_h-0.01, black, 1.0);
+// 	DrawLine(pr_x+0.01+offset_x*340, pr_y+0.01, pr_x+0.01+offset_x*340, pr_y+p_h-0.01, grey, 1.0);
+// 	DrawString(pr_x+0.5*p_w, pr_y-0.01, "Device R");
+
+// 	std::deque<double> data_R = mEnv->GetDevice()->GetSignals(2);
+// 	// std::deque<double> data_R_femur = mEnv->GetCharacter()->GetSignals(0);
+// 	// DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R, blue, 2.0, data_R_femur);
+// 	DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R, blue, 2.0, data_y);
+
+// 	glDisable(GL_COLOR_MATERIAL);
+// 	glPopMatrix();
+
+// 	glMatrixMode(GL_PROJECTION);
+// 	glPopMatrix();
+// 	glMatrixMode(oldMode);
+// }
 
 void
 Window::

@@ -44,23 +44,6 @@ private:
 	std::vector<std::vector<int>> mTorques_dofs_num;
 };
 
-// class Energy
-// {
-// public:
-// 	Energy();
-
-// 	void Init(dart::dynamics::SkeletonPtr skel);
-// 	void Reset();
-// 	void SetEnergy(std::string name, int t, double val);
-// 	double GetEnergy(std::string name, int t);
-// 	std::map<std::string, std::vector<double>>& Get(){return mE;}
-// 	std::map<std::string, std::vector<int>>& GetNum(){return mE_num;}
-
-// private:
-// 	std::map<std::string, std::vector<double>> mE;
-// 	std::map<std::string, std::vector<int>> mE_num;
-// };
-
 class Character
 {
 public:
@@ -221,8 +204,6 @@ private:
     double root_reward = 0;
     double com_reward = 0;
 
-	// Energy* mEnergy;
-	// Energy* mEnergy_Device;
 	Torques* mTorques;
 
 	MuscleTuple mCurrentMuscleTuple;

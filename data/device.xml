@@ -1,134 +1,109 @@
 <Skeleton name="Device">
     <Node name="Controller" parent="None" >
         <Body type="Box" mass="1.5" size="0.32 0.04 0.04" contact="Off" color="0.5 0.5 0.5 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 1.06 -0.087 "/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 1.06 -0.09"/>
         </Body>
         <Joint type="Free">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 1.06 -0.0 "/>
         </Joint>
     </Node>
+
     <Node name="ControllerLeft" parent="Controller" >
         <Body type="Box" mass="0.1" size="0.04 0.04 0.1340" contact="Off" color="0.5 0.5 0.5 1.0">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.14 1.06 -0.0"/>
         </Body>
         <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.14 1.06 -0.0"/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.14 1.06 -0.09"/>
         </Joint>
     </Node>
+
     <Node name="ControllerRight" parent="Controller" >
         <Body type="Box" mass="0.1" size="0.04 0.04 0.1340" contact="Off" color="0.5 0.5 0.5 1.0">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.14 1.06 -0.0"/>
         </Body>
         <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.14 1.06 -0.0"/>
-        </Joint>
-    </Node>
-    <!-- <Node name="ControllerFront" parent="Controller" >
-        <Body type="Box" mass="0.1" size="0.32 0.04 0.04" contact="Off" color="0.5 0.5 0.5 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 1.06 0.087"/>
-        </Body>
-        <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 1.06 0.087"/>
-        </Joint>
-    </Node>
- -->
-    <Node name="ControllerLeft2" parent="ControllerLeft" >
-        <Body type="Box" mass="0.1" size="0.04 0.1 0.04" contact="Off" color="0.5 0.5 0.5 1.0">
-            <Transformation linear="0.8660 -0.5 0.0 0.0 0.5 0.8660 0.0 0.0 1.0" translation="0.1497 0.9968 -0.0"/>
-        </Body>
-        <Joint type="Revolute" axis ="0.0 0.0 1.0" bvh="Character1_RightLeg" lower="0.0" upper="3.14" force_lower="-1000.0" force_upper="1000.0">
-            <Transformation linear="0.8660 -0.5 0.0 0.0 0.5 0.8660 0.0 0.0 1.0" translation="0.14 1.06 0.0"/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.14 1.06 -0.09"/>
         </Joint>
     </Node>
 
-    <Node name="RodLeft" parent="ControllerLeft2" >
-        <Body type="Box" mass="0.15" size="0.01 0.24 0.01" contact="Off" color="0.3 0.3 0.3 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.15 0.7609 -0.0308 "/>
+    <!-- <Node name="ControllerFront" parent="Controller" >
+        <Body type="Box" mass="0.1" size="0.32 0.04 0.04" contact="Off" color="0.5 0.5 0.5 1.0">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 1.06 0.09"/>
         </Body>
-        <Joint type="Ball" lower="-3.14 -3.14 -3.14" upper="3.14 3.14 3.14" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0903 0.9337 -0.0116 "/>
+        <Joint type="Weld">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 1.06 0.09"/>
+        </Joint>
+    </Node> -->
+
+    <Node name="RodLeft" parent="ControllerLeft" >
+        <Body type="Box" mass="0.15" size="0.03 0.24 0.03" contact="Off" color="0.5 0.5 0.5 1.0">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.175 0.86 0.0 "/>
+        </Body>
+         <Joint type="Ball" lower="-3.14 -3.14 -3.14" upper="3.14 3.14 3.14" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0" actuator_type="FORCE">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.94 0.0"/>
         </Joint>
     </Node>
 
     <Node name="FastenerLeftOut" parent="RodLeft" >
-        <Body type="Box" mass="0.05" size="0.02 0.02 0.12" contact="Off" color="0.3 0.3 0.3 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.15 0.6409 -0.0308 "/>
+        <Body type="Box" mass="0.05" size="0.03 0.03 0.20" contact="Off" color="0.3 0.3 0.3 1.0">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.175 0.74 -0.0 "/>
         </Body>
         <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.15 0.6409 -0.0308 "/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.10 0.74 -0.0 "/>
         </Joint>
     </Node>
 
-    <Node name="FastenerLeftIn" parent="RodLeft" >
-        <Body type="Box" mass="0.05" size="0.02 0.02 0.12" contact="Off" color="0.3 0.3 0.3 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.04 0.6409 -0.0308 "/>
+    <Node name="FastenerLeftFront" parent="FastenerLeftOut" >
+        <Body type="Box" mass="0.05" size="0.16 0.03 0.03" contact="Off" color="0.3 0.3 0.3 1.0">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.09 0.74 0.075 "/>
         </Body>
         <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.04 0.6409 -0.0308 "/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.09 0.74 0.075 "/>
         </Joint>
     </Node>
 
-    <Node name="FastenerLeftFront" parent="RodLeft" >
-        <Body type="Box" mass="0.05" size="0.12 0.02 0.02" contact="Off" color="0.3 0.3 0.3 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.6409 0.0308 "/>
+    <Node name="FastenerLeftBack" parent="FastenerLeftOut" >
+        <Body type="Box" mass="0.05" size="0.16 0.03 0.03" contact="Off" color="0.3 0.3 0.3 1.0">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.74 -0.075"/>
         </Body>
         <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.6409 0.0308 "/>
-        </Joint>
-    </Node>
-
-    <Node name="FastenerLeftBack" parent="RodLeft" >
-        <Body type="Box" mass="0.05" size="0.12 0.02 0.02" contact="Off" color="0.3 0.3 0.3 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.6409 -0.0808 "/>
-        </Body>
-        <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.6409 -0.0808 "/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.74 -0.075"/>
         </Joint>
     </Node>
 
     <Node name="RodRight" parent="ControllerRight" >
-        <Body type="Box" mass="0.15" size="0.01 0.24 0.01" contact="Off" color="0.3 0.3 0.3 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.15 0.7609 -0.0308 "/>
+        <Body type="Box" mass="0.15" size="0.03 0.24 0.03" contact="Off" color="0.3 0.3 0.3 1.0">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.175 0.86 0.0 "/>
         </Body>
-        <Joint type="Ball" lower="-3.14 -3.14 -3.14" upper="3.14 3.14 3.14" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.0903 0.9337 -0.0116 "/>
+        <Joint type="Ball" lower="-3.14 -3.14 -3.14" upper="3.14 3.14 3.14" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0" actuator_type="FORCE">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.1 0.94 0.0"/>
         </Joint>
     </Node>
-
 
     <Node name="FastenerRightOut" parent="RodRight" >
-        <Body type="Box" mass="0.05" size="0.02 0.02 0.12" contact="Off" color="0.3 0.3 0.3 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.15 0.6409 -0.0308 "/>
+        <Body type="Box" mass="0.05" size="0.03 0.03 0.20" contact="Off" color="0.3 0.3 0.3 1.0">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.175 0.74 -0.0 "/>
         </Body>
         <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.15 0.6409 -0.0308 "/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.10 0.74 -0.0 "/>
         </Joint>
     </Node>
 
-    <Node name="FastenerRightIn" parent="RodRight" >
-        <Body type="Box" mass="0.05" size="0.02 0.02 0.12" contact="Off" color="0.3 0.3 0.3 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.04 0.6409 -0.0308 "/>
+    <Node name="FastenerRightFront" parent="FastenerRightOut" >
+        <Body type="Box" mass="0.05" size="0.16 0.03 0.03" contact="Off" color="0.3 0.3 0.3 1.0">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.09 0.74 0.08 "/>
         </Body>
         <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.04 0.6409 -0.0308 "/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.175 0.74 0.08 "/>
         </Joint>
     </Node>
 
-    <Node name="FastenerRightFront" parent="RodRight" >
-        <Body type="Box" mass="0.05" size="0.12 0.02 0.02" contact="Off" color="0.3 0.3 0.3 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.1 0.6409 0.0308 "/>
+    <Node name="FastenerRightBack" parent="FastenerRightOut" >
+        <Body type="Box" mass="0.05" size="0.16 0.03 0.03" contact="Off" color="0.3 0.3 0.3 1.0">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.09 0.74 -0.075 "/>
         </Body>
         <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.1 0.6409 0.0308 "/>
-        </Joint>
-    </Node>
-
-    <Node name="FastenerRightBack" parent="RodRight" >
-        <Body type="Box" mass="0.05" size="0.12 0.02 0.02" contact="Off" color="0.3 0.3 0.3 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.1 0.6409 -0.0808 "/>
-        </Body>
-        <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.1 0.6409 -0.0808 "/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.18 0.74 -0.075 "/>
         </Joint>
     </Node>
 </Skeleton>

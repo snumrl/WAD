@@ -194,39 +194,39 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 
 	int dof = mSkeleton->getNumDofs();
 	maxForces.resize(dof);
-	// maxForces <<
-	// 		0, 0, 0, 0, 0, 0,
-	// 		200, 200, 200,
-	// 		150,
-	// 		90, 90, 90,
-	// 		200, 200, 200,
-	// 		150,
-	// 		90, 90, 90,
-	// 		200, 200, 200,
-	// 		30, 30, 30,
-	// 		100, 100, 100,
-	// 		60,
-	// 		0, 0, 0,
-	// 		100, 100, 100,
-	// 		60,
-	// 		0, 0, 0;
-
 	maxForces <<
 			0, 0, 0, 0, 0, 0,
 			200, 200, 200,
-			200,
+			150,
+			90, 90, 90,
 			200, 200, 200,
+			150,
+			90, 90, 90,
 			200, 200, 200,
-			200,
-			200, 200, 200,
-			200, 200, 200,
-			200, 200, 200,
-			200, 200, 200,
-			200,
-			200, 200, 200,
-			200, 200, 200,
-			200,
-			200, 200, 200;
+			30, 30, 30,
+			100, 100, 100,
+			60,
+			0, 0, 0,
+			100, 100, 100,
+			60,
+			0, 0, 0;
+
+	// maxForces <<
+	// 		0, 0, 0, 0, 0, 0,
+	// 		200, 200, 200,
+	// 		200,
+	// 		200, 200, 200,
+	// 		200, 200, 200,
+	// 		200,
+	// 		200, 200, 200,
+	// 		200, 200, 200,
+	// 		200, 200, 200,
+	// 		200, 200, 200,
+	// 		200,
+	// 		200, 200, 200,
+	// 		200, 200, 200,
+	// 		200,
+	// 		200, 200, 200;
 
 	// maxForces <<
 	// 		0, 0, 0, 0, 0, 0,
@@ -260,43 +260,43 @@ SetPDParameters()
 {
 	int dof = mSkeleton->getNumDofs();
 
-	mKp = Eigen::VectorXd::Constant(dof,500);
-	mKv = Eigen::VectorXd::Constant(dof,50);
+	// mKp = Eigen::VectorXd::Constant(dof,500);
+	// mKv = Eigen::VectorXd::Constant(dof,50);
 
-	// mKp.resize(dof);
-	// mKv.resize(dof);
+	mKp.resize(dof);
+	mKv.resize(dof);
 
-	// mKp << 0, 0, 0, 0, 0, 0,
-	// 	500, 500, 500,
-	// 	500,
-	// 	400, 400, 400,
-	// 	500, 500, 500,
-	// 	500,
-	// 	400, 400, 400,
-	// 	1000, 1000, 1000,
-	// 	100, 100, 100,
-	// 	400, 400, 400,
-	// 	300,
-	// 	100, 100, 100,
-	// 	400, 400, 400,
-	// 	300,
-	// 	100, 100, 100;
+	mKp << 0, 0, 0, 0, 0, 0,
+		500, 500, 500,
+		500,
+		400, 400, 400,
+		500, 500, 500,
+		500,
+		400, 400, 400,
+		1000, 1000, 1000,
+		100, 100, 100,
+		400, 400, 400,
+		300,
+		100, 100, 100,
+		400, 400, 400,
+		300,
+		100, 100, 100;
 
-	// mKv << 0, 0, 0, 0, 0, 0,
-	// 	50, 50, 50,
-	// 	50,
-	// 	40, 40, 40,
-	// 	50, 50, 50,
-	// 	50,
-	// 	40, 40, 40,
-	// 	100, 100, 100,
-	// 	10, 10, 10,
-	// 	40, 40, 40,
-	// 	30,
-	// 	10, 10, 10,
-	// 	40, 40, 40,
-	// 	30,
-	// 	10, 10, 10;
+	mKv << 0, 0, 0, 0, 0, 0,
+		50, 50, 50,
+		50,
+		40, 40, 40,
+		50, 50, 50,
+		50,
+		40, 40, 40,
+		100, 100, 100,
+		10, 10, 10,
+		40, 40, 40,
+		30,
+		10, 10, 10,
+		40, 40, 40,
+		30,
+		10, 10, 10;
 
 	// mKp << 0, 0, 0, 0, 0, 0,
 	// 	500, 500, 500,
@@ -379,7 +379,7 @@ Character::
 get_record()
 {
 	// mFemur_L_Avg.resize(34);
- //    mFemur_R_Avg.resize(34);
+    // mFemur_R_Avg.resize(34);
 	std::ifstream fileIn("../build/FemurL.txt");
     if(!fileIn.is_open())
     {
@@ -631,6 +631,8 @@ GetState()
 		idx_angv_diff += 3;
 	}
 
+	// Eigen::VectorXd device_state = mDevice->GetState();
+
 	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
 	this->SetPhase();
 
@@ -861,8 +863,8 @@ SetAction(const Eigen::VectorXd& a)
 {
 	double action_scale = 0.1;
 	mAction = a*action_scale;
-	// mAction = mAction*0.5 + mAction_prev*0.5;
-	// mAction_prev = mAction;
+	mAction = mAction*0.5 + mAction_prev*0.5;
+	mAction_prev = mAction;
 
 	double t = mWorld->getTime();
 	this->SetTargetPosAndVel(t, mControlHz);
@@ -876,11 +878,9 @@ SetDesiredTorques()
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction;
 	mDesiredTorque = this->GetSPDForces(p_des);
 
-	for(int i=0; i<mDesiredTorque.size(); i++)
-	{
+	for(int i=0; i<mDesiredTorque.size(); i++){
 		mDesiredTorque[i] = Utils::Clamp(mDesiredTorque[i], -maxForces[i], maxForces[i]);
 	}
-	// Utils::Clamp(mDesiredTorque, -maxForces, maxForces);
 
 	mFemurSignals_R.pop_back();
 	mFemurSignals_R.push_front(mDesiredTorque[6]);
@@ -1005,8 +1005,7 @@ GetPoseSlerp(double timeStep, double frameFraction, const Eigen::VectorXd& frame
 	{
 		auto joint = mSkeleton->getJoint(i);
 		int idx = joint->getIndexInSkeleton(0);
-		if(joint->getType()=="FreeJoint")
-		{
+		if(joint->getType()=="FreeJoint"){
 			Eigen::Vector3d basePos1Start = frameData.segment(idx,3);
 			Eigen::Vector3d basePos1End = frameDataNext.segment(idx,3);
 			Eigen::Vector3d basePos = basePos1Start + frameFraction*(basePos1End - basePos1Start);
@@ -1014,15 +1013,13 @@ GetPoseSlerp(double timeStep, double frameFraction, const Eigen::VectorXd& frame
 			pose.segment(idx,3) = basePos;
 			pose.segment(idx+3,3) = Utils::GetQuaternionSlerp(frameData.segment(idx+3,3),frameDataNext.segment(idx+3,3),frameFraction);
 		}
-		else if(joint->getType()=="RevoluteJoint")
-		{
+		else if(joint->getType()=="RevoluteJoint"){
 			pose[idx] = frameData[idx] + frameFraction * (frameDataNext[idx] - frameData[idx]);
 		}
 		else if(joint->getType()=="BallJoint"){
 			pose.segment(idx,3) = Utils::GetQuaternionSlerp(frameData.segment(idx,3),frameDataNext.segment(idx,3),frameFraction);
 		}
 	}
-
 	return pose;
 }
 
@@ -1060,7 +1057,7 @@ SetDevice(Device* device)
 	mDevice = device;
 	mUseDevice = true;
 	mOnDevice = true;
-	this->SetConstraints();
+	// this->SetConstraints();
 }
 
 void
@@ -1071,17 +1068,17 @@ SetConstraints()
 		mSkeleton->getBodyNode(0), mDevice->GetSkeleton()->getBodyNode(0)
 		);
 
-	mWeldJoint_LeftLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
-	   mSkeleton->getBodyNode("FemurL"), mDevice->GetSkeleton()->getBodyNode("FastenerLeftOut")
-		);
+	// mWeldJoint_LeftLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
+	//    mSkeleton->getBodyNode("FemurL"), mDevice->GetSkeleton()->getBodyNode("FastenerLeftOut")
+	// 	);
 
-	mWeldJoint_RightLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
-		mSkeleton->getBodyNode("FemurR"), mDevice->GetSkeleton()->getBodyNode("FastenerRightOut")
-		);
+	// mWeldJoint_RightLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
+	// 	mSkeleton->getBodyNode("FemurR"), mDevice->GetSkeleton()->getBodyNode("FastenerRightOut")
+	// 	);
 
 	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_Hip);
-	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
-	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
+	// mWorld->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
+	// mWorld->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
 }
 
 void
@@ -1106,8 +1103,8 @@ On_Device()
 	mDevice->Reset();
 
 	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_Hip);
-	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
-	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
+	// mWorld->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
+	// mWorld->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
 	mWorld->addSkeleton(mDevice->GetSkeleton());
 }
 
@@ -1116,42 +1113,10 @@ Character::
 Off_Device()
 {
 	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_Hip);
-	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_LeftLeg);
-	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_RightLeg);
+	// mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_LeftLeg);
+	// mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_RightLeg);
 	mWorld->removeSkeleton(mDevice->GetSkeleton());
 }
-
-// void
-// Character::
-// SetEnergy()
-// {
-// 	int offset = 6;
-// 	int n = mSkeleton->getNumJoints();
-// 	for(int i=1; i<n; i++)
-// 	{
-// 		std::string name = mSkeleton->getJoint(i)->getName();
-// 		int dof = mSkeleton->getJoint(i)->getNumDofs();
-// 		double torque = 0.0;
-// 		if(dof == 1)
-// 		{
-// 			torque = mDesiredTorque[offset];
-// 			if(torque<0)
-// 				torque *= -1;
-// 			offset += 1;
-// 		}
-// 		else if(dof == 3)
-// 		{
-// 			Eigen::Vector3d t_ = mDesiredTorque.segment(offset,3);
-// 			torque = t_.norm();
-// 			offset += 3;
-// 		}
-
-// 		if(mOnDevice)
-// 			mEnergy_Device->SetEnergy(name, (int)(mPhase/0.0303), torque);
-// 		else
-// 			mEnergy->SetEnergy(name, (int)(mPhase/0.0303), torque);
-// 	}
-// }
 
 void
 Character::
@@ -1297,24 +1262,4 @@ GetTorque(int dof, int phase)
 {
 	return mTorques_dofs_cur[dof][phase];
 }
-
-// void
-// Energy::
-// SetEnergy(std::string name, int t, double val)
-// {
-// 	int n = (mE_num.find(name)->second).at(t);
-// 	if(n==0)
-// 		(mE.find(name)->second).at(t) = val;
-// 	else
-// 		(mE.find(name)->second).at(t) = ((mE.find(name)->second).at(t)*n + val)/(double)(n+1);
-
-// 	(mE_num.find(name)->second).at(t) += 1;
-// }
-
-// double
-// Energy::
-// GetEnergy(std::string name, int t)
-// {
-// 	return (mE.find(name)->second).at(t);
-// }
 

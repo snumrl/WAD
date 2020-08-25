@@ -53,6 +53,7 @@ public:
 	void DrawRewardGraph(std::string name, double w, double h, double x, double y);
 	void DrawDevice();
 	void DrawDeviceSignals();
+	// void DrawDeviceSignals2();
 	void DrawTrajectory();
 	void DrawProgressBar();
 

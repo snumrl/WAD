@@ -158,7 +158,8 @@ ReadHierarchy(BVHNode* parent,const std::string& name,int& channel_offset,std::i
 			is>>x;
 			is>>y;
 			is>>z;
-			new_node->SetOffset(6.0*x,6.0*y,6.0*z);
+			// new_node->SetOffset(6.0*x,6.0*y,6.0*z);
+			new_node->SetOffset(100*x,100*y,100*z);
 		}
 		else if(!strcmp(buffer,"CHANNELS"))
 		{
@@ -237,10 +238,9 @@ Parse(const std::string& file,bool cyclic)
 				for(int j=0;j<mNumTotalChannels;j++)
 				{
 					is>>val;
-					if(i%4==0)
+					if(i%4==0){
 						mMotions[i/4][j] = val;
-						// if(j==1)
-						// 	mMotions[i/4][j] += 2.453;
+					}
 				}
 			}
 			mNumTotalFrames = mNumTotalFrames/4 + mNumTotalFrames%4;
@@ -339,15 +339,6 @@ Eigen::VectorXd
 BVH::
 GetMotion(int k)
 {
-	// Eigen::VectorXd v =  Eigen::VectorXd::Zero(mMotionFrames[0].size());
-	// // v[0] = -30.5073;
-	// // v[1] = 104.521;
-	// // v[2] = -237.413;
-	// v[3] = 3.43058;
-	// v[4] = -2.8926;
-	// v[5] = -8.40971;
-
-	// return v;
 	return mMotionFrames[k];
 }
 
@@ -404,75 +395,6 @@ GetMotionVel(int k)
 {
 	return mMotionVelFrames.row(k);
 }
-
-// Eigen::VectorXd
-// BVH::
-// GetMotion(double t)
-// {
-// 	int k = ((int)std::floor(t/mTimeStep));
-// 	if(mCyclic)
-// 		k %= mNumTotalFrames;
-// 	k = std::max(0,std::min(k,mNumTotalFrames-1));
-// 	Eigen::VectorXd m_t = mMotions[k];
-
-// 	// if(t==0){
-// 	// 	m_t.setZero();
-// 	// 	m_t[0] = -30.5073;
-// 	// 	m_t[1] = 104.521;
-// 	// 	m_t[2] = -237.413;
-// 	// 	// m_t[3] = 3.43058;
-// 	// 	// m_t[4] = -2.8926;
-// 	// 	// m_t[5] = -8.40971;
-// 	// 	// make
-// 	// }
-
-// 	for(auto& bn: mMap)
-// 		bn.second->Set(m_t);
-
-// 	int dof = mSkeleton->getNumDofs();
-// 	Eigen::VectorXd p = Eigen::VectorXd::Zero(dof);
-
-// 	for(auto ss : mBVHMap)
-// 	{
-// 		BodyNode* bn = mSkeleton->getBodyNode(ss.first);
-// 		Eigen::Matrix3d R = this->Get(ss.second);
-// 		Joint* jn = bn->getParentJoint();
-
-// 		int idx = jn->getIndexInSkeleton(0);
-// 		if(jn->getType()=="FreeJoint")
-// 		{
-// 			Eigen::Isometry3d T;
-// 			T.translation() = 0.01*m_t.segment<3>(0);
-// 			T.linear() = R;
-// 			p.segment<6>(idx) = FreeJoint::convertToPositions(T);
-// 		}
-// 		else if(jn->getType()=="BallJoint"){
-// 			p.segment<3>(idx) = BallJoint::convertToPositions(R);
-// 		}
-// 		else if(jn->getType()=="RevoluteJoint")
-// 		{
-// 			Eigen::Vector3d u =dynamic_cast<RevoluteJoint*>(jn)->getAxis();
-// 			Eigen::Vector3d aa = BallJoint::convertToPositions(R);
-// 			double val;
-// 			if((u-Eigen::Vector3d::UnitX()).norm()<1E-4)
-// 				val = aa[0];
-// 			else if((u-Eigen::Vector3d::UnitY()).norm()<1E-4)
-// 				val = aa[1];
-// 			else
-// 				val = aa[2];
-
-// 			if(val>M_PI)
-// 				val -= 2*M_PI;
-// 			else if(val<-M_PI)
-// 				val += 2*M_PI;
-
-// 			p[idx] = val;
-// 		}
-// 	}
-
-// 	return p;
-// }
-
 
 std::map<std::string,MASS::BVHNode::CHANNEL> BVHNode::CHANNEL_NAME =
 {
