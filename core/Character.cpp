@@ -145,8 +145,8 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 
 	mNumDof = mSkeleton->getNumDofs();
 	mNumActiveDof = mNumDof - mRootJointDof;
-	// mNumState = this->GetState().rows();
-	mNumState = 400;
+	// mNumState = 400;
+	mNumState = this->GetState().rows();
 
 	mAction.resize(mNumActiveDof);
 	mAction_prev.resize(mNumActiveDof);
@@ -173,33 +173,33 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	int num_joint = mSkeleton->getNumJoints();
 	mJointWeights.resize(num_joint);
 	mJointWeights <<
-			1.0,
-			0.5, 0.3, 0.2,
-			0.5, 0.3, 0.2,
-			0.5, 0.3,
-			0.3, 0.2, 0.1,
-			0.3, 0.2, 0.1;
+			0.5,			//Pelvis
+			0.5, 0.3, 0.2,	//Left Leg
+			0.5, 0.3, 0.2,	//Right Leg
+			0.5, 0.3,		//Torso & Neck
+			0.3, 0.2, 0.1,	//Left Arm
+			0.3, 0.2, 0.1;	//Right Arm
 
 	mJointWeights /= mJointWeights.sum();
 
 	int dof = mSkeleton->getNumDofs();
 	maxForces.resize(dof);
 	maxForces <<
-			0, 0, 0, 0, 0, 0,
-			200, 200, 200,
-			150,
-			90, 90, 90,
-			200, 200, 200,
-			150,
-			90, 90, 90,
-			200, 200, 200,
-			0, 0, 0,
-			100, 100, 100,
-			60,
-			0, 0, 0,
-			100, 100, 100,
-			60,
-			0, 0, 0;
+			0, 0, 0, 0, 0, 0,	//pelvis
+			200, 200, 200,		//Femur L
+			150,				//Tibia L
+			90, 90, 90,			//Talus L
+			200, 200, 200,		//Femur R
+			150,				//Tibia R
+			90, 90, 90,			//Talus R
+			200, 200, 200,		//Torso
+			10, 10, 10,			//Neck
+			100, 100, 100,		//Shoulder L
+			60,					//Arm L
+			0, 0, 0,			//Hand L
+			100, 100, 100,		//Shoulder R
+			60,					//Arm R
+			0, 0, 0;			//Hand R
 
 	// this->get_record();
 }
@@ -219,7 +219,7 @@ SetPDParameters()
 		500, 500, 500,
 		500,
 		400, 400, 400,
-		1000, 1000, 1000,
+		500, 500, 500,
 		100, 100, 100,
 		400, 400, 400,
 		300,
@@ -235,7 +235,7 @@ SetPDParameters()
 		50, 50, 50,
 		50,
 		40, 40, 40,
-		100, 100, 100,
+		50, 50, 50,
 		10, 10, 10,
 		40, 40, 40,
 		30,
@@ -530,9 +530,9 @@ GetState()
 		idx_angv_diff += 3;
 	}
 
-	Eigen::VectorXd device_state = mDevice->GetState();
+	// Eigen::VectorXd device_state = mDevice->GetState();
 
-	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+device_state.rows());
+	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
 
 	this->SetPhase();
 
@@ -540,7 +540,7 @@ GetState()
 	mSkeleton->setVelocities(cur_vel);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
-	state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,device_state;
+	state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
 
 	return state;
 }

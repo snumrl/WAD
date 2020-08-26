@@ -158,8 +158,8 @@ ReadHierarchy(BVHNode* parent,const std::string& name,int& channel_offset,std::i
 			is>>x;
 			is>>y;
 			is>>z;
-			// new_node->SetOffset(6.0*x,6.0*y,6.0*z);
-			new_node->SetOffset(100*x,100*y,100*z);
+			new_node->SetOffset(6.0*x,6.0*y,6.0*z);
+			// new_node->SetOffset(100*x,100*y,100*z);
 		}
 		else if(!strcmp(buffer,"CHANNELS"))
 		{
@@ -228,22 +228,25 @@ Parse(const std::string& file,bool cyclic)
 			is>>buffer; //time step
 			mTimeStep = atof(buffer);
 			mTimeStep = 0.0333;
-			mMotions.resize(mNumTotalFrames/4 + mNumTotalFrames%4);
+			mMotions.resize(mNumTotalFrames/4+1);
 			for(auto& m_t : mMotions)
 				m_t = Eigen::VectorXd::Zero(mNumTotalChannels);
 
 			double val;
-			for(int i=0;i<mNumTotalFrames;i++)
+			for(int i=0; i<mNumTotalFrames; i++)
 			{
-				for(int j=0;j<mNumTotalChannels;j++)
+				for(int j=0; j<mNumTotalChannels; j++)
 				{
 					is>>val;
 					if(i%4==0){
 						mMotions[i/4][j] = val;
 					}
+					if(i==mNumTotalFrames-1){
+						mMotions[i/4+1][j] = val;
+					}
 				}
 			}
-			mNumTotalFrames = mNumTotalFrames/4 + mNumTotalFrames%4;
+			mNumTotalFrames = mNumTotalFrames/4+1;
 		}
 	}
 	is.close();

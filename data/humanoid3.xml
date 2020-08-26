@@ -1,135 +1,132 @@
 <Skeleton name="Human">
     <Node name="Pelvis" parent="None" >
-        <Body type="Box" mass="8.0" size="0.160 0.140 0.1340" contact="Off" color="0.6 0.6 1.5 1.0" obj="Pelvis.obj">
+        <Body type="Box" mass="8.0" size="0.160 0.140 0.1340" contact="Off" color="0.6 0.6 1.8 1.0" obj="Pelvis.obj">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 1.06 -0.0 "/>
         </Body>
-        <Joint type="Free" bvh="Pelvic">
+        <Joint type="Free" bvh="Root">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 1.06 -0.0 "/>
         </Joint>
     </Node>
 
     <Node name="FemurL" parent="Pelvis" >
-        <Body type="Box" mass="4.5" size="0.110 0.3443 0.110" contact="Off" color="0.6 0.6 1.5 1.0"  obj="L_Femur.obj">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0995 0.7291 -0.0 "/>
+        <Body type="Box" mass="4.5" size="0.120 0.34 0.120" contact="Off" color="0.6 0.6 1.8 1.0"  obj="L_Femur.obj">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.74 -0.0 "/>
         </Body>
-        <Joint type="Ball" bvh="L_Hip" lower="-1.57 -1.0 -1.2" upper="2.57 1.0 1.2" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0995 0.9337 -0.0 "/>
+        <Joint type="Ball" bvh="L_Femur" lower="-1.57 -1.0 -1.2" upper="2.57 1.0 1.2" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0" actuator_type="FORCE">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.94 -0.0 "/>
         </Joint>
     </Node>
-
     <Node name="TibiaL" parent="FemurL" >
-        <Body type="Box" mass="3.0" size="0.110 0.3756 0.110 " contact="Off" color="0.6 0.6 1.5 1.0" obj="L_Tibia.obj">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0995 0.3068 -0.0 "/>
+        <Body type="Box" mass="3.0" size="0.120 0.38 0.120 " contact="Off" color="0.6 0.6 1.8 1.0" obj="L_Tibia.obj">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.315 -0.0 "/>
         </Body>
-        <Joint type="Revolute" axis ="1.0 0.0 0.0" bvh="L_Knee" lower="0.0" upper="3.14" force_lower="-1000.0" force_upper="1000.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0995 0.5387 -0.0 "/>
+        <Joint type="Revolute" axis ="1.0 0.0 0.0" bvh="L_Tibia" lower="0.0" upper="3.14" force_lower="-1000.0" force_upper="1000.0" actuator_type="FORCE">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.54 -0.0 "/>
         </Joint>
     </Node>
-
     <Node name="TalusL" parent="TibiaL" endeffector="True">
-        <Body type="Box" mass="1.0" size="0.10 0.070 0.20" contact="On" color="0.6 0.6 1.5 1.0" obj="L_Talus.obj">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0995 0.035 0.025 "/>
+        <Body type="Box" mass="1.0" size="0.120 0.070 0.20" contact="On" color="0.6 0.6 1.8 1.0" obj="L_Talus.obj">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.035 0.025 "/>
         </Body>
-        <Joint type="Ball" bvh="L_Ankle" lower="-1.0 -1.0 -1.0" upper="1.0 1.0 1.0" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0995 0.090 -0.0"/>
+        <Joint type="Ball" bvh="L_Foot" lower="-1.0 -1.0 -1.0" upper="1.0 1.0 1.0" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0" actuator_type="FORCE">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.1 0.090 -0.0"/>
         </Joint>
     </Node>
 
     <Node name="FemurR" parent="Pelvis" >
-        <Body type="Box" mass="4.5" size="0.110 0.3443 0.110" contact="Off" color="0.3 0.3 1.5 1.0" obj="R_Femur.obj">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 " translation="-0.0995 0.7291 -0.0 "/>
+        <Body type="Box" mass="4.5" size="0.120 0.34 0.120" contact="Off" color="0.6 0.6 1.8 1.0" obj="R_Femur.obj">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 " translation="-0.1 0.74 -0.0 "/>
         </Body>
-        <Joint type="Ball" bvh="R_Hip" lower="-1.57 -1.0 -1.2" upper="2.57 1.0 1.2" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.0995 0.9337 -0.0 "/>
+        <Joint type="Ball" bvh="R_Femur" lower="-1.57 -1.0 -1.2" upper="2.57 1.0 1.2" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0" actuator_type="FORCE">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.1 0.94 -0.0 "/>
         </Joint>
     </Node>
     <Node name="TibiaR" parent="FemurR" >
-        <Body type="Box" mass="3.0" size="0.110 0.3756 0.110 " contact="Off" color="0.3 0.3 1.5 1.0" obj="R_Tibia.obj">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 " translation="-0.0995 0.3068 -0.0 "/>
+        <Body type="Box" mass="3.0" size="0.120 0.38 0.120 " contact="Off" color="0.6 0.6 1.8 1.0" obj="R_Tibia.obj">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 " translation="-0.1 0.315 -0.0 "/>
         </Body>
-        <Joint type="Revolute" axis ="1.0 0.0 0.0" bvh="R_Knee" lower="0.0" upper="3.14" force_lower="-1000.0" force_upper="1000.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.0995 0.5387 -0.0 "/>
+        <Joint type="Revolute" axis ="1.0 0.0 0.0" bvh="R_Tibia" lower="0.0" upper="3.14" force_lower="-1000.0" force_upper="1000.0" actuator_type="FORCE">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.1 0.54 -0.0 "/>
         </Joint>
     </Node>
-
     <Node name="TalusR" parent="TibiaR" endeffector="True">
-        <Body type="Box" mass="1.0" size="0.10 0.070 0.20" contact="On" color="0.3 0.3 1.5 1.0" obj="R_Talus.obj">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.0995 0.035 0.025 "/>
+        <Body type="Box" mass="1.0" size="0.120 0.070 0.20" contact="On" color="0.6 0.6 1.8 1.0" obj="R_Talus.obj">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.1 0.035 0.025 "/>
         </Body>
-        <Joint type="Ball" bvh="R_Anklez" lower="-1.57 -1.0 -1.0" upper="1.57 1.0 1.0" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.0995 0.090 -0.0"/>
+        <Joint type="Ball" bvh="R_Foot" lower="-1.57 -1.0 -1.0" upper="1.57 1.0 1.0" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0" actuator_type="FORCE">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.1 0.090 -0.0"/>
         </Joint>
     </Node>
 
     <Node name="Torso" parent="Pelvis" >
-        <Body type="Box" mass="15.0" size="0.200 0.180 0.1340" contact="Off" color="0.6 0.6 1.5 1.0" obj="Torso.obj">
+        <Body type="Box" mass="15.0" size="0.200 0.180 0.1340" contact="Off" color="0.6 0.6 1.8 1.0" obj="Torso.obj">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 -0.0092 0.0 0.0092 1.0 " translation="0.0 1.26 -0.0 "/>
         </Body>
-        <Joint type="Ball" bvh="Neck" lower="-1.2 -1.2 -1.2 " upper="1.2 1.2 1.2 " force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
+        <Joint type="Ball" bvh="LowerBack" lower="-1.0 -1.0 -1.0 " upper="1.0 1.0 1.0 " force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0" actuator_type="FORCE">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0. 1.26 -0.0 "/>
         </Joint>
     </Node>
     <Node name="Neck" parent="Torso" endeffector="True">
-        <Body type="Box" mass="2.0" size="0.10 0.09 0.07" contact="Off" color="0.6 0.6 1.5 1.0" obj="Neck.obj">
+        <Body type="Box" mass="2.0" size="0.10 0.09 0.07" contact="Off" color="0.6 0.6 1.8 1.0" obj="Neck.obj">
             <Transformation linear="1.0 0.0 0.0 0.0 0.9732 -0.2301 0.0 0.2301 0.9732 " translation="0.0 1.50 -0.0 "/>
         </Body>
-        <Joint type="Ball" bvh="Head" lower="-0.4 -0.4 -0.4 " upper="0.6 0.6 1.5 " force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
+        <Joint type="Ball" bvh="Neck" lower="-0.4 -0.4 -0.4 " upper="0.4 0.4 0.4 " force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0" actuator_type="FORCE">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0. 1.42 -0.0 "/>
         </Joint>
     </Node>
 
-    <Node name="ShoulderR" parent="Torso" >
-        <Body type="Box" mass="1.0" size="0.20 0.0540 0.050" contact="Off" color="0.3 0.3 1.5 1.0" obj="R_Humerus.obj">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.290 1.3750 -0.0353"/>
+    <Node name="ShoulderL" parent="Torso" >
+        <Body type="Box" mass="1.0" size="0.20 0.06 0.06" contact="Off" color="0.6 0.6 1.8 1.0" obj="L_Humerus.obj">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.290 1.3750 -0.035"/>
         </Body>
-        <Joint type="Ball" bvh="R_Arm" lower="-2.0 -2.0 -2.0" upper="3.14 2.0 2.0" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.160 1.3750 -0.0353 "/>
-        </Joint>
-    </Node>
-
-    <Node name="ArmR" parent="ShoulderR" >
-        <Body type="Box" mass="0.5" size="0.16 0.0506 0.050" contact="Off" color="0.3 0.3 1.5 1.0" obj="R_Radius.obj">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.530 1.3750 -0.0353 "/>
-        </Body>
-        <Joint type="Revolute" axis="0.0 1.0 0.0" bvh="R_Elbow" lower="0.0" upper="2.3" force_lower="-1000.0" force_upper="1000.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.420 1.3750 -0.0353 "/>
-        </Joint>
-    </Node>
-
-    <Node name="HandR" parent="ArmR" endeffector="True">
-        <Body type="Box" mass="0.2" size="0.06 0.01 0.06" contact="Off" color="0.3 0.3 1.5 1.0" obj="R_Hand.obj">
-            <Transformation linear="0.9712 0.2357 -0.0353 0.2243 -0.9540 -0.1990 -0.0806 0.1853 -0.9794 " translation="-0.70 1.370 -0.0353 "/>
-        </Body>
-        <Joint type="Ball" bvh="R_Wrist" lower="-0.7 -0.7 -0.7 " upper="0.7 0.7 0.7" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.640 1.3750 -0.0353 "/>
-        </Joint>
-    </Node>
-
-     <Node name="ShoulderL" parent="Torso" >
-        <Body type="Box" mass="1.0" size="0.20 0.0540 0.050" contact="Off" color="0.6 0.6 1.5 1.0" obj="L_Humerus.obj">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.290 1.3750 -0.0353"/>
-        </Body>
-        <Joint type="Ball" bvh="L_Arm" lower="-2.0 -2.0 -2.0" upper="3.14 2.0 2.0" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.160 1.3750 -0.0353"/>
+        <Joint type="Ball" bvh="L_Humerus" lower="-2.0 -2.0 -2.0" upper="3.14 2.0 2.0" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0" actuator_type="FORCE">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.160 1.3750 -0.035"/>
         </Joint>
     </Node>
 
     <Node name="ArmL" parent="ShoulderL" >
-        <Body type="Box" mass="0.5" size="0.16 0.0506 0.050" contact="Off" color="0.6 0.6 1.5 1.0" obj="L_Radius.obj">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.530 1.3750 -0.0353 "/>
+        <Body type="Box" mass="0.5" size="0.16 0.05 0.05" contact="Off" color="0.6 0.6 1.8 1.0" obj="L_Radius.obj">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.530 1.3750 -0.035 "/>
         </Body>
-        <Joint type="Revolute" axis="0.0 1.0 0.0" bvh="L_Elbow" lower="-2.3" upper="0.0" force_lower="-1000.0" force_upper="1000.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.420 1.3750 -0.0353"/>
+        <Joint type="Revolute" axis="0.0 1.0 0.0" bvh="L_Elbow" lower="-2.3" upper="0.0" force_lower="-1000.0" force_upper="1000.0" actuator_type="FORCE">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.420 1.3750 -0.035"/>
         </Joint>
     </Node>
 
     <Node name="HandL" parent="ArmL" endeffector="True">
-        <Body type="Box" mass="0.2" size="0.06 0.01 0.06" contact="Off" color="0.6 0.6 1.5 1.0" obj="L_Hand.obj">
-            <Transformation linear="0.9712 0.2357 -0.0353 -0.2243 0.9540 0.1990 0.0806 -0.1853 0.9794 " translation="0.70 1.370 -0.0353 "/>
+        <Body type="Box" mass="0.2" size="0.06 0.02 0.06" contact="Off" color="0.6 0.6 1.8 1.0" obj="L_Hand.obj">
+            <Transformation linear="0.9712 0.2357 -0.0353 -0.2243 0.9540 0.1990 0.0806 -0.1853 0.9794 " translation="0.70 1.370 -0.035 "/>
         </Body>
-        <Joint type="Ball" bvh="L_Wrist" lower="-0.7 -0.7 -0.7 " upper="0.7 0.7 0.7" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.640 1.3750 -0.0353"/>
+        <Joint type="Ball" bvh="L_Wrist" lower="-0.7 -0.7 -0.7 " upper="0.7 0.7 0.7" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0" actuator_type="FORCE">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.640 1.3750 -0.035"/>
         </Joint>
     </Node>
+
+    <Node name="ShoulderR" parent="Torso" >
+        <Body type="Box" mass="1.0" size="0.20 0.06 0.06" contact="Off" color="0.6 0.6 1.8 1.0" obj="R_Humerus.obj">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.290 1.3750 -0.035"/>
+        </Body>
+        <Joint type="Ball" bvh="R_Humerus" lower="-2.0 -2.0 -2.0" upper="3.14 2.0 2.0" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0" actuator_type="FORCE">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.160 1.3750 -0.035"/>
+        </Joint>
+    </Node>
+    <Node name="ArmR" parent="ShoulderR" >
+        <Body type="Box" mass="0.5" size="0.16 0.05 0.05" contact="Off" color="0.6 0.6 1.8 1.0" obj="R_Radius.obj">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.530 1.3750 -0.035"/>
+        </Body>
+        <Joint type="Revolute" axis="0.0 1.0 0.0" bvh="R_Elbow" lower="0.0" upper="2.3" force_lower="-1000.0" force_upper="1000.0" actuator_type="FORCE">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.420 1.3750 -0.035"/>
+        </Joint>
+    </Node>
+    <Node name="HandR" parent="ArmR" endeffector="True">
+        <Body type="Box" mass="0.2" size="0.06 0.02 0.06" contact="Off" color="0.6 0.6 1.8 1.0" obj="R_Hand.obj">
+            <Transformation linear="0.9712 0.2357 -0.0353 0.2243 -0.9540 -0.1990 -0.0806 0.1853 -0.9794 " translation="-0.70 1.370 -0.0353 "/>
+        </Body>
+        <Joint type="Ball" bvh="R_Wrist" lower="-0.7 -0.7 -0.7 " upper="0.7 0.7 0.7" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0" actuator_type="FORCE">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.640 1.3750 -0.035"/>
+        </Joint>
+    </Node>
+
+
 
 </Skeleton>
