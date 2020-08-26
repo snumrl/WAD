@@ -193,7 +193,7 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 			150,
 			90, 90, 90,
 			200, 200, 200,
-			30, 30, 30,
+			0, 0, 0,
 			100, 100, 100,
 			60,
 			0, 0, 0,
@@ -762,17 +762,12 @@ void
 Character::
 SetDesiredTorques()
 {
-	for(int i=0; i<mDesiredTorque.size(); i++){
-		mDesiredTorque_prev[i] = mDesiredTorque[i];
-	}
-
 	Eigen::VectorXd p_des = mTargetPositions;
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction;
 	mDesiredTorque = this->GetSPDForces(p_des);
 
 	for(int i=0; i<mDesiredTorque.size(); i++){
 		mDesiredTorque[i] = Utils::Clamp(mDesiredTorque[i], -maxForces[i], maxForces[i]);
-		mDesiredTorque[i] = 0.2*mDesiredTorque[i]+0.8*mDesiredTorque_prev[i];
 	}
 
 	mFemurSignals_L.pop_back();

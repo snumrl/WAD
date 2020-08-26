@@ -611,12 +611,12 @@ DrawTorques()
 	double p_y = 0.82;
 
 	mTorques = mEnv->GetCharacter()->GetTorques();
-	DrawTorqueGraph("FemurR_x", 0, p_w, p_h, p_x, p_y);
-	DrawTorqueGraph("FemurR_y", 1, p_w, p_h, p_x, p_y-0.15);
-	DrawTorqueGraph("FemurR_z", 2, p_w, p_h, p_x, p_y-0.30);
-	DrawTorqueGraph("TalusR_x", 4, p_w, p_h, p_x, p_y-0.45);
-	DrawTorqueGraph("TalusR_y", 5, p_w, p_h, p_x, p_y-0.60);
-	DrawTorqueGraph("TalusR_z", 6, p_w, p_h, p_x, p_y-0.75);
+	DrawTorqueGraph("FemurL_x", 0, p_w, p_h, p_x, p_y);
+	DrawTorqueGraph("FemurL_y", 1, p_w, p_h, p_x, p_y-0.15);
+	DrawTorqueGraph("FemurL_z", 2, p_w, p_h, p_x, p_y-0.30);
+	DrawTorqueGraph("FemurR_x", 7, p_w, p_h, p_x, p_y-0.45);
+	DrawTorqueGraph("FemurR_y", 8, p_w, p_h, p_x, p_y-0.60);
+	DrawTorqueGraph("FemurR_z", 9, p_w, p_h, p_x, p_y-0.75);
 
 	glDisable(GL_COLOR_MATERIAL);
 	glPopMatrix();
@@ -1264,7 +1264,7 @@ DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vecto
 		glVertex2f(x + offset_x*i, y + 0.5*offset_y*data1.at(i));
 	glEnd();
 
-	// Eigen::Vector4d blend((color[0]+color1[0])/2.0, (color[1]+color1[1])/2.0, (color[2]+color1[2])/2.0, (color[3]+color1[3])/2.0);
+	Eigen::Vector4d blend((color[0]+color1[0])/2.0, (color[1]+color1[1])/2.0, (color[2]+color1[2])/2.0, (color[3]+color1[3])/2.0);
 
 	// mRI->setPenColor(blend);
 
