@@ -81,6 +81,7 @@ private:
 
 	int mSimCount;
 	int mRandomSampleIndex;
+	int step_=0;
 };
 };
 

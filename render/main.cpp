@@ -17,7 +17,7 @@ int main(int argc,char** argv)
 		return 0;
 	}
 	env->Initialize(std::string(argv[1]),true);
-	
+
 	Py_Initialize();
 	np::initialize();
 	glutInit(&argc, argv);
@@ -37,7 +37,7 @@ int main(int argc,char** argv)
 	}
 	else if(argc == 5)
 	{
-		window = new MASS::Window(env, argv[2], argv[3], argv[4]);	
+		window = new MASS::Window(env, argv[2], argv[3], argv[4]);
 	}
 	else{
 		std::cout<<"Please check your input"<<std::endl;
@@ -46,8 +46,8 @@ int main(int argc,char** argv)
 
 		return 0;
 	}
-	
-	window->initWindow(1920,1080,"gui");
-	
+
+	window->initWindow(1080,1080,"gui");
+
 	glutMainLoop();
 }

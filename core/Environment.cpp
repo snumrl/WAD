@@ -186,13 +186,13 @@ Environment::
 Reset(bool RSI)
 {
 	double t = 0.0;
-	if(RSI)
-	{
-		int random_variable = std::rand();
-		int t_idx = random_variable%90;
-		t = t_idx * 0.01;
-		// t = dart::math::random(0.0, mCharacter->GetBVH()->GetMaxTime()*0.9);
-	}
+	// if(RSI)
+	// {
+	// 	int random_variable = std::rand();
+	// 	int t_idx = random_variable%90;
+	// 	t = t_idx * 0.01;
+	// 	// t = dart::math::random(0.0, mCharacter->GetBVH()->GetMaxTime()*0.9);
+	// }
 
 	mWorld->reset();
 	mWorld->setTime(t);
@@ -220,6 +220,7 @@ Step(bool onDevice)
 	mWorld->step();
 
 	mSimCount++;
+	// std::cout << "step : " << step_++ << std::endl;
 }
 
 bool

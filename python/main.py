@@ -134,7 +134,7 @@ class PPO(object):
 		self.num_control_Hz = self.env.GetControlHz()
 		self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
 
-		self.max_iteration = 30000
+		self.max_iteration = 15000
 		self.num_evaluation = 0
 		self.rewards = []
 
@@ -208,7 +208,7 @@ class PPO(object):
 
 					self.env.Steps(1, False)
 			else:
-				self.env.StepsAtOnce(False)
+				self.env.StepsAtOnce(True)
 
 			for j in range(self.num_slaves):
 				nan_occur = False

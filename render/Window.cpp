@@ -419,6 +419,7 @@ DrawCharacter()
 
 	glDisable(GL_LIGHTING);
 	DrawTorques();
+	DrawFemurSignals();
 	DrawReward();
 	DrawRewardMap();
 	glEnable(GL_LIGHTING);
@@ -730,6 +731,67 @@ DrawArrow()
 
 void
 Window::
+DrawFemurSignals()
+{
+	GLint oldMode;
+	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
+	glMatrixMode(GL_PROJECTION);
+
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+
+	double p_w = 0.30;
+	double p_h = 0.15;
+
+	double pl_x = 0.70;
+	double pl_y = 0.83;
+	double pr_x = 0.70;
+	double pr_y = 0.60;
+
+	double offset_x = 0.00024;
+	double offset_y = 0.001;
+
+	// std::deque<double> data_y = mEnv->GetDevice()->GetSignals(0);
+
+	DrawString(pl_x+0.5*p_w, pl_y-0.02, "Device L");
+	DrawQuads(pl_x, pl_y, p_w, p_h, white);
+	DrawLine(pl_x+0.01, pl_y+0.01, pl_x+p_w-0.01, pl_y+0.01, black, 1.0);
+	DrawLine(pl_x+0.01, pl_y+0.01, pl_x+0.01, pl_y+p_h-0.01, black, 1.0);
+	// DrawLine(pl_x+0.01+offset_x*340, pl_y+0.01, pl_x+0.01+offset_x*340, pl_y+p_h-0.01, grey, 1.0);
+
+	std::deque<double> data_L_femur = mEnv->GetCharacter()->GetSignals(1);
+	DrawLineStrip(pl_x+0.01, pl_y+0.01, offset_x, offset_y, red, 2.0, data_L_femur);
+	DrawStringMax(pl_x+0.01, pl_y+0.01, offset_x, offset_y, data_L_femur, red);
+
+	DrawString(pr_x+0.5*p_w, pr_y-0.02, "Device R");
+	DrawQuads(pr_x, pr_y, p_w, p_h, white);
+	DrawLine(pr_x+0.01, pr_y+0.01, pr_x+p_w-0.01, pr_y+0.01, black, 1.0);
+	DrawLine(pr_x+0.01, pr_y+0.01, pr_x+0.01, pr_y+p_h-0.01, black, 1.0);
+	// DrawLine(pr_x+0.01+offset_x*340, pr_y+0.01, pr_x+0.01+offset_x*340, pr_y+p_h-0.01, grey, 1.0);
+
+	std::deque<double> data_R_femur = mEnv->GetCharacter()->GetSignals(0);
+	DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R_femur);
+	DrawStringMax(pr_x+0.01, pr_y+0.01, offset_x, offset_y, data_R_femur, red);
+
+
+	glDisable(GL_COLOR_MATERIAL);
+	glPopMatrix();
+
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(oldMode);
+}
+
+void
+Window::
 DrawDeviceSignals()
 {
 	GLint oldMode;
@@ -755,7 +817,7 @@ DrawDeviceSignals()
 	double pr_x = 0.70;
 	double pr_y = 0.60;
 
-	double offset_x = 0.00015;
+	double offset_x = 0.00024;
 	double offset_y = 0.001;
 
 	// std::deque<double> data_y = mEnv->GetDevice()->GetSignals(0);
@@ -770,6 +832,8 @@ DrawDeviceSignals()
 	std::deque<double> data_L_femur = mEnv->GetCharacter()->GetSignals(1);
 	DrawLineStrip(pl_x+0.01, pl_y+0.01, offset_x, offset_y, blue, 2.0, data_L, red, 2.0, data_L_femur);
 	// DrawLineStrip(pl_x+0.01, pl_y+0.01, offset_x, offset_y, red, 2.0, data_L, blue, 2.0, data_y);
+	DrawStringMax(pl_x+0.01, pl_y+0.01, offset_x, offset_y, data_L, blue);
+	DrawStringMax(pl_x+0.01, pl_y+0.01, offset_x, offset_y, data_L_femur, red);
 
 	DrawString(pr_x+0.5*p_w, pr_y-0.02, "Device R");
 	DrawQuads(pr_x, pr_y, p_w, p_h, white);
@@ -781,6 +845,9 @@ DrawDeviceSignals()
 	std::deque<double> data_R_femur = mEnv->GetCharacter()->GetSignals(0);
 	DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, blue, 2.0, data_R, red, 2.0, data_R_femur);
 	// DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R, blue, 2.0, data_y);
+	DrawStringMax(pr_x+0.01, pr_y+0.01, offset_x, offset_y, data_R, blue);
+	DrawStringMax(pr_x+0.01, pr_y+0.01, offset_x, offset_y, data_R_femur, red);
+
 
 	glDisable(GL_COLOR_MATERIAL);
 	glPopMatrix();
@@ -1199,6 +1266,24 @@ DrawStringMax(double x, double y, double offset_x, double offset_y, std::vector<
 
 void
 Window::
+DrawStringMax(double x, double y, double offset_x, double offset_y, std::deque<double> data, Eigen::Vector4d color)
+{
+	double max = 0;
+	int idx = 0;
+	for(int i=0; i<data.size(); i++)
+	{
+		if(data[i] > max)
+		{
+			max = data.at(i);
+			idx = i;
+		}
+	}
+
+	DrawString(x+idx*offset_x, y+max*offset_y, std::to_string(max), color);
+}
+
+void
+Window::
 DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::deque<double>& data)
 {
 	mRI->setPenColor(color);
@@ -1261,7 +1346,8 @@ DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vecto
 
 	glBegin(GL_LINE_STRIP);
 	for(int i=0; i<data1.size(); i++)
-		glVertex2f(x + offset_x*i, y + 0.5*offset_y*data1.at(i));
+		// glVertex2f(x + offset_x*i, y + 0.5*offset_y*data1.at(i));
+		glVertex2f(x + offset_x*i, y + offset_y*data1.at(i));
 	glEnd();
 
 	Eigen::Vector4d blend((color[0]+color1[0])/2.0, (color[1]+color1[1])/2.0, (color[2]+color1[2])/2.0, (color[3]+color1[3])/2.0);
@@ -1271,6 +1357,8 @@ DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vecto
 	// glBegin(GL_LINE_STRIP);
 	// for(int i=0; i<data1.size(); i++)
 	//  glVertex2f(x + offset_x*i, y + offset_y*(data.at(i)+data1.at(i)));
+	// for(int i=180; i<data.size(); i++)
+	//  glVertex2f(x + offset_x*(i-180), y + offset_y*(data.at(i)+0.5*data1.at(i-180)));
 	// glEnd();
 
 }

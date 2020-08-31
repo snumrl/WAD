@@ -51,6 +51,7 @@ public:
 	void DrawReward();
 	void DrawRewardMap();
 	void DrawRewardGraph(std::string name, double w, double h, double x, double y);
+	void DrawFemurSignals();
 	void DrawDevice();
 	void DrawDeviceSignals();
 	void DrawArrow();
@@ -72,6 +73,7 @@ public:
 	void DrawString(double x, double y, std::string str);
 	void DrawString(double x, double y, std::string str, Eigen::Vector4d color);
 	void DrawStringMax(double x, double y, double offset_x, double offset_y, std::vector<double> data, Eigen::Vector4d color);
+	void DrawStringMax(double x, double y, double offset_x, double offset_y, std::deque<double> data, Eigen::Vector4d color);
 	void DrawLine(double p1_x, double p1_y, double p2_x, double p2_y, Eigen::Vector4d color, double line_width);
 	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::vector<double>& data);
 	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::vector<double>& data, Eigen::Vector4d color1, double line_width1, std::vector<double>& data1);
