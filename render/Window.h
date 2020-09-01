@@ -29,36 +29,17 @@ public:
 	void Step();
 	void Reset();
 
-	void record();
 	void SetFocus();
 	void SetViewMatrix();
-	void SetTrajectory();
 
 	void LoadMuscleNN(const std::string& muscle_nn_path);
 	void LoadDeviceNN(const std::string& device_nn_path);
-
 	Eigen::VectorXd GetActionFromNN();
 	Eigen::VectorXd GetActionFromNN_Device();
 	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt);
 
 	void DrawGround();
 	void DrawCharacter();
-	void DrawTarget();
-	void DrawTorques();
-	void DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double y);
-	// void DrawEnergy();
-	// void DrawEnergyGraph(std::string name, double w, double h, double x, double y);
-	void DrawReward();
-	void DrawRewardMap();
-	void DrawRewardGraph(std::string name, double w, double h, double x, double y);
-	void DrawFemurSignals();
-	void DrawDevice();
-	void DrawDeviceSignals();
-	void DrawArrow();
-	// void DrawDeviceSignals2();
-	void DrawTrajectory();
-	void DrawProgressBar();
-
 	void DrawEntity(const dart::dynamics::Entity* entity);
 	void DrawBodyNode(const dart::dynamics::BodyNode* bn);
 	void DrawSkeleton(const dart::dynamics::SkeletonPtr& skel);
@@ -69,16 +50,31 @@ public:
 	void DrawShadow(const Eigen::Vector3d& scale, const aiScene* mesh,double y);
 	void DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine3d& M,double y);
 
+	void DrawTarget();
+	void DrawTorques();
+	void DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double y);
+	void DrawFemurSignals();
+	void DrawReward();
+	void DrawRewardMap();
+	void DrawRewardGraph(std::string name, double x, double y, double w, double h);
+	void DrawDevice();
+	void DrawDeviceSignals();
+	void DrawArrow();
+
+	void DrawGLBegin();
+	void DrawGLEnd();
+	void DrawBaseGraph(double x, double y, double w, double h, double ratio, double offset, std::string name);
 	void DrawQuads(double x, double y, double w, double h, Eigen::Vector4d color);
 	void DrawString(double x, double y, std::string str);
 	void DrawString(double x, double y, std::string str, Eigen::Vector4d color);
-	void DrawStringMax(double x, double y, double offset_x, double offset_y, std::vector<double> data, Eigen::Vector4d color);
-	void DrawStringMax(double x, double y, double offset_x, double offset_y, std::deque<double> data, Eigen::Vector4d color);
+	void DrawStringMax(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, std::vector<double> data, Eigen::Vector4d color);
+	void DrawStringMax(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, std::deque<double> data, Eigen::Vector4d color);
+	void DrawStringMinMax(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, std::deque<double> data, Eigen::Vector4d color);
 	void DrawLine(double p1_x, double p1_y, double p2_x, double p2_y, Eigen::Vector4d color, double line_width);
-	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::vector<double>& data);
-	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::vector<double>& data, Eigen::Vector4d color1, double line_width1, std::vector<double>& data1);
-	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::deque<double>& data);
-	void DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::deque<double>& data, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1);
+	void DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::vector<double>& data);
+	void DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::vector<double>& data, Eigen::Vector4d color1, double line_width1, std::vector<double>& data1);
+	void DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::deque<double>& data);
+	void DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::deque<double>& data, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1);
 
 private:
 
@@ -93,25 +89,15 @@ private:
 	bool mDrawArrow;
 	bool mDrawOBJ;
 	bool mDrawShadow;
-	bool mDrawTrajectory;
-	bool mDrawProgressBar;
 	bool mNNLoaded;
 	bool mMuscleNNLoaded;
 	bool mDeviceNNLoaded;
 	bool mOnDevice;
-
-	bool mTalusL;
-	bool mTalusR;
 	bool isDrawTarget;
 
+	GLint oldMode;
 	Eigen::Affine3d mViewMatrix;
-	std::vector<Eigen::Vector3d> mTrajectory;
-	std::vector<Eigen::Vector3d> mFootprint;
-
-	Eigen::VectorXd mOffset;
-	int offsetIdx=0;
 };
 };
-
 
 #endif

@@ -348,7 +348,6 @@ Reset()
 	mAction.setZero();
 	mAction_prev.setZero();
 	mTorques->Reset();
-
 	mFemurSignals_L.clear();
 	mFemurSignals_R.clear();
 	mFemurSignals_L.resize(1200);
@@ -708,7 +707,7 @@ GetReward_Character()
 
 	// std::cout << "torque min : " << r_torque_min << std::endl;
 
-	double r_ = 0.8*r_imitation + 0.2*r_torque_min;
+	double r_ = 0.9*r_imitation + 0.1*r_torque_min;
 	// double r_ = r_imitation;
 
 	// std::cout << pose_w * pose_reward << " / " << pose_w << "  " << pose_w * (pose_reward - 1.0) << " pose" << std::endl;
@@ -750,7 +749,7 @@ GetTorqueReward()
 	sum += torques[8]/maxForces[8];
 	sum += torques[9]/maxForces[9];
 	// sum /= (double)(idx);
-	sum /= 33.0;
+	sum /= 34.0;
 	return exp(-1.0 * 40.0 * sum);
 }
 
@@ -784,13 +783,6 @@ SetDesiredTorques()
 
 	mFemurSignals_R.pop_back();
 	mFemurSignals_R.push_front(mDesiredTorque[13]);
-
-	// if(mUseDeviceNN){
-	//  mDevice->SetDesiredTorques2();
-	//  Eigen::VectorXd des = mDevice->GetDesiredTorques2();
-	//  mDesiredTorque[6] += des[0];
-	//  mDesiredTorque[15] += des[1];
-	// }
 }
 
 Eigen::VectorXd
@@ -942,9 +934,9 @@ Character::
 GetSignals(int idx)
 {
 	if(idx==0)
-		return mFemurSignals_R;
-	else if(idx==1)
 		return mFemurSignals_L;
+	else if(idx==1)
+		return mFemurSignals_R;
 }
 
 void
@@ -952,9 +944,8 @@ Character::
 SetDevice(Device* device)
 {
 	mDevice = device;
-	mUseDevice = true;
 	mOnDevice = true;
-	// this->SetConstraints();
+	mUseDevice = true;
 }
 
 void
@@ -966,11 +957,11 @@ SetConstraints()
 		);
 
 	mWeldJoint_LeftLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
-	   mSkeleton->getBodyNode("FemurL"), mDevice->GetSkeleton()->getBodyNode("FastenerLeftOut")
+	   mSkeleton->getBodyNode("FemurL"), mDevice->GetSkeleton()->getBodyNode("RodLeft")
 		);
 
 	mWeldJoint_RightLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
-		mSkeleton->getBodyNode("FemurR"), mDevice->GetSkeleton()->getBodyNode("FastenerRightOut")
+		mSkeleton->getBodyNode("FemurR"), mDevice->GetSkeleton()->getBodyNode("RodRight")
 		);
 
 	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_Hip);
@@ -1094,6 +1085,11 @@ Init(dart::dynamics::SkeletonPtr skel)
 		mTorques_dofs_avg.push_back(std::vector<double>(num_phase));
 		mTorques_dofs_num.push_back(std::vector<int>(num_phase));
 	}
+
+	for(int i=0; i<num_dofs; i++)
+	{
+		mTorques_dofs.push_back(std::deque<double>(1200));
+	}
 }
 
 void
@@ -1109,6 +1105,11 @@ Reset()
 			mTorques_dofs_cur[i][j] = mTorques_dofs_avg[i][j];
 		}
 	}
+
+	for(int i=0; i<num_dofs; i++)
+	{
+		std::fill(mTorques_dofs[i].begin(), mTorques_dofs[i].end(), 0) ;
+	}
 }
 
 void
@@ -1119,6 +1120,19 @@ SetTorques()
 	for(int i=0; i<17; i++)
 	{
 		mTorques->SetTorque(i,(int)(mPhase/0.0303),mDesiredTorque[i+6]);
+	}
+
+	mTorques->SetTorqueDofs(mDesiredTorque);
+}
+
+void
+Torques::
+SetTorqueDofs(const Eigen::VectorXd& desTorques)
+{
+	for(int i=0; i<desTorques.size(); i++)
+	{
+		mTorques_dofs[i].pop_back();
+		mTorques_dofs[i].push_front(desTorques[i]);
 	}
 }
 

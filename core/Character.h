@@ -28,11 +28,13 @@ public:
 	void Reset();
 	void Set();
 	void SetTorque(int dof, int phase, double val);
+	void SetTorqueDofs(const Eigen::VectorXd& desTorques);
 	double GetTorque(int dof, int phase);
 	std::vector<double>& GetTorquesCur(){return mTorques_cur;}
 	std::vector<double>& GetTorquesAvg(){return mTorques_avg;}
 	std::vector<std::vector<double>>& GetTorquesDofsCur(){return mTorques_dofs_cur;}
 	std::vector<std::vector<double>>& GetTorquesDofsAvg(){return mTorques_dofs_cur;}
+	std::vector<std::deque<double>>& GetTorquesDofs(){return mTorques_dofs;}
 
 private:
 	int num_dofs;
@@ -42,6 +44,7 @@ private:
 	std::vector<std::vector<double>> mTorques_dofs_cur;
 	std::vector<std::vector<double>> mTorques_dofs_avg;
 	std::vector<std::vector<int>> mTorques_dofs_num;
+	std::vector<std::deque<double>> mTorques_dofs;
 };
 
 class Character

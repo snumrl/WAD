@@ -57,7 +57,7 @@ Eigen::Vector4d blue(0.2, 0.2, 0.8, 1.0);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),mDrawTrajectory(false),mDrawProgressBar(false),mTalusL(false),mTalusR(false),isDrawTarget(false),mDrawArrow(false)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),mDrawArrow(false)
 {
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
@@ -83,9 +83,6 @@ Window(Environment* env)
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
 	p::exec("from RunningMeanStd import *",mns);
-
-	mOffset.resize(6);
-	mOffset.setZero();
 }
 
 Window::
@@ -173,62 +170,27 @@ LoadDeviceNN(const std::string& device_nn_path)
 
 void
 Window::
-record()
-{
-	// std::vector<double> dataR = mEnv->GetCharacter()->GetEnergy(0).at("FemurR");
-	// std::ofstream output_file_R("./FemurR.txt");
-	// for(int i = 0; i < dataR.size(); i++)
-	// {
-	// 	output_file_R << dataR[i] << std::endl;
-	// }
-
-	// std::vector<double> dataL = mEnv->GetCharacter()->GetEnergy(0).at("FemurL");
-	// std::ofstream output_file_L("./FemurL.txt");
-	// for(int i = 0; i < dataL.size(); i++)
-	// {
-	// 	output_file_L << dataL[i] << std::endl;
-	// }
-}
-
-void
-Window::
 keyboard(unsigned char _key, int _x, int _y)
 {
-	// Eigen::Vector3d force = Eigen::Vector3d::Zero();
 	double f_ = 0.0;
 	switch (_key)
 	{
-	case '+':
-		f_ += 1000.0;
-		std::cout << "force : " << f_ << std::endl;
-		break;
-	case '-': f_ -= 500.0;break;
-	case 's': this->Step();break;
 	case 'r': this->Reset();break;
-	case ' ': mSimulating = !mSimulating;break;
+	case 's': this->Step();break;
 	case 'f': mFocus = !mFocus;break;
 	case 'o': mDrawOBJ = !mDrawOBJ;break;
-	case 't': mDrawTarget = !mDrawTarget;break;
-	case 'c': mDrawCharacter = !mDrawCharacter;break;
 	case 'a': mDrawArrow = !mDrawArrow;break;
-	case 'w': this->record();break;
+	case 't': mDrawTarget = !mDrawTarget;break;
+	case ' ': mSimulating = !mSimulating;break;
+	case 'c': mDrawCharacter = !mDrawCharacter;break;
 	case 'd':
 		if(mEnv->GetUseDevice())
 			mOnDevice = !mOnDevice;
 		break;
-	// case 't': mDrawTrajectory = !mDrawTrajectory;break;
-	case 'p': mDrawProgressBar = !mDrawProgressBar;break;
 	case 27 : exit(0);break;
 	default:
 		Win3D::keyboard(_key,_x,_y);break;
 	}
-
-	// Eigen::VectorXd f = Eigen::VectorXd::Zero(12);
-	// f[6] = f_;
-	// Eigen::VectorXd f = Eigen::VectorXd::Constant(10,500);
-	// mEnv->GetDevice()->GetSkeleton()->setForces(f);
-
-
 }
 
 void
@@ -245,8 +207,6 @@ void
 Window::
 Reset()
 {
-	mTrajectory.clear();
-	mFootprint.clear();
 	mEnv->Reset();
 }
 
@@ -288,36 +248,7 @@ Step()
 
 	mEnv->GetReward();
 
-	SetTrajectory();
 	glutPostRedisplay();
-}
-
-void
-Window::
-SetTrajectory()
-{
-	const SkeletonPtr& skel = mEnv->GetCharacter()->GetSkeleton();
-	const BodyNode* pelvis = skel->getBodyNode("Pelvis");
-	const BodyNode* talusR = skel->getBodyNode("TalusR");
-	const BodyNode* talusL = skel->getBodyNode("TalusL");
-
-	mTrajectory.push_back(pelvis->getCOM());
-
-	if(talusR->getCOM()[1] > 0.03)
-		mTalusR = false;
-	if(talusR->getCOM()[1] < 0.0255 && !mTalusR)
-	{
-		mFootprint.push_back(talusR->getCOM());
-		mTalusR = true;
-	}
-
-	if(talusL->getCOM()[1] > 0.03)
-		mTalusL = false;
-	if(talusL->getCOM()[1] < 0.0255 && !mTalusL)
-	{
-		mFootprint.push_back(talusL->getCOM());
-		mTalusL = true;
-	}
 }
 
 void
@@ -328,7 +259,6 @@ SetFocus()
 	{
 		mTrans = -mEnv->GetWorld()->getSkeleton("Human")->getRootBodyNode()->getCOM();
 		mTrans[1] -= 0.3;
-
 		mTrans *=1000.0;
 	}
 }
@@ -361,11 +291,8 @@ draw()
 
 	DrawGround();
 	DrawCharacter();
-
 	if(mEnv->GetUseDevice())
 		DrawDevice();
-	if(mDrawProgressBar)
-		DrawProgressBar();
 
 	SetFocus();
 }
@@ -376,7 +303,6 @@ DrawGround()
 {
 	glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 	glDisable(GL_LIGHTING);
-	glBegin(GL_QUADS);
 
 	auto ground = mEnv->GetGround();
 	float y = ground->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(ground->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
@@ -384,23 +310,25 @@ DrawGround()
 	int count = 0;
 	double w = 1.0;
 	double h = 1.0;
-	for(double x=-100.0; x<100.01; x+=1.0)
+	for(double x=-100.0; x<=100.0; x+=1.0)
 	{
-		for(double z=-100.0; z<100.01; z+=1.0)
+		for(double z=-100.0; z<=100.0; z+=1.0)
 		{
 			if(count%2==0)
-				glColor3f(216.0/255.0,211.0/255.0,204.0/255.0);
+				glColor3f(0.85, 0.83, 0.81);
 			else
-				glColor3f(216.0/255.0-0.1,211.0/255.0-0.1,204.0/255.0-0.1);
+				glColor3f(0.75, 0.73, 0.71);
 
+			glBegin(GL_QUADS);
 			glVertex3f(x  , y, z  );
 			glVertex3f(x+w, y, z  );
 			glVertex3f(x+w, y, z+h);
 			glVertex3f(x  , y, z+h);
+			glEnd();
+
 			count++;
 		}
 	}
-	glEnd();
 	glEnable(GL_LIGHTING);
 }
 
@@ -412,487 +340,26 @@ DrawCharacter()
 
 	if(mDrawCharacter)
 		DrawSkeleton(skeleton);
-	if(mDrawTarget)
-		DrawTarget();
-	// if(mDrawTrajectory)
-	//  DrawTrajectory();
-
-	glDisable(GL_LIGHTING);
-	DrawTorques();
-	DrawFemurSignals();
-	DrawReward();
-	DrawRewardMap();
-	glEnable(GL_LIGHTING);
 
 	if(mEnv->GetUseMuscle())
 		DrawMuscles(mEnv->GetCharacter()->GetMuscles());
 
+	if(mDrawTarget)
+		DrawTarget();
+
+	if(!mEnv->GetUseDevice())
+		DrawFemurSignals();
+
+	DrawTorques();
+	DrawReward();
+	DrawRewardMap();
 }
 
 void
 Window::
-DrawTarget()
+DrawSkeleton(const SkeletonPtr& skel)
 {
-	isDrawTarget = true;
-	SkeletonPtr skeleton = mEnv->GetCharacter()->GetSkeleton();
-
-	Eigen::VectorXd cur_pos = skeleton->getPositions();
-	skeleton->setPositions(mEnv->GetCharacter()->GetTargetPositions());
-
-	glPushMatrix();
-	DrawBodyNode(skeleton->getRootBodyNode());
-	glPopMatrix();
-
-	skeleton->setPositions(cur_pos);
-	isDrawTarget = false;
-}
-
-void
-Window::
-DrawRewardGraph(std::string name, double w, double h, double x, double y)
-{
-	// graph
-	double offset_x = 0.004;
-	double offset_y = 0.1;
-
-	DrawQuads(x, y, w, h, white);
-	DrawLine(x+0.005, y+0.01, x+w-0.005, y+0.01, black, 2.0);
-	DrawLine(x+0.005, y+0.01, x+0.005, y+h-0.01, black, 2.0);
-	DrawString(x+0.4*w, y-0.015, name);
-
-	std::vector<double> data_ = mEnv->GetCharacter()->GetReward_Graph(0);
-	std::vector<double> data_device_ = mEnv->GetCharacter()->GetReward_Graph(1);
-
-	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, red, 1.5, data_, green, 2.0, data_device_);
-
-	DrawStringMax(x+0.005, y+0.01, offset_x, offset_y, data_, red);
-	DrawStringMax(x+0.005, y+0.01, offset_x, offset_y, data_device_, green);
-}
-
-void
-Window::
-DrawReward()
-{
-	GLint oldMode;
-	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
-	glMatrixMode(GL_PROJECTION);
-
-	glPushMatrix();
-	glLoadIdentity();
-	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
-
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
-
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
-
-	// graph coord & size
-	double p_w = 0.15;
-	double p_h = 0.13;
-	double p_x = 0.7;
-
-	DrawRewardGraph("Reward", p_w, p_h, p_x, 0.38);
-
-	glDisable(GL_COLOR_MATERIAL);
-	glPopMatrix();
-
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glMatrixMode(oldMode);
-}
-
-void
-Window::
-DrawRewardMap()
-{
-	GLint oldMode;
-	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
-	glMatrixMode(GL_PROJECTION);
-
-	glPushMatrix();
-	glLoadIdentity();
-	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
-
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
-
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
-
-	// graph coord & size
-	double w = 0.125;
-	double h = 0.102;
-	double x = 0.86;
-	double y = 0.409;
-
-	double offset_x = 0.002;
-	double offset_y = 0.1;
-
-	std::map<std::string, std::deque<double>> map = mEnv->GetRewardMap();
-
-	y = 0.409;
-	DrawQuads(x, y, w, h, white);
-	DrawLine(x+0.005, y+0.01, x+w, y+0.01, black, 1.5);
-	DrawLine(x+0.005, y+0.01, x+0.005, y+h, black, 1.5);
-	DrawString(x+0.4*w, y+0.015, "pose");
-
-	std::deque<double> pose = map.at("pose");
-	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.5, pose);
-
-	y = 0.307;
-	DrawQuads(x, y, w, h, white);
-	DrawLine(x+0.005, y+0.01, x+w, y+0.01, black, 1.5);
-	DrawLine(x+0.005, y+0.01, x+0.005, y+h, black, 1.5);
-	DrawString(x+0.4*w, y+0.015, "vel");
-
-	std::deque<double> vel = map.at("vel");
-	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.5, vel);
-
-	y = 0.205;
-	DrawQuads(x, y, w, h, white);
-	DrawLine(x+0.005, y+0.01, x+w, y+0.01, black, 1.5);
-	DrawLine(x+0.005, y+0.01, x+0.005, y+h, black, 1.5);
-	DrawString(x+0.4*w, y+0.015, "ee");
-
-	std::deque<double> ee = map.at("ee");
-	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.5, ee);
-
-	y = 0.103;
-	DrawQuads(x, y, w, h, white);
-	DrawLine(x+0.005, y+0.01, x+w, y+0.01, black, 1.5);
-	DrawLine(x+0.005, y+0.01, x+0.005, y+h, black, 1.5);
-	DrawString(x+0.4*w, y+0.015, "root");
-
-	std::deque<double> root = map.at("root");
-	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.5, root);
-
-	y = 0.001;
-	DrawQuads(x, y, w, h, white);
-	DrawLine(x+0.005, y+0.01, x+w, y+0.01, black, 1.5);
-	DrawLine(x+0.005, y+0.01, x+0.005, y+h, black, 1.5);
-	DrawString(x+0.4*w, y+0.015, "com");
-
-	std::deque<double> com = map.at("com");
-	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, green, 1.5, com);
-
-	glDisable(GL_COLOR_MATERIAL);
-	glPopMatrix();
-
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glMatrixMode(oldMode);
-}
-
-void
-Window::
-DrawTorques()
-{
-	GLint oldMode;
-	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
-	glMatrixMode(GL_PROJECTION);
-
-	glPushMatrix();
-	glLoadIdentity();
-	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
-
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
-
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
-
-	// graph coord & size
-	double p_w = 0.15;
-	double p_h = 0.13;
-	double p_x = 0.01;
-	double p_y = 0.82;
-
-	mTorques = mEnv->GetCharacter()->GetTorques();
-	DrawTorqueGraph("FemurL_x", 0, p_w, p_h, p_x, p_y);
-	DrawTorqueGraph("FemurL_y", 1, p_w, p_h, p_x, p_y-0.15);
-	DrawTorqueGraph("FemurL_z", 2, p_w, p_h, p_x, p_y-0.30);
-	DrawTorqueGraph("FemurR_x", 7, p_w, p_h, p_x, p_y-0.45);
-	DrawTorqueGraph("FemurR_y", 8, p_w, p_h, p_x, p_y-0.60);
-	DrawTorqueGraph("FemurR_z", 9, p_w, p_h, p_x, p_y-0.75);
-
-	glDisable(GL_COLOR_MATERIAL);
-	glPopMatrix();
-
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glMatrixMode(oldMode);
-}
-
-void
-Window::
-DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double y)
-{
-	// graph
-	double offset_x = 0.004;
-	double offset_y = 0.001;
-
-	DrawQuads(x, y, w, h, white);
-	DrawLine(x+0.005, y+0.01, x+w-0.005, y+0.01, black, 2.0);
-	DrawLine(x+0.005, y+0.01, x+0.005, y+h-0.01, black, 2.0);
-	DrawString(x+0.4*w, y-0.015, name);
-
-	std::vector<double> data_ = (mTorques->GetTorquesDofsAvg())[idx];
-
-	DrawLineStrip(x+0.005, y+0.01, offset_x, offset_y, red, 1.5, data_);
-	DrawStringMax(x+0.005, y+0.01, offset_x, offset_y, data_, red);
-}
-
-void
-Window::
-DrawTrajectory()
-{
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
-
-	Eigen::Vector4d color(0.5, 0.5, 0.5, 0.7);
-	mRI->setPenColor(color);
-	mRI->setLineWidth(8.0);
-
-	glBegin(GL_LINE_STRIP);
-	for(int i=0; i<mTrajectory.size(); i++)
-	{
-		glVertex3f(mTrajectory[i][0], 0.0, mTrajectory[i][2]);
-	}
-	glEnd();
-
-	Eigen::Vector4d color1(0.5, 0.8, 0.5, 0.7);
-	mRI->setPenColor(color1);
-	for(int i=0; i<mFootprint.size(); i++)
-	{
-		glPushMatrix();
-		glTranslatef(mFootprint[i][0], 0.0, mFootprint[i][2]);
-		glutSolidCube(0.05);
-		glPopMatrix();
-	}
-
-	glDisable(GL_COLOR_MATERIAL);
-}
-
-void
-Window::
-DrawDevice()
-{
-	if(mEnv->GetCharacter()->GetOnDevice())
-	{
-		DrawSkeleton(mEnv->GetDevice()->GetSkeleton());
-		glDisable(GL_LIGHTING);
-		DrawDeviceSignals();
-		glEnable(GL_LIGHTING);
-		if(mDrawArrow)
-			DrawArrow();
-	}
-}
-
-void
-Window::
-DrawArrow()
-{
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
-
-	Eigen::Vector4d color(0.6, 1.2, 0.6, 0.8);
-	mRI->setPenColor(color);
-
-	Eigen::Vector3d p_L = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurL")->getTransform().translation();
-	Eigen::Matrix3d rot_L = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurL")->getTransform().rotation();
-	Eigen::Vector3d dir_L1 = rot_L.col(2);
-	Eigen::Vector3d dir_L2 = rot_L.col(2);
-	dir_L2[2] *= -1;
-
-	Eigen::VectorXd f = mEnv->GetDevice()->GetDesiredTorques2();
-
-	if(f[6] < 0)
-		drawArrow3D(p_L, dir_L2,-0.04*f[6], 0.01, 0.03);
-	else
-		drawArrow3D(p_L, dir_L1, 0.04*f[6], 0.01, 0.03);
-
-	Eigen::Vector3d p_R = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurR")->getTransform().translation();
-	Eigen::Matrix3d rot_R = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurR")->getTransform().rotation();
-	Eigen::Vector3d dir_R1 = rot_R.col(2);
-	Eigen::Vector3d dir_R2 = rot_R.col(2);
-	dir_R2[2] *= -1;
-
-	if(f[7] < 0)
-		drawArrow3D(p_R, dir_R2,-0.04*f[7], 0.015, 0.03);
-	else
-		drawArrow3D(p_R, dir_R1, 0.04*f[7], 0.015, 0.03);
-
-	glDisable(GL_COLOR_MATERIAL);
-}
-
-void
-Window::
-DrawFemurSignals()
-{
-	GLint oldMode;
-	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
-	glMatrixMode(GL_PROJECTION);
-
-	glPushMatrix();
-	glLoadIdentity();
-	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
-
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
-
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
-
-	double p_w = 0.30;
-	double p_h = 0.15;
-
-	double pl_x = 0.70;
-	double pl_y = 0.83;
-	double pr_x = 0.70;
-	double pr_y = 0.60;
-
-	double offset_x = 0.00024;
-	double offset_y = 0.001;
-
-	// std::deque<double> data_y = mEnv->GetDevice()->GetSignals(0);
-
-	DrawString(pl_x+0.5*p_w, pl_y-0.02, "Device L");
-	DrawQuads(pl_x, pl_y, p_w, p_h, white);
-	DrawLine(pl_x+0.01, pl_y+0.01, pl_x+p_w-0.01, pl_y+0.01, black, 1.0);
-	DrawLine(pl_x+0.01, pl_y+0.01, pl_x+0.01, pl_y+p_h-0.01, black, 1.0);
-	// DrawLine(pl_x+0.01+offset_x*340, pl_y+0.01, pl_x+0.01+offset_x*340, pl_y+p_h-0.01, grey, 1.0);
-
-	std::deque<double> data_L_femur = mEnv->GetCharacter()->GetSignals(1);
-	DrawLineStrip(pl_x+0.01, pl_y+0.01, offset_x, offset_y, red, 2.0, data_L_femur);
-	DrawStringMax(pl_x+0.01, pl_y+0.01, offset_x, offset_y, data_L_femur, red);
-
-	DrawString(pr_x+0.5*p_w, pr_y-0.02, "Device R");
-	DrawQuads(pr_x, pr_y, p_w, p_h, white);
-	DrawLine(pr_x+0.01, pr_y+0.01, pr_x+p_w-0.01, pr_y+0.01, black, 1.0);
-	DrawLine(pr_x+0.01, pr_y+0.01, pr_x+0.01, pr_y+p_h-0.01, black, 1.0);
-	// DrawLine(pr_x+0.01+offset_x*340, pr_y+0.01, pr_x+0.01+offset_x*340, pr_y+p_h-0.01, grey, 1.0);
-
-	std::deque<double> data_R_femur = mEnv->GetCharacter()->GetSignals(0);
-	DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R_femur);
-	DrawStringMax(pr_x+0.01, pr_y+0.01, offset_x, offset_y, data_R_femur, red);
-
-
-	glDisable(GL_COLOR_MATERIAL);
-	glPopMatrix();
-
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glMatrixMode(oldMode);
-}
-
-void
-Window::
-DrawDeviceSignals()
-{
-	GLint oldMode;
-	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
-	glMatrixMode(GL_PROJECTION);
-
-	glPushMatrix();
-	glLoadIdentity();
-	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
-
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
-
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
-
-	double p_w = 0.30;
-	double p_h = 0.15;
-
-	double pl_x = 0.70;
-	double pl_y = 0.83;
-	double pr_x = 0.70;
-	double pr_y = 0.60;
-
-	double offset_x = 0.00024;
-	double offset_y = 0.001;
-
-	// std::deque<double> data_y = mEnv->GetDevice()->GetSignals(0);
-
-	DrawString(pl_x+0.5*p_w, pl_y-0.02, "Device L");
-	DrawQuads(pl_x, pl_y, p_w, p_h, white);
-	DrawLine(pl_x+0.01, pl_y+0.01, pl_x+p_w-0.01, pl_y+0.01, black, 1.0);
-	DrawLine(pl_x+0.01, pl_y+0.01, pl_x+0.01, pl_y+p_h-0.01, black, 1.0);
-	// DrawLine(pl_x+0.01+offset_x*340, pl_y+0.01, pl_x+0.01+offset_x*340, pl_y+p_h-0.01, grey, 1.0);
-
-	std::deque<double> data_L = mEnv->GetDevice()->GetSignals(1);
-	std::deque<double> data_L_femur = mEnv->GetCharacter()->GetSignals(1);
-	DrawLineStrip(pl_x+0.01, pl_y+0.01, offset_x, offset_y, blue, 2.0, data_L, red, 2.0, data_L_femur);
-	// DrawLineStrip(pl_x+0.01, pl_y+0.01, offset_x, offset_y, red, 2.0, data_L, blue, 2.0, data_y);
-	DrawStringMax(pl_x+0.01, pl_y+0.01, offset_x, offset_y, data_L, blue);
-	DrawStringMax(pl_x+0.01, pl_y+0.01, offset_x, offset_y, data_L_femur, red);
-
-	DrawString(pr_x+0.5*p_w, pr_y-0.02, "Device R");
-	DrawQuads(pr_x, pr_y, p_w, p_h, white);
-	DrawLine(pr_x+0.01, pr_y+0.01, pr_x+p_w-0.01, pr_y+0.01, black, 1.0);
-	DrawLine(pr_x+0.01, pr_y+0.01, pr_x+0.01, pr_y+p_h-0.01, black, 1.0);
-	// DrawLine(pr_x+0.01+offset_x*340, pr_y+0.01, pr_x+0.01+offset_x*340, pr_y+p_h-0.01, grey, 1.0);
-
-	std::deque<double> data_R = mEnv->GetDevice()->GetSignals(2);
-	std::deque<double> data_R_femur = mEnv->GetCharacter()->GetSignals(0);
-	DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, blue, 2.0, data_R, red, 2.0, data_R_femur);
-	// DrawLineStrip(pr_x+0.01, pr_y+0.01, offset_x, offset_y, red, 2.0, data_R, blue, 2.0, data_y);
-	DrawStringMax(pr_x+0.01, pr_y+0.01, offset_x, offset_y, data_R, blue);
-	DrawStringMax(pr_x+0.01, pr_y+0.01, offset_x, offset_y, data_R_femur, red);
-
-
-	glDisable(GL_COLOR_MATERIAL);
-	glPopMatrix();
-
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glMatrixMode(oldMode);
-}
-
-void
-Window::
-DrawProgressBar()
-{
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
-
-	Eigen::Vector4d color(0.5, 0.5, 0.5, 1.0);
-	mRI->setPenColor(color);
-
-	double phase = mEnv->GetCharacter()->GetPhase();
-	dart::gui::drawProgressBar(phase*100, 100);
-
-	glDisable(GL_COLOR_MATERIAL);
-}
-
-
-void
-Window::
-DrawEntity(const Entity* entity)
-{
-	if (!entity)
-		return;
-	const auto& bn = dynamic_cast<const BodyNode*>(entity);
-	if(bn)
-	{
-		DrawBodyNode(bn);
-		return;
-	}
-
-	const auto& sf = dynamic_cast<const ShapeFrame*>(entity);
-	if(sf)
-	{
-		DrawShapeFrame(sf);
-		return;
-	}
+	DrawBodyNode(skel->getRootBodyNode());
 }
 
 void
@@ -915,13 +382,6 @@ DrawBodyNode(const BodyNode* bn)
 		DrawEntity(et);
 
 	mRI->popMatrix();
-}
-
-void
-Window::
-DrawSkeleton(const SkeletonPtr& skel)
-{
-	DrawBodyNode(skel->getRootBodyNode());
 }
 
 void
@@ -996,74 +456,30 @@ DrawShape(const Shape* shape,const Eigen::Vector4d& color)
 			float y = mEnv->GetGround()->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(mEnv->GetGround()->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
 			this->DrawShadow(mesh->getScale(), mesh->getMesh(),y);
 		}
-
 	}
-
 	glDisable(GL_COLOR_MATERIAL);
+	glDisable(GL_DEPTH_TEST);
 }
 
 void
 Window::
-DrawMuscles(const std::vector<Muscle*>& muscles)
+DrawEntity(const Entity* entity)
 {
-	int count =0;
-	glEnable(GL_LIGHTING);
-	glEnable(GL_DEPTH_TEST);
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
-
-	for(auto muscle : muscles)
+	if (!entity)
+		return;
+	const auto& bn = dynamic_cast<const BodyNode*>(entity);
+	if(bn)
 	{
-		auto aps = muscle->GetAnchors();
-		bool lower_body = true;
-		double a = muscle->GetActivation();
-		Eigen::Vector4d color(0.4+(2.0*a),0.4,0.4,1.0);//0.7*(1.0-3.0*a));
-		mRI->setPenColor(color);
-		for(int i=0;i<aps.size();i++)
-		{
-			Eigen::Vector3d p = aps[i]->GetPoint();
-			mRI->pushMatrix();
-			mRI->translate(p);
-			mRI->drawSphere(0.005*sqrt(muscle->GetF0()/1000.0));
-			mRI->popMatrix();
-		}
-
-		for(int i=0;i<aps.size()-1;i++)
-		{
-			Eigen::Vector3d p = aps[i]->GetPoint();
-			Eigen::Vector3d p1 = aps[i+1]->GetPoint();
-
-			Eigen::Vector3d u(0,0,1);
-			Eigen::Vector3d v = p-p1;
-			Eigen::Vector3d mid = 0.5*(p+p1);
-			double len = v.norm();
-			v /= len;
-			Eigen::Isometry3d T;
-			T.setIdentity();
-			Eigen::Vector3d axis = u.cross(v);
-			axis.normalize();
-			double angle = acos(u.dot(v));
-			Eigen::Matrix3d w_bracket = Eigen::Matrix3d::Zero();
-			w_bracket(0, 1) = -axis(2);
-			w_bracket(1, 0) =  axis(2);
-			w_bracket(0, 2) =  axis(1);
-			w_bracket(2, 0) = -axis(1);
-			w_bracket(1, 2) = -axis(0);
-			w_bracket(2, 1) =  axis(0);
-
-
-			Eigen::Matrix3d R = Eigen::Matrix3d::Identity()+(sin(angle))*w_bracket+(1.0-cos(angle))*w_bracket*w_bracket;
-			T.linear() = R;
-			T.translation() = mid;
-			mRI->pushMatrix();
-			mRI->transform(T);
-			mRI->drawCylinder(0.005*sqrt(muscle->GetF0()/1000.0),len);
-			mRI->popMatrix();
-		}
-
+		DrawBodyNode(bn);
+		return;
 	}
-	glEnable(GL_LIGHTING);
-	glDisable(GL_DEPTH_TEST);
+
+	const auto& sf = dynamic_cast<const ShapeFrame*>(entity);
+	if(sf)
+	{
+		DrawShapeFrame(sf);
+		return;
+	}
 }
 
 void
@@ -1107,7 +523,6 @@ DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine
 	glColor3f(0.3,0.3,0.3);
 
 	// update transform
-
 	// draw all meshes assigned to this node
 	for (; n < nd->mNumMeshes; ++n) {
 		const struct aiMesh* mesh = sc->mMeshes[nd->mMeshes[n]];
@@ -1140,58 +555,383 @@ DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine
 			}
 			glEnd();
 		}
-
 	}
 
-	// draw all children
 	for (n = 0; n < nd->mNumChildren; ++n) {
 		DrawAiMesh(sc, nd->mChildren[n],M,y);
 	}
 }
 
-np::ndarray toNumPyArray(const Eigen::VectorXd& vec)
+void
+Window::
+DrawMuscles(const std::vector<Muscle*>& muscles)
 {
-	int n = vec.rows();
-	p::tuple shape = p::make_tuple(n);
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray array = np::empty(shape,dtype);
+	int count =0;
+	glDisable(GL_LIGHTING);
+	glEnable(GL_DEPTH_TEST);
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+	for(auto muscle : muscles)
+	{
+		auto aps = muscle->GetAnchors();
+		bool lower_body = true;
+		double a = muscle->GetActivation();
+		Eigen::Vector4d color(0.4+(2.0*a),0.4,0.4,1.0);
+		//0.7*(1.0-3.0*a));
+		mRI->setPenColor(color);
+		for(int i=0;i<aps.size();i++)
+		{
+			Eigen::Vector3d p = aps[i]->GetPoint();
+			mRI->pushMatrix();
+			mRI->translate(p);
+			mRI->drawSphere(0.005*sqrt(muscle->GetF0()/1000.0));
+			mRI->popMatrix();
+		}
 
-	float* dest = reinterpret_cast<float*>(array.get_data());
-	for(int i =0;i<n;i++)
-		dest[i] = vec[i];
+		for(int i=0;i<aps.size()-1;i++)
+		{
+			Eigen::Vector3d p = aps[i]->GetPoint();
+			Eigen::Vector3d p1 = aps[i+1]->GetPoint();
 
-	return array;
+			Eigen::Vector3d u(0,0,1);
+			Eigen::Vector3d v = p-p1;
+			Eigen::Vector3d mid = 0.5*(p+p1);
+			double len = v.norm();
+			v /= len;
+			Eigen::Isometry3d T;
+			T.setIdentity();
+			Eigen::Vector3d axis = u.cross(v);
+			axis.normalize();
+			double angle = acos(u.dot(v));
+			Eigen::Matrix3d w_bracket = Eigen::Matrix3d::Zero();
+			w_bracket(0, 1) = -axis(2);
+			w_bracket(1, 0) =  axis(2);
+			w_bracket(0, 2) =  axis(1);
+			w_bracket(2, 0) = -axis(1);
+			w_bracket(1, 2) = -axis(0);
+			w_bracket(2, 1) =  axis(0);
+
+			Eigen::Matrix3d R = Eigen::Matrix3d::Identity()+(sin(angle))*w_bracket+(1.0-cos(angle))*w_bracket*w_bracket;
+			T.linear() = R;
+			T.translation() = mid;
+			mRI->pushMatrix();
+			mRI->transform(T);
+			mRI->drawCylinder(0.005*sqrt(muscle->GetF0()/1000.0),len);
+			mRI->popMatrix();
+		}
+	}
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_LIGHTING);
 }
 
-Eigen::VectorXd
+void
 Window::
-GetActionFromNN()
+DrawTarget()
 {
-	Eigen::VectorXd state = mEnv->GetCharacter()->GetState();
-	p::tuple shape = p::make_tuple(state.rows());
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray state_np = np::empty(shape,dtype);
+	isDrawTarget = true;
 
-	float* dest = reinterpret_cast<float*>(state_np.get_data());
-	for(int i =0;i<state.rows();i++)
-		dest[i] = state[i];
+	Character* character = mEnv->GetCharacter();
+	SkeletonPtr skeleton = character->GetSkeleton();
 
-	p::object apply;
-	apply = rms_module.attr("apply_no_update");
-	p::object state_np_tmp = apply(state_np);
-	np::ndarray state_np_ = np::from_object(state_np_tmp);
+	Eigen::VectorXd cur_pos = skeleton->getPositions();
 
-	p::object get_action;
-	get_action = nn_module.attr("get_action");
-	p::object temp = get_action(state_np_);
-	np::ndarray action_np = np::from_object(temp);
-	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+	skeleton->setPositions(character->GetTargetPositions());
+	DrawBodyNode(skeleton->getRootBodyNode());
 
-	Eigen::VectorXd action(mEnv->GetCharacter()->GetNumAction());
-	for(int i=0;i<action.rows();i++)
-		action[i] = srcs[i];
+	skeleton->setPositions(cur_pos);
 
-	return action;
+	isDrawTarget = false;
+}
+
+void
+Window::
+DrawFemurSignals()
+{
+	DrawGLBegin();
+
+	double p_w = 0.30;
+	double p_h = 0.15;
+	double pl_x = 0.70;
+	double pl_y = 0.83;
+	double pr_x = 0.70;
+	double pr_y = 0.60;
+
+	double offset_x = 0.00024;
+	double offset_y = 0.0006;
+	double offset = 0.005;
+	double ratio_y = 0.3;
+
+	Character* character = mEnv->GetCharacter();
+	std::deque<double> data_L_femur = character->GetSignals(0);
+	std::deque<double> data_R_femur = character->GetSignals(1);
+
+	DrawBaseGraph(pl_x, pl_y, p_w, p_h, ratio_y, offset, "Device L");
+	DrawLineStrip(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, red, 2.0, data_L_femur);
+	DrawStringMax(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, data_L_femur, red);
+
+	DrawBaseGraph(pr_x, pr_y, p_w, p_h, ratio_y, offset, "Device R");
+	DrawLineStrip(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, red, 2.0, data_R_femur);
+	DrawStringMax(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, data_R_femur, red);
+
+	DrawGLEnd();
+}
+
+void
+Window::
+DrawTorques()
+{
+	DrawGLBegin();
+
+	double p_w = 0.30;
+	double p_h = 0.13;
+	double p_x = 0.01;
+	double p_y = 0.84;
+
+	mTorques = mEnv->GetCharacter()->GetTorques();
+	DrawTorqueGraph("FemurL_x", 6, p_w, p_h, p_x, p_y);
+	DrawTorqueGraph("FemurL_y", 7, p_w, p_h, p_x, p_y-0.16);
+	DrawTorqueGraph("FemurL_z", 8, p_w, p_h, p_x, p_y-0.32);
+	DrawTorqueGraph("FemurR_x", 13, p_w, p_h, p_x, p_y-0.48);
+	DrawTorqueGraph("FemurR_y", 14, p_w, p_h, p_x, p_y-0.64);
+	DrawTorqueGraph("FemurR_z", 15, p_w, p_h, p_x, p_y-0.80);
+
+	DrawGLEnd();
+}
+
+void
+Window::
+DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double y)
+{
+	double offset_x = 0.00024;
+	double offset_y = 0.0006;
+	double offset = 0.005;
+	double ratio_y = 0.3;
+
+	std::deque<double> data_ = (mTorques->GetTorquesDofs())[idx];
+
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, name);
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, data_);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data_, red);
+}
+
+void
+Window::
+DrawReward()
+{
+	DrawGLBegin();
+
+	double p_w = 0.15;
+	double p_h = 0.13;
+	double p_x = 0.69;
+	double p_y = 0.38;
+
+	DrawRewardGraph("Reward", p_x, p_y, p_w, p_h);
+
+	DrawGLEnd();
+}
+
+void
+Window::
+DrawRewardGraph(std::string name, double x, double y, double w, double h)
+{
+	double offset_x = 0.004;
+	double offset_y = 0.1;
+	double offset = 0.005;
+	double ratio_y = 0;
+
+	Character* character = mEnv->GetCharacter();
+	std::vector<double> data_ = character->GetReward_Graph(0);
+	std::vector<double> data_device_ = character->GetReward_Graph(1);
+
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, name);
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, data_, green, 1.5, data_device_);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data_, red);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data_device_, green);
+}
+
+void
+Window::
+DrawRewardMap()
+{
+	DrawGLBegin();
+
+	double w = 0.13;
+	double h = 0.101;
+	double x = 0.86;
+	double y = 0.409;
+
+	double offset_x = 0.002;
+	double offset_y = 0.1;
+	double offset = 0.005;
+	double ratio_y = 0.0;
+
+	std::map<std::string, std::deque<double>> map = mEnv->GetRewardMap();
+	std::deque<double> pose = map.at("pose");
+	std::deque<double> vel = map.at("vel");
+	std::deque<double> ee = map.at("ee");
+	std::deque<double> root = map.at("root");
+	std::deque<double> com = map.at("com");
+
+	y = 0.409;
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "pose");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, pose);
+
+	y = 0.307;
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "vel");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, vel);
+
+	y = 0.205;
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "ee");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, ee);
+
+	y = 0.103;
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "root");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, root);
+
+	y = 0.001;
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "com");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, com);
+
+	DrawGLEnd();
+}
+
+void
+Window::
+DrawDevice()
+{
+	Character* character = mEnv->GetCharacter();
+	if(character->GetOnDevice())
+	{
+		DrawSkeleton(mEnv->GetDevice()->GetSkeleton());
+		DrawDeviceSignals();
+		if(mDrawArrow)
+			DrawArrow();
+	}
+}
+
+void
+Window::
+DrawDeviceSignals()
+{
+	DrawGLBegin();
+
+	double p_w = 0.30;
+	double p_h = 0.15;
+	double pl_x = 0.69;
+	double pl_y = 0.83;
+	double pr_x = 0.69;
+	double pr_y = 0.60;
+
+	double offset_x = 0.00024;
+	double offset_y = 0.0006;
+	double offset = 0.005;
+	double ratio_y = 0.3;
+
+	Device* device = mEnv->GetDevice();
+	Character* character = mEnv->GetCharacter();
+	std::deque<double> data_L = device->GetSignals(0);
+	std::deque<double> data_L_femur = character->GetSignals(0);
+	std::deque<double> data_R = device->GetSignals(1);
+	std::deque<double> data_R_femur = character->GetSignals(1);
+	// std::deque<double> data_y = device->GetSignals(2);
+
+	DrawBaseGraph(pl_x, pl_y, p_w, p_h, ratio_y, offset, "Device L");
+	DrawLineStrip(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_L, red, 1.5, data_L_femur);
+	DrawStringMax(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, data_L, blue);
+	DrawStringMax(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset,  data_L_femur, red);
+
+	DrawBaseGraph(pr_x, pr_y, p_w, p_h, ratio_y, offset, "Device R");
+	DrawLineStrip(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_R, red, 1.5, data_R_femur);
+	DrawStringMax(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, data_R, blue);
+	DrawStringMax(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset,  data_R_femur, red);
+
+	DrawGLEnd();
+}
+
+void
+Window::
+DrawArrow()
+{
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+
+	Eigen::Vector4d color(0.6, 1.2, 0.6, 0.8);
+	mRI->setPenColor(color);
+
+	Eigen::VectorXd f = mEnv->GetDevice()->GetDesiredTorques2();
+
+	Eigen::Isometry3d trans_L = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurL")->getTransform();
+	Eigen::Vector3d p_L = trans_L.translation();
+	Eigen::Matrix3d rot_L = trans_L.rotation();
+	Eigen::Vector3d dir_L1 = rot_L.col(2);
+	Eigen::Vector3d dir_L2 = rot_L.col(2);
+	dir_L2[2] *= -1;
+
+	if(f[6] < 0)
+		drawArrow3D(p_L, dir_L2,-0.04*f[6], 0.01, 0.03);
+	else
+		drawArrow3D(p_L, dir_L1, 0.04*f[6], 0.01, 0.03);
+
+	Eigen::Isometry3d trans_R = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurR")->getTransform();
+	Eigen::Vector3d p_R = trans_R.translation();
+	Eigen::Matrix3d rot_R = trans_R.rotation();
+	Eigen::Vector3d dir_R1 = rot_R.col(2);
+	Eigen::Vector3d dir_R2 = rot_R.col(2);
+	dir_R2[2] *= -1;
+
+	if(f[7] < 0)
+		drawArrow3D(p_R, dir_R2,-0.04*f[7], 0.015, 0.03);
+	else
+		drawArrow3D(p_R, dir_R1, 0.04*f[7], 0.015, 0.03);
+
+	glDisable(GL_COLOR_MATERIAL);
+}
+
+void
+Window::
+DrawGLBegin()
+{
+	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
+	glMatrixMode(GL_PROJECTION);
+
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+	glDisable(GL_LIGHTING);
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+}
+
+void
+Window::
+DrawGLEnd()
+{
+	glDisable(GL_COLOR_MATERIAL);
+	glEnable(GL_LIGHTING);
+	glPopMatrix();
+
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(oldMode);
+}
+
+void
+Window::
+DrawBaseGraph(double x, double y, double w, double h, double ratio, double offset, std::string name)
+{
+	h -= 2*offset;
+	w -= 2*offset;
+	x += offset;
+	y += offset;
+	DrawQuads(x-offset, y-offset, w+2*offset, h+2*offset, white);
+	DrawLine(x, y+ratio*h, x+w, y+ratio*h, black, 1.5);
+	DrawLine(x, y, x, y+h, black, 1.5);
+	DrawString(x+0.45*w, y+offset, name);
 }
 
 void
@@ -1248,7 +988,7 @@ DrawString(double x, double y, std::string str, Eigen::Vector4d color)
 
 void
 Window::
-DrawStringMax(double x, double y, double offset_x, double offset_y, std::vector<double> data, Eigen::Vector4d color)
+DrawStringMax(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, std::vector<double> data, Eigen::Vector4d color)
 {
 	double max = 0;
 	int idx = 0;
@@ -1261,12 +1001,15 @@ DrawStringMax(double x, double y, double offset_x, double offset_y, std::vector<
 		}
 	}
 
+	h -= 2*offset;
+	x += offset;
+	y += offset + ratio*h;
 	DrawString(x+idx*offset_x, y+max*offset_y, std::to_string(max), color);
 }
 
 void
 Window::
-DrawStringMax(double x, double y, double offset_x, double offset_y, std::deque<double> data, Eigen::Vector4d color)
+DrawStringMax(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, std::deque<double> data, Eigen::Vector4d color)
 {
 	double max = 0;
 	int idx = 0;
@@ -1279,16 +1022,52 @@ DrawStringMax(double x, double y, double offset_x, double offset_y, std::deque<d
 		}
 	}
 
+	h -= 2*offset;
+	x += offset;
+	y += offset + ratio*h;
 	DrawString(x+idx*offset_x, y+max*offset_y, std::to_string(max), color);
 }
 
 void
 Window::
-DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::deque<double>& data)
+DrawStringMinMax(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, std::deque<double> data, Eigen::Vector4d color)
+{
+	double max = 0;
+	double min = 0;
+	int idx_max = 0;
+	int idx_min = 0;
+	for(int i=0; i<data.size(); i++)
+	{
+		if(data[i] > max)
+		{
+			max = data.at(i);
+			idx_max = i;
+		}
+
+		if(data[i] < min)
+		{
+			min = data.at(i);
+			idx_min = i;
+		}
+	}
+
+	h -= 2*offset;
+	x += offset;
+	y += offset + ratio*h;
+	DrawString(x+idx_max*offset_x, y+max*offset_y, std::to_string(max), color);
+	DrawString(x+idx_min*offset_x, y+min*offset_y, std::to_string(min), color);
+}
+
+void
+Window::
+DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::deque<double>& data)
 {
 	mRI->setPenColor(color);
 	mRI->setLineWidth(line_width);
 
+	h -= 2*offset;
+	x += offset;
+	y += offset + ratio*h;
 	glBegin(GL_LINE_STRIP);
 	for(int i=0; i<data.size(); i++)
 		glVertex2f(x + offset_x*i, y + offset_y*data.at(i));
@@ -1297,11 +1076,14 @@ DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vecto
 
 void
 Window::
-DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::vector<double>& data, Eigen::Vector4d color1, double line_width1, std::vector<double>& data1)
+DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::vector<double>& data, Eigen::Vector4d color1, double line_width1, std::vector<double>& data1)
 {
 	mRI->setPenColor(color);
 	mRI->setLineWidth(line_width);
 
+	h -= 2*offset;
+	x += offset;
+	y += offset + ratio*h;
 	glBegin(GL_LINE_STRIP);
 	for(int i=0; i<data.size(); i++)
 		glVertex2f(x + offset_x*i, y + offset_y*data.at(i));
@@ -1318,11 +1100,14 @@ DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vecto
 
 void
 Window::
-DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::vector<double>& data)
+DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::vector<double>& data)
 {
 	mRI->setPenColor(color);
 	mRI->setLineWidth(line_width);
 
+	h -= 2*offset;
+	x += offset;
+	y += offset + ratio*h;
 	glBegin(GL_LINE_STRIP);
 	for(int i=0; i<data.size(); i++)
 		glVertex2f(x + offset_x*i, y + offset_y*data.at(i));
@@ -1331,11 +1116,14 @@ DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vecto
 
 void
 Window::
-DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vector4d color, double line_width, std::deque<double>& data, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1)
+DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::deque<double>& data, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1)
 {
 	mRI->setPenColor(color);
 	mRI->setLineWidth(line_width);
 
+	h -= 2*offset;
+	x += offset;
+	y += offset + ratio*h;
 	glBegin(GL_LINE_STRIP);
 	for(int i=180; i<data.size(); i++)
 		glVertex2f(x + offset_x*(i-180), y + offset_y*data.at(i));
@@ -1346,7 +1134,6 @@ DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vecto
 
 	glBegin(GL_LINE_STRIP);
 	for(int i=0; i<data1.size(); i++)
-		// glVertex2f(x + offset_x*i, y + 0.5*offset_y*data1.at(i));
 		glVertex2f(x + offset_x*i, y + offset_y*data1.at(i));
 	glEnd();
 
@@ -1360,7 +1147,6 @@ DrawLineStrip(double x, double y, double offset_x, double offset_y, Eigen::Vecto
 	// for(int i=180; i<data.size(); i++)
 	//  glVertex2f(x + offset_x*(i-180), y + offset_y*(data.at(i)+0.5*data1.at(i-180)));
 	// glEnd();
-
 }
 
 Eigen::VectorXd
@@ -1384,6 +1170,51 @@ GetActionFromNN_Device()
 	float* srcs = reinterpret_cast<float*>(action_np.get_data());
 
 	Eigen::VectorXd action(mEnv->GetCharacter()->GetDevice()->GetNumAction());
+	for(int i=0;i<action.rows();i++)
+		action[i] = srcs[i];
+
+	return action;
+}
+
+np::ndarray toNumPyArray(const Eigen::VectorXd& vec)
+{
+	int n = vec.rows();
+	p::tuple shape = p::make_tuple(n);
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::ndarray array = np::empty(shape,dtype);
+
+	float* dest = reinterpret_cast<float*>(array.get_data());
+	for(int i =0;i<n;i++)
+		dest[i] = vec[i];
+
+	return array;
+}
+
+Eigen::VectorXd
+Window::
+GetActionFromNN()
+{
+	Eigen::VectorXd state = mEnv->GetCharacter()->GetState();
+	p::tuple shape = p::make_tuple(state.rows());
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::ndarray state_np = np::empty(shape,dtype);
+
+	float* dest = reinterpret_cast<float*>(state_np.get_data());
+	for(int i =0;i<state.rows();i++)
+		dest[i] = state[i];
+
+	p::object apply;
+	apply = rms_module.attr("apply_no_update");
+	p::object state_np_tmp = apply(state_np);
+	np::ndarray state_np_ = np::from_object(state_np_tmp);
+
+	p::object get_action;
+	get_action = nn_module.attr("get_action");
+	p::object temp = get_action(state_np_);
+	np::ndarray action_np = np::from_object(temp);
+	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+
+	Eigen::VectorXd action(mEnv->GetCharacter()->GetNumAction());
 	for(int i=0;i<action.rows();i++)
 		action[i] = srcs[i];
 
