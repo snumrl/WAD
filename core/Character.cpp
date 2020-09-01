@@ -157,11 +157,11 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	mFemurSignals_L.resize(1200);
 	mFemurSignals_R.resize(1200);
 
-	std::deque<double> pose_(60, 0);
-	std::deque<double> vel_(60, 0);
-	std::deque<double> root_(60, 0);
-	std::deque<double> ee_(60, 0);
-	std::deque<double> com_(60, 0);
+	std::deque<double> pose_(70, 0);
+	std::deque<double> vel_(70, 0);
+	std::deque<double> root_(70, 0);
+	std::deque<double> ee_(70, 0);
+	std::deque<double> com_(70, 0);
 
 	mReward_map;
 	mReward_map.insert(std::make_pair("pose", pose_));
@@ -277,53 +277,15 @@ Initialize_Muscles()
 
 void
 Character::
-get_record()
-{
-	// mFemur_L_Avg.resize(34);
-    // mFemur_R_Avg.resize(34);
-	std::ifstream fileIn("../build/FemurL.txt");
-    if(!fileIn.is_open())
-    {
-        std::cout << "Failed to open file!\n";
-        return ;
-    }
-
-    std::string data;
-    while (fileIn >> data)
-    {
-        mFemur_L_Avg.push_back(std::stod(data));
-    }
-
-    std::ifstream fileIn2("../build/FemurR.txt");
-    if(!fileIn2.is_open())
-    {
-        std::cout << "Failed to open file!\n";
-        return ;
-    }
-
-    while (fileIn2 >> data)
-    {
-        mFemur_R_Avg.push_back(std::stod(data));
-    }
-}
-
-void
-Character::
 Initialize_Analysis()
 {
 	mTorques = new Torques();
 	mTorques->Init(mSkeleton);
 
-	for(int i=0; i<33; i++)
+	for(int i=0; i<70; i++)
 	{
 		mRewards.push_back(0.0);
-		mRewards_num.push_back(0);
-	}
-
-	for(int i=0; i<33; i++)
-	{
 		mRewards_Device.push_back(0.0);
-		mRewards_Device_num.push_back(0);
 	}
 }
 
@@ -1010,24 +972,13 @@ void
 Character::
 SetReward_Graph()
 {
-	int phase_idx = (int)(mPhase/0.0303);
 	if(mOnDevice){
-		int n = mRewards_Device_num[phase_idx];
-		mRewards_Device[phase_idx] = (mRewards_Device[phase_idx]*n+mReward)/(double)(n+1);
-
-		mRewards_Device_num[phase_idx] += 1;
+		mRewards_Device.pop_back();
+		mRewards_Device.push_front(mReward);
 	}
-	else
-	{
-		int n = mRewards_num[phase_idx];
-		mRewards[phase_idx] = (mRewards[phase_idx]*n+mReward)/(double)(n+1);
-
-		mRewards_num[phase_idx] += 1;
-
-		n = mRewards_Device_num[phase_idx];
-		mRewards_Device[phase_idx] = (mRewards_Device[phase_idx]*n+r_torque_min)/(double)(n+1);
-
-		mRewards_Device_num[phase_idx] += 1;
+	else{
+		mRewards.pop_back();
+		mRewards.push_front(mReward);
 	}
 
 	mReward_map;
@@ -1056,7 +1007,7 @@ SetPhase()
 		mDevice->SetPhase(mPhase);
 }
 
-std::vector<double>
+std::deque<double>
 Character::
 GetReward_Graph(int idx)
 {

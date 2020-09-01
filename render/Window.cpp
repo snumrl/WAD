@@ -52,7 +52,7 @@ Eigen::Vector4d black(0.1, 0.1, 0.1, 1.0);
 Eigen::Vector4d grey(0.6, 0.6, 0.6, 1.0);
 
 Eigen::Vector4d red(0.8, 0.2, 0.2, 1.0);
-Eigen::Vector4d green(0.2, 0.8, 0.2, 1.0);
+Eigen::Vector4d green(0.2, 0.6, 0.2, 1.0);
 Eigen::Vector4d blue(0.2, 0.2, 0.8, 1.0);
 
 Window::
@@ -683,7 +683,7 @@ DrawTorques()
 	DrawGLBegin();
 
 	double p_w = 0.30;
-	double p_h = 0.13;
+	double p_h = 0.14;
 	double p_x = 0.01;
 	double p_y = 0.84;
 
@@ -721,9 +721,9 @@ DrawReward()
 	DrawGLBegin();
 
 	double p_w = 0.15;
-	double p_h = 0.13;
+	double p_h = 0.11;
 	double p_x = 0.69;
-	double p_y = 0.38;
+	double p_y = 0.49;
 
 	DrawRewardGraph("Reward", p_x, p_y, p_w, p_h);
 
@@ -734,14 +734,14 @@ void
 Window::
 DrawRewardGraph(std::string name, double x, double y, double w, double h)
 {
-	double offset_x = 0.004;
+	double offset_x = 0.002;
 	double offset_y = 0.1;
 	double offset = 0.005;
-	double ratio_y = 0;
+	double ratio_y = 0.0;
 
 	Character* character = mEnv->GetCharacter();
-	std::vector<double> data_ = character->GetReward_Graph(0);
-	std::vector<double> data_device_ = character->GetReward_Graph(1);
+	std::deque<double> data_ = character->GetReward_Graph(0);
+	std::deque<double> data_device_ = character->GetReward_Graph(1);
 
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, name);
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, data_, green, 1.5, data_device_);
@@ -755,10 +755,10 @@ DrawRewardMap()
 {
 	DrawGLBegin();
 
-	double w = 0.13;
-	double h = 0.101;
-	double x = 0.86;
-	double y = 0.409;
+	double w = 0.15;
+	double h = 0.11;
+	double x = 0.85;
+	double y = 0.49;
 
 	double offset_x = 0.002;
 	double offset_y = 0.1;
@@ -772,23 +772,23 @@ DrawRewardMap()
 	std::deque<double> root = map.at("root");
 	std::deque<double> com = map.at("com");
 
-	y = 0.409;
+	y = 0.49;
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "pose");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, pose);
 
-	y = 0.307;
+	y = 0.37;
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "vel");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, vel);
 
-	y = 0.205;
+	y = 0.25;
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "ee");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, ee);
 
-	y = 0.103;
+	y = 0.13;
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "root");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, root);
 
-	y = 0.001;
+	y = 0.01;
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "com");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, com);
 
@@ -816,11 +816,11 @@ DrawDeviceSignals()
 	DrawGLBegin();
 
 	double p_w = 0.30;
-	double p_h = 0.15;
+	double p_h = 0.14;
 	double pl_x = 0.69;
-	double pl_y = 0.83;
+	double pl_y = 0.84;
 	double pr_x = 0.69;
-	double pr_y = 0.60;
+	double pr_y = 0.68;
 
 	double offset_x = 0.00024;
 	double offset_y = 0.0006;

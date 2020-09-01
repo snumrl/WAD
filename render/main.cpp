@@ -47,7 +47,7 @@ int main(int argc,char** argv)
 		return 0;
 	}
 
-	window->initWindow(1080,1080,"gui");
+	window->initWindow(1440,1080,"gui");
 
 	glutMainLoop();
 }
