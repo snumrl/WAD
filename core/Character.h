@@ -129,7 +129,7 @@ public:
 
 	bool GetUseMuscle(){return mUseMuscle;}
 	double GetPhase(){return mPhase;}
-	std::deque<double> GetReward_Graph(int idx);
+	std::deque<double> GetRewards();
 	std::deque<double> GetSignals(int idx);
 	std::map<std::string, std::deque<double>> GetRewardMap(){return mReward_map;}
 

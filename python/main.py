@@ -208,7 +208,7 @@ class PPO(object):
 
 					self.env.Steps(1, False)
 			else:
-				self.env.StepsAtOnce(True)
+				self.env.StepsAtOnce(False)
 
 			for j in range(self.num_slaves):
 				nan_occur = False

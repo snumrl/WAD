@@ -86,6 +86,7 @@ private:
 	bool mSimulating;
 	bool mDrawCharacter;
 	bool mDrawTarget;
+	bool mDrawGraph;
 	bool mDrawArrow;
 	bool mDrawOBJ;
 	bool mDrawShadow;
@@ -94,7 +95,8 @@ private:
 	bool mDeviceNNLoaded;
 	bool mOnDevice;
 	bool isDrawTarget;
-
+	int mGraphMode;
+	int mCharacterMode;
 	GLint oldMode;
 	Eigen::Affine3d mViewMatrix;
 };

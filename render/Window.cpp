@@ -57,7 +57,7 @@ Eigen::Vector4d blue(0.2, 0.2, 0.8, 1.0);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),mDrawArrow(false)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),mDrawArrow(false),mDrawGraph(true),mGraphMode(0),mCharacterMode(0)
 {
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
@@ -179,6 +179,7 @@ keyboard(unsigned char _key, int _x, int _y)
 	case 's': this->Step();break;
 	case 'f': mFocus = !mFocus;break;
 	case 'o': mDrawOBJ = !mDrawOBJ;break;
+	case 'g': mDrawGraph = !mDrawGraph;break;
 	case 'a': mDrawArrow = !mDrawArrow;break;
 	case 't': mDrawTarget = !mDrawTarget;break;
 	case ' ': mSimulating = !mSimulating;break;
@@ -187,6 +188,8 @@ keyboard(unsigned char _key, int _x, int _y)
 		if(mEnv->GetUseDevice())
 			mOnDevice = !mOnDevice;
 		break;
+	case '\t': mGraphMode = (mGraphMode+1)%6;break;
+	case '`' : mCharacterMode = (mCharacterMode+1)%2; break;
 	case 27 : exit(0);break;
 	default:
 		Win3D::keyboard(_key,_x,_y);break;
@@ -347,12 +350,13 @@ DrawCharacter()
 	if(mDrawTarget)
 		DrawTarget();
 
-	if(!mEnv->GetUseDevice())
-		DrawFemurSignals();
-
-	DrawTorques();
-	DrawReward();
-	DrawRewardMap();
+	if(mDrawGraph){
+		if(!mEnv->GetUseDevice())
+			DrawFemurSignals();
+		DrawTorques();
+		DrawReward();
+		DrawRewardMap();
+	}
 }
 
 void
@@ -409,6 +413,15 @@ DrawShapeFrame(const ShapeFrame* sf)
 		color[1] = 0.6;
 		color[2] = 0.6;
 		color[3] = 0.3;
+	}
+	else{
+		if(mCharacterMode == 1)
+		{
+			color[0] = 0.9;
+			color[1] = 0.9;
+			color[2] = 0.9;
+			color[3] = 1.0;
+		}
 	}
 
 	DrawShape(sf->getShape().get(), color);
@@ -650,11 +663,11 @@ DrawFemurSignals()
 	DrawGLBegin();
 
 	double p_w = 0.30;
-	double p_h = 0.15;
-	double pl_x = 0.70;
-	double pl_y = 0.83;
-	double pr_x = 0.70;
-	double pr_y = 0.60;
+	double p_h = 0.14;
+	double pl_x = 0.69;
+	double pl_y = 0.84;
+	double pr_x = 0.69;
+	double pr_y = 0.68;
 
 	double offset_x = 0.00024;
 	double offset_y = 0.0006;
@@ -665,11 +678,11 @@ DrawFemurSignals()
 	std::deque<double> data_L_femur = character->GetSignals(0);
 	std::deque<double> data_R_femur = character->GetSignals(1);
 
-	DrawBaseGraph(pl_x, pl_y, p_w, p_h, ratio_y, offset, "Device L");
+	DrawBaseGraph(pl_x, pl_y, p_w, p_h, ratio_y, offset, "Femur L");
 	DrawLineStrip(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, red, 2.0, data_L_femur);
 	DrawStringMax(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, data_L_femur, red);
 
-	DrawBaseGraph(pr_x, pr_y, p_w, p_h, ratio_y, offset, "Device R");
+	DrawBaseGraph(pr_x, pr_y, p_w, p_h, ratio_y, offset, "Femur R");
 	DrawLineStrip(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, red, 2.0, data_R_femur);
 	DrawStringMax(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, data_R_femur, red);
 
@@ -686,14 +699,55 @@ DrawTorques()
 	double p_h = 0.14;
 	double p_x = 0.01;
 	double p_y = 0.84;
+	double offset_y = 0.16;
 
 	mTorques = mEnv->GetCharacter()->GetTorques();
-	DrawTorqueGraph("FemurL_x", 6, p_w, p_h, p_x, p_y);
-	DrawTorqueGraph("FemurL_y", 7, p_w, p_h, p_x, p_y-0.16);
-	DrawTorqueGraph("FemurL_z", 8, p_w, p_h, p_x, p_y-0.32);
-	DrawTorqueGraph("FemurR_x", 13, p_w, p_h, p_x, p_y-0.48);
-	DrawTorqueGraph("FemurR_y", 14, p_w, p_h, p_x, p_y-0.64);
-	DrawTorqueGraph("FemurR_z", 15, p_w, p_h, p_x, p_y-0.80);
+	if(mGraphMode == 0){
+		DrawTorqueGraph("FemurL_x", 6, p_w, p_h, p_x, p_y-0*offset_y);
+		DrawTorqueGraph("FemurL_y", 7, p_w, p_h, p_x, p_y-1*offset_y);
+		DrawTorqueGraph("FemurL_z", 8, p_w, p_h, p_x, p_y-2*offset_y);
+		DrawTorqueGraph("FemurR_x", 13, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("FemurR_y", 14, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("FemurR_z", 15, p_w, p_h, p_x, p_y-5*offset_y);
+	}
+	else if(mGraphMode == 1){
+		DrawTorqueGraph("Tibia_L", 9, p_w, p_h, p_x, p_y-0*offset_y);
+		DrawTorqueGraph("Tibia_R", 16, p_w, p_h, p_x, p_y-1*offset_y);
+		DrawTorqueGraph("Elbow_L", 29, p_w, p_h, p_x, p_y-2*offset_y);
+		DrawTorqueGraph("Elbow_R", 36, p_w, p_h, p_x, p_y-3*offset_y);
+	}
+	else if(mGraphMode == 2){
+		DrawTorqueGraph("TalusL_x", 10, p_w, p_h, p_x, p_y-0*offset_y);
+		DrawTorqueGraph("TalusL_y", 11, p_w, p_h, p_x, p_y-1*offset_y);
+		DrawTorqueGraph("TalusL_z", 12, p_w, p_h, p_x, p_y-2*offset_y);
+		DrawTorqueGraph("TalusR_x", 17, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("TalusR_y", 18, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("TalusR_z", 19, p_w, p_h, p_x, p_y-5*offset_y);
+	}
+	else if(mGraphMode == 3){
+		DrawTorqueGraph("Torso_x", 20, p_w, p_h, p_x, p_y-0*offset_y);
+		DrawTorqueGraph("Torso_y", 21, p_w, p_h, p_x, p_y-1*offset_y);
+		DrawTorqueGraph("Torso_z", 22, p_w, p_h, p_x, p_y-2*offset_y);
+		DrawTorqueGraph("Neck_x", 23, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("Neck_y", 24, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("Neck_z", 25, p_w, p_h, p_x, p_y-5*offset_y);
+	}
+	else if(mGraphMode == 4){
+		DrawTorqueGraph("ShoulderL_x", 26, p_w, p_h, p_x, p_y-0*offset_y);
+		DrawTorqueGraph("ShoulderL_y", 27, p_w, p_h, p_x, p_y-1*offset_y);
+		DrawTorqueGraph("ShoulderL_z", 28, p_w, p_h, p_x, p_y-2*offset_y);
+		DrawTorqueGraph("ShoulderR_x", 33, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("ShoulderR_Y", 34, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("ShoulderR_z", 35, p_w, p_h, p_x, p_y-5*offset_y);
+	}
+	else if(mGraphMode == 5){
+		DrawTorqueGraph("HandL_x", 30, p_w, p_h, p_x, p_y-0*offset_y);
+		DrawTorqueGraph("HandL_y", 31, p_w, p_h, p_x, p_y-1*offset_y);
+		DrawTorqueGraph("HandL_z", 32, p_w, p_h, p_x, p_y-2*offset_y);
+		DrawTorqueGraph("HandR_x", 37, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("HandR_y", 38, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("HandR_z", 39, p_w, p_h, p_x, p_y-5*offset_y);
+	}
 
 	DrawGLEnd();
 }
@@ -740,13 +794,11 @@ DrawRewardGraph(std::string name, double x, double y, double w, double h)
 	double ratio_y = 0.0;
 
 	Character* character = mEnv->GetCharacter();
-	std::deque<double> data_ = character->GetReward_Graph(0);
-	std::deque<double> data_device_ = character->GetReward_Graph(1);
+	std::deque<double> data_ = character->GetRewards();
 
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, name);
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, data_, green, 1.5, data_device_);
-	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data_, red);
-	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data_device_, green);
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, data_);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data_, green);
 }
 
 void
@@ -803,7 +855,8 @@ DrawDevice()
 	if(character->GetOnDevice())
 	{
 		DrawSkeleton(mEnv->GetDevice()->GetSkeleton());
-		DrawDeviceSignals();
+		if(mDrawGraph)
+			DrawDeviceSignals();
 		if(mDrawArrow)
 			DrawArrow();
 	}

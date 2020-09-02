@@ -145,8 +145,8 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 
 	mNumDof = mSkeleton->getNumDofs();
 	mNumActiveDof = mNumDof - mRootJointDof;
-	mNumState = 400;
-	// mNumState = this->GetState().rows();
+	// mNumState = 400;
+	mNumState = this->GetState().rows();
 
 	mAction.resize(mNumActiveDof);
 	mAction_prev.resize(mNumActiveDof);
@@ -176,7 +176,7 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 			1.0,			//Pelvis
 			0.5, 0.3, 0.2,	//Left Leg
 			0.5, 0.3, 0.2,	//Right Leg
-			0.5, 0.3,		//Torso & Neck
+			1.0, 0.3,		//Torso & Neck
 			0.3, 0.2, 0.1,	//Left Arm
 			0.3, 0.2, 0.1;	//Right Arm
 
@@ -186,14 +186,14 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	maxForces.resize(dof);
 	maxForces <<
 			0, 0, 0, 0, 0, 0,	//pelvis
-			30, 30, 30,		//Femur L
+			200, 200, 200,		//Femur L
 			150,				//Tibia L
 			90, 90, 90,			//Talus L
 			200, 200, 200,		//Femur R
 			150,				//Tibia R
 			90, 90, 90,			//Talus R
 			200, 200, 200,		//Torso
-			30, 30, 30,			//Neck
+			50, 50, 50,			//Neck
 			100, 100, 100,		//Shoulder L
 			60,					//Arm L
 			30, 30, 30,			//Hand L
@@ -219,7 +219,7 @@ SetPDParameters()
 		500, 500, 500,
 		500,
 		400, 400, 400,
-		1000, 1000, 1000,
+		500, 500, 500,
 		100, 100, 100,
 		400, 400, 400,
 		300,
@@ -235,7 +235,7 @@ SetPDParameters()
 		50, 50, 50,
 		50,
 		40, 40, 40,
-		100, 100, 100,
+		50, 50, 50,
 		10, 10, 10,
 		40, 40, 40,
 		30,
@@ -283,10 +283,7 @@ Initialize_Analysis()
 	mTorques->Init(mSkeleton);
 
 	for(int i=0; i<70; i++)
-	{
 		mRewards.push_back(0.0);
-		mRewards_Device.push_back(0.0);
-	}
 }
 
 void
@@ -306,6 +303,9 @@ Reset()
 	mSkeleton->setPositions(mTargetPositions);
 	mSkeleton->setVelocities(mTargetVelocities);
 	mSkeleton->computeForwardKinematics(true,false,false);
+
+	mDesiredTorque.setZero();
+	mDesiredTorque_prev.setZero();
 
 	mAction.setZero();
 	mAction_prev.setZero();
@@ -491,10 +491,10 @@ GetState()
 		idx_angv_diff += 3;
 	}
 
-	Eigen::VectorXd device_state = mDevice->GetState();
+	// Eigen::VectorXd device_state = mDevice->GetState();
 
-	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+device_state.rows());
-	// Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
+	// Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+device_state.rows());
+	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
 
 	this->SetPhase();
 
@@ -502,8 +502,8 @@ GetState()
 	mSkeleton->setVelocities(cur_vel);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
-	state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,device_state;
-	// state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
+	// state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,device_state;
+	state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
 
 	return state;
 }
@@ -653,10 +653,12 @@ GetReward_Character()
 	root_reward = exp(-err_scale * root_scale * root_err);
 	com_reward = exp(-err_scale * com_scale * com_err);
 
-	double torque_reward = this->GetTorqueReward();
+	double smooth_err = (mDesiredTorque_prev - mDesiredTorque).squaredNorm()/40.0;
+	double smooth_reward = exp(-err_scale * 5.0 * smooth_err);
+
+	// double torque_reward = this->GetTorqueReward();
 
 	// double r_ = pose_w * pose_reward + vel_w * vel_reward + end_eff_w * end_eff_reward + root_w * root_reward + com_w * com_reward;
-	// double r_imitation = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
 	double r_imitation = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
 
 	// if(r_imitation < 0.7)
@@ -669,15 +671,8 @@ GetReward_Character()
 
 	// std::cout << "torque min : " << r_torque_min << std::endl;
 
-	double r_ = 0.9*r_imitation + 0.1*r_torque_min;
-	// double r_ = r_imitation;
-
-	// std::cout << pose_w * pose_reward << " / " << pose_w << "  " << pose_w * (pose_reward - 1.0) << " pose" << std::endl;
-	// std::cout << vel_w * vel_reward << " / " << vel_w << "  " << vel_w * (vel_reward - 1.0) << " vel" << std::endl;
-	// std::cout << end_eff_w * end_eff_reward << " / " << end_eff_w << "  " << end_eff_w * (end_eff_reward - 1.0) << " ee" << std::endl;
-	// std::cout << root_w * root_reward << " / " << root_w << "  " << root_w * (root_reward - 1.0) << " root"<< std::endl;
-	// std::cout << com_w * com_reward << " / " << com_w << "  " << com_w * (com_reward - 1.0) << " com" << std::endl;
-	// std::cout << std::endl;
+	// double r_ = 0.9*r_imitation + 0.1*r_torque_min;
+	double r_ = r_imitation;
 
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
@@ -721,8 +716,8 @@ SetAction(const Eigen::VectorXd& a)
 {
 	double action_scale = 0.1;
 	mAction = a*action_scale;
-	// mAction = mAction*0.5 + mAction_prev*0.5;
-	// mAction_prev = mAction;
+	mAction = mAction*0.5 + mAction_prev*0.5;
+	mAction_prev = mAction;
 
 	double t = mWorld->getTime();
 	this->SetTargetPosAndVel(t, mControlHz);
@@ -732,9 +727,12 @@ void
 Character::
 SetDesiredTorques()
 {
+	mDesiredTorque_prev = mDesiredTorque;
 	Eigen::VectorXd p_des = mTargetPositions;
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction;
 	mDesiredTorque = this->GetSPDForces(p_des);
+
+	mDesiredTorque = 0.5*mDesiredTorque  + 0.5*mDesiredTorque_prev;
 
 	for(int i=0; i<mDesiredTorque.size(); i++){
 		mDesiredTorque[i] = Utils::Clamp(mDesiredTorque[i], -maxForces[i], maxForces[i]);
@@ -972,14 +970,8 @@ void
 Character::
 SetReward_Graph()
 {
-	if(mOnDevice){
-		mRewards_Device.pop_back();
-		mRewards_Device.push_front(mReward);
-	}
-	else{
-		mRewards.pop_back();
-		mRewards.push_front(mReward);
-	}
+	mRewards.pop_back();
+	mRewards.push_front(mReward);
 
 	mReward_map;
 	(mReward_map.find("pose")->second).pop_back();
@@ -1009,12 +1001,9 @@ SetPhase()
 
 std::deque<double>
 Character::
-GetReward_Graph(int idx)
+GetRewards()
 {
-	if(idx==0) // OFF Device
-		return mRewards;
-	else // ON Device
-		return mRewards_Device;
+	return mRewards;
 }
 
 Torques::Torques()
@@ -1047,15 +1036,15 @@ void
 Torques::
 Reset()
 {
-	std::fill(mTorques_cur.begin(), mTorques_cur.end(), 0);
-	std::fill(mTorques_avg.begin(), mTorques_avg.end(), 0);
-	for(int i=0; i<17; i++)
-	{
-		for(int j=0; j<num_phase; j++)
-		{
-			mTorques_dofs_cur[i][j] = mTorques_dofs_avg[i][j];
-		}
-	}
+	// std::fill(mTorques_cur.begin(), mTorques_cur.end(), 0);
+	// std::fill(mTorques_avg.begin(), mTorques_avg.end(), 0);
+	// for(int i=0; i<17; i++)
+	// {
+	// 	for(int j=0; j<num_phase; j++)
+	// 	{
+	// 		mTorques_dofs_cur[i][j] = mTorques_dofs_avg[i][j];
+	// 	}
+	// }
 
 	for(int i=0; i<num_dofs; i++)
 	{
@@ -1067,11 +1056,11 @@ void
 Character::
 SetTorques()
 {
-	int num_dofs = mSkeleton->getNumDofs();
-	for(int i=0; i<17; i++)
-	{
-		mTorques->SetTorque(i,(int)(mPhase/0.0303),mDesiredTorque[i+6]);
-	}
+	// int num_dofs = mSkeleton->getNumDofs();
+	// for(int i=0; i<17; i++)
+	// {
+	// 	mTorques->SetTorque(i,(int)(mPhase/0.0303),mDesiredTorque[i+6]);
+	// }
 
 	mTorques->SetTorqueDofs(mDesiredTorque);
 }

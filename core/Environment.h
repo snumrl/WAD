@@ -34,8 +34,6 @@ public:
 	int GetNumAction();
 	int GetNumAction_Device();
 
-	void parseJSONtoBVH();
-
 public:
 	void SetUseMuscle(bool use_muscle){mUseMuscle = use_muscle;}
 	void SetUseDevice(bool use_device){mUseDevice = use_device;}

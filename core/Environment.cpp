@@ -143,17 +143,6 @@ Initialize(const std::string& meta_file, bool load_obj)
 
 void
 Environment::
-parseJSONtoBVH()
-{
-	std::string name = "humanoid3d_walk";
-	std::string file = std::string(MASS_ROOT_DIR)+"/data/motion/"+name+".txt";
-	std::ifstream is(file);
-
-	std::ofstream output(std::string(MASS_ROOT_DIR)+"/data/motion/"+name+".bvh");
-}
-
-void
-Environment::
 Initialize()
 {
 	mWorld->setGravity(Eigen::Vector3d(0,-9.8,0.0));
@@ -188,10 +177,7 @@ Reset(bool RSI)
 	double t = 0.0;
 	// if(RSI)
 	// {
-	// 	int random_variable = std::rand();
-	// 	int t_idx = random_variable%90;
-	// 	t = t_idx * 0.01;
-	// 	// t = dart::math::random(0.0, mCharacter->GetBVH()->GetMaxTime()*0.9);
+	// 	t = dart::math::random(0.0, mCharacter->GetBVH()->GetMaxTime()*0.9);
 	// }
 
 	mWorld->reset();
