@@ -273,13 +273,13 @@ SetMotionTransform()
 	T0.linear() = this->Get(root_bvh_name);
 	T0.translation() = 0.01*mData.segment<3>(0);
 
-	Eigen::VectorXd mDataNext = mMotions[mNumTotalFrames-1];
+	Eigen::VectorXd mDataLast = mMotions[mNumTotalFrames-1];
 
-	mMap[root_bvh_name]->Set(mDataNext);
+	mMap[root_bvh_name]->Set(mDataLast);
 	T1.linear() = this->Get(root_bvh_name);
-	T1.translation() = 0.01*mDataNext.segment<3>(0);
+	T1.translation() = 0.01*mDataLast.segment<3>(0);
 
-	mCycleOffset = T1.translation() - T0.translation();
+	mCycleOffset = T1.translation() + 0.01*(mMotions[1]-mMotions[0]).segment<3>(0) - T0.translation();
 }
 
 void

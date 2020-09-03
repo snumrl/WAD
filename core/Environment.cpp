@@ -175,10 +175,10 @@ Environment::
 Reset(bool RSI)
 {
 	double t = 0.0;
-	// if(RSI)
-	// {
-	// 	t = dart::math::random(0.0, mCharacter->GetBVH()->GetMaxTime()*0.9);
-	// }
+	if(RSI)
+	{
+		t = dart::math::random(0.0, mCharacter->GetBVH()->GetMaxTime()*0.9);
+	}
 
 	mWorld->reset();
 	mWorld->setTime(t);

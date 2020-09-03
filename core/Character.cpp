@@ -176,7 +176,7 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 			1.0,			//Pelvis
 			0.5, 0.3, 0.2,	//Left Leg
 			0.5, 0.3, 0.2,	//Right Leg
-			1.0, 0.3,		//Torso & Neck
+			0.5, 0.2,		//Torso & Neck
 			0.3, 0.2, 0.1,	//Left Arm
 			0.3, 0.2, 0.1;	//Right Arm
 
@@ -193,7 +193,7 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 			150,				//Tibia R
 			90, 90, 90,			//Talus R
 			200, 200, 200,		//Torso
-			50, 50, 50,			//Neck
+			30, 30, 30,			//Neck
 			100, 100, 100,		//Shoulder L
 			60,					//Arm L
 			30, 30, 30,			//Hand L
@@ -219,7 +219,7 @@ SetPDParameters()
 		500, 500, 500,
 		500,
 		400, 400, 400,
-		500, 500, 500,
+		1000, 1000, 1000,
 		100, 100, 100,
 		400, 400, 400,
 		300,
@@ -235,7 +235,7 @@ SetPDParameters()
 		50, 50, 50,
 		50,
 		40, 40, 40,
-		50, 50, 50,
+		100, 100, 100,
 		10, 10, 10,
 		40, 40, 40,
 		30,
@@ -654,12 +654,12 @@ GetReward_Character()
 	com_reward = exp(-err_scale * com_scale * com_err);
 
 	double smooth_err = (mDesiredTorque_prev - mDesiredTorque).squaredNorm()/40.0;
-	double smooth_reward = exp(-err_scale * 5.0 * smooth_err);
+	double smooth_reward = exp(-err_scale * 10.0 * smooth_err);
 
 	// double torque_reward = this->GetTorqueReward();
 
 	// double r_ = pose_w * pose_reward + vel_w * vel_reward + end_eff_w * end_eff_reward + root_w * root_reward + com_w * com_reward;
-	double r_imitation = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
+	double r_imitation = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward * 1.0;
 
 	// if(r_imitation < 0.7)
 	// 	r_imitation += 0.3;
@@ -716,8 +716,8 @@ SetAction(const Eigen::VectorXd& a)
 {
 	double action_scale = 0.1;
 	mAction = a*action_scale;
-	mAction = mAction*0.5 + mAction_prev*0.5;
-	mAction_prev = mAction;
+	// mAction = mAction*0.5 + mAction_prev*0.5;
+	// mAction_prev = mAction;
 
 	double t = mWorld->getTime();
 	this->SetTargetPosAndVel(t, mControlHz);
@@ -732,7 +732,7 @@ SetDesiredTorques()
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction;
 	mDesiredTorque = this->GetSPDForces(p_des);
 
-	mDesiredTorque = 0.5*mDesiredTorque  + 0.5*mDesiredTorque_prev;
+	// mDesiredTorque = 0.5*mDesiredTorque  + 0.5*mDesiredTorque_prev;
 
 	for(int i=0; i<mDesiredTorque.size(); i++){
 		mDesiredTorque[i] = Utils::Clamp(mDesiredTorque[i], -maxForces[i], maxForces[i]);
