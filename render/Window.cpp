@@ -262,7 +262,7 @@ SetFocus()
 	{
 		mTrans = -mEnv->GetWorld()->getSkeleton("Human")->getRootBodyNode()->getCOM();
 		mTrans[1] -= 0.3;
-		mTrans *=1000.0;
+		mTrans *= 1000.0;
 	}
 }
 
@@ -406,25 +406,25 @@ DrawShapeFrame(const ShapeFrame* sf)
 	mRI->pushMatrix();
 	mRI->transform(sf->getRelativeTransform());
 
-	Eigen::Vector4d color = va->getRGBA();
+	mColor = va->getRGBA();
 	if(isDrawTarget)
 	{
-		color[0] = 1.0;
-		color[1] = 0.6;
-		color[2] = 0.6;
-		color[3] = 0.3;
+		mColor[0] = 1.0;
+		mColor[1] = 0.6;
+		mColor[2] = 0.6;
+		mColor[3] = 0.3;
 	}
 	else{
 		if(mCharacterMode == 1)
 		{
-			color[0] = 0.9;
-			color[1] = 0.9;
-			color[2] = 0.9;
-			color[3] = 1.0;
+			mColor[0] = 0.9;
+			mColor[1] = 0.9;
+			mColor[2] = 0.9;
+			mColor[3] = 1.0;
 		}
 	}
 
-	DrawShape(sf->getShape().get(), color);
+	DrawShape(sf->getShape().get(), mColor);
 	mRI->popMatrix();
 }
 

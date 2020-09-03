@@ -113,6 +113,7 @@ public:
 	Device* GetDevice(){return mDevice;}
 	BVH* GetBVH(){return mBVH;}
 	Torques* GetTorques(){return mTorques;}
+	Eigen::VectorXd GetMaxForces(){return maxForces;}
 
 	int GetNumMuscles(){return mNumMuscle;}
 	int GetNumState(){return mNumState;}

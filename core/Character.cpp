@@ -653,9 +653,6 @@ GetReward_Character()
 	root_reward = exp(-err_scale * root_scale * root_err);
 	com_reward = exp(-err_scale * com_scale * com_err);
 
-	double smooth_err = (mDesiredTorque_prev - mDesiredTorque).squaredNorm()/40.0;
-	double smooth_reward = exp(-err_scale * 10.0 * smooth_err);
-
 	// double torque_reward = this->GetTorqueReward();
 
 	// double r_ = pose_w * pose_reward + vel_w * vel_reward + end_eff_w * end_eff_reward + root_w * root_reward + com_w * com_reward;
@@ -692,22 +689,23 @@ GetTorqueReward()
 
 	double sum = 0;
 	// int idx = 0;
-	// for(int i=0; i<torques.size(); i++)
+	// for(int i=6; i<torques.size(); i++)
 	// {
 	// 	if(maxForces[i] != 0){
 	// 		sum += torques[i]/maxForces[i];
 	// 		idx++;
 	// 	}
 	// }
-	sum += torques[0]/maxForces[0];
-	sum += torques[1]/maxForces[1];
-	sum += torques[2]/maxForces[2];
-	sum += torques[7]/maxForces[7];
-	sum += torques[8]/maxForces[8];
-	sum += torques[9]/maxForces[9];
 	// sum /= (double)(idx);
-	sum /= 34.0;
-	return exp(-1.0 * 40.0 * sum);
+
+	sum += torques[6]/maxForces[0];
+	sum += torques[7]/maxForces[1];
+	sum += torques[8]/maxForces[2];
+	sum += torques[13]/maxForces[7];
+	sum += torques[14]/maxForces[8];
+	sum += torques[15]/maxForces[9];
+	sum /= 6.0;
+	return exp(-1.0 * 10.0 * sum);
 }
 
 void
@@ -732,7 +730,7 @@ SetDesiredTorques()
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction;
 	mDesiredTorque = this->GetSPDForces(p_des);
 
-	// mDesiredTorque = 0.5*mDesiredTorque  + 0.5*mDesiredTorque_prev;
+	mDesiredTorque = 0.5*mDesiredTorque  + 0.5*mDesiredTorque_prev;
 
 	for(int i=0; i<mDesiredTorque.size(); i++){
 		mDesiredTorque[i] = Utils::Clamp(mDesiredTorque[i], -maxForces[i], maxForces[i]);
@@ -1017,7 +1015,7 @@ Init(dart::dynamics::SkeletonPtr skel)
 	num_dofs = skel->getNumDofs();
 	num_phase = 33;
 
-	mTorques_cur.resize(17);
+	mTorques_cur.resize(num_dofs);
 	mTorques_avg.resize(17);
 	for(int i=0; i<17; i++)
 	{
@@ -1073,6 +1071,7 @@ SetTorqueDofs(const Eigen::VectorXd& desTorques)
 	{
 		mTorques_dofs[i].pop_back();
 		mTorques_dofs[i].push_front(desTorques[i]);
+		mTorques_cur[i] = fabs(desTorques[i]);
 	}
 }
 
@@ -1080,17 +1079,17 @@ void
 Torques::
 Set()
 {
-	for(int i=0; i<17; i++)
-	{
-		double sum = 0;
-		for(int j=0; j<num_phase; j++){
-			if(mTorques_dofs_cur[i][j]<0)
-				sum += -1*(mTorques_dofs_cur[i][j]);
-			else
-				sum +=  1*(mTorques_dofs_cur[i][j]);
-		}
-		mTorques_cur[i] = sum;
-	}
+	// for(int i=0; i<17; i++)
+	// {
+	// 	double sum = 0;
+	// 	for(int j=0; j<num_phase; j++){
+	// 		if(mTorques_dofs_cur[i][j]<0)
+	// 			sum += -1*(mTorques_dofs_cur[i][j]);
+	// 		else
+	// 			sum +=  1*(mTorques_dofs_cur[i][j]);
+	// 	}
+	// 	mTorques_cur[i] = sum;
+	// }
 }
 
 void

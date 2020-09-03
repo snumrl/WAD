@@ -1,6 +1,6 @@
 <Skeleton name="Human">
     <Node name="Pelvis" parent="None" >
-        <Body type="Box" mass="12.0" size="0.160 0.140 0.1340" contact="Off" color="0.6 0.6 1.8 1.0" obj="Pelvis.obj">
+        <Body type="Box" mass="8.0" size="0.160 0.140 0.1340" contact="Off" color="0.6 0.6 1.8 1.0" obj="Pelvis.obj">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 1.06 -0.0 "/>
         </Body>
         <Joint type="Free" bvh="Character1_Hips">
@@ -59,7 +59,7 @@
     </Node>
 
     <Node name="Torso" parent="Pelvis" >
-        <Body type="Box" mass="12.0" size="0.200 0.180 0.1340" contact="Off" color="0.6 0.6 1.8 1.0" obj="Torso.obj">
+        <Body type="Box" mass="15.0" size="0.200 0.180 0.1340" contact="Off" color="0.6 0.6 1.8 1.0" obj="Torso.obj">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 -0.0092 0.0 0.0092 1.0 " translation="0.0 1.26 -0.0 "/>
         </Body>
         <Joint type="Ball" bvh="Character1_Spine1" lower="-1.0 -1.0 -1.0 " upper="1.0 1.0 1.0 " force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0" actuator_type="FORCE">

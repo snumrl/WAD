@@ -99,6 +99,7 @@ private:
 	int mCharacterMode;
 	GLint oldMode;
 	Eigen::Affine3d mViewMatrix;
+	Eigen::Vector4d mColor;
 };
 };
 
