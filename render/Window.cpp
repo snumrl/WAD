@@ -823,6 +823,7 @@ DrawRewardMap()
 	std::deque<double> ee = map.at("ee");
 	std::deque<double> root = map.at("root");
 	std::deque<double> com = map.at("com");
+	std::deque<double> min = map.at("min");
 
 	y = 0.49;
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "pose");
@@ -843,6 +844,11 @@ DrawRewardMap()
 	y = 0.01;
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "com");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, com);
+
+	y = 0.37;
+	DrawBaseGraph(0.69, y, w, h, ratio_y, offset, "min");
+	DrawLineStrip(0.69, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, min);
+	DrawStringMax(0.69, y, h, ratio_y, offset_x, offset_y, offset, min, green);
 
 	DrawGLEnd();
 }
@@ -868,35 +874,53 @@ DrawDeviceSignals()
 {
 	DrawGLBegin();
 
+	// double p_w = 0.30;
+	// double p_h = 0.14;
+	// double pl_x = 0.69;
+	// double pl_y = 0.84;
+	// double pr_x = 0.69;
+	// double pr_y = 0.68;
+
+	// double offset_x = 0.00024;
+	// double offset_y = 0.0006;
+	// double offset = 0.005;
+	// double ratio_y = 0.3;
+
+	Device* device = mEnv->GetDevice();
+	// Character* character = mEnv->GetCharacter();
+	std::deque<double> data_L = device->GetSignals(0);
+
+	// std::deque<double> data_L_femur = character->GetSignals(0);
+	std::deque<double> data_R = device->GetSignals(1);
+	// std::deque<double> data_R_femur = character->GetSignals(1);
+	// // std::deque<double> data_y = device->GetSignals(2);
+
+	// DrawBaseGraph(pl_x, pl_y, p_w, p_h, ratio_y, offset, "Device L");
+	// DrawLineStrip(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_L, red, 1.5, data_L_femur);
+	// DrawStringMax(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, data_L, blue);
+	// DrawStringMax(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset,  data_L_femur, red);
+
+	// DrawBaseGraph(pr_x, pr_y, p_w, p_h, ratio_y, offset, "Device R");
+	// DrawLineStrip(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_R, red, 1.5, data_R_femur);
+	// DrawStringMax(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, data_R, blue);
+	// DrawStringMax(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset,  data_R_femur, red);
+
 	double p_w = 0.30;
 	double p_h = 0.14;
-	double pl_x = 0.69;
-	double pl_y = 0.84;
-	double pr_x = 0.69;
-	double pr_y = 0.68;
-
+	double p_x = 0.01;
+	double p_y = 0.84;
+	// double offset_y = 0.16;
 	double offset_x = 0.00024;
 	double offset_y = 0.0006;
 	double offset = 0.005;
 	double ratio_y = 0.3;
 
-	Device* device = mEnv->GetDevice();
-	Character* character = mEnv->GetCharacter();
-	std::deque<double> data_L = device->GetSignals(0);
-	std::deque<double> data_L_femur = character->GetSignals(0);
-	std::deque<double> data_R = device->GetSignals(1);
-	std::deque<double> data_R_femur = character->GetSignals(1);
-	// std::deque<double> data_y = device->GetSignals(2);
-
-	DrawBaseGraph(pl_x, pl_y, p_w, p_h, ratio_y, offset, "Device L");
-	DrawLineStrip(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_L, red, 1.5, data_L_femur);
-	DrawStringMax(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, data_L, blue);
-	DrawStringMax(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset,  data_L_femur, red);
-
-	DrawBaseGraph(pr_x, pr_y, p_w, p_h, ratio_y, offset, "Device R");
-	DrawLineStrip(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_R, red, 1.5, data_R_femur);
-	DrawStringMax(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, data_R, blue);
-	DrawStringMax(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset,  data_R_femur, red);
+	if(mGraphMode == 0){
+		DrawLineStrip(p_x, p_y, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_L, 180);
+		DrawStringMax(p_x, p_y, p_h, ratio_y, offset_x, offset_y, offset, data_L, blue);
+		DrawLineStrip(p_x, p_y-3*0.16, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_R, 180);
+		DrawStringMax(p_x, p_y-3*0.16, p_h, ratio_y, offset_x, offset_y, offset, data_R, blue);
+	}
 
 	DrawGLEnd();
 }
@@ -907,6 +931,7 @@ DrawArrow()
 {
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
+	glEnable(GL_DEPTH_TEST);
 
 	Eigen::Vector4d color(0.6, 1.2, 0.6, 0.8);
 	mRI->setPenColor(color);
@@ -937,6 +962,7 @@ DrawArrow()
 	else
 		drawArrow3D(p_R, dir_R1, 0.04*f[7], 0.015, 0.03);
 
+	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_COLOR_MATERIAL);
 }
 
@@ -1129,6 +1155,22 @@ DrawLineStrip(double x, double y, double h, double ratio, double offset_x, doubl
 
 void
 Window::
+DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::deque<double>& data, int idx)
+{
+	mRI->setPenColor(color);
+	mRI->setLineWidth(line_width);
+
+	h -= 2*offset;
+	x += offset;
+	y += offset + ratio*h;
+	glBegin(GL_LINE_STRIP);
+	for(int i=idx; i<data.size(); i++)
+		glVertex2f(x + offset_x*(i-idx), y + offset_y*data.at(i));
+	glEnd();
+}
+
+void
+Window::
 DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::vector<double>& data, Eigen::Vector4d color1, double line_width1, std::vector<double>& data1)
 {
 	mRI->setPenColor(color);
@@ -1165,6 +1207,41 @@ DrawLineStrip(double x, double y, double h, double ratio, double offset_x, doubl
 	for(int i=0; i<data.size(); i++)
 		glVertex2f(x + offset_x*i, y + offset_y*data.at(i));
 	glEnd();
+}
+
+void
+Window::
+DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::deque<double>& data, int idx, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1, int idx1)
+{
+	mRI->setPenColor(color);
+	mRI->setLineWidth(line_width);
+
+	h -= 2*offset;
+	x += offset;
+	y += offset + ratio*h;
+	glBegin(GL_LINE_STRIP);
+	for(int i=idx; i<data.size(); i++)
+		glVertex2f(x + offset_x*(i-idx), y + offset_y*data.at(i));
+	glEnd();
+
+	mRI->setPenColor(color1);
+	mRI->setLineWidth(line_width1);
+
+	glBegin(GL_LINE_STRIP);
+	for(int i=idx1; i<data1.size(); i++)
+		glVertex2f(x + offset_x*(i-idx1), y + offset_y*data1.at(i));
+	glEnd();
+
+	Eigen::Vector4d blend((color[0]+color1[0])/2.0, (color[1]+color1[1])/2.0, (color[2]+color1[2])/2.0, (color[3]+color1[3])/2.0);
+
+	// mRI->setPenColor(blend);
+
+	// glBegin(GL_LINE_STRIP);
+	// for(int i=0; i<data1.size(); i++)
+	//  glVertex2f(x + offset_x*i, y + offset_y*(data.at(i)+data1.at(i)));
+	// for(int i=180; i<data.size(); i++)
+	//  glVertex2f(x + offset_x*(i-180), y + offset_y*(data.at(i)+0.5*data1.at(i-180)));
+	// glEnd();
 }
 
 void

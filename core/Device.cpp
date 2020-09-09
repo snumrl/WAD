@@ -8,12 +8,13 @@ using namespace dart::dynamics;
 Device::
 Device()
 {
-
+    mDelta_t = 180;
+    mK_ = 15.0;
 }
 
 Device::
 Device(dart::dynamics::SkeletonPtr dPtr)
-:mNumState(0),mNumAction(0),mNumDof(0),mNumActiveDof(0),mRootJointDof(0),mUseNN(false),mPhase(0),mTorqueMax(0.0),qr(0.0),ql(0.0),qr_prev(0.0),ql_prev(0.0)
+:mNumState(0),mNumAction(0),mNumDof(0),mNumActiveDof(0),mRootJointDof(0),mUseNN(false),mPhase(0),mTorqueMax(0.0),qr(0.0),ql(0.0),qr_prev(0.0),ql_prev(0.0),mDelta_t(180),mK_(30.0)
 {
     mSkeleton = dPtr;
 }
@@ -63,9 +64,10 @@ Initialize(dart::simulation::WorldPtr& wPtr, bool nn)
     else
         mRootJointDof = 0;
 
-    mDeviceSignals_y = std::deque<double>(1380,0);
-    mDeviceSignals_L = std::deque<double>(1380,0);
-    mDeviceSignals_R = std::deque<double>(1380,0);
+    signal_size = 1200 + mDelta_t;
+    mDeviceSignals_y = std::deque<double>(signal_size,0);
+    mDeviceSignals_L = std::deque<double>(signal_size,0);
+    mDeviceSignals_R = std::deque<double>(signal_size,0);
 
     mNumDof = mSkeleton->getNumDofs();
     mNumActiveDof = mNumDof-mRootJointDof;
@@ -76,9 +78,7 @@ Initialize(dart::simulation::WorldPtr& wPtr, bool nn)
     mTorqueMax = 15.0;
 
     mDesiredTorque = Eigen::VectorXd::Zero(mNumDof);
-    mDesiredTorque_Buffer.resize(1380);
-    for(auto& t : mDesiredTorque_Buffer)
-        t = Eigen::VectorXd::Zero(mNumDof);
+
 }
 
 void
@@ -106,17 +106,12 @@ Reset()
     mSkeleton->setVelocities(v);
     mSkeleton->computeForwardKinematics(true, false, false);
 
-    mDesiredTorque_Buffer.clear();
-    mDesiredTorque_Buffer.resize(1380);
-    for(auto& t : mDesiredTorque_Buffer)
-        t = Eigen::VectorXd::Zero(12);
-
     mDeviceSignals_y.clear();
-    mDeviceSignals_y.resize(1380);
+    mDeviceSignals_y.resize(signal_size);
     mDeviceSignals_L.clear();
-    mDeviceSignals_L.resize(1380);
+    mDeviceSignals_L.resize(signal_size);
     mDeviceSignals_R.clear();
-    mDeviceSignals_R.resize(1380);
+    mDeviceSignals_R.resize(signal_size);
 
     qr = 0.0;
     ql = 0.0;
@@ -170,14 +165,16 @@ GetState()
     //             root_linvel / 10., root_angvel/10., positions.tail<6>(), velocities.tail<6>()/10.;
 
     Eigen::VectorXd state(8);
-    int delta_t = 180;
+    int offset = (mDelta_t/3.0);
+    double scaler = mK_/2.0;
+
     for(int i=0; i<4; i++)
     {
-        double torque = mDeviceSignals_y.at(delta_t-i*60);
+        double torque = mDeviceSignals_y.at(mDelta_t-i*offset);
         double des_torque_l =  1*torque;
         double des_torque_r = -1*torque;
-        state[i*2] = des_torque_l/15.0;
-        state[i*2+1] = des_torque_r/15.0 ;
+        state[i*2] = des_torque_l/scaler;
+        state[i*2+1] = des_torque_r/scaler;
     }
 
     return state;
@@ -229,18 +226,16 @@ SetDesiredTorques2()
 
     double y = sin(qr) - sin(ql);
 
-    int delta_t = 180;
-    double k_ = 30.0;
     double beta_L = 1.0;
     double beta_Lhip = 1.0;
     double beta_R = 1.0;
     double beta_Rhip = 1.0;
 
     mDeviceSignals_y.pop_back();
-    mDeviceSignals_y.push_front(k_*y);
+    mDeviceSignals_y.push_front(mK_*y);
 
     // double torque = k_ * y_delta_t;
-    double torque = mDeviceSignals_y.at(delta_t);
+    double torque = mDeviceSignals_y.at(mDelta_t);
     double des_torque_l =  1*torque*beta_L*beta_Lhip;
     double des_torque_r = -1*torque*beta_R*beta_Rhip;
 

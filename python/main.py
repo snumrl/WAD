@@ -122,7 +122,7 @@ class PPO(object):
 
 			self.loss_muscle = 0.0
 			self.muscle_batch_size = 128
-			self.default_learning_rate_muscle = 1E-4
+			self.default_learning_rate_muscle = 1E-5
 			self.learning_rate_muscle = self.default_learning_rate_muscle
 			self.optimizer_muscle = optim.Adam(self.muscle_model.parameters(),lr=self.learning_rate_muscle)
 			self.num_epochs_muscle = 3
@@ -208,7 +208,7 @@ class PPO(object):
 
 					self.env.Steps(1, False)
 			else:
-				self.env.StepsAtOnce(False)
+				self.env.StepsAtOnce(True)
 
 			for j in range(self.num_slaves):
 				nan_occur = False
@@ -318,7 +318,7 @@ class PPO(object):
 		print('')
 
 	def OptimizeMuscleNN(self):
-		muscle_transitions = np.array(self.muscle_buffer.buffer)
+		muscle_transitions = np.array(self.muscle_buffer.buffer, dtype=object)
 		for j in range(self.num_epochs_muscle):
 			np.random.shuffle(muscle_transitions)
 			for i in range(len(muscle_transitions)//self.muscle_batch_size):

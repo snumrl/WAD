@@ -353,8 +353,7 @@ BuildFromFile(const std::string& path,bool create_obj)
 			Eigen::Vector1d force_lower = string_to_vector1d(joint->Attribute("force_lower"));
 			Eigen::Vector1d force_upper = string_to_vector1d(joint->Attribute("force_upper"));
 			Eigen::Vector3d axis = string_to_vector3d(joint->Attribute("axis"));
-			std::string actuator_type = joint->Attribute("actuator_type");
-			props = MASS::MakeRevoluteJointProperties(name,axis,parent_to_joint,child_to_joint,lower,upper,force_lower,force_upper,actuator_type);
+			props = MASS::MakeRevoluteJointProperties(name,axis,parent_to_joint,child_to_joint,lower,upper,force_lower,force_upper);
 		}
 		else if(type == "Weld")
 		{

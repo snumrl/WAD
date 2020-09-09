@@ -34,6 +34,7 @@ public:
 	double Getl_mt();
 
 	Eigen::MatrixXd GetJacobianTranspose();
+	Eigen::MatrixXd GetReducedJacobianTranspose();
 	std::pair<Eigen::VectorXd,Eigen::VectorXd> GetForceJacobianAndPassive();
 
 	int GetNumRelatedDofs(){return num_related_dofs;};

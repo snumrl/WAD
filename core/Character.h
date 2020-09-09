@@ -196,6 +196,7 @@ private:
     double end_eff_reward = 0;
     double root_reward = 0;
     double com_reward = 0;
+    double min_reward = 0;
 
 	Torques* mTorques;
 

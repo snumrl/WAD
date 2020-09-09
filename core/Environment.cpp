@@ -150,13 +150,13 @@ Initialize()
 	mWorld->getConstraintSolver()->setCollisionDetector(dart::collision::BulletCollisionDetector::create());
 
 	mCharacter->Initialize(mWorld, mControlHz, mSimulationHz);
+
 	if(mUseMuscle)
 		mCharacter->Initialize_Muscles();
 
 	if(mUseDevice)
 	{
 		mDevice->Initialize(mWorld, mUseDeviceNN);
-
 		mDevice->SetCharacter(mCharacter);
 		mCharacter->SetDevice(mDevice);
 	}
@@ -175,10 +175,10 @@ Environment::
 Reset(bool RSI)
 {
 	double t = 0.0;
-	// if(RSI)
-	// {
-	// 	t = dart::math::random(0.0, mCharacter->GetBVH()->GetMaxTime()*0.9);
-	// }
+	if(RSI)
+	{
+		t = dart::math::random(0.0, mCharacter->GetBVH()->GetMaxTime()*0.9);
+	}
 
 	mWorld->reset();
 	mWorld->setTime(t);
