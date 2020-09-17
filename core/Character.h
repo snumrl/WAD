@@ -61,6 +61,7 @@ public:
 	void Step_Muscles(int simCount, int randomSampleIndex);
 
 	Eigen::VectorXd GetState();
+	Eigen::VectorXd GetState_Character();
 	double GetReward();
 	double GetReward_Character();
 	double GetTorqueReward();

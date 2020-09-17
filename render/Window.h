@@ -56,7 +56,6 @@ public:
 	void DrawTorques();
 	void DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double y);
 	void DrawFemurSignals();
-
 	void DrawDevice();
 	void DrawDeviceSignals();
 	void DrawArrow();
@@ -99,6 +98,7 @@ private:
 	bool isDrawTarget;
 	int mGraphMode;
 	int mCharacterMode;
+
 	GLint oldMode;
 	Eigen::Affine3d mViewMatrix;
 	Eigen::Vector4d mColor;

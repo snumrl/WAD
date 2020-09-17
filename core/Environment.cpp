@@ -125,16 +125,8 @@ Initialize(const std::string& meta_file, bool load_obj)
 	this->Initialize();
 
 	// auto weld_pelvis = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Pelvis"));
-	// auto weld_spine = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Spine"));
-	// auto weld_handr = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("HandR"));
-	// auto weld_handl = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("HandL"));
-	// auto weld_talusr = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("TalusR"));
 
 	// mWorld->getConstraintSolver()->addConstraint(weld_pelvis);
-	// mWorld->getConstraintSolver()->addConstraint(weld_spine);
-	// mWorld->getConstraintSolver()->addConstraint(weld_handr);
-	// mWorld->getConstraintSolver()->addConstraint(weld_handl);
-	// mWorld->getConstraintSolver()->addConstraint(weld_talusr);
 }
 
 void
@@ -145,7 +137,7 @@ Initialize()
 	mWorld->setTimeStep(1.0/mSimulationHz);
 	mWorld->getConstraintSolver()->setCollisionDetector(dart::collision::BulletCollisionDetector::create());
 
-	mCharacter->Initialize(mWorld, mControlHz, mSimulationHz, mUseDevice);
+	mCharacter->Initialize(mWorld, mControlHz, mSimulationHz);
 
 	if(mUseMuscle)
 		mCharacter->Initialize_Muscles();

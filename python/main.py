@@ -199,8 +199,8 @@ class PPO(object):
 			values = v.cpu().detach().numpy().reshape(-1)
 			self.env.SetActions(actions)
 			if self.use_muscle:
-				mt = Tensor(self.env.GetMuscleTorques())
 				for i in range(self.num_simulation_per_control):
+					mt = Tensor(self.env.GetMuscleTorques())
 					self.env.SetDesiredTorques()
 					dt = Tensor(self.env.GetDesiredTorques())
 					activations = self.muscle_model(mt,dt).cpu().detach().numpy()
@@ -379,8 +379,8 @@ class PPO(object):
 		print('||Loss Critic              : {:.4f}'.format(self.loss_critic))
 		if self.use_muscle:
 			print('||Loss Muscle              : {:.4f}'.format(self.loss_muscle))
-		# print('||Noise                    : {:.3f}'.format(self.model.log_std.exp().mean()))
-		print('||Noise                    : {:.3f}'.format(self.model.p_out_std.exp().mean()))
+		print('||Noise                    : {:.3f}'.format(self.model.log_std.exp().mean()))
+		# print('||Noise                    : {:.3f}'.format(self.model.p_out_std.exp().mean()))
 		print('||Num Transition So far    : {}'.format(self.num_tuple_so_far))
 		print('||Num Transition           : {}'.format(self.num_tuple))
 		print('||Num Episode              : {}'.format(self.num_episode))
@@ -456,6 +456,7 @@ if __name__=="__main__":
 			ppo.SaveModel_Muscle()
 
 	print('num states: {}, num actions: {}'.format(ppo.env.GetNumState(),ppo.env.GetNumAction()))
+
 	for i in range(ppo.max_iteration-5):
 		ppo.Train()
 		rewards = ppo.Evaluate()

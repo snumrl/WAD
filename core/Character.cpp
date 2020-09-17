@@ -149,8 +149,7 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 
 	mNumDof = mSkeleton->getNumDofs();
 	mNumActiveDof = mNumDof - mRootJointDof;
-	// mNumState = this->GetState().rows();
-	mNumState = 400;
+	mNumState = this->GetState().rows();
 
 	mAction.resize(mNumActiveDof);
 	mAction_prev.resize(mNumActiveDof);
@@ -176,42 +175,96 @@ Character::
 SetPDParameters()
 {
 	int dof = mSkeleton->getNumDofs();
-	// mKp.resize(dof, 500);
-	// mKv.resize(dof, 50);
 	mKp.resize(dof);
 	mKv.resize(dof);
 
-	mKp << 0, 0, 0, 0, 0, 0,
-		500, 500, 500,
-		500,
-		400, 400, 400,
-		500, 500, 500,
-		500,
-		400, 400, 400,
-		1000, 1000, 1000,
-		100, 100, 100,
-		400, 400, 400,
-		300,
-		100, 100, 100,
-		400, 400, 400,
-		300,
-		100, 100, 100;
+	for(int i=0; i<mKp.size(); i++)
+		mKp[i] = 500;
+	for(int i=0; i<mKv.size(); i++)
+		mKv[i] = 50;
 
-	mKv << 0, 0, 0, 0, 0, 0,
-		50, 50, 50,
-		50,
-		40, 40, 40,
-		50, 50, 50,
-		50,
-		40, 40, 40,
-		100, 100, 100,
-		10, 10, 10,
-		40, 40, 40,
-		30,
-		10, 10, 10,
-		40, 40, 40,
-		30,
-		10, 10, 10;
+	// mKp << 0, 0, 0, 0, 0, 0,
+	// 	500, 500, 500,
+	// 	500,
+	// 	400, 400, 400,
+	// 	500, 500, 500,
+	// 	500,
+	// 	400, 400, 400,
+	// 	1000, 1000, 1000,
+	// 	100, 100, 100,
+	// 	400, 400, 400,
+	// 	300,
+	// 	100, 100, 100,
+	// 	400, 400, 400,
+	// 	300,
+	// 	100, 100, 100;
+
+	// mKv << 0, 0, 0, 0, 0, 0,
+	// 	50, 50, 50,
+	// 	50,
+	// 	40, 40, 40,
+	// 	50, 50, 50,
+	// 	50,
+	// 	40, 40, 40,
+	// 	100, 100, 100,
+	// 	10, 10, 10,
+	// 	40, 40, 40,
+	// 	30,
+	// 	10, 10, 10,
+	// 	40, 40, 40,
+	// 	30,
+	// 	10, 10, 10;
+}
+
+void
+Character::
+Initialize_JointWeights()
+{
+	int num_joint = mSkeleton->getNumJoints();
+	mJointWeights.resize(num_joint);
+
+	for(int i=0; i<mJointWeights.size(); i++)
+		mJointWeights[i] = 0.1;
+
+	// mJointWeights <<
+	// 		1.0,			//Pelvis
+	// 		0.5, 0.3, 0.2,	//Left Leg
+	// 		0.5, 0.3, 0.2,	//Right Leg
+	// 		0.5, 0.2,		//Torso & Neck
+	// 		0.3, 0.2, 0.1,	//Left Arm
+	// 		0.3, 0.2, 0.1;	//Right Arm
+
+	mJointWeights /= mJointWeights.sum();
+}
+
+void
+Character::
+Initialize_MaxForces()
+{
+	int dof = mSkeleton->getNumDofs();
+	maxForces.resize(dof);
+
+	for(int i=0; i<6; i++)
+		maxForces[i] = 0;
+	for(int i=6; i<maxForces.size(); i++)
+		maxForces[i] = 200;
+
+	// maxForces <<
+	// 		0, 0, 0, 0, 0, 0,	//pelvis
+	// 		200, 200, 200,		//Femur L
+	// 		150,				//Tibia L
+	// 		90, 90, 90,			//Talus L
+	// 		200, 200, 200,		//Femur R
+	// 		150,				//Tibia R
+	// 		90, 90, 90,			//Talus R
+	// 		150, 150, 150,		//Torso
+	// 		30, 30, 30,			//Neck
+	// 		90, 90, 90,		//Shoulder L
+	// 		60,					//Arm L
+	// 		30, 30, 30,			//Hand L
+	// 		90, 90, 90,		//Shoulder R
+	// 		60,					//Arm R
+	// 		30, 30, 30;			//Hand R
 }
 
 void
@@ -258,47 +311,6 @@ Initialize_Rewards()
 	mRewards.insert(std::make_pair("ee", ee_));
 	mRewards.insert(std::make_pair("com", com_));
 	mRewards.insert(std::make_pair("min", min_));
-}
-
-void
-Character::
-Initialize_JointWeights()
-{
-	int num_joint = mSkeleton->getNumJoints();
-	mJointWeights.resize(num_joint);
-	mJointWeights <<
-			1.0,			//Pelvis
-			0.5, 0.3, 0.2,	//Left Leg
-			0.5, 0.3, 0.2,	//Right Leg
-			0.5, 0.2,		//Torso & Neck
-			0.3, 0.2, 0.1,	//Left Arm
-			0.3, 0.2, 0.1;	//Right Arm
-
-	mJointWeights /= mJointWeights.sum();
-}
-
-void
-Character::
-Initialize_MaxForces()
-{
-	int dof = mSkeleton->getNumDofs();
-	maxForces.resize(dof);
-	maxForces <<
-			0, 0, 0, 0, 0, 0,	//pelvis
-			200, 200, 200,		//Femur L
-			150,				//Tibia L
-			90, 90, 90,			//Talus L
-			200, 200, 200,		//Femur R
-			150,				//Tibia R
-			90, 90, 90,			//Talus R
-			150, 150, 150,		//Torso
-			30, 30, 30,			//Neck
-			90, 90, 90,		//Shoulder L
-			60,					//Arm L
-			30, 30, 30,			//Hand L
-			90, 90, 90,		//Shoulder R
-			60,					//Arm R
-			30, 30, 30;			//Hand R
 }
 
 void
@@ -396,6 +408,30 @@ Step_Muscles(int simCount, int randomSampleIndex)
 Eigen::VectorXd
 Character::
 GetState()
+{
+	int state_dim = 0;
+
+	Eigen::VectorXd state_character = this->GetState_Character();
+	state_dim += state_character.rows();
+
+	Eigen::VectorXd state_device;
+	if(mUseDevice)
+	{
+		state_device = mDevice->GetState();
+		state_dim += state_device.rows();
+	}
+
+	Eigen::VectorXd state(state_dim);
+	state << state_character;
+	if(mUseDevice)
+		state << state_device;
+
+	return state;
+}
+
+Eigen::VectorXd
+Character::
+GetState_Character()
 {
 	Eigen::VectorXd cur_pos = mSkeleton->getPositions();
 	Eigen::VectorXd cur_vel = mSkeleton->getVelocities();
@@ -507,17 +543,13 @@ GetState()
 		idx_angv_diff += 3;
 	}
 
-	Eigen::VectorXd device_state = mDevice->GetState();
-	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+device_state.rows());
-
-	// Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
+	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
 
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
-	state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,device_state;
-	// state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
+	state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
 
 	return state;
 }
@@ -869,6 +901,8 @@ SetDevice(Device* device)
 	mDevice = device;
 	mOnDevice = true;
 	mUseDevice = true;
+
+	mNumState += mDevice->GetState().rows();
 }
 
 void
