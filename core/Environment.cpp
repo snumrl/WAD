@@ -117,16 +117,12 @@ Initialize(const std::string& meta_file, bool load_obj)
 		}
 	}
 	ifs.close();
-	this->SetGround(MASS::BuildFromFile(std::string(MASS_ROOT_DIR)+std::string("/data/ground.xml")));
-	this->SetCharacter(character);
 
+	this->SetCharacter(character);
 	if(mUseDevice)
 		this->SetDevice(device);
 
 	this->Initialize();
-
-	if(mUseDevice)
-		mCharacter->SetConstraints();
 
 	// auto weld_pelvis = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Pelvis"));
 	// auto weld_spine = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Spine"));
@@ -149,25 +145,24 @@ Initialize()
 	mWorld->setTimeStep(1.0/mSimulationHz);
 	mWorld->getConstraintSolver()->setCollisionDetector(dart::collision::BulletCollisionDetector::create());
 
-	mCharacter->Initialize(mWorld, mControlHz, mSimulationHz);
+	mCharacter->Initialize(mWorld, mControlHz, mSimulationHz, mUseDevice);
 
 	if(mUseMuscle)
 		mCharacter->Initialize_Muscles();
 
 	if(mUseDevice)
 	{
-		mDevice->Initialize(mWorld, mUseDeviceNN);
 		mDevice->SetCharacter(mCharacter);
+		mDevice->Initialize(mWorld, mUseDeviceNN);
+
 		mCharacter->SetDevice(mDevice);
+		mCharacter->SetConstraints();
 	}
 
-	// mCharacter->Initialize_Analysis();
-
-	mNumSteps = mSimulationHz / mControlHz;
-
+	mGround = MASS::BuildFromFile(std::string(MASS_ROOT_DIR)+std::string("/data/ground.xml"));
 	mWorld->addSkeleton(mGround);
 
-	Reset(false);
+	mNumSteps = mSimulationHz / mControlHz;
 }
 
 void

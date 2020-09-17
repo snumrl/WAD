@@ -79,28 +79,27 @@ Initialize(dart::simulation::WorldPtr& wPtr, bool nn)
 
     mDesiredTorque = Eigen::VectorXd::Zero(mNumDof);
 
+    this->Reset();
 }
 
 void
 Device::
 Reset()
 {
-    mSkeleton->clearConstraintImpulses();
-    mSkeleton->clearInternalForces();
-    mSkeleton->clearExternalForces();
-
     dart::dynamics::SkeletonPtr skel_char = mCharacter->GetSkeleton();
 
     Eigen::VectorXd p(mNumDof);
     Eigen::VectorXd v(mNumDof);
-    p.setZero();
-    v.setZero();
     p.head(6) = skel_char->getPositions().head(6);
     v.head(6) = skel_char->getVelocities().head(6);
     p.segment<3>(6) = skel_char->getJoint("FemurL")->getPositions();
     p.segment<3>(9) = skel_char->getJoint("FemurR")->getPositions();
     v.segment<3>(6) = skel_char->getJoint("FemurL")->getVelocities();
     v.segment<3>(9) = skel_char->getJoint("FemurR")->getVelocities();
+
+    mSkeleton->clearConstraintImpulses();
+    mSkeleton->clearInternalForces();
+    mSkeleton->clearExternalForces();
 
     mSkeleton->setPositions(p);
     mSkeleton->setVelocities(v);

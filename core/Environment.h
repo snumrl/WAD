@@ -42,7 +42,6 @@ public:
 	void SetSimulationHz(int sim_hz) {mSimulationHz = sim_hz;}
 	void SetCharacter(Character* character) {mCharacter = character;}
 	void SetDevice(Device* device) {mDevice = device;}
-	void SetGround(const dart::dynamics::SkeletonPtr& ground) {mGround = ground;}
 
 	bool GetUseMuscle(){return mUseMuscle;}
 	bool GetUseDevice(){return mUseDevice;}
@@ -72,7 +71,6 @@ private:
 
 	int mSimCount;
 	int mRandomSampleIndex;
-	int step_=0;
 };
 };
 
