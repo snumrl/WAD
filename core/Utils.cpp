@@ -215,7 +215,7 @@ int Clamp(int val, int min, int max)
     return std::max(min, std::min(val, max));
 }
 
-void Clamp(const Eigen::VectorXd& min, const Eigen::VectorXd& max, Eigen::VectorXd& out_vec)
+void Clamp(Eigen::VectorXd min, Eigen::VectorXd max, Eigen::VectorXd& out_vec)
 {
     out_vec = out_vec.cwiseMin(max).cwiseMax(min);
 }

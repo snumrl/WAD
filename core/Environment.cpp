@@ -15,6 +15,7 @@ Environment::
 Environment()
 	:mWorld(std::make_shared<World>())
 {
+	std::srand(std::time(nullptr));
 }
 
 Environment::
@@ -118,9 +119,13 @@ Initialize(const std::string& meta_file, bool load_obj)
 	ifs.close();
 	this->SetGround(MASS::BuildFromFile(std::string(MASS_ROOT_DIR)+std::string("/data/ground.xml")));
 	this->SetCharacter(character);
+
 	if(mUseDevice)
 		this->SetDevice(device);
 	this->Initialize();
+
+	if(mUseDevice)
+		mCharacter->SetConstraints();
 
 	// this->parseJSONtoBVH();
 	// auto weld_pelvis = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Pelvis"));
@@ -139,27 +144,20 @@ Initialize(const std::string& meta_file, bool load_obj)
 
 void
 Environment::
-parseJSONtoBVH()
-{
-	std::string name = "humanoid3d_walk";
-	std::string file = std::string(MASS_ROOT_DIR)+"/data/motion/"+name+".txt";
-	std::ifstream is(file);
-
-	std::ofstream output(std::string(MASS_ROOT_DIR)+"/data/motion/"+name+".bvh");
-}
-
-void
-Environment::
 Initialize()
 {
+	mWorld->setGravity(Eigen::Vector3d(0,-9.8,0.0));
+	mWorld->setTimeStep(1.0/mSimulationHz);
+	mWorld->getConstraintSolver()->setCollisionDetector(dart::collision::BulletCollisionDetector::create());
+
 	mCharacter->Initialize(mWorld, mControlHz, mSimulationHz);
+
 	if(mUseMuscle)
 		mCharacter->Initialize_Muscles();
 
 	if(mUseDevice)
 	{
 		mDevice->Initialize(mWorld, mUseDeviceNN);
-
 		mDevice->SetCharacter(mCharacter);
 		mCharacter->SetDevice(mDevice);
 	}
@@ -167,10 +165,6 @@ Initialize()
 	mCharacter->Initialize_Analysis();
 
 	mNumSteps = mSimulationHz / mControlHz;
-
-	mWorld->setGravity(Eigen::Vector3d(0,-9.8,0.0));
-	mWorld->setTimeStep(1.0/mSimulationHz);
-	mWorld->getConstraintSolver()->setCollisionDetector(dart::collision::BulletCollisionDetector::create());
 
 	mWorld->addSkeleton(mGround);
 
@@ -183,7 +177,9 @@ Reset(bool RSI)
 {
 	double t = 0.0;
 	if(RSI)
+	{
 		t = dart::math::random(0.0, mCharacter->GetBVH()->GetMaxTime()*0.9);
+	}
 
 	mWorld->reset();
 	mWorld->setTime(t);
@@ -211,6 +207,7 @@ Step(bool onDevice)
 	mWorld->step();
 
 	mSimCount++;
+	// std::cout << "step : " << step_++ << std::endl;
 }
 
 bool

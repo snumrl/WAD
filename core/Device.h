@@ -45,12 +45,18 @@ public:
     void SetTorqueMax(double m){ mTorqueMax = m;}
     double GetTorqueMax(){ return mTorqueMax;}
 
-    double GetAngleQ(int idx);
+    double GetAngleQ(const std::string& name);
     // void SetSignals();
     std::deque<double> GetSignals(int idx);
 
     void SetPhase(double p){mPhase = p;}
     double GetPhase(){ return mPhase; }
+
+    void setDelta_t(int t){mDelta_t = t;}
+    void setK_(double k){mK_ = k;}
+
+    int getDelta_t(){return mDelta_t;}
+    double getK_(){return mK_;}
 
 private:
     dart::dynamics::SkeletonPtr mSkeleton;
@@ -79,6 +85,10 @@ private:
     double ql;
     double qr_prev;
     double ql_prev;
+
+    int signal_size;
+    int mDelta_t;
+    double mK_;
 };
 
 }

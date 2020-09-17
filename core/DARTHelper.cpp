@@ -66,10 +66,14 @@ MakePlanarJointProperties(const std::string& name,const Eigen::Isometry3d& paren
 }
 BallJoint::Properties*
 MASS::
-MakeBallJointProperties(const std::string& name,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint,const Eigen::Vector3d& lower,const Eigen::Vector3d& upper,const Eigen::Vector3d& force_lower,const Eigen::Vector3d& force_upper)
+MakeBallJointProperties(const std::string& name,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint,const Eigen::Vector3d& lower,const Eigen::Vector3d& upper,const Eigen::Vector3d& force_lower,const Eigen::Vector3d& force_upper,const std::string& actuator_type)
 {
 	BallJoint::Properties* props = new BallJoint::Properties();
 
+	if(actuator_type == "FORCE")
+		props->mActuatorType = Joint::FORCE;
+	else if(actuator_type == "PASSIVE")
+		props->mActuatorType = Joint::PASSIVE;
 	props->mName = name;
 	props->mT_ParentBodyToJoint = parent_to_joint;
 	props->mT_ChildBodyToJoint = child_to_joint;
@@ -86,10 +90,14 @@ MakeBallJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 }
 RevoluteJoint::Properties*
 MASS::
-MakeRevoluteJointProperties(const std::string& name,const Eigen::Vector3d& axis,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint,const Eigen::Vector1d& lower,const Eigen::Vector1d& upper,const Eigen::Vector1d& force_lower,const Eigen::Vector1d& force_upper)
+MakeRevoluteJointProperties(const std::string& name,const Eigen::Vector3d& axis,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint,const Eigen::Vector1d& lower,const Eigen::Vector1d& upper,const Eigen::Vector1d& force_lower,const Eigen::Vector1d& force_upper,const std::string& actuator_type)
 {
 	RevoluteJoint::Properties* props = new RevoluteJoint::Properties();
 
+	if(actuator_type == "FORCE")
+		props->mActuatorType = Joint::FORCE;
+	else if(actuator_type == "PASSIVE")
+		props->mActuatorType = Joint::PASSIVE;
 	props->mName = name;
 	props->mT_ParentBodyToJoint = parent_to_joint;
 	props->mT_ChildBodyToJoint = child_to_joint;
@@ -294,10 +302,10 @@ BuildFromFile(const std::string& path,bool create_obj)
 				contact = true;
 		}
 
-		Eigen::Vector4d color = Eigen::Vector4d::Constant(0.2);
+		Eigen::Vector4d color = Eigen::Vector4d::Constant(0.0);
 		if(body->Attribute("color")!=nullptr)
 			color = string_to_vector4d(body->Attribute("color"));
-		color[3] = 0.8;
+		// color[3] = 0.8;
 
 		dart::dynamics::Inertia inertia = MakeInertia(shape, mass);
 
@@ -369,8 +377,6 @@ BuildFromFile(const std::string& path,bool create_obj)
 		Eigen::Vector4d color_joint(0.8,0.2,0.8,1.0);
 		bn->getShapeNodesWith<VisualAspect>().back()->getVisualAspect()->setColor(color_joint);
 		bn->getShapeNodesWith<VisualAspect>().back()->setRelativeTransform(child_to_joint);
-
-
 
 		if(obj_file!="None" && create_obj)
 		{

@@ -35,7 +35,7 @@ namespace Utils
     Eigen::Isometry3d GetBodyTransform(dart::dynamics::BodyNode* body);
 
     int Clamp(int val, int min, int max);
-    void Clamp(const Eigen::VectorXd& min, const Eigen::VectorXd& max, Eigen::VectorXd& out_vec);
+    void Clamp(Eigen::VectorXd min, Eigen::VectorXd max, Eigen::VectorXd& out_vec);
     double Clamp(double val, double min, double max);
     double NormalizeAngle(double theta);
     Eigen::Matrix4d TranslateMat(const Eigen::Vector3d& trans);
