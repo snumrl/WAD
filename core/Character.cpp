@@ -152,8 +152,8 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 
 	mNumDof = mSkeleton->getNumDofs();
 	mNumActiveDof = mNumDof - mRootJointDof;
-	// mNumState = this->GetState().rows();
-	mNumState = 400;
+	mNumState = this->GetState().rows();
+	// mNumState = 400;
 
 	mAction.resize(mNumActiveDof);
 	mAction_prev.resize(mNumActiveDof);
@@ -503,10 +503,10 @@ GetState()
 		idx_angv_diff += 3;
 	}
 
-	Eigen::VectorXd device_state = mDevice->GetState();
-	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+device_state.rows());
+	// Eigen::VectorXd device_state = mDevice->GetState();
+	// Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+device_state.rows());
 
-	// Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
+	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
 
 	this->SetPhase();
 
@@ -514,8 +514,8 @@ GetState()
 	mSkeleton->setVelocities(cur_vel);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
-	state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,device_state;
-	// state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
+	// state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,device_state;
+	state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
 
 	return state;
 }
