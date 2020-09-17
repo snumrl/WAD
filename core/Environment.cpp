@@ -136,6 +136,7 @@ Initialize(const std::string& meta_file, bool load_obj)
 	// mWorld->getConstraintSolver()->addConstraint(weld_talusr);
 }
 
+
 void
 Environment::
 parseJSONtoBVH()
