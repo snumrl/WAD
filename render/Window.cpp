@@ -355,7 +355,6 @@ DrawCharacter()
 			DrawFemurSignals();
 		DrawTorques();
 		DrawReward();
-		DrawRewardMap();
 	}
 }
 
@@ -761,7 +760,7 @@ DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double 
 	double offset = 0.005;
 	double ratio_y = 0.3;
 
-	std::deque<double> data_ = (mTorques->GetTorquesDofs())[idx];
+	std::deque<double> data_ = (mTorques->GetTorques())[idx];
 
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, name);
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, data_);
@@ -774,42 +773,9 @@ DrawReward()
 {
 	DrawGLBegin();
 
-	double p_w = 0.15;
-	double p_h = 0.11;
-	double p_x = 0.69;
-	double p_y = 0.49;
-
-	DrawRewardGraph("Reward", p_x, p_y, p_w, p_h);
-
-	DrawGLEnd();
-}
-
-void
-Window::
-DrawRewardGraph(std::string name, double x, double y, double w, double h)
-{
-	double offset_x = 0.002;
-	double offset_y = 0.1;
-	double offset = 0.005;
-	double ratio_y = 0.0;
-
-	Character* character = mEnv->GetCharacter();
-	std::deque<double> data_ = character->GetRewards();
-
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, name);
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, data_);
-	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data_, green);
-}
-
-void
-Window::
-DrawRewardMap()
-{
-	DrawGLBegin();
-
 	double w = 0.15;
 	double h = 0.11;
-	double x = 0.85;
+	double x = 0.69;
 	double y = 0.49;
 
 	double offset_x = 0.002;
@@ -817,38 +783,45 @@ DrawRewardMap()
 	double offset = 0.005;
 	double ratio_y = 0.0;
 
-	std::map<std::string, std::deque<double>> map = mEnv->GetRewardMap();
-	std::deque<double> pose = map.at("pose");
-	std::deque<double> vel = map.at("vel");
-	std::deque<double> ee = map.at("ee");
-	std::deque<double> root = map.at("root");
-	std::deque<double> com = map.at("com");
-	std::deque<double> min = map.at("min");
+	std::map<std::string, std::deque<double>> map = mEnv->GetRewards();
 
 	y = 0.49;
+	std::deque<double> reward = map.at("reward");
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "reward");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, reward);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, reward, green);
+
+	y = 0.37;
+	std::deque<double> min = map.at("min");
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "min");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, min);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, min, green);
+
+	x = 0.85;
+	y = 0.49;
+	std::deque<double> pose = map.at("pose");
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "pose");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, pose);
 
 	y = 0.37;
+	std::deque<double> vel = map.at("vel");
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "vel");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, vel);
 
 	y = 0.25;
+	std::deque<double> ee = map.at("ee");
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "ee");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, ee);
 
 	y = 0.13;
+	std::deque<double> root = map.at("root");
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "root");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, root);
 
 	y = 0.01;
+	std::deque<double> com = map.at("com");
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "com");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, com);
-
-	y = 0.37;
-	DrawBaseGraph(0.69, y, w, h, ratio_y, offset, "min");
-	DrawLineStrip(0.69, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, min);
-	DrawStringMax(0.69, y, h, ratio_y, offset_x, offset_y, offset, min, green);
 
 	DrawGLEnd();
 }

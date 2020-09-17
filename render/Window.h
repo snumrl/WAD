@@ -51,12 +51,12 @@ public:
 	void DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine3d& M,double y);
 
 	void DrawTarget();
+
+	void DrawReward();
 	void DrawTorques();
 	void DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double y);
 	void DrawFemurSignals();
-	void DrawReward();
-	void DrawRewardMap();
-	void DrawRewardGraph(std::string name, double x, double y, double w, double h);
+
 	void DrawDevice();
 	void DrawDeviceSignals();
 	void DrawArrow();

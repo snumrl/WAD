@@ -49,9 +49,6 @@ public:
     // void SetSignals();
     std::deque<double> GetSignals(int idx);
 
-    void SetPhase(double p){mPhase = p;}
-    double GetPhase(){ return mPhase; }
-
     void setDelta_t(int t){mDelta_t = t;}
     void setK_(double k){mK_ = k;}
 
@@ -71,7 +68,6 @@ private:
 
     bool mUseNN;
 
-    double mPhase;
     double mTorqueMax;
     Eigen::VectorXd mAction;
     Eigen::VectorXd mDesiredTorque;

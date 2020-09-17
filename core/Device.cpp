@@ -14,7 +14,7 @@ Device()
 
 Device::
 Device(dart::dynamics::SkeletonPtr dPtr)
-:mNumState(0),mNumAction(0),mNumDof(0),mNumActiveDof(0),mRootJointDof(0),mUseNN(false),mPhase(0),mTorqueMax(0.0),qr(0.0),ql(0.0),qr_prev(0.0),ql_prev(0.0),mDelta_t(180),mK_(30.0)
+:mNumState(0),mNumAction(0),mNumDof(0),mNumActiveDof(0),mRootJointDof(0),mUseNN(false),mTorqueMax(0.0),qr(0.0),ql(0.0),qr_prev(0.0),ql_prev(0.0),mDelta_t(180),mK_(30.0)
 {
     mSkeleton = dPtr;
 }
@@ -159,9 +159,9 @@ GetState()
     // Eigen::Quaterniond rotation(root->getWorldTransform().rotation());
     // Eigen::Vector3d root_linvel = root->getCOMLinearVelocity();
     // Eigen::Vector3d root_angvel = root->getAngularVelocity();
-    // Eigen::VectorXd state(23);
+    // Eigen::VectorXd state(22);
 
-    // state << mPhase, rotation.w(), rotation.x(), rotation.y(), rotation.z(),
+    // state << rotation.w(), rotation.x(), rotation.y(), rotation.z(),
     //             root_linvel / 10., root_angvel/10., positions.tail<6>(), velocities.tail<6>()/10.;
 
     Eigen::VectorXd state(8);

@@ -23,6 +23,7 @@ namespace Utils
     Eigen::Quaterniond Slerp(const Eigen::Quaterniond& _a, const Eigen::Quaterniond& _b, double interp);
     Eigen::Quaterniond GetQuaternionSlerp(const Eigen::Quaterniond& _a, const Eigen::Quaterniond& _b, double interp);
     Eigen::Vector3d GetQuaternionSlerp(const Eigen::Vector3d& _a, const Eigen::Vector3d& _b, double interp);
+    Eigen::VectorXd GetPoseSlerp(const dart::dynamics::SkeletonPtr& skeleton, double ratio, const Eigen::VectorXd& p1, const Eigen::VectorXd& p2);
 
     Eigen::Vector4d GetPoint4d(Eigen::Vector3d v);
     Eigen::Vector4d GetVector4d(Eigen::Vector3d v);

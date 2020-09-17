@@ -12,7 +12,7 @@ using namespace MASS;
 
 Character::
 Character()
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mPhase(0.0)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false)
 {
 }
 
@@ -27,6 +27,7 @@ Character::
 
 	delete mBVH;
 	delete mDevice;
+	delete mTorques;
 }
 
 void
@@ -109,9 +110,9 @@ LoadMuscles(const std::string& path)
 				muscle_elem->AddAnchor(mSkeleton->getBodyNode(body),glob_pos);
 			else
 				muscle_elem->AddAnchor(mSkeleton,mSkeleton->getBodyNode(body),glob_pos,2);
-
 			i++;
 		}
+
 		if(isValid)
 			mMuscles.push_back(muscle_elem);
 	}
@@ -135,6 +136,7 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	mControlHz = conHz;
 	mSimulationHz = simHz;
 	this->SetPDParameters();
+	this->SetTargetPosAndVel(0, mControlHz);
 
 	const std::string& type =
 		mSkeleton->getRootBodyNode()->getParentJoint()->getType();
@@ -145,15 +147,10 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	else
 		mRootJointDof = 0;
 
-	mTorques = new Torques();
-	mTorques->Init(mSkeleton);
-
-	this->Reset();
-
 	mNumDof = mSkeleton->getNumDofs();
 	mNumActiveDof = mNumDof - mRootJointDof;
-	mNumState = this->GetState().rows();
-	// mNumState = 400;
+	// mNumState = this->GetState().rows();
+	mNumState = 400;
 
 	mAction.resize(mNumActiveDof);
 	mAction_prev.resize(mNumActiveDof);
@@ -164,54 +161,14 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	mFemurSignals_L.resize(1200);
 	mFemurSignals_R.resize(1200);
 
-	std::deque<double> pose_(70, 0);
-	std::deque<double> vel_(70, 0);
-	std::deque<double> root_(70, 0);
-	std::deque<double> ee_(70, 0);
-	std::deque<double> com_(70, 0);
-	std::deque<double> min_(70, 0);
+	mTorques = new Torques();
+	mTorques->Initialize(mSkeleton);
 
-	mReward_map;
-	mReward_map.insert(std::make_pair("pose", pose_));
-	mReward_map.insert(std::make_pair("vel", vel_));
-	mReward_map.insert(std::make_pair("root", root_));
-	mReward_map.insert(std::make_pair("ee", ee_));
-	mReward_map.insert(std::make_pair("com", com_));
-	mReward_map.insert(std::make_pair("min", min_));
+	this->Initialize_Rewards();
+	this->Initialize_JointWeights();
+	this->Initialize_MaxForces();
 
-	int num_joint = mSkeleton->getNumJoints();
-	mJointWeights.resize(num_joint);
-	// for(int i=0; i<mJointWeights.size(); i++)
-	// 	mJointWeights[i] = 0.1;
-	mJointWeights <<
-			1.0,			//Pelvis
-			0.5, 0.3, 0.2,	//Left Leg
-			0.5, 0.3, 0.2,	//Right Leg
-			0.5, 0.2,		//Torso & Neck
-			0.3, 0.2, 0.1,	//Left Arm
-			0.3, 0.2, 0.1;	//Right Arm
-	mJointWeights /= mJointWeights.sum();
-
-	int dof = mSkeleton->getNumDofs();
-	maxForces.resize(dof);
-	// for(int i=0; i<maxForces.size(); i++)
-	// 	maxForces[i] = 200.0;
-	maxForces <<
-			0, 0, 0, 0, 0, 0,	//pelvis
-			200, 200, 200,		//Femur L
-			150,				//Tibia L
-			90, 90, 90,			//Talus L
-			200, 200, 200,		//Femur R
-			150,				//Tibia R
-			90, 90, 90,			//Talus R
-			150, 150, 150,		//Torso
-			30, 30, 30,			//Neck
-			90, 90, 90,		//Shoulder L
-			60,					//Arm L
-			30, 30, 30,			//Hand L
-			90, 90, 90,		//Shoulder R
-			60,					//Arm R
-			30, 30, 30;			//Hand R
+	this->Reset();
 }
 
 void
@@ -259,22 +216,6 @@ SetPDParameters()
 
 void
 Character::
-SetKp(double kp)
-{
-	int dof = mSkeleton->getNumDofs();
-	mKp = Eigen::VectorXd::Constant(dof,kp);
-}
-
-void
-Character::
-SetKv(double kv)
-{
-	int dof = mSkeleton->getNumDofs();
-	mKv = Eigen::VectorXd::Constant(dof,kv);
-}
-
-void
-Character::
 Initialize_Muscles()
 {
 	mUseMuscle = true;
@@ -289,13 +230,75 @@ Initialize_Muscles()
 
 void
 Character::
-Initialize_Analysis()
+Initialize_Rewards()
 {
-	mTorques = new Torques();
-	mTorques->Init(mSkeleton);
+	mReward = 0;
+	pose_reward = 0;
+    vel_reward = 0;
+    end_eff_reward = 0;
+    root_reward = 0;
+    com_reward = 0;
+    min_reward = 0;
 
-	for(int i=0; i<70; i++)
-		mRewards.push_back(0.0);
+    int reward_window = 70;
+
+    reward_.resize(reward_window);
+    pose_.resize(reward_window);
+    vel_.resize(reward_window);
+    root_.resize(reward_window);
+    ee_.resize(reward_window);
+    com_.resize(reward_window);
+    min_.resize(reward_window);
+
+	mRewards;
+	mRewards.insert(std::make_pair("reward", reward_));
+	mRewards.insert(std::make_pair("pose", pose_));
+	mRewards.insert(std::make_pair("vel", vel_));
+	mRewards.insert(std::make_pair("root", root_));
+	mRewards.insert(std::make_pair("ee", ee_));
+	mRewards.insert(std::make_pair("com", com_));
+	mRewards.insert(std::make_pair("min", min_));
+}
+
+void
+Character::
+Initialize_JointWeights()
+{
+	int num_joint = mSkeleton->getNumJoints();
+	mJointWeights.resize(num_joint);
+	mJointWeights <<
+			1.0,			//Pelvis
+			0.5, 0.3, 0.2,	//Left Leg
+			0.5, 0.3, 0.2,	//Right Leg
+			0.5, 0.2,		//Torso & Neck
+			0.3, 0.2, 0.1,	//Left Arm
+			0.3, 0.2, 0.1;	//Right Arm
+
+	mJointWeights /= mJointWeights.sum();
+}
+
+void
+Character::
+Initialize_MaxForces()
+{
+	int dof = mSkeleton->getNumDofs();
+	maxForces.resize(dof);
+	maxForces <<
+			0, 0, 0, 0, 0, 0,	//pelvis
+			200, 200, 200,		//Femur L
+			150,				//Tibia L
+			90, 90, 90,			//Talus L
+			200, 200, 200,		//Femur R
+			150,				//Tibia R
+			90, 90, 90,			//Talus R
+			150, 150, 150,		//Torso
+			30, 30, 30,			//Neck
+			90, 90, 90,		//Shoulder L
+			60,					//Arm L
+			30, 30, 30,			//Hand L
+			90, 90, 90,		//Shoulder R
+			60,					//Arm R
+			30, 30, 30;			//Hand R
 }
 
 void
@@ -318,14 +321,15 @@ Reset()
 
 	mDesiredTorque.setZero();
 	mDesiredTorque_prev.setZero();
-
 	mAction.setZero();
 	mAction_prev.setZero();
-	mTorques->Reset();
+
 	mFemurSignals_L.clear();
-	mFemurSignals_R.clear();
 	mFemurSignals_L.resize(1200);
+	mFemurSignals_R.clear();
 	mFemurSignals_R.resize(1200);
+
+	mTorques->Reset();
 
 	if(mUseMuscle)
 		Reset_Muscles();
@@ -503,19 +507,17 @@ GetState()
 		idx_angv_diff += 3;
 	}
 
-	// Eigen::VectorXd device_state = mDevice->GetState();
-	// Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+device_state.rows());
+	Eigen::VectorXd device_state = mDevice->GetState();
+	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+device_state.rows());
 
-	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
-
-	this->SetPhase();
+	// Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
 
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
-	// state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,device_state;
-	state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
+	state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,device_state;
+	// state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
 
 	return state;
 }
@@ -527,6 +529,8 @@ GetReward()
 	r_character = this->GetReward_Character();
 
 	mReward = r_character;
+
+	this->SetRewards();
 
 	return mReward;
 }
@@ -677,8 +681,6 @@ GetReward_Character()
 	mSkeleton->setVelocities(cur_vel);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
-	this->SetReward_Graph();
-
 	return r_;
 }
 
@@ -686,42 +688,16 @@ double
 Character::
 GetTorqueReward()
 {
-	mTorques->Set();
-	std::vector<double> torques = mTorques->GetTorquesCur();
 
 	double sum = 0;
-	// int idx = 0;
-	// for(int i=0; i<torques.size(); i++)
-	// {
-	// 	if(maxForces[i] != 0){
-	// 		sum += torques[i]/maxForces[i];
-	// 		idx++;
-	// 	}
-	// }
-	// sum /= (double)(idx);
-
 	int idx = 0;
 	for(int i=6; i<20; i++)
 	{
 		sum += fabs(mDesiredTorque[i])/maxForces[i];
 		idx++;
 	}
-
-	// sum += fabs(mDesiredTorque[6])/maxForces[6];
-	// sum += fabs(mDesiredTorque[7])/maxForces[7];
-	// sum += fabs(mDesiredTorque[8])/maxForces[8];
-	// sum += fabs(mDesiredTorque[13])/maxForces[13];
-	// sum += fabs(mDesiredTorque[14])/maxForces[14];
-	// sum += fabs(mDesiredTorque[15])/maxForces[15];
-
-	// sum += torques[0]/maxForces[6];
-	// sum += torques[1]/maxForces[7];
-	// sum += torques[2]/maxForces[8];
-	// sum += torques[7]/maxForces[13];
-	// sum += torques[8]/maxForces[14];
-	// sum += torques[9]/maxForces[15];
-
 	sum /= (double)(idx);
+
 	return exp(-1.0 * 10.0 * sum);
 }
 
@@ -754,12 +730,12 @@ SetDesiredTorques()
 	}
 
 	mFemurSignals_L.pop_back();
-	// mFemurSignals_L.push_front(mDesiredTorque[6]);
-	mFemurSignals_L.push_front(mDesiredTorque.segment(9, 3).norm());
+	mFemurSignals_L.push_front(mDesiredTorque[6]);
+	// mFemurSignals_L.push_front(mDesiredTorque.segment(9, 3).norm());
 
 	mFemurSignals_R.pop_back();
-	// mFemurSignals_R.push_front(mDesiredTorque[13]);
-	mFemurSignals_R.push_front(mDesiredTorque.segment(13,3).norm());
+	mFemurSignals_R.push_front(mDesiredTorque[13]);
+	// mFemurSignals_R.push_front(mDesiredTorque.segment(13,3).norm());
 }
 
 Eigen::VectorXd
@@ -833,7 +809,7 @@ GetTargetPositions(double t,double dt,int frame,int frameNext, double frameFract
 	Eigen::VectorXd frameData = mBVH->GetMotion(frame);
 	Eigen::VectorXd frameDataNext = mBVH->GetMotion(frameNext);
 
-	Eigen::VectorXd p = this->GetPoseSlerp(dt, frameFraction, frameData, frameDataNext);
+	Eigen::VectorXd p = Utils::GetPoseSlerp(mSkeleton, frameFraction, frameData, frameDataNext);
 
 	Eigen::Vector3d cycleOffset = mBVH->GetCycleOffset();
 	cycleOffset[1] = 0.0;
@@ -857,36 +833,6 @@ GetTargetVelocities(double t,double dt,int frame,int frameNext, double frameFrac
 	Eigen::VectorXd v = frameVel + frameFraction*(frameNextVel - frameVel);
 
 	return v;
-}
-
-Eigen::VectorXd
-Character::
-GetPoseSlerp(double timeStep, double frameFraction, const Eigen::VectorXd& frameData, const Eigen::VectorXd& frameDataNext)
-{
-	double ketFrameDuration = timeStep;
-	Eigen::VectorXd pose(frameData.size());
-
-	int num_joints = mSkeleton->getNumJoints();
-	for(int i=0; i<num_joints; i++)
-	{
-		auto joint = mSkeleton->getJoint(i);
-		int idx = joint->getIndexInSkeleton(0);
-		if(joint->getType()=="FreeJoint"){
-			Eigen::Vector3d basePos1Start = frameData.segment(idx,3);
-			Eigen::Vector3d basePos1End = frameDataNext.segment(idx,3);
-			Eigen::Vector3d basePos = basePos1Start + frameFraction*(basePos1End - basePos1Start);
-
-			pose.segment(idx,3) = basePos;
-			pose.segment(idx+3,3) = Utils::GetQuaternionSlerp(frameData.segment(idx+3,3),frameDataNext.segment(idx+3,3),frameFraction);
-		}
-		else if(joint->getType()=="RevoluteJoint"){
-			pose[idx] = frameData[idx] + frameFraction * (frameDataNext[idx] - frameData[idx]);
-		}
-		else if(joint->getType()=="BallJoint"){
-			pose.segment(idx,3) = Utils::GetQuaternionSlerp(frameData.segment(idx,3),frameDataNext.segment(idx,3),frameFraction);
-		}
-	}
-	return pose;
 }
 
 Eigen::VectorXd
@@ -985,44 +931,29 @@ Off_Device()
 
 void
 Character::
-SetReward_Graph()
+SetRewards()
 {
-	mRewards.pop_back();
-	mRewards.push_front(mReward);
-
-	mReward_map;
-	(mReward_map.find("pose")->second).pop_back();
-	(mReward_map.find("pose")->second).push_front(pose_reward);
-	(mReward_map.find("vel")->second).pop_back();
-	(mReward_map.find("vel")->second).push_front(vel_reward);
-	(mReward_map.find("root")->second).pop_back();
-	(mReward_map.find("root")->second).push_front(root_reward);
-	(mReward_map.find("ee")->second).pop_back();
-	(mReward_map.find("ee")->second).push_front(end_eff_reward);
-	(mReward_map.find("com")->second).pop_back();
-	(mReward_map.find("com")->second).push_front(com_reward);
-	(mReward_map.find("min")->second).pop_back();
-	(mReward_map.find("min")->second).push_front(min_reward);
+	(mRewards.find("reward")->second).pop_back();
+	(mRewards.find("reward")->second).push_front(mReward);
+	(mRewards.find("pose")->second).pop_back();
+	(mRewards.find("pose")->second).push_front(pose_reward);
+	(mRewards.find("vel")->second).pop_back();
+	(mRewards.find("vel")->second).push_front(vel_reward);
+	(mRewards.find("root")->second).pop_back();
+	(mRewards.find("root")->second).push_front(root_reward);
+	(mRewards.find("ee")->second).pop_back();
+	(mRewards.find("ee")->second).push_front(end_eff_reward);
+	(mRewards.find("com")->second).pop_back();
+	(mRewards.find("com")->second).push_front(com_reward);
+	(mRewards.find("min")->second).pop_back();
+	(mRewards.find("min")->second).push_front(min_reward);
 }
 
 void
 Character::
-SetPhase()
+SetTorques()
 {
-	double worldTime = mWorld->getTime();
-	double t_phase = mBVH->GetMaxTime();
-	double phi = std::fmod(worldTime, t_phase)/t_phase;
-	mPhase = phi;
-
-	if(mUseDevice)
-		mDevice->SetPhase(mPhase);
-}
-
-std::deque<double>
-Character::
-GetRewards()
-{
-	return mRewards;
+	mTorques->SetTorques(mDesiredTorque);
 }
 
 Torques::Torques()
@@ -1031,110 +962,29 @@ Torques::Torques()
 
 void
 Torques::
-Init(dart::dynamics::SkeletonPtr skel)
+Initialize(dart::dynamics::SkeletonPtr skel)
 {
 	num_dofs = skel->getNumDofs();
-	num_phase = 34;
-
-	// mTorques_cur.resize(num_dofs);
-	mTorques_cur.resize(14);
-	mTorques_avg.resize(14);
-	for(int i=0; i<14; i++)
-	{
-		mTorques_dofs_cur.push_back(std::vector<double>(num_phase));
-		mTorques_dofs_avg.push_back(std::vector<double>(num_phase));
-		mTorques_dofs_num.push_back(std::vector<int>(num_phase));
-	}
-
 	for(int i=0; i<num_dofs; i++)
-	{
 		mTorques_dofs.push_back(std::deque<double>(1200));
-	}
 }
 
 void
 Torques::
 Reset()
 {
-	std::fill(mTorques_cur.begin(), mTorques_cur.end(), 0);
-	std::fill(mTorques_avg.begin(), mTorques_avg.end(), 0);
-	for(int i=0; i<14; i++)
-	{
-		for(int j=0; j<num_phase; j++)
-		{
-			mTorques_dofs_cur[i][j] = mTorques_dofs_avg[i][j];
-		}
-	}
-
 	for(int i=0; i<num_dofs; i++)
-	{
 		std::fill(mTorques_dofs[i].begin(), mTorques_dofs[i].end(), 0) ;
-	}
-}
-
-void
-Character::
-SetTorques()
-{
-	int num_dofs = mSkeleton->getNumDofs();
-	for(int i=0; i<14; i++)
-	{
-		mTorques->SetTorque(i,(int)(mPhase/0.0303),mDesiredTorque[i+6]);
-	}
-
-	mTorques->SetTorqueDofs(mDesiredTorque);
 }
 
 void
 Torques::
-SetTorqueDofs(const Eigen::VectorXd& desTorques)
+SetTorques(const Eigen::VectorXd& desTorques)
 {
 	for(int i=0; i<desTorques.size(); i++)
 	{
 		mTorques_dofs[i].pop_back();
 		mTorques_dofs[i].push_front(desTorques[i]);
 	}
-}
-
-void
-Torques::
-Set()
-{
-	for(int i=0; i<14; i++)
-	{
-		double sum = 0;
-		for(int j=0; j<num_phase; j++){
-			if(mTorques_dofs_cur[i][j]<0)
-				sum += -1*(mTorques_dofs_cur[i][j]);
-			else
-				sum +=  1*(mTorques_dofs_cur[i][j]);
-		}
-		mTorques_cur[i] = sum;
-	}
-}
-
-void
-Torques::
-SetTorque(int dof, int phase, double val)
-{
-	if(phase >= 34)
-		return;
-
-	// if(val<0)
-	// 	val *= -1;
-
-	mTorques_dofs_cur[dof][phase] = val;
-
-	int n = mTorques_dofs_num[dof][phase];
-	mTorques_dofs_avg[dof][phase] = (mTorques_dofs_avg[dof][phase]*n + val)/(double)(n+1);
-
-	mTorques_dofs_num[dof][phase] += 1;
-}
-
-double
-Torques::
-GetTorque(int dof, int phase)
-{
-	return mTorques_dofs_cur[dof][phase];
 }
 

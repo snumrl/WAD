@@ -63,8 +63,8 @@ Initialize(const std::string& meta_file, bool load_obj)
 			std::string str2;
 			ss>>str2;
 			if(!str2.compare("true")){
-				this->SetUseDevice(true);
 				device = new MASS::Device();
+				this->SetUseDevice(true);
 			}
 			else{
 				this->SetUseDevice(false);
@@ -122,12 +122,12 @@ Initialize(const std::string& meta_file, bool load_obj)
 
 	if(mUseDevice)
 		this->SetDevice(device);
+
 	this->Initialize();
 
 	if(mUseDevice)
 		mCharacter->SetConstraints();
 
-	// this->parseJSONtoBVH();
 	// auto weld_pelvis = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Pelvis"));
 	// auto weld_spine = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Spine"));
 	// auto weld_handr = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("HandR"));
@@ -140,7 +140,6 @@ Initialize(const std::string& meta_file, bool load_obj)
 	// mWorld->getConstraintSolver()->addConstraint(weld_handl);
 	// mWorld->getConstraintSolver()->addConstraint(weld_talusr);
 }
-
 
 void
 Environment::
@@ -162,7 +161,7 @@ Initialize()
 		mCharacter->SetDevice(mDevice);
 	}
 
-	mCharacter->Initialize_Analysis();
+	// mCharacter->Initialize_Analysis();
 
 	mNumSteps = mSimulationHz / mControlHz;
 
@@ -207,7 +206,6 @@ Step(bool onDevice)
 	mWorld->step();
 
 	mSimCount++;
-	// std::cout << "step : " << step_++ << std::endl;
 }
 
 bool
@@ -267,6 +265,13 @@ Environment::
 GetReward()
 {
 	return mCharacter->GetReward();
+}
+
+std::map<std::string, std::deque<double>>
+Environment::
+GetRewards()
+{
+	return mCharacter->GetRewards();
 }
 
 int

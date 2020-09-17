@@ -24,26 +24,13 @@ class Torques
 public:
 	Torques();
 
-	void Init(dart::dynamics::SkeletonPtr skel);
+	void Initialize(dart::dynamics::SkeletonPtr skel);
 	void Reset();
-	void Set();
-	void SetTorque(int dof, int phase, double val);
-	void SetTorqueDofs(const Eigen::VectorXd& desTorques);
-	double GetTorque(int dof, int phase);
-	std::vector<double>& GetTorquesCur(){return mTorques_cur;}
-	std::vector<double>& GetTorquesAvg(){return mTorques_avg;}
-	std::vector<std::vector<double>>& GetTorquesDofsCur(){return mTorques_dofs_cur;}
-	std::vector<std::vector<double>>& GetTorquesDofsAvg(){return mTorques_dofs_cur;}
-	std::vector<std::deque<double>>& GetTorquesDofs(){return mTorques_dofs;}
+	void SetTorques(const Eigen::VectorXd& desTorques);
+	std::vector<std::deque<double>>& GetTorques(){return mTorques_dofs;}
 
 private:
 	int num_dofs;
-	int num_phase;
-	std::vector<double> mTorques_cur;
-	std::vector<double> mTorques_avg;
-	std::vector<std::vector<double>> mTorques_dofs_cur;
-	std::vector<std::vector<double>> mTorques_dofs_avg;
-	std::vector<std::vector<int>> mTorques_dofs_num;
 	std::vector<std::deque<double>> mTorques_dofs;
 };
 
@@ -60,13 +47,12 @@ public:
 	void SetWorld(dart::simulation::WorldPtr& wPtr){ mWorld = wPtr; }
 	void Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz);
 	void Initialize_Muscles();
-	void Initialize_Analysis();
+	void Initialize_Rewards();
+	void Initialize_JointWeights();
+	void Initialize_MaxForces();
 
 	Eigen::VectorXd GetKp(){return mKp;}
 	Eigen::VectorXd GetKv(){return mKv;}
-
-	void SetKp(double kp);
-	void SetKv(double kv);
 
 	void Reset();
 	void Reset_Muscles();
@@ -85,12 +71,11 @@ public:
 
 	void SetPDParameters();
 	void SetTargetPosAndVel(double t, int controlHz);
+
 	Eigen::VectorXd GetSPDForces(const Eigen::VectorXd& p_desired);
 	std::pair<Eigen::VectorXd,Eigen::VectorXd> GetTargetPosAndVel(double t,double dt);
-	// Eigen::VectorXd GetTargetPositions(double t,double dt);
 	Eigen::VectorXd GetTargetPositions(double t,double dt,int frame,int frameNext, double frameFraction);
 	Eigen::VectorXd GetTargetVelocities(double t,double dt,int frame,int frameNext, double frameFraction);
-
 	Eigen::VectorXd GetTargetPositions(){return mTargetPositions;}
 	Eigen::VectorXd GetTargetVelocities(){return mTargetVelocities;}
 
@@ -100,8 +85,8 @@ public:
 	MuscleTuple& GetCurrentMuscleTuple(){return mCurrentMuscleTuple;}
 	std::vector<MuscleTuple>& GetMuscleTuples(){return mMuscleTuples;}
 
-	void SetDevice(Device* device);
 	void SetConstraints();
+	void SetDevice(Device* device);
 	void SetOnDevice(bool onDevice);
 	bool GetOnDevice(){ return mOnDevice; }
 	void On_Device();
@@ -112,7 +97,6 @@ public:
 	const std::vector<dart::dynamics::BodyNode*>& GetEndEffectors(){return mEndEffectors;}
 	Device* GetDevice(){return mDevice;}
 	BVH* GetBVH(){return mBVH;}
-	Torques* GetTorques(){return mTorques;}
 	Eigen::VectorXd GetMaxForces(){return maxForces;}
 
 	int GetNumMuscles(){return mNumMuscle;}
@@ -124,17 +108,15 @@ public:
 	int GetNumTotalRelatedDofs(){return mNumTotalRelatedDof;}
 
 	void SetUseMuscle(bool b);
-	void SetPhase();
-	void SetTorques();
-	void SetReward_Graph();
-
 	bool GetUseMuscle(){return mUseMuscle;}
-	double GetPhase(){return mPhase;}
-	std::deque<double> GetRewards();
-	std::deque<double> GetSignals(int idx);
-	std::map<std::string, std::deque<double>> GetRewardMap(){return mReward_map;}
 
-	Eigen::VectorXd GetPoseSlerp(double timeStep, double frameFraction, const Eigen::VectorXd& frameData, const Eigen::VectorXd& frameDataNext);
+	void SetTorques();
+	Torques* GetTorques(){return mTorques;}
+
+	void SetRewards();
+	std::map<std::string, std::deque<double>> GetRewards(){return mRewards;}
+
+	std::deque<double> GetSignals(int idx);
 
 private:
 	dart::dynamics::SkeletonPtr mSkeleton;
@@ -143,6 +125,8 @@ private:
 	Device* mDevice;
 	std::vector<Muscle*> mMuscles;
 	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
+
+	Torques* mTorques;
 
 	int mNumDof;
 	int mNumActiveDof;
@@ -158,11 +142,6 @@ private:
 	int mControlHz;
 	int mSimulationHz;
 
-	double w_q,w_v,w_ee,w_com,w_character;
-	double r_q,r_v,r_ee,r_com,r_character;
-	double mReward;
-	double mPhase;
-
 	Eigen::VectorXd mAction;
 	Eigen::VectorXd mAction_prev;
 	Eigen::VectorXd mActivationLevels;
@@ -174,31 +153,32 @@ private:
 
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;
+
 	Eigen::VectorXd mDesiredTorque;
 	Eigen::VectorXd mDesiredTorque_prev;
 
-	double r_torque_min;
 	std::deque<double> mFemurSignals_L;
     std::deque<double> mFemurSignals_R;
 
-	std::deque<double> mRewards;
-	std::deque<double> mRewards_Device;
+	double w_q,w_v,w_ee,w_com,w_character;
+	double r_q,r_v,r_ee,r_com,r_character;
 
-    std::map<std::string, std::deque<double>> mReward_map;
+	std::map<std::string, std::deque<double>> mRewards;
+    std::deque<double> reward_;
     std::deque<double> pose_;
     std::deque<double> vel_;
     std::deque<double> root_;
     std::deque<double> com_;
     std::deque<double> ee_;
+    std::deque<double> min_;
 
-    double pose_reward = 0;
-    double vel_reward = 0;
-    double end_eff_reward = 0;
-    double root_reward = 0;
-    double com_reward = 0;
-    double min_reward = 0;
-
-	Torques* mTorques;
+    double mReward;
+    double pose_reward;
+    double vel_reward;
+    double end_eff_reward;
+    double root_reward;
+    double com_reward;
+    double min_reward;
 
 	MuscleTuple mCurrentMuscleTuple;
 	std::vector<MuscleTuple> mMuscleTuples;

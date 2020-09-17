@@ -115,6 +115,34 @@ Eigen::Vector3d GetQuaternionSlerp(const Eigen::Vector3d& _a, const Eigen::Vecto
     return QuaternionToAxisAngle(Slerp(q_a, q_b, interp));
 }
 
+Eigen::VectorXd GetPoseSlerp(const dart::dynamics::SkeletonPtr& skeleton, double ratio, const Eigen::VectorXd& p1, const Eigen::VectorXd& p2)
+{
+    Eigen::VectorXd pose(p1.size());
+
+    int num_joints = skeleton->getNumJoints();
+    for(int i=0; i<num_joints; i++)
+    {
+        auto joint = skeleton->getJoint(i);
+
+        int idx = joint->getIndexInSkeleton(0);
+        if(joint->getType()=="FreeJoint"){
+            Eigen::Vector3d basePos1Start = p1.segment(idx,3);
+            Eigen::Vector3d basePos1End = p2.segment(idx,3);
+            Eigen::Vector3d basePos = basePos1Start + ratio*(basePos1End - basePos1Start);
+
+            pose.segment(idx,3) = basePos;
+            pose.segment(idx+3,3) = GetQuaternionSlerp(p1.segment(idx+3,3),p2.segment(idx+3,3),ratio);
+        }
+        else if(joint->getType()=="RevoluteJoint"){
+            pose[idx] = p1[idx] + ratio * (p2[idx] - p1[idx]);
+        }
+        else if(joint->getType()=="BallJoint"){
+            pose.segment(idx,3) = GetQuaternionSlerp(p1.segment(idx,3),p2.segment(idx,3),ratio);
+        }
+    }
+    return pose;
+}
+
 Eigen::Vector4d GetPoint4d(Eigen::Vector3d v)
 {
     Eigen::Vector4d p;

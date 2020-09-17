@@ -54,14 +54,7 @@ public:
 	Device* GetDevice(){return mDevice;}
 	const dart::dynamics::SkeletonPtr& GetGround(){return mGround;}
 	const dart::simulation::WorldPtr& GetWorld(){return mWorld;}
-
-	std::map<std::string, std::deque<double>> GetRewardMap(){return mCharacter->GetRewardMap();}
-
-	// double GetPhase(){return mCharacter->GetPhase();}
-	// std::map<std::string, std::vector<double>> GetEnergy(int idx){return mCharacter->GetEnergy(idx);}
-	// std::vector<double> GetReward_Graph(int idx){return mCharacter->GetReward_Graph(idx);}
-	// std::deque<double> GetDeviceSignals(int idx);
-	// std::deque<double> GetSignals(){return mCharacter->GetSignals();}
+	std::map<std::string, std::deque<double>> GetRewards();
 
 private:
 	dart::simulation::WorldPtr mWorld;
