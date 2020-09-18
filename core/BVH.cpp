@@ -311,6 +311,8 @@ SetMotionFrames()
 			}
 			else if(jn->getType()=="BallJoint"){
 				p.segment<3>(idx) = BallJoint::convertToPositions(R);
+				// if(jn->getName() == "Spine")
+				// 	p[idx] -= 0.07;
 			}
 			else if(jn->getType()=="RevoluteJoint")
 			{
