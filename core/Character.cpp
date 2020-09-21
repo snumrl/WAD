@@ -249,6 +249,33 @@ Initialize_MaxForces()
 	for(int i=6; i<maxForces.size(); i++)
 		maxForces[i] = 200;
 
+	maxForces <<
+			0, 0, 0, 0, 0, 0,	//pelvis
+			200, 50, 120,		//Femur L
+			70,					//Tibia L
+			90, 30, 30,			//Talus L
+			30, 30, 			//Thumb, Pinky L
+			200, 30, 60,		//Femur R
+			100,				//Tibia R
+			90, 30, 30,			//Talus R
+			30, 30, 			//Thumb, Pinky R
+			30, 30, 90,			//Spine
+			30, 30, 60,			//Torso
+			30, 30, 30,			//Neck
+			30, 30, 30,			//Head
+			50, 50, 50,			//Shoulder L
+			30, 50, 50,			//Arm L
+			30,					//ForeArm L
+			30, 30, 30,			//Hand L
+			40, 40, 40,			//Shoulder R
+			30, 30, 30,			//Arm R
+			30,					//ForeArm R
+			30, 30, 30;			//Hand R
+
+	double energy_ratio = 1.0;
+	maxForces *= energy_ratio;
+
+
 	// maxForces <<
 	// 		0, 0, 0, 0, 0, 0,	//pelvis
 	// 		200, 200, 200,		//Femur L
@@ -488,70 +515,84 @@ GetState_Character()
 		idx_angv += 3;
 	}
 
-	mSkeleton->setPositions(mTargetPositions);
-	mSkeleton->setVelocities(mTargetVelocities);
-	mSkeleton->computeForwardKinematics(true, false, false);
+	// mSkeleton->setPositions(mTargetPositions);
+	// mSkeleton->setVelocities(mTargetVelocities);
+	// mSkeleton->computeForwardKinematics(true, false, false);
 
-	Eigen::VectorXd pos_diff,ori_diff,lin_v_diff,ang_v_diff;
+	// Eigen::VectorXd pos_diff,ori_diff,lin_v_diff,ang_v_diff;
 
-	pos_diff.resize(body_num*3+1); //3dof + root world y
-	ori_diff.resize(body_num*4); //4dof (quaternion)
-	lin_v_diff.resize(body_num*3);
-	ang_v_diff.resize(body_num*3); //dof - root_dof
+	// pos_diff.resize(body_num*3+1); //3dof + root world y
+	// ori_diff.resize(body_num*4); //4dof (quaternion)
+	// lin_v_diff.resize(body_num*3);
+	// ang_v_diff.resize(body_num*3); //dof - root_dof
 
-	dart::dynamics::BodyNode* root_kin = mSkeleton->getBodyNode(0);
-	Eigen::Isometry3d trans_kin = Utils::GetBodyTransform(root_kin);
-	Eigen::Vector3d root_pos_kin = trans_kin.translation();
-	Eigen::Vector3d root_pos_rel_kin = root_pos_kin;
+	// dart::dynamics::BodyNode* root_kin = mSkeleton->getBodyNode(0);
+	// Eigen::Isometry3d trans_kin = Utils::GetBodyTransform(root_kin);
+	// Eigen::Vector3d root_pos_kin = trans_kin.translation();
+	// Eigen::Vector3d root_pos_rel_kin = root_pos_kin;
 
-	root_pos_rel_kin = Utils::AffineTransPoint(origin_trans, root_pos_rel_kin);
+	// root_pos_rel_kin = Utils::AffineTransPoint(origin_trans, root_pos_rel_kin);
 
-	pos_diff(0) = root_pos_rel_kin[1] - pos(0);
-	int idx_pos_diff = 1;
-	int idx_ori_diff = 0;
-	int idx_linv_diff = 0;
-	int idx_angv_diff = 0;
-	for(int i=0; i<body_num; i++)
-	{
-		dart::dynamics::BodyNode* body_kin = mSkeleton->getBodyNode(i);
-		trans_kin = Utils::GetBodyTransform(body_kin);
+	// pos_diff(0) = root_pos_rel_kin[1] - pos(0);
+	// int idx_pos_diff = 1;
+	// int idx_ori_diff = 0;
+	// int idx_linv_diff = 0;
+	// int idx_angv_diff = 0;
+	// for(int i=0; i<body_num; i++)
+	// {
+	// 	dart::dynamics::BodyNode* body_kin = mSkeleton->getBodyNode(i);
+	// 	trans_kin = Utils::GetBodyTransform(body_kin);
 
-		Eigen::Vector3d body_pos_kin = trans_kin.translation();
-		body_pos_kin = Utils::AffineTransPoint(origin_trans, body_pos_kin);
-		body_pos_kin -= root_pos_rel_kin;
-		pos_diff.segment(idx_pos_diff,3) = body_pos_kin.segment(0,3) - pos.segment(idx_pos_diff,3);
-		idx_pos_diff += 3;
+	// 	Eigen::Vector3d body_pos_kin = trans_kin.translation();
+	// 	body_pos_kin = Utils::AffineTransPoint(origin_trans, body_pos_kin);
+	// 	body_pos_kin -= root_pos_rel_kin;
+	// 	pos_diff.segment(idx_pos_diff,3) = body_pos_kin.segment(0,3) - pos.segment(idx_pos_diff,3);
+	// 	idx_pos_diff += 3;
 
-		Eigen::Quaterniond body_ori_kin(trans_kin.rotation());
-		body_ori_kin = origin_quat * body_ori_kin;
-		Utils::QuatNormalize(body_ori_kin);
+	// 	Eigen::Quaterniond body_ori_kin(trans_kin.rotation());
+	// 	body_ori_kin = origin_quat * body_ori_kin;
+	// 	Utils::QuatNormalize(body_ori_kin);
 
-		Eigen::Quaterniond qDiff = Utils::QuatDiff(body_ori_kin, Utils::VecToQuat(ori.segment(idx_ori_diff, 4)));
-		Utils::QuatNormalize(qDiff);
+	// 	Eigen::Quaterniond qDiff = Utils::QuatDiff(body_ori_kin, Utils::VecToQuat(ori.segment(idx_ori_diff, 4)));
+	// 	Utils::QuatNormalize(qDiff);
 
-		ori_diff.segment(idx_ori_diff, 4) = Utils::QuatToVec(qDiff).segment(0, 4);
-		idx_ori_diff += 4;
+	// 	ori_diff.segment(idx_ori_diff, 4) = Utils::QuatToVec(qDiff).segment(0, 4);
+	// 	idx_ori_diff += 4;
 
-		Eigen::Vector3d lin_vel_kin = body_kin->getLinearVelocity();
-		lin_vel_kin = Utils::AffineTransVector(origin_trans, lin_vel_kin);
-		lin_v_diff.segment(idx_linv_diff, 3) = lin_vel_kin - lin_v.segment(idx_linv_diff, 3);
-		idx_linv_diff += 3;
+	// 	Eigen::Vector3d lin_vel_kin = body_kin->getLinearVelocity();
+	// 	lin_vel_kin = Utils::AffineTransVector(origin_trans, lin_vel_kin);
+	// 	lin_v_diff.segment(idx_linv_diff, 3) = lin_vel_kin - lin_v.segment(idx_linv_diff, 3);
+	// 	idx_linv_diff += 3;
 
-		Eigen::Vector3d ang_vel_kin = body_kin->getAngularVelocity();
-		ang_vel_kin = Utils::AffineTransVector(origin_trans, ang_vel_kin);
-		ang_v_diff.segment(idx_angv_diff, 3) = ang_vel_kin - ang_v.segment(idx_angv_diff, 3);
-		idx_angv_diff += 3;
-	}
+	// 	Eigen::Vector3d ang_vel_kin = body_kin->getAngularVelocity();
+	// 	ang_vel_kin = Utils::AffineTransVector(origin_trans, ang_vel_kin);
+	// 	ang_v_diff.segment(idx_angv_diff, 3) = ang_vel_kin - ang_v.segment(idx_angv_diff, 3);
+	// 	idx_angv_diff += 3;
+	// }
 
-	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
+	// Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
 
-	mSkeleton->setPositions(cur_pos);
-	mSkeleton->setVelocities(cur_vel);
-	mSkeleton->computeForwardKinematics(true, false, false);
+	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+1);
 
-	state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
+	double phase = this->GetPhase();
+	// mSkeleton->setPositions(cur_pos);
+	// mSkeleton->setVelocities(cur_vel);
+	// mSkeleton->computeForwardKinematics(true, false, false);
+
+	// state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
+	state<<pos,ori,lin_v,ang_v,phase;
 
 	return state;
+}
+
+double
+Character::
+GetPhase()
+{
+	double worldTime = mWorld->getTime();
+	double t_phase = mBVH->GetMaxTime();
+	double phi = std::fmod(worldTime, t_phase)/t_phase;
+	return phi;
 }
 
 double
@@ -766,7 +807,7 @@ SetDesiredTorques()
 	// mFemurSignals_L.push_front(mDesiredTorque.segment(9, 3).norm());
 
 	mFemurSignals_R.pop_back();
-	mFemurSignals_R.push_front(mDesiredTorque[13]);
+	mFemurSignals_R.push_front(mDesiredTorque[15]);
 	// mFemurSignals_R.push_front(mDesiredTorque.segment(13,3).norm());
 }
 

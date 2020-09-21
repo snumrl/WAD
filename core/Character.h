@@ -62,6 +62,7 @@ public:
 
 	Eigen::VectorXd GetState();
 	Eigen::VectorXd GetState_Character();
+	double GetPhase();
 	double GetReward();
 	double GetReward_Character();
 	double GetTorqueReward();

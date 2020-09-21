@@ -96,7 +96,7 @@ class PPO(object):
 		self.lb = 0.99
 
 		self.default_clip_ratio = 0.2
-		self.default_learning_rate = 1.0*1E-5
+		self.default_learning_rate = 1.0*1E-4
 		self.clip_ratio = self.default_clip_ratio
 		self.learning_rate = self.default_learning_rate
 
@@ -122,7 +122,7 @@ class PPO(object):
 
 			self.loss_muscle = 0.0
 			self.muscle_batch_size = 128
-			self.default_learning_rate_muscle = 1E-5
+			self.default_learning_rate_muscle = 1E-4
 			self.learning_rate_muscle = self.default_learning_rate_muscle
 			self.optimizer_muscle = optim.Adam(self.muscle_model.parameters(),lr=self.learning_rate_muscle)
 			self.num_epochs_muscle = 3
@@ -205,7 +205,6 @@ class PPO(object):
 					dt = Tensor(self.env.GetDesiredTorques())
 					activations = self.muscle_model(mt,dt).cpu().detach().numpy()
 					self.env.SetActivationLevels(activations)
-
 					self.env.Steps(1, False)
 			else:
 				self.env.StepsAtOnce(False)
@@ -392,6 +391,8 @@ class PPO(object):
 		self.rewards.append(self.sum_return/self.num_episode)
 
 		self.SaveModel()
+		if self.use_muscle:
+			self.SaveModel_Muscle()
 		print('=============================================')
 
 		return np.array(self.rewards)

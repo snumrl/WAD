@@ -236,7 +236,7 @@ Step()
 	if(mEnv->GetUseMuscle())
 	{
 		int inference_per_sim = 2;
-		for(int i=0; i<num/2; i+=inference_per_sim){
+		for(int i=0; i<num; i+=inference_per_sim){
 			Eigen::VectorXd mt = mEnv->GetCharacter()->GetMuscleTorques();
 			mEnv->GetCharacter()->SetActivationLevels(GetActivationFromNN(mt));
 			for(int j=0; j<inference_per_sim; j++)
@@ -705,48 +705,96 @@ DrawTorques()
 		DrawTorqueGraph("FemurL_x", 6, p_w, p_h, p_x, p_y-0*offset_y);
 		DrawTorqueGraph("FemurL_y", 7, p_w, p_h, p_x, p_y-1*offset_y);
 		DrawTorqueGraph("FemurL_z", 8, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("FemurR_x", 13, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("FemurR_y", 14, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("FemurR_z", 15, p_w, p_h, p_x, p_y-5*offset_y);
+		DrawTorqueGraph("FemurR_x", 15, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("FemurR_y", 16, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("FemurR_z", 17, p_w, p_h, p_x, p_y-5*offset_y);
 	}
 	else if(mGraphMode == 1){
 		DrawTorqueGraph("Tibia_L", 9, p_w, p_h, p_x, p_y-0*offset_y);
-		DrawTorqueGraph("Tibia_R", 16, p_w, p_h, p_x, p_y-1*offset_y);
-		DrawTorqueGraph("Elbow_L", 29, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("Elbow_R", 36, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("Tibia_R", 18, p_w, p_h, p_x, p_y-1*offset_y);
+		DrawTorqueGraph("Elbow_L", 42, p_w, p_h, p_x, p_y-2*offset_y);
+		DrawTorqueGraph("Elbow_R", 52, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("Thumb_L", 13, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("Thumb_R", 22, p_w, p_h, p_x, p_y-5*offset_y);
 	}
 	else if(mGraphMode == 2){
 		DrawTorqueGraph("TalusL_x", 10, p_w, p_h, p_x, p_y-0*offset_y);
 		DrawTorqueGraph("TalusL_y", 11, p_w, p_h, p_x, p_y-1*offset_y);
 		DrawTorqueGraph("TalusL_z", 12, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("TalusR_x", 17, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("TalusR_y", 18, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("TalusR_z", 19, p_w, p_h, p_x, p_y-5*offset_y);
+		DrawTorqueGraph("TalusR_x", 19, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("TalusR_y", 20, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("TalusR_z", 21, p_w, p_h, p_x, p_y-5*offset_y);
 	}
 	else if(mGraphMode == 3){
-		DrawTorqueGraph("Torso_x", 20, p_w, p_h, p_x, p_y-0*offset_y);
-		DrawTorqueGraph("Torso_y", 21, p_w, p_h, p_x, p_y-1*offset_y);
-		DrawTorqueGraph("Torso_z", 22, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("Neck_x", 23, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("Neck_y", 24, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("Neck_z", 25, p_w, p_h, p_x, p_y-5*offset_y);
+		DrawTorqueGraph("Spine_x", 24, p_w, p_h, p_x, p_y-0*offset_y);
+		DrawTorqueGraph("Spine_y", 25, p_w, p_h, p_x, p_y-1*offset_y);
+		DrawTorqueGraph("Spine_z", 26, p_w, p_h, p_x, p_y-2*offset_y);
+		DrawTorqueGraph("Torso_x", 27, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("Torso_y", 28, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("Torso_z", 29, p_w, p_h, p_x, p_y-5*offset_y);
 	}
 	else if(mGraphMode == 4){
-		DrawTorqueGraph("ShoulderL_x", 26, p_w, p_h, p_x, p_y-0*offset_y);
-		DrawTorqueGraph("ShoulderL_y", 27, p_w, p_h, p_x, p_y-1*offset_y);
-		DrawTorqueGraph("ShoulderL_z", 28, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("ShoulderR_x", 33, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("ShoulderR_Y", 34, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("ShoulderR_z", 35, p_w, p_h, p_x, p_y-5*offset_y);
+		DrawTorqueGraph("ShoulderL_x", 36, p_w, p_h, p_x, p_y-0*offset_y);
+		DrawTorqueGraph("ShoulderL_y", 37, p_w, p_h, p_x, p_y-1*offset_y);
+		DrawTorqueGraph("ShoulderL_z", 38, p_w, p_h, p_x, p_y-2*offset_y);
+		DrawTorqueGraph("ShoulderR_x", 46, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("ShoulderR_Y", 47, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("ShoulderR_z", 48, p_w, p_h, p_x, p_y-5*offset_y);
 	}
 	else if(mGraphMode == 5){
-		DrawTorqueGraph("HandL_x", 30, p_w, p_h, p_x, p_y-0*offset_y);
-		DrawTorqueGraph("HandL_y", 31, p_w, p_h, p_x, p_y-1*offset_y);
-		DrawTorqueGraph("HandL_z", 32, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("HandR_x", 37, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("HandR_y", 38, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("HandR_z", 39, p_w, p_h, p_x, p_y-5*offset_y);
+		DrawTorqueGraph("ArmL_x", 39, p_w, p_h, p_x, p_y-0*offset_y);
+		DrawTorqueGraph("ArmL_y", 40, p_w, p_h, p_x, p_y-1*offset_y);
+		DrawTorqueGraph("ArmL_z", 41, p_w, p_h, p_x, p_y-2*offset_y);
+		DrawTorqueGraph("ArmR_x", 49, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("ArmR_y", 50, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("ArmR_z", 51, p_w, p_h, p_x, p_y-5*offset_y);
 	}
+	// if(mGraphMode == 0){
+	// 	DrawTorqueGraph("FemurL_x", 6, p_w, p_h, p_x, p_y-0*offset_y);
+	// 	DrawTorqueGraph("FemurL_y", 7, p_w, p_h, p_x, p_y-1*offset_y);
+	// 	DrawTorqueGraph("FemurL_z", 8, p_w, p_h, p_x, p_y-2*offset_y);
+	// 	DrawTorqueGraph("FemurR_x", 13, p_w, p_h, p_x, p_y-3*offset_y);
+	// 	DrawTorqueGraph("FemurR_y", 14, p_w, p_h, p_x, p_y-4*offset_y);
+	// 	DrawTorqueGraph("FemurR_z", 15, p_w, p_h, p_x, p_y-5*offset_y);
+	// }
+	// else if(mGraphMode == 1){
+	// 	DrawTorqueGraph("Tibia_L", 9, p_w, p_h, p_x, p_y-0*offset_y);
+	// 	DrawTorqueGraph("Tibia_R", 16, p_w, p_h, p_x, p_y-1*offset_y);
+	// 	DrawTorqueGraph("Elbow_L", 29, p_w, p_h, p_x, p_y-2*offset_y);
+	// 	DrawTorqueGraph("Elbow_R", 36, p_w, p_h, p_x, p_y-3*offset_y);
+	// }
+	// else if(mGraphMode == 2){
+	// 	DrawTorqueGraph("TalusL_x", 10, p_w, p_h, p_x, p_y-0*offset_y);
+	// 	DrawTorqueGraph("TalusL_y", 11, p_w, p_h, p_x, p_y-1*offset_y);
+	// 	DrawTorqueGraph("TalusL_z", 12, p_w, p_h, p_x, p_y-2*offset_y);
+	// 	DrawTorqueGraph("TalusR_x", 17, p_w, p_h, p_x, p_y-3*offset_y);
+	// 	DrawTorqueGraph("TalusR_y", 18, p_w, p_h, p_x, p_y-4*offset_y);
+	// 	DrawTorqueGraph("TalusR_z", 19, p_w, p_h, p_x, p_y-5*offset_y);
+	// }
+	// else if(mGraphMode == 3){
+	// 	DrawTorqueGraph("Torso_x", 20, p_w, p_h, p_x, p_y-0*offset_y);
+	// 	DrawTorqueGraph("Torso_y", 21, p_w, p_h, p_x, p_y-1*offset_y);
+	// 	DrawTorqueGraph("Torso_z", 22, p_w, p_h, p_x, p_y-2*offset_y);
+	// 	DrawTorqueGraph("Neck_x", 23, p_w, p_h, p_x, p_y-3*offset_y);
+	// 	DrawTorqueGraph("Neck_y", 24, p_w, p_h, p_x, p_y-4*offset_y);
+	// 	DrawTorqueGraph("Neck_z", 25, p_w, p_h, p_x, p_y-5*offset_y);
+	// }
+	// else if(mGraphMode == 4){
+	// 	DrawTorqueGraph("ShoulderL_x", 26, p_w, p_h, p_x, p_y-0*offset_y);
+	// 	DrawTorqueGraph("ShoulderL_y", 27, p_w, p_h, p_x, p_y-1*offset_y);
+	// 	DrawTorqueGraph("ShoulderL_z", 28, p_w, p_h, p_x, p_y-2*offset_y);
+	// 	DrawTorqueGraph("ShoulderR_x", 33, p_w, p_h, p_x, p_y-3*offset_y);
+	// 	DrawTorqueGraph("ShoulderR_Y", 34, p_w, p_h, p_x, p_y-4*offset_y);
+	// 	DrawTorqueGraph("ShoulderR_z", 35, p_w, p_h, p_x, p_y-5*offset_y);
+	// }
+	// else if(mGraphMode == 5){
+	// 	DrawTorqueGraph("HandL_x", 30, p_w, p_h, p_x, p_y-0*offset_y);
+	// 	DrawTorqueGraph("HandL_y", 31, p_w, p_h, p_x, p_y-1*offset_y);
+	// 	DrawTorqueGraph("HandL_z", 32, p_w, p_h, p_x, p_y-2*offset_y);
+	// 	DrawTorqueGraph("HandR_x", 37, p_w, p_h, p_x, p_y-3*offset_y);
+	// 	DrawTorqueGraph("HandR_y", 38, p_w, p_h, p_x, p_y-4*offset_y);
+	// 	DrawTorqueGraph("HandR_z", 39, p_w, p_h, p_x, p_y-5*offset_y);
+	// }
 
 	DrawGLEnd();
 }
@@ -1333,6 +1381,7 @@ GetActivationFromNN(const Eigen::VectorXd& mt)
 		mEnv->GetCharacter()->GetDesiredTorques();
 		return Eigen::VectorXd::Zero(mEnv->GetCharacter()->GetMuscles().size());
 	}
+
 	p::object get_activation = muscle_nn_module.attr("get_activation");
 	Eigen::VectorXd dt = mEnv->GetCharacter()->GetDesiredTorques();
 	np::ndarray mt_np = toNumPyArray(mt);
@@ -1343,7 +1392,7 @@ GetActivationFromNN(const Eigen::VectorXd& mt)
 
 	Eigen::VectorXd activation(mEnv->GetCharacter()->GetMuscles().size());
 	float* srcs = reinterpret_cast<float*>(activation_np.get_data());
-	for(int i=0;i<activation.rows();i++)
+	for(int i=0; i<activation.rows(); i++)
 		activation[i] = srcs[i];
 
 	return activation;
