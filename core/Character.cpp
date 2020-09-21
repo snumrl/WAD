@@ -720,7 +720,8 @@ GetReward_Character()
 	double root_ang_vel_err = (angVelSim - angVelKin).squaredNorm();
 	vel_err += root_rot_w * root_ang_vel_err;
 
-	root_err = root_pos_err + 0.1 * root_rot_err + 0.01 * root_vel_err + 0.001 * root_ang_vel_err;
+	// root_err = root_pos_err + 0.1 * root_rot_err + 0.01 * root_vel_err + 0.001 * root_ang_vel_err;
+	root_err = root_rot_err;
 
 	Eigen::Isometry3d origin_trans_kin = Utils::GetOriginTrans(mSkeleton);
 
@@ -742,7 +743,8 @@ GetReward_Character()
 	root_reward = exp(-err_scale * root_scale * root_err);
 	com_reward = exp(-err_scale * com_scale * com_err);
 
-	double r_imitation = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
+	// double r_imitation = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
+	double r_imitation = pose_reward * 1.0 * end_eff_reward * root_reward * 1.0;
 
 	// min_reward = this->GetTorqueReward();
 	// double r_torque_min = min_reward;
