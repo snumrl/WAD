@@ -303,16 +303,16 @@ Initialize_MaxForces()
 
 	maxForces <<
 			0, 0, 0, 0, 0, 0,	//pelvis
-			200, 200, 200,		//Femur L
-			150,				//Tibia L
-			100, 100, 100,		//Talus L
+			150, 150, 150,		//Femur L
+			100,				//Tibia L
+			120, 120, 120,		//Talus L
 			30, 30, 			//Thumb, Pinky L
-			200, 200, 200,		//Femur R
-			150,				//Tibia R
-			100, 100, 100,			//Talus R
+			150, 150, 150,		//Femur R
+			100,				//Tibia R
+			120, 120, 120,		//Talus R
 			30, 30, 			//Thumb, Pinky R
-			100, 100, 100,			//Spine
-			100, 100, 100,			//Torso
+			80, 80, 80,			//Spine
+			80, 80, 80,			//Torso
 			30, 30, 30,			//Neck
 			30, 30, 30,			//Head
 			50, 50, 50,			//Shoulder L

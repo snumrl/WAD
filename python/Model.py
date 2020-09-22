@@ -103,8 +103,6 @@ class SimulationNN(nn.Module):
 		self.v_fc2 = nn.Linear(num_h1,num_h2)
 		self.v_fc3 = nn.Linear(num_h2,1)
 
-		# self.reward_container = Container(10000)
-
 		torch.nn.init.xavier_uniform_(self.p_fc1.weight)
 		torch.nn.init.xavier_uniform_(self.p_fc2.weight)
 		torch.nn.init.xavier_uniform_(self.p_fc3.weight)
