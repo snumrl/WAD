@@ -93,7 +93,7 @@ class PPO(object):
 		self.replay_buffer = ReplayBuffer(30000)
 
 		self.gamma = 0.95
-		self.lb = 0.99
+		self.lb = 0.95
 
 		self.default_clip_ratio = 0.2
 		self.default_learning_rate = 1.0*1E-4

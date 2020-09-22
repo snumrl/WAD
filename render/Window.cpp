@@ -804,7 +804,7 @@ Window::
 DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double y)
 {
 	double offset_x = 0.00024;
-	double offset_y = 0.0006;
+	double offset_y = 0.0005;
 	double offset = 0.005;
 	double ratio_y = 0.3;
 
