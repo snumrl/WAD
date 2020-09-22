@@ -178,10 +178,54 @@ SetPDParameters()
 	mKp.resize(dof);
 	mKv.resize(dof);
 
-	for(int i=0; i<mKp.size(); i++)
-		mKp[i] = 500;
-	for(int i=0; i<mKv.size(); i++)
-		mKv[i] = 50;
+	// for(int i=0; i<mKp.size(); i++)
+	// 	mKp[i] = 500;
+	// for(int i=0; i<mKv.size(); i++)
+	// 	mKv[i] = 50;
+
+	mKp << 0, 0, 0, 0, 0, 0,
+		500, 500, 500,
+		500,
+		400, 400, 400,
+		100, 100,
+		500, 500, 500,
+		500,
+		400, 400, 400,
+		100, 100,
+		1000, 1000, 1000,
+		500, 500, 500,
+		100, 100, 100,
+		100, 100, 100,
+		400, 400, 400,
+		300, 300, 300,
+		300,
+		100, 100, 100,
+		400, 400, 400,
+		300, 300, 300,
+		300,
+		100, 100, 100;
+
+	mKv << 0, 0, 0, 0, 0, 0,
+		50, 50, 50,
+		50,
+		40, 40, 40,
+		10, 10,
+		50, 50, 50,
+		50,
+		40, 40, 40,
+		10, 10,
+		100, 100, 100,
+		50, 50, 50,
+		10, 10, 10,
+		10, 10, 10,
+		40, 40, 40,
+		30, 30, 30,
+		30,
+		10, 10, 10,
+		40, 40, 40,
+		30, 30, 30,
+		30,
+		10, 10, 10;
 
 	// mKp << 0, 0, 0, 0, 0, 0,
 	// 	500, 500, 500,
@@ -223,8 +267,16 @@ Initialize_JointWeights()
 	int num_joint = mSkeleton->getNumJoints();
 	mJointWeights.resize(num_joint);
 
-	for(int i=0; i<mJointWeights.size(); i++)
-		mJointWeights[i] = 0.1;
+	// for(int i=0; i<mJointWeights.size(); i++)
+	// 	mJointWeights[i] = 0.1;
+
+	mJointWeights <<
+		1.0,					//Pelvis
+		0.5, 0.3, 0.2, 0.1, 0.1,//Left Leg
+		0.5, 0.3, 0.2, 0.1, 0.1,//Right Leg
+		0.5, 0.5, 0.2, 0.2,		//Torso & Neck
+		0.3, 0.2, 0.2, 0.1,		//Left Arm
+		0.3, 0.2, 0.2, 0.1;		//Right Arm
 
 	// mJointWeights <<
 	// 		1.0,			//Pelvis
@@ -244,37 +296,36 @@ Initialize_MaxForces()
 	int dof = mSkeleton->getNumDofs();
 	maxForces.resize(dof);
 
-	for(int i=0; i<6; i++)
-		maxForces[i] = 0;
-	for(int i=6; i<maxForces.size(); i++)
-		maxForces[i] = 200;
+	// for(int i=0; i<6; i++)
+	// 	maxForces[i] = 0;
+	// for(int i=6; i<maxForces.size(); i++)
+	// 	maxForces[i] = 200;
 
 	maxForces <<
 			0, 0, 0, 0, 0, 0,	//pelvis
-			200, 50, 120,		//Femur L
-			70,					//Tibia L
-			90, 30, 30,			//Talus L
+			200, 200, 200,		//Femur L
+			150,				//Tibia L
+			100, 100, 100,		//Talus L
 			30, 30, 			//Thumb, Pinky L
-			200, 30, 60,		//Femur R
-			100,				//Tibia R
-			90, 30, 30,			//Talus R
+			200, 200, 200,		//Femur R
+			150,				//Tibia R
+			100, 100, 100,			//Talus R
 			30, 30, 			//Thumb, Pinky R
-			30, 30, 90,			//Spine
-			30, 30, 60,			//Torso
+			100, 100, 100,			//Spine
+			100, 100, 100,			//Torso
 			30, 30, 30,			//Neck
 			30, 30, 30,			//Head
 			50, 50, 50,			//Shoulder L
-			30, 50, 50,			//Arm L
+			50, 50, 50,			//Arm L
 			30,					//ForeArm L
 			30, 30, 30,			//Hand L
-			40, 40, 40,			//Shoulder R
-			30, 30, 30,			//Arm R
+			50, 50, 50,			//Shoulder R
+			50, 50, 50,			//Arm R
 			30,					//ForeArm R
 			30, 30, 30;			//Hand R
 
 	double energy_ratio = 1.0;
 	maxForces *= energy_ratio;
-
 
 	// maxForces <<
 	// 		0, 0, 0, 0, 0, 0,	//pelvis
@@ -720,8 +771,8 @@ GetReward_Character()
 	double root_ang_vel_err = (angVelSim - angVelKin).squaredNorm();
 	vel_err += root_rot_w * root_ang_vel_err;
 
-	// root_err = root_pos_err + 0.1 * root_rot_err + 0.01 * root_vel_err + 0.001 * root_ang_vel_err;
-	root_err = root_rot_err;
+	root_err = root_pos_err + 0.1 * root_rot_err + 0.01 * root_vel_err + 0.001 * root_ang_vel_err;
+	//root_err = root_rot_err;
 
 	Eigen::Isometry3d origin_trans_kin = Utils::GetOriginTrans(mSkeleton);
 
@@ -743,8 +794,8 @@ GetReward_Character()
 	root_reward = exp(-err_scale * root_scale * root_err);
 	com_reward = exp(-err_scale * com_scale * com_err);
 
-	// double r_imitation = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
-	double r_imitation = pose_reward * 1.0 * end_eff_reward * root_reward * 1.0;
+	double r_imitation = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
+	// double r_imitation = pose_reward * 1.0 * end_eff_reward * root_reward * com_reward;
 
 	// min_reward = this->GetTorqueReward();
 	// double r_torque_min = min_reward;

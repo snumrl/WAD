@@ -92,11 +92,11 @@ class PPO(object):
 		self.batch_size = 128
 		self.replay_buffer = ReplayBuffer(30000)
 
-		self.gamma = 0.99
+		self.gamma = 0.95
 		self.lb = 0.99
 
 		self.default_clip_ratio = 0.2
-		self.default_learning_rate = 1.0*1E-5
+		self.default_learning_rate = 1.0*1E-4
 		self.clip_ratio = self.default_clip_ratio
 		self.learning_rate = self.default_learning_rate
 
@@ -162,7 +162,7 @@ class PPO(object):
 
 	def LoadModel(self, path):
 		self.model.load('../nn/'+path+'.pt')
-		self.rms.load('../nn/'+path)
+		self.rms.load(path)
 
 	def LoadModel_Muscle(self,path):
 		self.muscle_model.load('../nn/'+path+'_muscle.pt')
