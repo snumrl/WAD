@@ -1383,6 +1383,7 @@ GetActivationFromNN(const Eigen::VectorXd& mt)
 	}
 
 	p::object get_activation = muscle_nn_module.attr("get_activation");
+	mEnv->GetCharacter()->SetDesiredTorques();
 	Eigen::VectorXd dt = mEnv->GetCharacter()->GetDesiredTorques();
 	np::ndarray mt_np = toNumPyArray(mt);
 	np::ndarray dt_np = toNumPyArray(dt);

@@ -96,7 +96,7 @@ class PPO(object):
 		self.lb = 0.95
 
 		self.default_clip_ratio = 0.2
-		self.default_learning_rate = 1.0*1E-5
+		self.default_learning_rate = 1.0*1E-4
 		self.clip_ratio = self.default_clip_ratio
 		self.learning_rate = self.default_learning_rate
 
@@ -119,6 +119,7 @@ class PPO(object):
 			self.num_action_muscle = self.env.GetNumAction()
 			self.muscle_model = MuscleNN(self.env.GetNumTotalMuscleRelatedDofs(), self.num_action_muscle,self.num_muscles)
 			self.muscle_buffer = MuscleBuffer(30000)
+			# self.rms_muscle = RunningMeanStd(shape=(self.env.GetNumTotalMuscleRelatedDofs()))
 
 			self.loss_muscle = 0.0
 			self.muscle_batch_size = 128
@@ -134,7 +135,7 @@ class PPO(object):
 		self.num_control_Hz = self.env.GetControlHz()
 		self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
 
-		self.max_iteration = 3000
+		self.max_iteration = 5000
 		self.num_evaluation = 0
 		self.rewards = []
 
@@ -154,11 +155,14 @@ class PPO(object):
 
 	def SaveModel_Muscle(self):
 		self.muscle_model.save('../nn/current_muscle.pt')
+		# self.rms_muscle.save('current_muscle')
 
 		if self.max_return_epoch == self.num_evaluation:
 			self.muscle_model.save('../nn/max_muscle.pt')
+			# self.rms_muscle.save('max_muscle')
 		if self.num_evaluation%100 == 0:
 			self.muscle_model.save('../nn/'+str(self.num_evaluation//100)+'_muscle.pt')
+			# self.rms_muscle.save(str(self.num_evaluation//100)+'_muscle')
 
 	def LoadModel(self, path):
 		self.model.load('../nn/'+path+'.pt')
@@ -166,6 +170,7 @@ class PPO(object):
 
 	def LoadModel_Muscle(self,path):
 		self.muscle_model.load('../nn/'+path+'_muscle.pt')
+		# self.rms_muscle.load(path+'_muscle')
 
 	def Train(self):
 		self.GenerateTransitions()

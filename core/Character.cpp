@@ -324,7 +324,7 @@ Initialize_MaxForces()
 			30,					//ForeArm R
 			30, 30, 30;			//Hand R
 
-	double energy_ratio = 1.0;
+	double energy_ratio = 0.4;
 	maxForces *= energy_ratio;
 
 	// maxForces <<
