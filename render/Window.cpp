@@ -589,9 +589,85 @@ DrawMuscles(const std::vector<Muscle*>& muscles)
 	for (auto muscle : muscles)
 	{
         double a = muscle->GetActivation();
-        Eigen::Vector4d color(0.4+(2.0*a),0.4,0.4,1.0);//0.7*(1.0-3.0*a));
-        glColor4dv(color.data());
+        Eigen::Vector4d color(0.4+(2.0*a),0.4,0.4,1.0);
+        std::string m_name = muscle->GetName();
 
+        // Front
+      //   if(!m_name.compare("L_Rectus_Abdominis1") || !m_name.compare("R_Rectus_Abdominis1")){
+      //   	color[0] = 1.0;
+      //   	color[1] = 0.0;
+      //   	color[2] = 0.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+      //   if(!m_name.compare("L_Transversus_Abdominis4") || !m_name.compare("R_Transversus_Abdominis4")){
+      //   	color[0] = 0.0;
+      //   	color[1] = 1.0;
+      //   	color[2] = 0.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+        // Back
+      //   if(!m_name.compare("L_Multifidus") || !m_name.compare("R_Multifidus")){
+      //   	color[0] = 1.0;
+      //   	color[1] = 0.0;
+      //   	color[2] = 0.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+      //   if(!m_name.compare("L_Quadratus_Lumborum1") || !m_name.compare("R_Quadratus_Lumborum1")){
+      //   	color[0] = 1.0;
+      //   	color[1] = 0.0;
+      //   	color[2] = 1.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+      //   if(!m_name.compare("L_Transversus_Abdominis") || !m_name.compare("R_Transversus_Abdominis")){
+      //   	color[0] = 0.0;
+      //   	color[1] = 1.0;
+      //   	color[2] = 1.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+        // Rest
+      //   if(!m_name.compare("L_Psoas_Minor") || !m_name.compare("R_Psoas_Minor")){
+      //   	color[0] = 0.0;
+      //   	color[1] = 1.0;
+      //   	color[2] = 0.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+      //   if(!m_name.compare("L_Transversus_Abdominis2") || !m_name.compare("R_Transversus_Abdominis2")){
+      //   	color[0] = 1.0;
+      //   	color[1] = 0.0;
+      //   	color[2] = 1.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+      //   if(!m_name.compare("L_Serratus_Posterior_Inferior") || !m_name.compare("R_Serratus_Posterior_Inferior")){
+      //   	color[0] = 0.0;
+      //   	color[1] = 0.0;
+      //   	color[2] = 1.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+        glColor4dv(color.data());
 	    mShapeRenderer.renderMuscle(muscle);
 	}
 	glEnable(GL_LIGHTING);

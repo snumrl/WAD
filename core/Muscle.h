@@ -32,6 +32,7 @@ public:
 	double Getf_A();
 	double Getf_p();
 	double Getl_mt();
+	std::string GetName(){return name;}
 
 	Eigen::MatrixXd GetJacobianTranspose();
 	Eigen::MatrixXd GetReducedJacobianTranspose();
@@ -44,6 +45,7 @@ public:
 	std::vector<dart::dynamics::BodyNode*> GetRelatedBodyNodes();
 	void ComputeJacobians();
 	Eigen::VectorXd Getdl_dtheta();
+
 
 private:
 	std::string name;
@@ -72,7 +74,6 @@ private:
 	double l_mt,l_mt_max;
 	double l_m;
 	double activation;
-
 
 	double f0;
 	double l_mt0,l_m0,l_t0;
