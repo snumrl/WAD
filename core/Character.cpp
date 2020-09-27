@@ -113,8 +113,28 @@ LoadMuscles(const std::string& path)
 			i++;
 		}
 
-		if(isValid)
+		if(isValid){
+			std::string muscle_name = muscle_elem->GetName();
+			if(!muscle_name.compare("L_Rectus_Abdominis1")||
+			!muscle_name.compare("R_Rectus_Abdominis1")||
+			!muscle_name.compare("L_Transversus_Abdominis4")||
+			!muscle_name.compare("R_Transversus_Abdominis4"))
+			{
+				muscle_elem->SetMt0Ratio(0.6);
+			}
+
+			if(!muscle_name.compare("L_Multifidus")||
+			!muscle_name.compare("R_Multifidus")||
+			!muscle_name.compare("L_Quadratus_Lumborum1")||
+			!muscle_name.compare("R_Quadratus_Lumborum1")||
+			!muscle_name.compare("L_Transversus_Abdominis")||
+			!muscle_name.compare("R_Transversus_Abdominis"))
+			{
+				muscle_elem->SetMt0Ratio(1.0);
+			}
+
 			mMuscles.push_back(muscle_elem);
+		}
 	}
 
 	mNumMuscle = mMuscles.size();

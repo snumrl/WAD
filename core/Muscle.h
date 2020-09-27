@@ -69,6 +69,8 @@ public:
 	void SetF0(double f){ f0 = f;}
 	double GetF0(){ return f0;}
 
+	void SetMt0Ratio(double ratio){l_mt0 *= ratio;}
+
 private:
 
 	double l_mt,l_mt_max;

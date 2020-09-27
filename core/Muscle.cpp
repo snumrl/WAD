@@ -109,15 +109,6 @@ AddAnchor(const dart::dynamics::SkeletonPtr& skel,dart::dynamics::BodyNode* bn,c
 	int n = mAnchors.size();
 	if(n>1){
 		l_mt0 += (mAnchors[n-1]->GetPoint()-mAnchors[n-2]->GetPoint()).norm();
-
-		if(!name.compare("L_Rectus_Abdominis1") ||
-			!name.compare("R_Rectus_Abdominis1") ||
-			!name.compare("L_Transversus_Abdominis4") ||
-			!name.compare("R_Transversus_Abdominis4")
-			)
-		{
-			l_mt0 * 0.5;
-		}
 	}
 
 	mCachedAnchorPositions.resize(n);
@@ -154,15 +145,6 @@ AddAnchor(dart::dynamics::BodyNode* bn,const Eigen::Vector3d& glob_pos)
 	int n = mAnchors.size();
 	if(n>1){
 		l_mt0 += (mAnchors[n-1]->GetPoint()-mAnchors[n-2]->GetPoint()).norm();
-
-		if(!name.compare("L_Rectus_Abdominis1") ||
-			!name.compare("R_Rectus_Abdominis1") ||
-			!name.compare("L_Transversus_Abdominis4") ||
-			!name.compare("R_Transversus_Abdominis4")
-			)
-		{
-			l_mt0 * 0.7;
-		}
 	}
 
 	mCachedAnchorPositions.resize(n);
