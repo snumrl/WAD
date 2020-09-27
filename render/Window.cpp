@@ -83,6 +83,7 @@ Window(Environment* env)
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
 	p::exec("from RunningMeanStd import *",mns);
+
 }
 
 Window::
@@ -464,9 +465,10 @@ DrawShape(const Shape* shape,const Eigen::Vector4d& color)
 		{
 			const auto& mesh = static_cast<const MeshShape*>(shape);
 			glDisable(GL_COLOR_MATERIAL);
-			mRI->drawMesh(mesh->getScale(), mesh->getMesh());
 			float y = mEnv->GetGround()->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(mEnv->GetGround()->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
-			this->DrawShadow(mesh->getScale(), mesh->getMesh(),y);
+			// mRI->drawMesh(mesh->getScale(), mesh->getMesh());
+			// this->DrawShadow(mesh->getScale(), mesh->getMesh(),y);
+			mShapeRenderer.renderMesh(mesh, false, y, color);
 		}
 	}
 	glDisable(GL_COLOR_MATERIAL);
@@ -578,63 +580,85 @@ void
 Window::
 DrawMuscles(const std::vector<Muscle*>& muscles)
 {
-	int count =0;
-	glDisable(GL_LIGHTING);
+	int count = 0;
+	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
-	for(auto muscle : muscles)
+
+	for (auto muscle : muscles)
 	{
-		auto aps = muscle->GetAnchors();
-		bool lower_body = true;
-		double a = muscle->GetActivation();
-		Eigen::Vector4d color(0.4+(2.0*a),0.4,0.4,1.0);
-		//0.7*(1.0-3.0*a));
-		mRI->setPenColor(color);
-		for(int i=0;i<aps.size();i++)
-		{
-			Eigen::Vector3d p = aps[i]->GetPoint();
-			mRI->pushMatrix();
-			mRI->translate(p);
-			mRI->drawSphere(0.005*sqrt(muscle->GetF0()/1000.0));
-			mRI->popMatrix();
-		}
+        double a = muscle->GetActivation();
+        Eigen::Vector4d color(0.4+(2.0*a),0.4,0.4,1.0);//0.7*(1.0-3.0*a));
+        glColor4dv(color.data());
 
-		for(int i=0;i<aps.size()-1;i++)
-		{
-			Eigen::Vector3d p = aps[i]->GetPoint();
-			Eigen::Vector3d p1 = aps[i+1]->GetPoint();
-
-			Eigen::Vector3d u(0,0,1);
-			Eigen::Vector3d v = p-p1;
-			Eigen::Vector3d mid = 0.5*(p+p1);
-			double len = v.norm();
-			v /= len;
-			Eigen::Isometry3d T;
-			T.setIdentity();
-			Eigen::Vector3d axis = u.cross(v);
-			axis.normalize();
-			double angle = acos(u.dot(v));
-			Eigen::Matrix3d w_bracket = Eigen::Matrix3d::Zero();
-			w_bracket(0, 1) = -axis(2);
-			w_bracket(1, 0) =  axis(2);
-			w_bracket(0, 2) =  axis(1);
-			w_bracket(2, 0) = -axis(1);
-			w_bracket(1, 2) = -axis(0);
-			w_bracket(2, 1) =  axis(0);
-
-			Eigen::Matrix3d R = Eigen::Matrix3d::Identity()+(sin(angle))*w_bracket+(1.0-cos(angle))*w_bracket*w_bracket;
-			T.linear() = R;
-			T.translation() = mid;
-			mRI->pushMatrix();
-			mRI->transform(T);
-			mRI->drawCylinder(0.005*sqrt(muscle->GetF0()/1000.0),len);
-			mRI->popMatrix();
-		}
+	    mShapeRenderer.renderMuscle(muscle);
 	}
-	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
+	glDisable(GL_DEPTH_TEST);
 }
+
+// void
+// Window::
+// DrawMuscles(const std::vector<Muscle*>& muscles)
+// {
+// 	int count =0;
+// 	glDisable(GL_LIGHTING);
+// 	glEnable(GL_DEPTH_TEST);
+// 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+// 	glEnable(GL_COLOR_MATERIAL);
+// 	for(auto muscle : muscles)
+// 	{
+// 		auto aps = muscle->GetAnchors();
+// 		bool lower_body = true;
+// 		double a = muscle->GetActivation();
+// 		Eigen::Vector4d color(0.4+(2.0*a),0.4,0.4,1.0);
+// 		//0.7*(1.0-3.0*a));
+// 		mRI->setPenColor(color);
+// 		for(int i=0;i<aps.size();i++)
+// 		{
+// 			Eigen::Vector3d p = aps[i]->GetPoint();
+// 			mRI->pushMatrix();
+// 			mRI->translate(p);
+// 			mRI->drawSphere(0.005*sqrt(muscle->GetF0()/1000.0));
+// 			mRI->popMatrix();
+// 		}
+
+// 		for(int i=0;i<aps.size()-1;i++)
+// 		{
+// 			Eigen::Vector3d p = aps[i]->GetPoint();
+// 			Eigen::Vector3d p1 = aps[i+1]->GetPoint();
+
+// 			Eigen::Vector3d u(0,0,1);
+// 			Eigen::Vector3d v = p-p1;
+// 			Eigen::Vector3d mid = 0.5*(p+p1);
+// 			double len = v.norm();
+// 			v /= len;
+// 			Eigen::Isometry3d T;
+// 			T.setIdentity();
+// 			Eigen::Vector3d axis = u.cross(v);
+// 			axis.normalize();
+// 			double angle = acos(u.dot(v));
+// 			Eigen::Matrix3d w_bracket = Eigen::Matrix3d::Zero();
+// 			w_bracket(0, 1) = -axis(2);
+// 			w_bracket(1, 0) =  axis(2);
+// 			w_bracket(0, 2) =  axis(1);
+// 			w_bracket(2, 0) = -axis(1);
+// 			w_bracket(1, 2) = -axis(0);
+// 			w_bracket(2, 1) =  axis(0);
+
+// 			Eigen::Matrix3d R = Eigen::Matrix3d::Identity()+(sin(angle))*w_bracket+(1.0-cos(angle))*w_bracket*w_bracket;
+// 			T.linear() = R;
+// 			T.translation() = mid;
+// 			mRI->pushMatrix();
+// 			mRI->transform(T);
+// 			mRI->drawCylinder(0.005*sqrt(muscle->GetF0()/1000.0),len);
+// 			mRI->popMatrix();
+// 		}
+// 	}
+// 	glDisable(GL_DEPTH_TEST);
+// 	glEnable(GL_LIGHTING);
+// }
 
 void
 Window::
@@ -895,46 +919,19 @@ DrawDeviceSignals()
 {
 	DrawGLBegin();
 
-	// double p_w = 0.30;
-	// double p_h = 0.14;
-	// double pl_x = 0.69;
-	// double pl_y = 0.84;
-	// double pr_x = 0.69;
-	// double pr_y = 0.68;
-
-	// double offset_x = 0.00024;
-	// double offset_y = 0.0006;
-	// double offset = 0.005;
-	// double ratio_y = 0.3;
-
-	Device* device = mEnv->GetDevice();
-	// Character* character = mEnv->GetCharacter();
-	std::deque<double> data_L = device->GetSignals(0);
-
-	// std::deque<double> data_L_femur = character->GetSignals(0);
-	std::deque<double> data_R = device->GetSignals(1);
-	// std::deque<double> data_R_femur = character->GetSignals(1);
-	// // std::deque<double> data_y = device->GetSignals(2);
-
-	// DrawBaseGraph(pl_x, pl_y, p_w, p_h, ratio_y, offset, "Device L");
-	// DrawLineStrip(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_L, red, 1.5, data_L_femur);
-	// DrawStringMax(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, data_L, blue);
-	// DrawStringMax(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset,  data_L_femur, red);
-
-	// DrawBaseGraph(pr_x, pr_y, p_w, p_h, ratio_y, offset, "Device R");
-	// DrawLineStrip(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_R, red, 1.5, data_R_femur);
-	// DrawStringMax(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, data_R, blue);
-	// DrawStringMax(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset,  data_R_femur, red);
-
 	double p_w = 0.30;
 	double p_h = 0.14;
 	double p_x = 0.01;
 	double p_y = 0.84;
-	// double offset_y = 0.16;
+
 	double offset_x = 0.00024;
 	double offset_y = 0.0006;
 	double offset = 0.005;
 	double ratio_y = 0.3;
+
+	Device* device = mEnv->GetDevice();
+	std::deque<double> data_L = device->GetSignals(0);
+	std::deque<double> data_R = device->GetSignals(1);
 
 	if(mGraphMode == 0){
 		DrawLineStrip(p_x, p_y, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_L, 180);
