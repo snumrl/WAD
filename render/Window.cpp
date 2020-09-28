@@ -589,10 +589,10 @@ DrawMuscles(const std::vector<Muscle*>& muscles)
 	for (auto muscle : muscles)
 	{
         double a = muscle->GetActivation();
-        Eigen::Vector4d color(0.4+(2.0*a),0.4,0.4,1.0);
+        Eigen::Vector4d color(0.8+(2.0*a),0.8,0.8,1.0);
         std::string m_name = muscle->GetName();
 
-        // Front
+       // Front
       //   if(!m_name.compare("L_Rectus_Abdominis1") || !m_name.compare("R_Rectus_Abdominis1")){
       //   	color[0] = 1.0;
       //   	color[1] = 0.0;
@@ -632,8 +632,17 @@ DrawMuscles(const std::vector<Muscle*>& muscles)
 
       //   if(!m_name.compare("L_Transversus_Abdominis") || !m_name.compare("R_Transversus_Abdominis")){
       //   	color[0] = 0.0;
-      //   	color[1] = 1.0;
+      //   	color[1] = 0.0;
       //   	color[2] = 1.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+      //   if(!m_name.compare("L_Longissimus_Thoracis") || !m_name.compare("R_Longissimus_Thoracis")){
+      //   	color[0] = 0.0;
+      //   	color[1] = 1.0;
+      //   	color[2] = 0.0;
       //   	color[3] = 1.0;
       //   	glColor4dv(color.data());
 	    	// mShapeRenderer.renderMuscle(muscle);

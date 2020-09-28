@@ -70,6 +70,7 @@ public:
 	double GetF0(){ return f0;}
 
 	void SetMt0Ratio(double ratio){l_mt0 *= ratio;}
+	void SetF0Ratio(double ratio){f0 *= ratio;}
 
 private:
 

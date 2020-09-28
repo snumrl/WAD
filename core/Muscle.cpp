@@ -203,6 +203,54 @@ double
 Muscle::
 GetForce()
 {
+	// if(!name.compare("L_Rectus_Abdominis1")||
+	// 	!name.compare("R_Rectus_Abdominis1")||
+	// 	!name.compare("L_Transversus_Abdominis4")||
+	// 	!name.compare("R_Transversus_Abdominis4"))
+	// {
+	// 	double f_A = Getf_A();
+	// 	double f_p = Getf_p();
+	// 	if(activation > 0)
+	// 	{
+	// 		std::cout << "name : " << name << std::endl;
+	// 		std::cout << "f_A : " << f_A << std::endl;
+	// 		std::cout << "activation : " << activation << std::endl;
+	// 		std::cout << "f_p : " << f_p << std::endl;
+	// 		std::cout << std::endl;
+	// 	}
+	// 	else
+	// 	{
+	// 		std::cout << "name : " << name << std::endl;
+	// 		std::cout << "f_p : " << f_p << std::endl;
+	// 		std::cout << std::endl;
+	// 	}
+	// }
+
+	// if(!name.compare("L_Multifidus")||
+	// 	!name.compare("R_Multifidus")||
+	// 	!name.compare("L_Quadratus_Lumborum1")||
+	// 	!name.compare("R_Quadratus_Lumborum1")||
+	// 	!name.compare("L_Transversus_Abdominis")||
+	// 	!name.compare("R_Transversus_Abdominis"))
+	// {
+	// 	double f_A = Getf_A();
+	// 	double f_p = Getf_p();
+	// 	if(activation > 0)
+	// 	{
+	// 		std::cout << "name : " << name << std::endl;
+	// 		std::cout << "f_A : " << f_A << std::endl;
+	// 		std::cout << "activation : " << activation << std::endl;
+	// 		std::cout << "f_p : " << f_p << std::endl;
+	// 		std::cout << std::endl;
+	// 	}
+	// 	else
+	// 	{
+	// 		std::cout << "name : " << name << std::endl;
+	// 		std::cout << "f_p : " << f_p << std::endl;
+	// 		std::cout << std::endl;
+	// 	}
+	// }
+
 	return Getf_A()*activation + Getf_p();
 }
 

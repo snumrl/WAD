@@ -121,6 +121,7 @@ LoadMuscles(const std::string& path)
 			!muscle_name.compare("R_Transversus_Abdominis4"))
 			{
 				muscle_elem->SetMt0Ratio(1.0);
+				muscle_elem->SetF0Ratio(1.0);
 			}
 
 			if(!muscle_name.compare("L_Multifidus")||
@@ -128,9 +129,12 @@ LoadMuscles(const std::string& path)
 			!muscle_name.compare("L_Quadratus_Lumborum1")||
 			!muscle_name.compare("R_Quadratus_Lumborum1")||
 			!muscle_name.compare("L_Transversus_Abdominis")||
-			!muscle_name.compare("R_Transversus_Abdominis"))
+			!muscle_name.compare("R_Transversus_Abdominis")||
+			!muscle_name.compare("L_Longissimus_Thoracis")||
+			!muscle_name.compare("R_Longissimus_Thoracis"))
 			{
-				muscle_elem->SetMt0Ratio(1.2);
+				muscle_elem->SetMt0Ratio(1.0);
+				muscle_elem->SetF0Ratio(0.5);
 			}
 
 			mMuscles.push_back(muscle_elem);
