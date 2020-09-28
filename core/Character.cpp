@@ -120,7 +120,7 @@ LoadMuscles(const std::string& path)
 			!muscle_name.compare("L_Transversus_Abdominis4")||
 			!muscle_name.compare("R_Transversus_Abdominis4"))
 			{
-				muscle_elem->SetMt0Ratio(0.6);
+				muscle_elem->SetMt0Ratio(1.0);
 			}
 
 			if(!muscle_name.compare("L_Multifidus")||
@@ -130,7 +130,7 @@ LoadMuscles(const std::string& path)
 			!muscle_name.compare("L_Transversus_Abdominis")||
 			!muscle_name.compare("R_Transversus_Abdominis"))
 			{
-				muscle_elem->SetMt0Ratio(1.0);
+				muscle_elem->SetMt0Ratio(1.2);
 			}
 
 			mMuscles.push_back(muscle_elem);
@@ -344,7 +344,7 @@ Initialize_MaxForces()
 			30,					//ForeArm R
 			30, 30, 30;			//Hand R
 
-	double energy_ratio = 0.4;
+	double energy_ratio = 1.0;
 	maxForces *= energy_ratio;
 
 	// maxForces <<
