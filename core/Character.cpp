@@ -134,7 +134,7 @@ LoadMuscles(const std::string& path)
 			!muscle_name.compare("R_Longissimus_Thoracis"))
 			{
 				muscle_elem->SetMt0Ratio(1.0);
-				muscle_elem->SetF0Ratio(0.5);
+				muscle_elem->SetF0Ratio(1.0);
 			}
 
 			mMuscles.push_back(muscle_elem);
@@ -689,7 +689,7 @@ GetReward_Character()
 {
 	double pose_scale = 2.0;
 	double vel_scale = 0.1;
-	double end_eff_scale = 10.0;
+	double end_eff_scale = 20.0;
 	double root_scale = 5.0;
 	double com_scale = 10.0;
 	double err_scale = 2.0;  // error scale

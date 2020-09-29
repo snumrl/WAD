@@ -57,7 +57,7 @@ Eigen::Vector4d blue(0.2, 0.2, 0.8, 1.0);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),mDrawArrow(false),mDrawGraph(true),mGraphMode(0),mCharacterMode(0)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0)
 {
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
@@ -343,10 +343,11 @@ DrawCharacter()
 	SkeletonPtr skeleton = mEnv->GetCharacter()->GetSkeleton();
 
 	if(mDrawCharacter)
+	{
 		DrawSkeleton(skeleton);
-
-	if(mEnv->GetUseMuscle())
-		DrawMuscles(mEnv->GetCharacter()->GetMuscles());
+		if(mEnv->GetUseMuscle())
+			DrawMuscles(mEnv->GetCharacter()->GetMuscles());
+	}
 
 	if(mDrawTarget)
 		DrawTarget();
@@ -414,15 +415,6 @@ DrawShapeFrame(const ShapeFrame* sf)
 		mColor[2] = 0.6;
 		mColor[3] = 0.3;
 	}
-	else{
-		if(mCharacterMode == 1)
-		{
-			mColor[0] = 0.9;
-			mColor[1] = 0.9;
-			mColor[2] = 0.9;
-			mColor[3] = 1.0;
-		}
-	}
 
 	DrawShape(sf->getShape().get(), mColor);
 	mRI->popMatrix();
@@ -430,7 +422,7 @@ DrawShapeFrame(const ShapeFrame* sf)
 
 void
 Window::
-DrawShape(const Shape* shape,const Eigen::Vector4d& color)
+DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 {
 	if(!shape)
 		return;
@@ -440,9 +432,9 @@ DrawShape(const Shape* shape,const Eigen::Vector4d& color)
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_COLOR_MATERIAL);
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	mRI->setPenColor(color);
 	if(mDrawOBJ == false)
 	{
+		mRI->setPenColor(color);
 		if (shape->is<SphereShape>())
 		{
 			const auto* sphere = static_cast<const SphereShape*>(shape);
@@ -466,9 +458,9 @@ DrawShape(const Shape* shape,const Eigen::Vector4d& color)
 			const auto& mesh = static_cast<const MeshShape*>(shape);
 			glDisable(GL_COLOR_MATERIAL);
 			float y = mEnv->GetGround()->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(mEnv->GetGround()->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
-			// mRI->drawMesh(mesh->getScale(), mesh->getMesh());
-			// this->DrawShadow(mesh->getScale(), mesh->getMesh(),y);
-			mShapeRenderer.renderMesh(mesh, false, y, color);
+			Eigen::Vector4d mesh_color;
+			mesh_color << 0.5, 0.5, 1.0, 1.0;
+			mShapeRenderer.renderMesh(mesh, false, y, mesh_color);
 		}
 	}
 	glDisable(GL_COLOR_MATERIAL);
@@ -589,7 +581,7 @@ DrawMuscles(const std::vector<Muscle*>& muscles)
 	for (auto muscle : muscles)
 	{
         double a = muscle->GetActivation();
-        Eigen::Vector4d color(0.8+(2.0*a),0.8,0.8,1.0);
+        Eigen::Vector4d color(1.2+(2.8*a), 1.2, 1.2, 1.0);
         std::string m_name = muscle->GetName();
 
        // Front
@@ -682,68 +674,6 @@ DrawMuscles(const std::vector<Muscle*>& muscles)
 	glEnable(GL_LIGHTING);
 	glDisable(GL_DEPTH_TEST);
 }
-
-// void
-// Window::
-// DrawMuscles(const std::vector<Muscle*>& muscles)
-// {
-// 	int count =0;
-// 	glDisable(GL_LIGHTING);
-// 	glEnable(GL_DEPTH_TEST);
-// 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-// 	glEnable(GL_COLOR_MATERIAL);
-// 	for(auto muscle : muscles)
-// 	{
-// 		auto aps = muscle->GetAnchors();
-// 		bool lower_body = true;
-// 		double a = muscle->GetActivation();
-// 		Eigen::Vector4d color(0.4+(2.0*a),0.4,0.4,1.0);
-// 		//0.7*(1.0-3.0*a));
-// 		mRI->setPenColor(color);
-// 		for(int i=0;i<aps.size();i++)
-// 		{
-// 			Eigen::Vector3d p = aps[i]->GetPoint();
-// 			mRI->pushMatrix();
-// 			mRI->translate(p);
-// 			mRI->drawSphere(0.005*sqrt(muscle->GetF0()/1000.0));
-// 			mRI->popMatrix();
-// 		}
-
-// 		for(int i=0;i<aps.size()-1;i++)
-// 		{
-// 			Eigen::Vector3d p = aps[i]->GetPoint();
-// 			Eigen::Vector3d p1 = aps[i+1]->GetPoint();
-
-// 			Eigen::Vector3d u(0,0,1);
-// 			Eigen::Vector3d v = p-p1;
-// 			Eigen::Vector3d mid = 0.5*(p+p1);
-// 			double len = v.norm();
-// 			v /= len;
-// 			Eigen::Isometry3d T;
-// 			T.setIdentity();
-// 			Eigen::Vector3d axis = u.cross(v);
-// 			axis.normalize();
-// 			double angle = acos(u.dot(v));
-// 			Eigen::Matrix3d w_bracket = Eigen::Matrix3d::Zero();
-// 			w_bracket(0, 1) = -axis(2);
-// 			w_bracket(1, 0) =  axis(2);
-// 			w_bracket(0, 2) =  axis(1);
-// 			w_bracket(2, 0) = -axis(1);
-// 			w_bracket(1, 2) = -axis(0);
-// 			w_bracket(2, 1) =  axis(0);
-
-// 			Eigen::Matrix3d R = Eigen::Matrix3d::Identity()+(sin(angle))*w_bracket+(1.0-cos(angle))*w_bracket*w_bracket;
-// 			T.linear() = R;
-// 			T.translation() = mid;
-// 			mRI->pushMatrix();
-// 			mRI->transform(T);
-// 			mRI->drawCylinder(0.005*sqrt(muscle->GetF0()/1000.0),len);
-// 			mRI->popMatrix();
-// 		}
-// 	}
-// 	glDisable(GL_DEPTH_TEST);
-// 	glEnable(GL_LIGHTING);
-// }
 
 void
 Window::
