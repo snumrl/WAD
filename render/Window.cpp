@@ -459,7 +459,10 @@ DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 			glDisable(GL_COLOR_MATERIAL);
 			float y = mEnv->GetGround()->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(mEnv->GetGround()->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
 			Eigen::Vector4d mesh_color;
-			mesh_color << 0.5, 0.5, 1.0, 1.0;
+			if(isDrawTarget)
+				mesh_color << color[0], color[1], color[2], color[3];
+			else
+				mesh_color << 0.6, 0.6, 1.0, 1.0;
 			mShapeRenderer.renderMesh(mesh, false, y, mesh_color);
 		}
 	}
@@ -581,7 +584,8 @@ DrawMuscles(const std::vector<Muscle*>& muscles)
 	for (auto muscle : muscles)
 	{
         double a = muscle->GetActivation();
-        Eigen::Vector4d color(1.2+(2.8*a), 1.2, 1.2, 1.0);
+        // Eigen::Vector4d color(1.0+2.0*(a),1.0, 1.2+0.8*(1-a),1.0);
+        Eigen::Vector4d color(1.0+(3.0*a), 1.0, 1.0, 1.0);
         std::string m_name = muscle->GetName();
 
        // Front

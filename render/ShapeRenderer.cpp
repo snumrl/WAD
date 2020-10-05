@@ -36,8 +36,8 @@ void transformContour(std::vector<Eigen::Vector3f>& contour, std::vector<Eigen::
 }
 
 void ShapeRenderer::renderMuscle(Muscle* muscle) {
-    const float radius = 0.005f*sqrt(muscle->GetF0()/1000.0);
-    const int steps = 16;
+    const float radius = 0.0065f*sqrt(muscle->GetF0()/1000.0);
+    const int steps = 8;
 
     int N = muscle->GetAnchors().size();
     int numVertices = (steps+1)*N;
