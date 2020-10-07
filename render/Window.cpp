@@ -588,6 +588,16 @@ DrawMuscles(const std::vector<Muscle*>& muscles)
         Eigen::Vector4d color(1.0+(3.0*a), 1.0, 1.0, 1.0);
         std::string m_name = muscle->GetName();
 
+      //   if(muscle->GetFemur())
+      //   {
+      //   	color[0] = 1.4;
+      //   	color[1] = 1.0;
+      //   	color[2] = 0.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
        // Front
       //   if(!m_name.compare("L_Rectus_Abdominis1") || !m_name.compare("R_Rectus_Abdominis1")){
       //   	color[0] = 1.0;

@@ -93,6 +93,7 @@ LoadMuscles(const std::string& path)
 		double lmax = std::stod(unit->Attribute("lmax"));
 		Muscle* muscle_elem = new Muscle(name,f0,lm,lt,pa,lmax);
 		bool isValid = true;
+		bool isFemur = false;
 		int num_waypoints = 0;
 		for(TiXmlElement* waypoint = unit->FirstChildElement("Waypoint");waypoint!=nullptr;waypoint = waypoint->NextSiblingElement("Waypoint"))
 			num_waypoints++;
@@ -105,6 +106,10 @@ LoadMuscles(const std::string& path)
 			{
 				isValid = false;
 				break;
+			}
+			if(body == "FemurL"){
+				isFemur = true;
+				muscle_elem->SetFemur(true);
 			}
 			if(i==0||i==num_waypoints-1)
 				muscle_elem->AddAnchor(mSkeleton->getBodyNode(body),glob_pos);
@@ -136,6 +141,15 @@ LoadMuscles(const std::string& path)
 				muscle_elem->SetMt0Ratio(1.0);
 				muscle_elem->SetF0Ratio(1.0);
 			}
+
+			if(isFemur)
+			{
+				muscle_elem->SetMt0Ratio(1.0);
+				muscle_elem->SetF0Ratio(0.5);
+			}
+
+			if(!muscle_name.compare("L_Adductor_Brevis"))
+				std::cout << "f0 : " << muscle_elem->GetF0() << std::endl;
 
 			mMuscles.push_back(muscle_elem);
 		}

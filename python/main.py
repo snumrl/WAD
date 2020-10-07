@@ -68,7 +68,7 @@ class ReplayBuffer(object):
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
-		self.num_slaves = 16
+		self.num_slaves = 14
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
 
@@ -92,8 +92,8 @@ class PPO(object):
 		self.batch_size = 128
 		self.replay_buffer = ReplayBuffer(30000)
 
-		self.gamma = 0.95
-		self.lb = 0.95
+		self.gamma = 0.99
+		self.lb = 0.99
 
 		self.default_clip_ratio = 0.2
 		self.default_learning_rate = 1.0*1E-5
