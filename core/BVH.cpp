@@ -346,13 +346,17 @@ SetMotionFrames()
 					p[idx+2] += 0.1;
 
 				if(jointName == "FemurL" || jointName == "FemurR"){
-					p[idx]   *= mSpeedRatio;
-					p[idx+1] *= mSpeedRatio;
-					p[idx+2] *= mSpeedRatio;
+					// p[idx]   *= mSpeedRatio;
+					// p[idx+1] *= mSpeedRatio;
+					// p[idx+2] *= mSpeedRatio;
+					p[idx]   *= 0.6;
+					p[idx+1] *= 0.6;
+					p[idx+2] *=0.6;
 				}
 
 				if(jointName == "TibiaL" || jointName == "TibiaR"){
-					p[idx] *= mSpeedRatio;
+					// p[idx] *= mSpeedRatio;
+					p[idx] *= 0.2;
 				}
 
 				if(jointName == "TalusL" || jointName == "TalusR"){

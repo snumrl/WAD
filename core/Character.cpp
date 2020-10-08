@@ -145,12 +145,9 @@ LoadMuscles(const std::string& path)
 			if(isFemur)
 			{
 				muscle_elem->SetMt0Ratio(1.0);
-				muscle_elem->SetF0Ratio(0.5);
+				muscle_elem->SetF0Ratio(0.3);
 			}
-
-			if(!muscle_name.compare("L_Adductor_Brevis"))
-				std::cout << "f0 : " << muscle_elem->GetF0() << std::endl;
-
+			
 			mMuscles.push_back(muscle_elem);
 		}
 	}
