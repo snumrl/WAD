@@ -326,18 +326,18 @@ SetMotionFrames()
 				p.segment<3>(idx) = BallJoint::convertToPositions(R);
 
 				if(jointName == "Spine"){
-					// p[idx] -= 0.07;
-					p[idx] += 0.25;
+					p[idx] -= 0.07;
+					// p[idx] += 0.25;
 				}
 
 				if(jointName == "Torso"){
-					p[idx] += 0.25;
+					// p[idx] += 0.25;
 					if(p[idx+2] > 0)
 						p[idx+2] *= 0.5;
 				}
 
-				if(jointName == "ShoulderL" || jointName ==  "ShoulderR")
-					p[idx] -= 0.15;
+				// if(jointName == "ShoulderL" || jointName ==  "ShoulderR")
+				// 	p[idx] -= 0.15;
 
 				if(jointName == "ArmL")
 					p[idx+2] -= 0.1;
@@ -346,17 +346,17 @@ SetMotionFrames()
 					p[idx+2] += 0.1;
 
 				if(jointName == "FemurL" || jointName == "FemurR"){
-					// p[idx]   *= mSpeedRatio;
-					// p[idx+1] *= mSpeedRatio;
-					// p[idx+2] *= mSpeedRatio;
-					p[idx]   *= 0.6;
-					p[idx+1] *= 0.6;
-					p[idx+2] *=0.6;
+					p[idx]   *= mSpeedRatio;
+					p[idx+1] *= mSpeedRatio;
+					p[idx+2] *= mSpeedRatio;
+					// p[idx]   *= 0.6;
+					// p[idx+1] *= 0.6;
+					// p[idx+2] *=0.6; // for speed 0.4
 				}
 
 				if(jointName == "TibiaL" || jointName == "TibiaR"){
-					// p[idx] *= mSpeedRatio;
-					p[idx] *= 0.2;
+					p[idx] *= mSpeedRatio;
+					// p[idx] *= 0.2; //for speed 0.4
 				}
 
 				if(jointName == "TalusL" || jointName == "TalusR"){

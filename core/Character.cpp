@@ -145,9 +145,9 @@ LoadMuscles(const std::string& path)
 			if(isFemur)
 			{
 				muscle_elem->SetMt0Ratio(1.0);
-				muscle_elem->SetF0Ratio(0.3);
+				muscle_elem->SetF0Ratio(1.0);
 			}
-			
+
 			mMuscles.push_back(muscle_elem);
 		}
 	}
