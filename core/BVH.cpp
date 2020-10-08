@@ -268,17 +268,19 @@ SetMotionTransform()
 	std::string root_bvh_name = mBVHMap[root->getName()];
 	Eigen::VectorXd mData = mMotions[0];
 
+	mData.segment<3>(3) *= mSpeedRatio;
 	mMap[root_bvh_name]->Set(mData);
 	T0.linear() = this->Get(root_bvh_name);
 	T0.translation() = 0.01*mData.segment<3>(0);
 
 	Eigen::VectorXd mDataLast = mMotions[mNumTotalFrames-1];
 
+	mDataLast.segment<3>(3) *= mSpeedRatio;
 	mMap[root_bvh_name]->Set(mDataLast);
 	T1.linear() = this->Get(root_bvh_name);
-	T1.translation() = 0.01*mDataLast.segment<3>(0);
+	T1.translation() = 0.01*(mSpeedRatio*mDataLast.segment<3>(0) + (1.0-mSpeedRatio)*mData.segment<3>(0));
 
-	mCycleOffset = T1.translation() + 0.01*(mMotions[1]-mMotions[0]).segment<3>(0) - T0.translation();
+	mCycleOffset = T1.translation() + 0.01*(mSpeedRatio)*(mMotions[1]-mMotions[0]).segment<3>(0) - T0.translation();
 }
 
 void
@@ -301,17 +303,78 @@ SetMotionFrames()
 			Joint* jn = bn->getParentJoint();
 
 			int idx = jn->getIndexInSkeleton(0);
+			std::string jointName = jn->getName();
 			if(jn->getType()=="FreeJoint")
 			{
 				Eigen::Isometry3d T;
 				T.translation() = 0.01*m_t.segment<3>(0);
 				T.linear() = R;
 				p.segment<6>(idx) = FreeJoint::convertToPositions(T);
+
+				if(jointName == "Pelvis"){
+
+					p[idx]   *= mSpeedRatio;
+					p[idx+1] *= mSpeedRatio;
+					p[idx+2] *= mSpeedRatio;
+					p[idx+3] *= mSpeedRatio;
+					p[idx+4] *= 1.0;
+					p[idx+5] *= mSpeedRatio;
+				}
 			}
 			else if(jn->getType()=="BallJoint"){
 				p.segment<3>(idx) = BallJoint::convertToPositions(R);
-				// if(jn->getName() == "Spine")
-				// 	p[idx] -= 0.07;
+
+				if(jointName == "Spine"){
+					p[idx] -= 0.07;
+					// p[idx] += 0.25;
+				}
+
+				if(jointName == "Torso"){
+					// p[idx] += 0.25;
+					if(p[idx+2] > 0)
+						p[idx+2] *= 0.5;
+				}
+
+				// if(jointName == "ShoulderL" || jointName ==  "ShoulderR")
+				// 	p[idx] -= 0.15;
+
+				if(jointName == "ArmL")
+					p[idx+2] -= 0.1;
+
+				if(jointName == "ArmR")
+					p[idx+2] += 0.1;
+
+				if(jointName == "FemurL" || jointName == "FemurR"){
+					p[idx]   *= mSpeedRatio;
+					p[idx+1] *= mSpeedRatio;
+					p[idx+2] *= mSpeedRatio;
+					// p[idx]   *= 0.6;
+					// p[idx+1] *= 0.6;
+					// p[idx+2] *=0.6; // for speed 0.4
+				}
+
+				if(jointName == "TibiaL" || jointName == "TibiaR"){
+					p[idx] *= mSpeedRatio;
+					// p[idx] *= 0.2; //for speed 0.4
+				}
+
+				if(jointName == "TalusL" || jointName == "TalusR"){
+					p[idx]   *= mSpeedRatio;
+					p[idx+1] *= mSpeedRatio;
+					p[idx+2] *= mSpeedRatio;
+				}
+
+				if(jointName == "FootThumbL" || jointName == "FootThumbR"){
+					p[idx]   *= mSpeedRatio;
+					p[idx+1] *= mSpeedRatio;
+					p[idx+2] *= mSpeedRatio;
+				}
+
+				if(jointName == "FootPinkyL" || jointName == "FootPinkyR"){
+					p[idx]   *= mSpeedRatio;
+					p[idx+1] *= mSpeedRatio;
+					p[idx+2] *= mSpeedRatio;
+				}
 			}
 			else if(jn->getType()=="RevoluteJoint")
 			{
@@ -335,6 +398,8 @@ SetMotionFrames()
 		}
 		mMotionFrames[i] = p;
 	}
+
+	// this->SetMotionTransform();
 }
 
 Eigen::VectorXd

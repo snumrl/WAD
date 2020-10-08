@@ -1,9 +1,11 @@
-#include "Window.h"
+#include <GL/glew.h>
+#include <GL/glut.h>
 #include "Environment.h"
 #include "DARTHelper.h"
 #include "Character.h"
 #include "BVH.h"
 #include "Muscle.h"
+#include "Window.h"
 #include "dart/gui/gui.hpp"
 namespace p = boost::python;
 namespace np = boost::python::numpy;
@@ -48,6 +50,12 @@ int main(int argc,char** argv)
 	}
 
 	window->initWindow(1440,1080,"gui");
+
+	GLenum err = glewInit();
+    if (err != GLEW_OK){
+        /* Problem: glewInit failed, something is seriously wrong. */
+        fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
+    }
 
 	glutMainLoop();
 }

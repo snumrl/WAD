@@ -1,5 +1,8 @@
 #ifndef __MASS_WINDOW_H__
 #define __MASS_WINDOW_H__
+
+#include "ShapeRenderer.h"
+
 #include "dart/dart.hpp"
 #include "dart/gui/gui.hpp"
 #include <boost/python.hpp>
@@ -102,6 +105,8 @@ private:
 	GLint oldMode;
 	Eigen::Affine3d mViewMatrix;
 	Eigen::Vector4d mColor;
+
+	ShapeRenderer mShapeRenderer;
 };
 };
 

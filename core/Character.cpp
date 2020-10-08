@@ -93,6 +93,7 @@ LoadMuscles(const std::string& path)
 		double lmax = std::stod(unit->Attribute("lmax"));
 		Muscle* muscle_elem = new Muscle(name,f0,lm,lt,pa,lmax);
 		bool isValid = true;
+		bool isFemur = false;
 		int num_waypoints = 0;
 		for(TiXmlElement* waypoint = unit->FirstChildElement("Waypoint");waypoint!=nullptr;waypoint = waypoint->NextSiblingElement("Waypoint"))
 			num_waypoints++;
@@ -106,6 +107,10 @@ LoadMuscles(const std::string& path)
 				isValid = false;
 				break;
 			}
+			if(body == "FemurL"){
+				isFemur = true;
+				muscle_elem->SetFemur(true);
+			}
 			if(i==0||i==num_waypoints-1)
 				muscle_elem->AddAnchor(mSkeleton->getBodyNode(body),glob_pos);
 			else
@@ -113,8 +118,38 @@ LoadMuscles(const std::string& path)
 			i++;
 		}
 
-		if(isValid)
+		if(isValid){
+			std::string muscle_name = muscle_elem->GetName();
+			if(!muscle_name.compare("L_Rectus_Abdominis1")||
+			!muscle_name.compare("R_Rectus_Abdominis1")||
+			!muscle_name.compare("L_Transversus_Abdominis4")||
+			!muscle_name.compare("R_Transversus_Abdominis4"))
+			{
+				muscle_elem->SetMt0Ratio(1.0);
+				muscle_elem->SetF0Ratio(1.0);
+			}
+
+			if(!muscle_name.compare("L_Multifidus")||
+			!muscle_name.compare("R_Multifidus")||
+			!muscle_name.compare("L_Quadratus_Lumborum1")||
+			!muscle_name.compare("R_Quadratus_Lumborum1")||
+			!muscle_name.compare("L_Transversus_Abdominis")||
+			!muscle_name.compare("R_Transversus_Abdominis")||
+			!muscle_name.compare("L_Longissimus_Thoracis")||
+			!muscle_name.compare("R_Longissimus_Thoracis"))
+			{
+				muscle_elem->SetMt0Ratio(1.0);
+				muscle_elem->SetF0Ratio(1.0);
+			}
+
+			if(isFemur)
+			{
+				muscle_elem->SetMt0Ratio(1.0);
+				muscle_elem->SetF0Ratio(1.0);
+			}
+
 			mMuscles.push_back(muscle_elem);
+		}
 	}
 
 	mNumMuscle = mMuscles.size();
@@ -178,10 +213,54 @@ SetPDParameters()
 	mKp.resize(dof);
 	mKv.resize(dof);
 
-	for(int i=0; i<mKp.size(); i++)
-		mKp[i] = 500;
-	for(int i=0; i<mKv.size(); i++)
-		mKv[i] = 50;
+	// for(int i=0; i<mKp.size(); i++)
+	// 	mKp[i] = 500;
+	// for(int i=0; i<mKv.size(); i++)
+	// 	mKv[i] = 50;
+
+	mKp << 0, 0, 0, 0, 0, 0,
+		500, 500, 500,
+		500,
+		400, 400, 400,
+		100, 100,
+		500, 500, 500,
+		500,
+		400, 400, 400,
+		100, 100,
+		1000, 1000, 1000,
+		500, 500, 500,
+		100, 100, 100,
+		100, 100, 100,
+		400, 400, 400,
+		300, 300, 300,
+		300,
+		100, 100, 100,
+		400, 400, 400,
+		300, 300, 300,
+		300,
+		100, 100, 100;
+
+	mKv << 0, 0, 0, 0, 0, 0,
+		50, 50, 50,
+		50,
+		40, 40, 40,
+		10, 10,
+		50, 50, 50,
+		50,
+		40, 40, 40,
+		10, 10,
+		100, 100, 100,
+		50, 50, 50,
+		10, 10, 10,
+		10, 10, 10,
+		40, 40, 40,
+		30, 30, 30,
+		30,
+		10, 10, 10,
+		40, 40, 40,
+		30, 30, 30,
+		30,
+		10, 10, 10;
 
 	// mKp << 0, 0, 0, 0, 0, 0,
 	// 	500, 500, 500,
@@ -223,8 +302,16 @@ Initialize_JointWeights()
 	int num_joint = mSkeleton->getNumJoints();
 	mJointWeights.resize(num_joint);
 
-	for(int i=0; i<mJointWeights.size(); i++)
-		mJointWeights[i] = 0.1;
+	// for(int i=0; i<mJointWeights.size(); i++)
+	// 	mJointWeights[i] = 0.1;
+
+	mJointWeights <<
+		1.0,					//Pelvis
+		0.5, 0.3, 0.2, 0.1, 0.1,//Left Leg
+		0.5, 0.3, 0.2, 0.1, 0.1,//Right Leg
+		0.5, 0.5, 0.2, 0.2,		//Torso & Neck
+		0.3, 0.2, 0.2, 0.1,		//Left Arm
+		0.3, 0.2, 0.2, 0.1;		//Right Arm
 
 	// mJointWeights <<
 	// 		1.0,			//Pelvis
@@ -244,10 +331,36 @@ Initialize_MaxForces()
 	int dof = mSkeleton->getNumDofs();
 	maxForces.resize(dof);
 
-	for(int i=0; i<6; i++)
-		maxForces[i] = 0;
-	for(int i=6; i<maxForces.size(); i++)
-		maxForces[i] = 200;
+	// for(int i=0; i<6; i++)
+	// 	maxForces[i] = 0;
+	// for(int i=6; i<maxForces.size(); i++)
+	// 	maxForces[i] = 200;
+
+	maxForces <<
+			0, 0, 0, 0, 0, 0,	//pelvis
+			150, 150, 150,		//Femur L
+			100,				//Tibia L
+			120, 120, 120,		//Talus L
+			30, 30, 			//Thumb, Pinky L
+			150, 150, 150,		//Femur R
+			100,				//Tibia R
+			120, 120, 120,		//Talus R
+			30, 30, 			//Thumb, Pinky R
+			80, 80, 80,			//Spine
+			80, 80, 80,			//Torso
+			30, 30, 30,			//Neck
+			30, 30, 30,			//Head
+			50, 50, 50,			//Shoulder L
+			50, 50, 50,			//Arm L
+			30,					//ForeArm L
+			30, 30, 30,			//Hand L
+			50, 50, 50,			//Shoulder R
+			50, 50, 50,			//Arm R
+			30,					//ForeArm R
+			30, 30, 30;			//Hand R
+
+	double energy_ratio = 1.0;
+	maxForces *= energy_ratio;
 
 	// maxForces <<
 	// 		0, 0, 0, 0, 0, 0,	//pelvis
@@ -545,13 +658,27 @@ GetState_Character()
 
 	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
 
+	// Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+1);
+
+	// double phase = this->GetPhase();
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
 	state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
+	// state<<pos,ori,lin_v,ang_v,phase;
 
 	return state;
+}
+
+double
+Character::
+GetPhase()
+{
+	double worldTime = mWorld->getTime();
+	double t_phase = mBVH->GetMaxTime();
+	double phi = std::fmod(worldTime, t_phase)/t_phase;
+	return phi;
 }
 
 double
@@ -573,7 +700,7 @@ GetReward_Character()
 {
 	double pose_scale = 2.0;
 	double vel_scale = 0.1;
-	double end_eff_scale = 40.0;
+	double end_eff_scale = 20.0;
 	double root_scale = 5.0;
 	double com_scale = 10.0;
 	double err_scale = 2.0;  // error scale
@@ -610,9 +737,14 @@ GetReward_Character()
 
 	auto ees = this->GetEndEffectors();
 	Eigen::VectorXd ee_diff(ees.size()*3);
+	std::vector<Eigen::Quaterniond> ee_ori_diff(ees.size());
 	for(int i=0; i<ees.size(); i++){
 		Eigen::Vector4d cur_ee = Utils::GetPoint4d(ees[i]->getCOM());
 		ee_diff.segment<3>(i*3) = (origin_trans_sim * cur_ee).segment(0,3);
+		Eigen::Isometry3d cur_ee_trans = Utils::GetBodyTransform(ees[i]);
+		cur_ee_trans = origin_trans_sim	* cur_ee_trans;
+		Eigen::Quaterniond cur_ee_ori(cur_ee_trans.rotation());
+		ee_ori_diff[i] = cur_ee_ori;
 	}
 
 	for(int i=1; i<num_joints; i++)
@@ -680,17 +812,27 @@ GetReward_Character()
 	vel_err += root_rot_w * root_ang_vel_err;
 
 	root_err = root_pos_err + 0.1 * root_rot_err + 0.01 * root_vel_err + 0.001 * root_ang_vel_err;
+	//root_err = root_rot_err;
 
 	Eigen::Isometry3d origin_trans_kin = Utils::GetOriginTrans(mSkeleton);
 
+	double end_ori_err = 0;
 	ees = this->GetEndEffectors();
 	for(int i=0; i<ees.size(); i++)
 	{
 		Eigen::Vector4d cur_ee = Utils::GetPoint4d(ees[i]->getCOM());
 		ee_diff.segment<3>(i*3) -= (origin_trans_kin*cur_ee).segment(0,3);
+
+		Eigen::Isometry3d cur_ee_trans = Utils::GetBodyTransform(ees[i]);
+		cur_ee_trans = origin_trans_kin	* cur_ee_trans;
+		Eigen::Quaterniond cur_ee_ori(cur_ee_trans.rotation());
+
+		double theta_ = Utils::QuatDiffTheta(ee_ori_diff[i], cur_ee_ori);
+		end_ori_err += theta_ * theta_;
 	}
 
 	end_eff_err = ee_diff.squaredNorm();
+	end_eff_err += end_ori_err;
 	end_eff_err /= ees.size();
 
 	com_err = 0.1 * (comKinVel - comSimVel).squaredNorm();
@@ -702,6 +844,7 @@ GetReward_Character()
 	com_reward = exp(-err_scale * com_scale * com_err);
 
 	double r_imitation = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
+	// double r_imitation = pose_reward * 1.0 * end_eff_reward * root_reward * com_reward;
 
 	// min_reward = this->GetTorqueReward();
 	// double r_torque_min = min_reward;
@@ -766,7 +909,7 @@ SetDesiredTorques()
 	// mFemurSignals_L.push_front(mDesiredTorque.segment(9, 3).norm());
 
 	mFemurSignals_R.pop_back();
-	mFemurSignals_R.push_front(mDesiredTorque[13]);
+	mFemurSignals_R.push_front(mDesiredTorque[15]);
 	// mFemurSignals_R.push_front(mDesiredTorque.segment(13,3).norm());
 }
 

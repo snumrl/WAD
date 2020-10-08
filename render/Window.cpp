@@ -57,7 +57,7 @@ Eigen::Vector4d blue(0.2, 0.2, 0.8, 1.0);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),mDrawArrow(false),mDrawGraph(true),mGraphMode(0),mCharacterMode(0)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0)
 {
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
@@ -83,6 +83,7 @@ Window(Environment* env)
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
 	p::exec("from RunningMeanStd import *",mns);
+
 }
 
 Window::
@@ -236,7 +237,7 @@ Step()
 	if(mEnv->GetUseMuscle())
 	{
 		int inference_per_sim = 2;
-		for(int i=0; i<num/2; i+=inference_per_sim){
+		for(int i=0; i<num; i+=inference_per_sim){
 			Eigen::VectorXd mt = mEnv->GetCharacter()->GetMuscleTorques();
 			mEnv->GetCharacter()->SetActivationLevels(GetActivationFromNN(mt));
 			for(int j=0; j<inference_per_sim; j++)
@@ -342,10 +343,11 @@ DrawCharacter()
 	SkeletonPtr skeleton = mEnv->GetCharacter()->GetSkeleton();
 
 	if(mDrawCharacter)
+	{
 		DrawSkeleton(skeleton);
-
-	if(mEnv->GetUseMuscle())
-		DrawMuscles(mEnv->GetCharacter()->GetMuscles());
+		if(mEnv->GetUseMuscle())
+			DrawMuscles(mEnv->GetCharacter()->GetMuscles());
+	}
 
 	if(mDrawTarget)
 		DrawTarget();
@@ -413,15 +415,6 @@ DrawShapeFrame(const ShapeFrame* sf)
 		mColor[2] = 0.6;
 		mColor[3] = 0.3;
 	}
-	else{
-		if(mCharacterMode == 1)
-		{
-			mColor[0] = 0.9;
-			mColor[1] = 0.9;
-			mColor[2] = 0.9;
-			mColor[3] = 1.0;
-		}
-	}
 
 	DrawShape(sf->getShape().get(), mColor);
 	mRI->popMatrix();
@@ -429,7 +422,7 @@ DrawShapeFrame(const ShapeFrame* sf)
 
 void
 Window::
-DrawShape(const Shape* shape,const Eigen::Vector4d& color)
+DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 {
 	if(!shape)
 		return;
@@ -439,9 +432,9 @@ DrawShape(const Shape* shape,const Eigen::Vector4d& color)
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_COLOR_MATERIAL);
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	mRI->setPenColor(color);
 	if(mDrawOBJ == false)
 	{
+		mRI->setPenColor(color);
 		if (shape->is<SphereShape>())
 		{
 			const auto* sphere = static_cast<const SphereShape*>(shape);
@@ -464,9 +457,13 @@ DrawShape(const Shape* shape,const Eigen::Vector4d& color)
 		{
 			const auto& mesh = static_cast<const MeshShape*>(shape);
 			glDisable(GL_COLOR_MATERIAL);
-			mRI->drawMesh(mesh->getScale(), mesh->getMesh());
 			float y = mEnv->GetGround()->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(mEnv->GetGround()->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
-			this->DrawShadow(mesh->getScale(), mesh->getMesh(),y);
+			Eigen::Vector4d mesh_color;
+			if(isDrawTarget)
+				mesh_color << color[0], color[1], color[2], color[3];
+			else
+				mesh_color << 0.6, 0.6, 1.0, 1.0;
+			mShapeRenderer.renderMesh(mesh, false, y, mesh_color);
 		}
 	}
 	glDisable(GL_COLOR_MATERIAL);
@@ -578,62 +575,118 @@ void
 Window::
 DrawMuscles(const std::vector<Muscle*>& muscles)
 {
-	int count =0;
-	glDisable(GL_LIGHTING);
+	int count = 0;
+	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
-	for(auto muscle : muscles)
+
+	for (auto muscle : muscles)
 	{
-		auto aps = muscle->GetAnchors();
-		bool lower_body = true;
-		double a = muscle->GetActivation();
-		Eigen::Vector4d color(0.4+(2.0*a),0.4,0.4,1.0);
-		//0.7*(1.0-3.0*a));
-		mRI->setPenColor(color);
-		for(int i=0;i<aps.size();i++)
-		{
-			Eigen::Vector3d p = aps[i]->GetPoint();
-			mRI->pushMatrix();
-			mRI->translate(p);
-			mRI->drawSphere(0.005*sqrt(muscle->GetF0()/1000.0));
-			mRI->popMatrix();
-		}
+        double a = muscle->GetActivation();
+        // Eigen::Vector4d color(1.0+2.0*(a),1.0, 1.2+0.8*(1-a),1.0);
+        Eigen::Vector4d color(1.0+(3.0*a), 1.0, 1.0, 1.0);
+        std::string m_name = muscle->GetName();
 
-		for(int i=0;i<aps.size()-1;i++)
-		{
-			Eigen::Vector3d p = aps[i]->GetPoint();
-			Eigen::Vector3d p1 = aps[i+1]->GetPoint();
+      //   if(muscle->GetFemur())
+      //   {
+      //   	color[0] = 1.4;
+      //   	color[1] = 1.0;
+      //   	color[2] = 0.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
 
-			Eigen::Vector3d u(0,0,1);
-			Eigen::Vector3d v = p-p1;
-			Eigen::Vector3d mid = 0.5*(p+p1);
-			double len = v.norm();
-			v /= len;
-			Eigen::Isometry3d T;
-			T.setIdentity();
-			Eigen::Vector3d axis = u.cross(v);
-			axis.normalize();
-			double angle = acos(u.dot(v));
-			Eigen::Matrix3d w_bracket = Eigen::Matrix3d::Zero();
-			w_bracket(0, 1) = -axis(2);
-			w_bracket(1, 0) =  axis(2);
-			w_bracket(0, 2) =  axis(1);
-			w_bracket(2, 0) = -axis(1);
-			w_bracket(1, 2) = -axis(0);
-			w_bracket(2, 1) =  axis(0);
+       // Front
+      //   if(!m_name.compare("L_Rectus_Abdominis1") || !m_name.compare("R_Rectus_Abdominis1")){
+      //   	color[0] = 1.0;
+      //   	color[1] = 0.0;
+      //   	color[2] = 0.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
 
-			Eigen::Matrix3d R = Eigen::Matrix3d::Identity()+(sin(angle))*w_bracket+(1.0-cos(angle))*w_bracket*w_bracket;
-			T.linear() = R;
-			T.translation() = mid;
-			mRI->pushMatrix();
-			mRI->transform(T);
-			mRI->drawCylinder(0.005*sqrt(muscle->GetF0()/1000.0),len);
-			mRI->popMatrix();
-		}
+      //   if(!m_name.compare("L_Transversus_Abdominis4") || !m_name.compare("R_Transversus_Abdominis4")){
+      //   	color[0] = 0.0;
+      //   	color[1] = 1.0;
+      //   	color[2] = 0.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+        // Back
+      //   if(!m_name.compare("L_Multifidus") || !m_name.compare("R_Multifidus")){
+      //   	color[0] = 1.0;
+      //   	color[1] = 0.0;
+      //   	color[2] = 0.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+      //   if(!m_name.compare("L_Quadratus_Lumborum1") || !m_name.compare("R_Quadratus_Lumborum1")){
+      //   	color[0] = 1.0;
+      //   	color[1] = 0.0;
+      //   	color[2] = 1.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+      //   if(!m_name.compare("L_Transversus_Abdominis") || !m_name.compare("R_Transversus_Abdominis")){
+      //   	color[0] = 0.0;
+      //   	color[1] = 0.0;
+      //   	color[2] = 1.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+      //   if(!m_name.compare("L_Longissimus_Thoracis") || !m_name.compare("R_Longissimus_Thoracis")){
+      //   	color[0] = 0.0;
+      //   	color[1] = 1.0;
+      //   	color[2] = 0.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+        // Rest
+      //   if(!m_name.compare("L_Psoas_Minor") || !m_name.compare("R_Psoas_Minor")){
+      //   	color[0] = 0.0;
+      //   	color[1] = 1.0;
+      //   	color[2] = 0.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+      //   if(!m_name.compare("L_Transversus_Abdominis2") || !m_name.compare("R_Transversus_Abdominis2")){
+      //   	color[0] = 1.0;
+      //   	color[1] = 0.0;
+      //   	color[2] = 1.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+      //   if(!m_name.compare("L_Serratus_Posterior_Inferior") || !m_name.compare("R_Serratus_Posterior_Inferior")){
+      //   	color[0] = 0.0;
+      //   	color[1] = 0.0;
+      //   	color[2] = 1.0;
+      //   	color[3] = 1.0;
+      //   	glColor4dv(color.data());
+	    	// mShapeRenderer.renderMuscle(muscle);
+      //   }
+
+        glColor4dv(color.data());
+	    mShapeRenderer.renderMuscle(muscle);
 	}
-	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
+	glDisable(GL_DEPTH_TEST);
 }
 
 void
@@ -705,48 +758,96 @@ DrawTorques()
 		DrawTorqueGraph("FemurL_x", 6, p_w, p_h, p_x, p_y-0*offset_y);
 		DrawTorqueGraph("FemurL_y", 7, p_w, p_h, p_x, p_y-1*offset_y);
 		DrawTorqueGraph("FemurL_z", 8, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("FemurR_x", 13, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("FemurR_y", 14, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("FemurR_z", 15, p_w, p_h, p_x, p_y-5*offset_y);
+		DrawTorqueGraph("FemurR_x", 15, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("FemurR_y", 16, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("FemurR_z", 17, p_w, p_h, p_x, p_y-5*offset_y);
 	}
 	else if(mGraphMode == 1){
 		DrawTorqueGraph("Tibia_L", 9, p_w, p_h, p_x, p_y-0*offset_y);
-		DrawTorqueGraph("Tibia_R", 16, p_w, p_h, p_x, p_y-1*offset_y);
-		DrawTorqueGraph("Elbow_L", 29, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("Elbow_R", 36, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("Tibia_R", 18, p_w, p_h, p_x, p_y-1*offset_y);
+		DrawTorqueGraph("Elbow_L", 42, p_w, p_h, p_x, p_y-2*offset_y);
+		DrawTorqueGraph("Elbow_R", 52, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("Thumb_L", 13, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("Thumb_R", 22, p_w, p_h, p_x, p_y-5*offset_y);
 	}
 	else if(mGraphMode == 2){
 		DrawTorqueGraph("TalusL_x", 10, p_w, p_h, p_x, p_y-0*offset_y);
 		DrawTorqueGraph("TalusL_y", 11, p_w, p_h, p_x, p_y-1*offset_y);
 		DrawTorqueGraph("TalusL_z", 12, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("TalusR_x", 17, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("TalusR_y", 18, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("TalusR_z", 19, p_w, p_h, p_x, p_y-5*offset_y);
+		DrawTorqueGraph("TalusR_x", 19, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("TalusR_y", 20, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("TalusR_z", 21, p_w, p_h, p_x, p_y-5*offset_y);
 	}
 	else if(mGraphMode == 3){
-		DrawTorqueGraph("Torso_x", 20, p_w, p_h, p_x, p_y-0*offset_y);
-		DrawTorqueGraph("Torso_y", 21, p_w, p_h, p_x, p_y-1*offset_y);
-		DrawTorqueGraph("Torso_z", 22, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("Neck_x", 23, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("Neck_y", 24, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("Neck_z", 25, p_w, p_h, p_x, p_y-5*offset_y);
+		DrawTorqueGraph("Spine_x", 24, p_w, p_h, p_x, p_y-0*offset_y);
+		DrawTorqueGraph("Spine_y", 25, p_w, p_h, p_x, p_y-1*offset_y);
+		DrawTorqueGraph("Spine_z", 26, p_w, p_h, p_x, p_y-2*offset_y);
+		DrawTorqueGraph("Torso_x", 27, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("Torso_y", 28, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("Torso_z", 29, p_w, p_h, p_x, p_y-5*offset_y);
 	}
 	else if(mGraphMode == 4){
-		DrawTorqueGraph("ShoulderL_x", 26, p_w, p_h, p_x, p_y-0*offset_y);
-		DrawTorqueGraph("ShoulderL_y", 27, p_w, p_h, p_x, p_y-1*offset_y);
-		DrawTorqueGraph("ShoulderL_z", 28, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("ShoulderR_x", 33, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("ShoulderR_Y", 34, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("ShoulderR_z", 35, p_w, p_h, p_x, p_y-5*offset_y);
+		DrawTorqueGraph("ShoulderL_x", 36, p_w, p_h, p_x, p_y-0*offset_y);
+		DrawTorqueGraph("ShoulderL_y", 37, p_w, p_h, p_x, p_y-1*offset_y);
+		DrawTorqueGraph("ShoulderL_z", 38, p_w, p_h, p_x, p_y-2*offset_y);
+		DrawTorqueGraph("ShoulderR_x", 46, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("ShoulderR_Y", 47, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("ShoulderR_z", 48, p_w, p_h, p_x, p_y-5*offset_y);
 	}
 	else if(mGraphMode == 5){
-		DrawTorqueGraph("HandL_x", 30, p_w, p_h, p_x, p_y-0*offset_y);
-		DrawTorqueGraph("HandL_y", 31, p_w, p_h, p_x, p_y-1*offset_y);
-		DrawTorqueGraph("HandL_z", 32, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("HandR_x", 37, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("HandR_y", 38, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("HandR_z", 39, p_w, p_h, p_x, p_y-5*offset_y);
+		DrawTorqueGraph("ArmL_x", 39, p_w, p_h, p_x, p_y-0*offset_y);
+		DrawTorqueGraph("ArmL_y", 40, p_w, p_h, p_x, p_y-1*offset_y);
+		DrawTorqueGraph("ArmL_z", 41, p_w, p_h, p_x, p_y-2*offset_y);
+		DrawTorqueGraph("ArmR_x", 49, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("ArmR_y", 50, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("ArmR_z", 51, p_w, p_h, p_x, p_y-5*offset_y);
 	}
+	// if(mGraphMode == 0){
+	// 	DrawTorqueGraph("FemurL_x", 6, p_w, p_h, p_x, p_y-0*offset_y);
+	// 	DrawTorqueGraph("FemurL_y", 7, p_w, p_h, p_x, p_y-1*offset_y);
+	// 	DrawTorqueGraph("FemurL_z", 8, p_w, p_h, p_x, p_y-2*offset_y);
+	// 	DrawTorqueGraph("FemurR_x", 13, p_w, p_h, p_x, p_y-3*offset_y);
+	// 	DrawTorqueGraph("FemurR_y", 14, p_w, p_h, p_x, p_y-4*offset_y);
+	// 	DrawTorqueGraph("FemurR_z", 15, p_w, p_h, p_x, p_y-5*offset_y);
+	// }
+	// else if(mGraphMode == 1){
+	// 	DrawTorqueGraph("Tibia_L", 9, p_w, p_h, p_x, p_y-0*offset_y);
+	// 	DrawTorqueGraph("Tibia_R", 16, p_w, p_h, p_x, p_y-1*offset_y);
+	// 	DrawTorqueGraph("Elbow_L", 29, p_w, p_h, p_x, p_y-2*offset_y);
+	// 	DrawTorqueGraph("Elbow_R", 36, p_w, p_h, p_x, p_y-3*offset_y);
+	// }
+	// else if(mGraphMode == 2){
+	// 	DrawTorqueGraph("TalusL_x", 10, p_w, p_h, p_x, p_y-0*offset_y);
+	// 	DrawTorqueGraph("TalusL_y", 11, p_w, p_h, p_x, p_y-1*offset_y);
+	// 	DrawTorqueGraph("TalusL_z", 12, p_w, p_h, p_x, p_y-2*offset_y);
+	// 	DrawTorqueGraph("TalusR_x", 17, p_w, p_h, p_x, p_y-3*offset_y);
+	// 	DrawTorqueGraph("TalusR_y", 18, p_w, p_h, p_x, p_y-4*offset_y);
+	// 	DrawTorqueGraph("TalusR_z", 19, p_w, p_h, p_x, p_y-5*offset_y);
+	// }
+	// else if(mGraphMode == 3){
+	// 	DrawTorqueGraph("Torso_x", 20, p_w, p_h, p_x, p_y-0*offset_y);
+	// 	DrawTorqueGraph("Torso_y", 21, p_w, p_h, p_x, p_y-1*offset_y);
+	// 	DrawTorqueGraph("Torso_z", 22, p_w, p_h, p_x, p_y-2*offset_y);
+	// 	DrawTorqueGraph("Neck_x", 23, p_w, p_h, p_x, p_y-3*offset_y);
+	// 	DrawTorqueGraph("Neck_y", 24, p_w, p_h, p_x, p_y-4*offset_y);
+	// 	DrawTorqueGraph("Neck_z", 25, p_w, p_h, p_x, p_y-5*offset_y);
+	// }
+	// else if(mGraphMode == 4){
+	// 	DrawTorqueGraph("ShoulderL_x", 26, p_w, p_h, p_x, p_y-0*offset_y);
+	// 	DrawTorqueGraph("ShoulderL_y", 27, p_w, p_h, p_x, p_y-1*offset_y);
+	// 	DrawTorqueGraph("ShoulderL_z", 28, p_w, p_h, p_x, p_y-2*offset_y);
+	// 	DrawTorqueGraph("ShoulderR_x", 33, p_w, p_h, p_x, p_y-3*offset_y);
+	// 	DrawTorqueGraph("ShoulderR_Y", 34, p_w, p_h, p_x, p_y-4*offset_y);
+	// 	DrawTorqueGraph("ShoulderR_z", 35, p_w, p_h, p_x, p_y-5*offset_y);
+	// }
+	// else if(mGraphMode == 5){
+	// 	DrawTorqueGraph("HandL_x", 30, p_w, p_h, p_x, p_y-0*offset_y);
+	// 	DrawTorqueGraph("HandL_y", 31, p_w, p_h, p_x, p_y-1*offset_y);
+	// 	DrawTorqueGraph("HandL_z", 32, p_w, p_h, p_x, p_y-2*offset_y);
+	// 	DrawTorqueGraph("HandR_x", 37, p_w, p_h, p_x, p_y-3*offset_y);
+	// 	DrawTorqueGraph("HandR_y", 38, p_w, p_h, p_x, p_y-4*offset_y);
+	// 	DrawTorqueGraph("HandR_z", 39, p_w, p_h, p_x, p_y-5*offset_y);
+	// }
 
 	DrawGLEnd();
 }
@@ -756,7 +857,7 @@ Window::
 DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double y)
 {
 	double offset_x = 0.00024;
-	double offset_y = 0.0006;
+	double offset_y = 0.0005;
 	double offset = 0.005;
 	double ratio_y = 0.3;
 
@@ -847,46 +948,19 @@ DrawDeviceSignals()
 {
 	DrawGLBegin();
 
-	// double p_w = 0.30;
-	// double p_h = 0.14;
-	// double pl_x = 0.69;
-	// double pl_y = 0.84;
-	// double pr_x = 0.69;
-	// double pr_y = 0.68;
-
-	// double offset_x = 0.00024;
-	// double offset_y = 0.0006;
-	// double offset = 0.005;
-	// double ratio_y = 0.3;
-
-	Device* device = mEnv->GetDevice();
-	// Character* character = mEnv->GetCharacter();
-	std::deque<double> data_L = device->GetSignals(0);
-
-	// std::deque<double> data_L_femur = character->GetSignals(0);
-	std::deque<double> data_R = device->GetSignals(1);
-	// std::deque<double> data_R_femur = character->GetSignals(1);
-	// // std::deque<double> data_y = device->GetSignals(2);
-
-	// DrawBaseGraph(pl_x, pl_y, p_w, p_h, ratio_y, offset, "Device L");
-	// DrawLineStrip(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_L, red, 1.5, data_L_femur);
-	// DrawStringMax(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, data_L, blue);
-	// DrawStringMax(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset,  data_L_femur, red);
-
-	// DrawBaseGraph(pr_x, pr_y, p_w, p_h, ratio_y, offset, "Device R");
-	// DrawLineStrip(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_R, red, 1.5, data_R_femur);
-	// DrawStringMax(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, data_R, blue);
-	// DrawStringMax(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset,  data_R_femur, red);
-
 	double p_w = 0.30;
 	double p_h = 0.14;
 	double p_x = 0.01;
 	double p_y = 0.84;
-	// double offset_y = 0.16;
+
 	double offset_x = 0.00024;
 	double offset_y = 0.0006;
 	double offset = 0.005;
 	double ratio_y = 0.3;
+
+	Device* device = mEnv->GetDevice();
+	std::deque<double> data_L = device->GetSignals(0);
+	std::deque<double> data_R = device->GetSignals(1);
 
 	if(mGraphMode == 0){
 		DrawLineStrip(p_x, p_y, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_L, 180);
@@ -1333,7 +1407,9 @@ GetActivationFromNN(const Eigen::VectorXd& mt)
 		mEnv->GetCharacter()->GetDesiredTorques();
 		return Eigen::VectorXd::Zero(mEnv->GetCharacter()->GetMuscles().size());
 	}
+
 	p::object get_activation = muscle_nn_module.attr("get_activation");
+	mEnv->GetCharacter()->SetDesiredTorques();
 	Eigen::VectorXd dt = mEnv->GetCharacter()->GetDesiredTorques();
 	np::ndarray mt_np = toNumPyArray(mt);
 	np::ndarray dt_np = toNumPyArray(dt);
@@ -1343,7 +1419,7 @@ GetActivationFromNN(const Eigen::VectorXd& mt)
 
 	Eigen::VectorXd activation(mEnv->GetCharacter()->GetMuscles().size());
 	float* srcs = reinterpret_cast<float*>(activation_np.get_data());
-	for(int i=0;i<activation.rows();i++)
+	for(int i=0; i<activation.rows(); i++)
 		activation[i] = srcs[i];
 
 	return activation;

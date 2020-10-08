@@ -68,7 +68,7 @@ class ReplayBuffer(object):
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
-		self.num_slaves = 16
+		self.num_slaves = 30
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
 
@@ -119,10 +119,11 @@ class PPO(object):
 			self.num_action_muscle = self.env.GetNumAction()
 			self.muscle_model = MuscleNN(self.env.GetNumTotalMuscleRelatedDofs(), self.num_action_muscle,self.num_muscles)
 			self.muscle_buffer = MuscleBuffer(30000)
+			# self.rms_muscle = RunningMeanStd(shape=(self.env.GetNumTotalMuscleRelatedDofs()))
 
 			self.loss_muscle = 0.0
 			self.muscle_batch_size = 128
-			self.default_learning_rate_muscle = 1E-5
+			self.default_learning_rate_muscle = 1E-4
 			self.learning_rate_muscle = self.default_learning_rate_muscle
 			self.optimizer_muscle = optim.Adam(self.muscle_model.parameters(),lr=self.learning_rate_muscle)
 			self.num_epochs_muscle = 3
@@ -134,7 +135,7 @@ class PPO(object):
 		self.num_control_Hz = self.env.GetControlHz()
 		self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
 
-		self.max_iteration = 3000
+		self.max_iteration = 10000
 		self.num_evaluation = 0
 		self.rewards = []
 
@@ -154,18 +155,22 @@ class PPO(object):
 
 	def SaveModel_Muscle(self):
 		self.muscle_model.save('../nn/current_muscle.pt')
+		# self.rms_muscle.save('current_muscle')
 
 		if self.max_return_epoch == self.num_evaluation:
 			self.muscle_model.save('../nn/max_muscle.pt')
+			# self.rms_muscle.save('max_muscle')
 		if self.num_evaluation%100 == 0:
 			self.muscle_model.save('../nn/'+str(self.num_evaluation//100)+'_muscle.pt')
+			# self.rms_muscle.save(str(self.num_evaluation//100)+'_muscle')
 
 	def LoadModel(self, path):
 		self.model.load('../nn/'+path+'.pt')
-		self.rms.load('../nn/'+path)
+		self.rms.load(path)
 
 	def LoadModel_Muscle(self,path):
 		self.muscle_model.load('../nn/'+path+'_muscle.pt')
+		# self.rms_muscle.load(path+'_muscle')
 
 	def Train(self):
 		self.GenerateTransitions()
@@ -205,7 +210,6 @@ class PPO(object):
 					dt = Tensor(self.env.GetDesiredTorques())
 					activations = self.muscle_model(mt,dt).cpu().detach().numpy()
 					self.env.SetActivationLevels(activations)
-
 					self.env.Steps(1, False)
 			else:
 				self.env.StepsAtOnce(False)
@@ -392,6 +396,8 @@ class PPO(object):
 		self.rewards.append(self.sum_return/self.num_episode)
 
 		self.SaveModel()
+		if self.use_muscle:
+			self.SaveModel_Muscle()
 		print('=============================================')
 
 		return np.array(self.rewards)
