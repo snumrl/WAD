@@ -107,7 +107,7 @@ LoadMuscles(const std::string& path)
 				isValid = false;
 				break;
 			}
-			if(body == "FemurL"){
+			if(body == "FemurL" || body == "FemurR"){
 				isFemur = true;
 				muscle_elem->SetFemur(true);
 			}
