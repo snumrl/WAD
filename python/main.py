@@ -68,7 +68,7 @@ class ReplayBuffer(object):
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
-		self.num_slaves = 14
+		self.num_slaves = 15
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
 
@@ -155,14 +155,11 @@ class PPO(object):
 
 	def SaveModel_Muscle(self):
 		self.muscle_model.save('../nn/current_muscle.pt')
-		# self.rms_muscle.save('current_muscle')
 
 		if self.max_return_epoch == self.num_evaluation:
 			self.muscle_model.save('../nn/max_muscle.pt')
-			# self.rms_muscle.save('max_muscle')
 		if self.num_evaluation%100 == 0:
 			self.muscle_model.save('../nn/'+str(self.num_evaluation//100)+'_muscle.pt')
-			# self.rms_muscle.save(str(self.num_evaluation//100)+'_muscle')
 
 	def LoadModel(self, path):
 		self.model.load('../nn/'+path+'.pt')
@@ -170,7 +167,6 @@ class PPO(object):
 
 	def LoadModel_Muscle(self,path):
 		self.muscle_model.load('../nn/'+path+'_muscle.pt')
-		# self.rms_muscle.load(path+'_muscle')
 
 	def Train(self):
 		self.GenerateTransitions()
@@ -218,7 +214,7 @@ class PPO(object):
 				nan_occur = False
 				terminated_state = True
 
-				if np.any(np.isnan(states[j])) or np.any(np.isnan(actions[j])) or np.any(np.isnan(states[j])) or np.any(np.isnan(values[j])) or np.any(np.isnan(logprobs[j])):
+				if np.any(np.isnan(states[j])) or np.any(np.isnan(actions[j])) or np.any(np.isnan(values[j])) or np.any(np.isnan(logprobs[j])):
 					nan_occur = True
 				elif self.env.IsEndOfEpisode(j) is False:
 					terminated_state = False

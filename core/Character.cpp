@@ -1071,6 +1071,15 @@ SetConstraints()
 
 void
 Character::
+RemoveConstraints()
+{
+	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_Hip);
+	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_LeftLeg);
+	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_RightLeg);
+}
+
+void
+Character::
 SetOnDevice(bool onDevice)
 {
 	if(onDevice ^ mOnDevice)

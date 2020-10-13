@@ -222,8 +222,9 @@ Step()
 	Eigen::VectorXd action;
 	Eigen::VectorXd action_device;
 
-	if(mNNLoaded)
+	if(mNNLoaded){
 		action = GetActionFromNN();
+	}
 	else
 		action = Eigen::VectorXd::Zero(mEnv->GetCharacter()->GetNumAction());
 
@@ -957,11 +958,9 @@ DrawDeviceSignals()
 	double offset_y = 0.0006;
 	double offset = 0.005;
 	double ratio_y = 0.3;
-
 	Device* device = mEnv->GetDevice();
 	std::deque<double> data_L = device->GetSignals(0);
 	std::deque<double> data_R = device->GetSignals(1);
-
 	if(mGraphMode == 0){
 		DrawLineStrip(p_x, p_y, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_L, 180);
 		DrawStringMax(p_x, p_y, p_h, ratio_y, offset_x, offset_y, offset, data_L, blue);

@@ -88,6 +88,7 @@ public:
 	std::vector<MuscleTuple>& GetMuscleTuples(){return mMuscleTuples;}
 
 	void SetConstraints();
+	void RemoveConstraints();
 	void SetDevice(Device* device);
 	void SetOnDevice(bool onDevice);
 	bool GetOnDevice(){ return mOnDevice; }

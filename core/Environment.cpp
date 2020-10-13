@@ -154,7 +154,7 @@ Initialize()
 	mGround = MASS::BuildFromFile(std::string(MASS_ROOT_DIR)+std::string("/data/ground.xml"));
 	mWorld->addSkeleton(mGround);
 
-	mNumSteps = mSimulationHz / mControlHz;
+	mNumSteps = mSimulationHz/mControlHz;
 }
 
 void
@@ -170,8 +170,9 @@ Reset(bool RSI)
 	mWorld->reset();
 	mWorld->setTime(t);
 	mCharacter->Reset();
-	if(mUseDevice)
+	if(mUseDevice){
 		mDevice->Reset();
+	}
 }
 
 void

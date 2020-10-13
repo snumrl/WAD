@@ -26,6 +26,15 @@
         </Joint>
     </Node>
 
+    <!-- <Node name="ControllerFront" parent="Controller" >
+        <Body type="Box" mass="0.1" size="0.32 0.04 0.04" contact="Off" color="0.5 0.5 0.5 1.0">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 1.06 0.09"/>
+        </Body>
+        <Joint type="Weld">
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 1.06 0.09"/>
+        </Joint>
+    </Node> -->
+
     <Node name="RodLeft" parent="ControllerLeft" >
         <Body type="Box" mass="0.15" size="0.03 0.24 0.03" contact="Off" color="0.5 0.5 0.5 1.0">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.175 0.86 0.0 "/>
@@ -67,7 +76,7 @@
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.175 0.86 0.0 "/>
         </Body>
         <Joint type="Ball" lower="-3.14 -3.14 -3.14" upper="3.14 3.14 3.14" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0" actuator_type="FORCE">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.0903 0.9337 0.0116"/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.1 0.94 0.0"/>
         </Joint>
     </Node>
 
