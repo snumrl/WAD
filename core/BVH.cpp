@@ -384,13 +384,13 @@ SetMotionFrames()
 				if(jointName == "ForeArmL"){
 					// p[idx] *= 0.7;
 					p[idx] *= mSpeedRatio;
-					p[idx] -= 0.2 ;
+					// p[idx] -= 0.2 ;
 				}
 
 				if(jointName == "ForeArmR"){
 					// p[idx] *= 0.7;
 					p[idx] *= mSpeedRatio;
-					p[idx] += 0.2 ;
+					// p[idx] += 0.2 ;
 				}
 
 				if(jointName == "TibiaL" || jointName == "TibiaR"){

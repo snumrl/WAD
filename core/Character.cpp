@@ -536,8 +536,12 @@ GetState()
 
 	Eigen::VectorXd state(state_dim);
 	state << state_character;
-	if(mUseDevice)
-		state << state_device;
+	if(mUseDevice){
+		int size = state_character.size();
+		for(int i=0; i<state_device.size(); i++)
+			state[size+i] = state_device[i];
+		// state << state_device;
+	}
 
 	return state;
 }

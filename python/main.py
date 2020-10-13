@@ -71,6 +71,7 @@ class PPO(object):
 		self.num_slaves = 15
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
+		self.use_device = self.env.UseDevice()
 
 		# ========== Character setting ========== #
 		self.num_state = self.env.GetNumState()
@@ -206,9 +207,9 @@ class PPO(object):
 					dt = Tensor(self.env.GetDesiredTorques())
 					activations = self.muscle_model(mt,dt).cpu().detach().numpy()
 					self.env.SetActivationLevels(activations)
-					self.env.Steps(1, False)
+					self.env.Steps(1, self.use_device)
 			else:
-				self.env.StepsAtOnce(False)
+				self.env.StepsAtOnce(self.use_device)
 
 			for j in range(self.num_slaves):
 				nan_occur = False

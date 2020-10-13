@@ -9,7 +9,7 @@ Device::
 Device()
 {
     mDelta_t = 180;
-    mK_ = 15.0;
+    mK_ = 30.0;
 }
 
 Device::
@@ -140,8 +140,8 @@ Step(double t)
         SetDesiredTorques2();
 
         Eigen::VectorXd tmp = Eigen::VectorXd::Zero(mDesiredTorque.size());
-        tmp[6] = mDesiredTorque[6];
-        tmp[9] = mDesiredTorque[7];
+        tmp[6] = mDesiredTorque[6]/10.0;
+        tmp[9] = mDesiredTorque[7]/10.0;
         mSkeleton->setForces(tmp);
     }
 }
