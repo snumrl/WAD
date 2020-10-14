@@ -99,6 +99,7 @@ private:
 	bool mDeviceNNLoaded;
 	bool mOnDevice;
 	bool isDrawTarget;
+	bool isDrawDevice;
 	int mGraphMode;
 	int mCharacterMode;
 
