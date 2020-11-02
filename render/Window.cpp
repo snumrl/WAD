@@ -57,7 +57,7 @@ Eigen::Vector4d blue(0.2, 0.2, 0.8, 1.0);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0)
 {
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
@@ -83,7 +83,6 @@ Window(Environment* env)
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
 	p::exec("from RunningMeanStd import *",mns);
-
 }
 
 Window::
@@ -115,7 +114,7 @@ Window(Environment* env,const std::string& nn_path, const std::string& nn_path2)
 	if(env->GetUseMuscle())
 		LoadMuscleNN(nn_path2);
 
-	if(env->GetUseDevice())
+	if(env->GetUseDeviceNN())
 		LoadDeviceNN(nn_path2);
 }
 
@@ -466,6 +465,26 @@ DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 				mesh_color << 0.6, 0.6, 1.0, 1.0;
 			mShapeRenderer.renderMesh(mesh, false, y, mesh_color);
 		}
+
+		if(isDrawDevice)
+		{
+			mRI->setPenColor(color);
+			if (shape->is<SphereShape>())
+			{
+				const auto* sphere = static_cast<const SphereShape*>(shape);
+				mRI->drawSphere(sphere->getRadius());
+			}
+			else if (shape->is<BoxShape>())
+			{
+				const auto* box = static_cast<const BoxShape*>(shape);
+				mRI->drawCube(box->getSize());
+			}
+			else if (shape->is<CapsuleShape>())
+			{
+				const auto* capsule = static_cast<const CapsuleShape*>(shape);
+				mRI->drawCapsule(capsule->getRadius(), capsule->getHeight());
+			}
+		}
 	}
 	glDisable(GL_COLOR_MATERIAL);
 	glDisable(GL_DEPTH_TEST);
@@ -585,7 +604,6 @@ DrawMuscles(const std::vector<Muscle*>& muscles)
 	for (auto muscle : muscles)
 	{
         double a = muscle->GetActivation();
-        // Eigen::Vector4d color(1.0+2.0*(a),1.0, 1.2+0.8*(1-a),1.0);
         Eigen::Vector4d color(1.0+(3.0*a), 1.0, 1.0, 1.0);
         std::string m_name = muscle->GetName();
 
@@ -935,11 +953,13 @@ DrawDevice()
 	Character* character = mEnv->GetCharacter();
 	if(character->GetOnDevice())
 	{
+		isDrawDevice = true;
 		DrawSkeleton(mEnv->GetDevice()->GetSkeleton());
 		if(mDrawGraph)
 			DrawDeviceSignals();
 		if(mDrawArrow)
 			DrawArrow();
+		isDrawDevice = false;
 	}
 }
 

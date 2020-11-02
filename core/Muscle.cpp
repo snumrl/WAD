@@ -275,7 +275,7 @@ Getl_mt()
 	for(int i=1; i<mAnchors.size(); i++)
 		l_mt += (mCachedAnchorPositions[i]-mCachedAnchorPositions[i-1]).norm();
 
-	return l_mt/l_mt0;
+	return l_mt*(l_m0 + l_t0) / (l_mt0 * l_m0) - (l_t0 / l_m0) + l_t0;
 }
 
 Eigen::VectorXd
