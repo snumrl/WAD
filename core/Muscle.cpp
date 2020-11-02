@@ -111,7 +111,6 @@ AddAnchor(const dart::dynamics::SkeletonPtr& skel,dart::dynamics::BodyNode* bn,c
 	if(n>1){
 		l_mt0 += (mAnchors[n-1]->GetPoint()-mAnchors[n-2]->GetPoint()).norm();
 	}
-
 	mCachedAnchorPositions.resize(n);
 
 	this->Update();
