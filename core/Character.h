@@ -54,6 +54,9 @@ public:
 	Eigen::VectorXd GetKp(){return mKp;}
 	Eigen::VectorXd GetKv(){return mKv;}
 
+	int GetSimHz(){return mSimulationHz;}
+	int GetConHz(){return mControlHz;}
+
 	void Reset();
 	void Reset_Muscles();
 
@@ -130,6 +133,7 @@ private:
 	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
 
 	Torques* mTorques;
+	double mTotalTorques;
 
 	int mNumDof;
 	int mNumActiveDof;

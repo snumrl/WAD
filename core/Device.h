@@ -66,6 +66,9 @@ private:
     int mNumActiveDof;
     int mRootJointDof;
 
+    int mSimulationHz;
+    int mControlHz;
+
     bool mUseNN;
 
     double mTorqueMax;

@@ -7,14 +7,15 @@ using namespace dart::dynamics;
 
 Device::
 Device()
+:mNumState(0),mNumAction(0),mNumDof(0),mNumActiveDof(0),mRootJointDof(0),mUseNN(false),mTorqueMax(0.0),qr(0.0),ql(0.0),qr_prev(0.0),ql_prev(0.0)
 {
     mDelta_t = 180;
-    mK_ = 30.0;
+    mK_ = 15.0;
 }
 
 Device::
 Device(dart::dynamics::SkeletonPtr dPtr)
-:mNumState(0),mNumAction(0),mNumDof(0),mNumActiveDof(0),mRootJointDof(0),mUseNN(false),mTorqueMax(0.0),qr(0.0),ql(0.0),qr_prev(0.0),ql_prev(0.0),mDelta_t(180),mK_(30.0)
+:Device()
 {
     mSkeleton = dPtr;
 }
@@ -37,6 +38,8 @@ Device::
 SetCharacter(Character* character)
 {
     mCharacter = character;
+    mSimulationHz = character->GetSimHz();
+    mControlHz = character->GetConHz();
 }
 
 void
@@ -139,10 +142,10 @@ Step(double t)
     {
         SetDesiredTorques2();
 
-        Eigen::VectorXd tmp = Eigen::VectorXd::Zero(mDesiredTorque.size());
-        tmp[6] = mDesiredTorque[6]/10.0;
-        tmp[9] = mDesiredTorque[7]/10.0;
-        mSkeleton->setForces(tmp);
+        Eigen::VectorXd f = Eigen::VectorXd::Zero(mDesiredTorque.size());
+        f[6] = mDesiredTorque[6];
+        f[9] = mDesiredTorque[9];
+        mSkeleton->setForces(f);
     }
 }
 
@@ -163,13 +166,17 @@ GetState()
     // state << rotation.w(), rotation.x(), rotation.y(), rotation.z(),
     //             root_linvel / 10., root_angvel/10., positions.tail<6>(), velocities.tail<6>()/10.;
 
-    Eigen::VectorXd state(8);
-    int offset = (mDelta_t/3.0);
-    double scaler = mK_/2.0;
+    double history_window = 0.3;
+    double history_interval = 0.1;
+    int offset = (history_interval * mSimulationHz);
+    int history_num = (history_window/history_interval) + 1;
 
-    for(int i=0; i<4; i++)
+    Eigen::VectorXd state(history_num*2);
+
+    double scaler = mK_/2.0;
+    for(int i=0; i<history_num; i++)
     {
-        double torque = mDeviceSignals_y.at(mDelta_t-i*offset);
+        double torque = mDeviceSignals_y.at(mDelta_t + i*offset);
         double des_torque_l =  1*torque;
         double des_torque_r = -1*torque;
         state[i*2] = des_torque_l/scaler;
@@ -245,7 +252,7 @@ SetDesiredTorques2()
     mDeviceSignals_R.push_front(des_torque_r);
 
     mDesiredTorque[6] = des_torque_l;
-    mDesiredTorque[7] = des_torque_r;
+    mDesiredTorque[9] = des_torque_r;
 }
 
 double

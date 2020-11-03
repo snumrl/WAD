@@ -93,7 +93,6 @@ LoadMuscles(const std::string& path)
 		double lmax = std::stod(unit->Attribute("lmax"));
 		Muscle* muscle_elem = new Muscle(name,f0,lm,lt,pa,lmax);
 		bool isValid = true;
-		bool isFemur = false;
 		int num_waypoints = 0;
 		for(TiXmlElement* waypoint = unit->FirstChildElement("Waypoint");waypoint!=nullptr;waypoint = waypoint->NextSiblingElement("Waypoint"))
 			num_waypoints++;
@@ -107,10 +106,11 @@ LoadMuscles(const std::string& path)
 				isValid = false;
 				break;
 			}
+
 			if(body == "FemurL" || body == "FemurR"){
-				isFemur = true;
 				muscle_elem->SetFemur(true);
 			}
+
 			if(i==0||i==num_waypoints-1)
 				muscle_elem->AddAnchor(mSkeleton->getBodyNode(body),glob_pos);
 			else
@@ -127,7 +127,7 @@ LoadMuscles(const std::string& path)
 			{
 				muscle_elem->SetMt0Ratio(1.0);
 				muscle_elem->SetF0Ratio(1.0);
-			}
+			} // front
 
 			if(!muscle_name.compare("L_Multifidus")||
 			!muscle_name.compare("R_Multifidus")||
@@ -140,13 +140,13 @@ LoadMuscles(const std::string& path)
 			{
 				muscle_elem->SetMt0Ratio(1.0);
 				muscle_elem->SetF0Ratio(1.0);
-			}
+			} // back
 
-			if(isFemur)
+			if(muscle_elem->GetFemur())
 			{
 				muscle_elem->SetMt0Ratio(1.0);
-				muscle_elem->SetF0Ratio(0.2);
-			}
+				muscle_elem->SetF0Ratio(1.0);
+			} // femur
 
 			mMuscles.push_back(muscle_elem);
 		}
@@ -175,6 +175,7 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 
 	const std::string& type =
 		mSkeleton->getRootBodyNode()->getParentJoint()->getType();
+
 	if(type == "FreeJoint")
 		mRootJointDof = 6;
 	else if(type == "PlanarJoint")
@@ -197,6 +198,7 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 
 	mTorques = new Torques();
 	mTorques->Initialize(mSkeleton);
+	mTotalTorques = 680 * (910 + 910);
 
 	this->Initialize_Rewards();
 	this->Initialize_JointWeights();
@@ -499,7 +501,7 @@ Step_Muscles(int simCount, int randomSampleIndex)
 		Eigen::MatrixXd JtA = Eigen::MatrixXd::Zero(n,m);
 		Eigen::VectorXd Jtp = Eigen::VectorXd::Zero(n);
 
-		for(int i=0;i<mMuscles.size();i++)
+		for(int i=0; i<mMuscles.size(); i++)
 		{
 			auto muscle = mMuscles[i];
 			// muscle->Update();
@@ -536,12 +538,8 @@ GetState()
 
 	Eigen::VectorXd state(state_dim);
 	state << state_character;
-	if(mUseDevice){
-		int size = state_character.size();
-		for(int i=0; i<state_device.size(); i++)
-			state[size+i] = state_device[i];
-		// state << state_device;
-	}
+	if(mUseDevice)
+		state << state_character, state_device;
 
 	return state;
 }
@@ -661,7 +659,6 @@ GetState_Character()
 	}
 
 	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
-
 	// Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+1);
 
 	// double phase = this->GetPhase();
@@ -669,7 +666,7 @@ GetState_Character()
 	mSkeleton->setVelocities(cur_vel);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
-	state<<pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
+	state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
 	// state<<pos,ori,lin_v,ang_v,phase;
 
 	return state;
@@ -842,19 +839,19 @@ GetReward_Character()
 	com_err = 0.1 * (comKinVel - comSimVel).squaredNorm();
 
 	pose_reward = exp(-err_scale * pose_scale * pose_err);
-	vel_reward = exp(-err_scale * vel_scale * vel_err);
+	// vel_reward = exp(-err_scale * vel_scale * vel_err);
+	vel_reward = 1.0;
 	end_eff_reward = exp(-err_scale * end_eff_scale * end_eff_err);
 	root_reward = exp(-err_scale * root_scale * root_err);
 	com_reward = exp(-err_scale * com_scale * com_err);
 
 	double r_imitation = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
-	// double r_imitation = pose_reward * 1.0 * end_eff_reward * root_reward * com_reward;
 
-	// min_reward = this->GetTorqueReward();
-	// double r_torque_min = min_reward;
+	min_reward = this->GetTorqueReward();
+	double r_torque_min = min_reward;
 
-	// double r_ = 0.8*r_imitation + 0.2*r_torque_min;
-	double r_ = r_imitation;
+	double r_ = 0.5*r_imitation + 0.5*r_torque_min;
+	// double r_ = r_imitation;
 
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
@@ -867,17 +864,29 @@ double
 Character::
 GetTorqueReward()
 {
+	int cycle_step = 680;
 
-	double sum = 0;
+	std::vector<std::deque<double>> ts = mTorques->GetTorques();
+
 	int idx = 0;
-	for(int i=6; i<20; i++)
+	for(int i=6; i<22; i++)
 	{
-		sum += fabs(mDesiredTorque[i])/maxForces[i];
+		if(i==13 || i==14)
+			continue;
+
+		mTotalTorques -= fabs(ts[i].at(cycle_step));
+		mTotalTorques += fabs(ts[i].at(0));
 		idx++;
 	}
-	sum /= (double)(idx);
 
-	return exp(-1.0 * 10.0 * sum);
+	double mTotalTorques_ = mTotalTorques;
+    mTotalTorques_ /= (double)(idx);
+    mTotalTorques_ /= (double)(cycle_step);
+    mTotalTorques_ /= (double)(910.0);
+
+	// std::cout << "torques : " << mTotalTorques_ << std::endl;
+
+	return exp(-1.0 * 40.0 * mTotalTorques_);
 }
 
 void
@@ -958,6 +967,7 @@ Character::
 GetTargetPosAndVel(double t,double dt)
 {
 	double cycleTime = mBVH->GetMaxTime();
+	// std::cout << "time : " << cycleTime << std::endl;
 	int cycleCount = (int)(t/cycleTime);
 	double frameTime = t;
 	if(mBVH->IsCyclic())
