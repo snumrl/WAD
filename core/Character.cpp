@@ -1205,10 +1205,21 @@ void
 Torques::
 SetTorques(const Eigen::VectorXd& desTorques)
 {
-	for(int i=0; i<desTorques.size(); i++)
+	for(int i=6; i<desTorques.size(); i++)
 	{
 		mTorques_dofs[i].pop_back();
 		mTorques_dofs[i].push_front(desTorques[i]);
 	}
+
+	double sum = 0;
+	for(int i=6; i<22; i++)
+	{
+		if(i==13 || i==14)
+			continue;
+		sum += fabs(desTorques[i]);
+	}
+
+	mTorques_dofs[0].pop_back();
+	mTorques_dofs[0].push_front(sum);
 }
 

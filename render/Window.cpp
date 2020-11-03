@@ -774,12 +774,18 @@ DrawTorques()
 
 	mTorques = mEnv->GetCharacter()->GetTorques();
 	if(mGraphMode == 0){
-		DrawTorqueGraph("FemurL_x", 6, p_w, p_h, p_x, p_y-0*offset_y);
-		DrawTorqueGraph("FemurL_y", 7, p_w, p_h, p_x, p_y-1*offset_y);
-		DrawTorqueGraph("FemurL_z", 8, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("FemurR_x", 15, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("FemurR_y", 16, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("FemurR_z", 17, p_w, p_h, p_x, p_y-5*offset_y);
+		DrawTorqueGraph("Lower", 0, p_w, p_h, p_x, p_y-0*offset_y);
+		DrawTorqueGraph("FemurL_x", 6, p_w, p_h, p_x, p_y-1*offset_y);
+		DrawTorqueGraph("FemurL_y", 7, p_w, p_h, p_x, p_y-2*offset_y);
+		DrawTorqueGraph("FemurL_z", 8, p_w, p_h, p_x, p_y-3*offset_y);
+		DrawTorqueGraph("FemurR_x", 15, p_w, p_h, p_x, p_y-4*offset_y);
+		DrawTorqueGraph("FemurR_y", 16, p_w, p_h, p_x, p_y-5*offset_y);
+		// DrawTorqueGraph("FemurL_x", 6, p_w, p_h, p_x, p_y-0*offset_y);
+		// DrawTorqueGraph("FemurL_y", 7, p_w, p_h, p_x, p_y-1*offset_y);
+		// DrawTorqueGraph("FemurL_z", 8, p_w, p_h, p_x, p_y-2*offset_y);
+		// DrawTorqueGraph("FemurR_x", 15, p_w, p_h, p_x, p_y-3*offset_y);
+		// DrawTorqueGraph("FemurR_y", 16, p_w, p_h, p_x, p_y-4*offset_y);
+		// DrawTorqueGraph("FemurR_z", 17, p_w, p_h, p_x, p_y-5*offset_y);
 	}
 	else if(mGraphMode == 1){
 		DrawTorqueGraph("Tibia_L", 9, p_w, p_h, p_x, p_y-0*offset_y);
@@ -881,6 +887,11 @@ DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double 
 	double ratio_y = 0.3;
 
 	std::deque<double> data_ = (mTorques->GetTorques())[idx];
+
+	if(idx == 0){
+		offset_y *= 0.25;
+		ratio_y = 0.1;
+	}
 
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, name);
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, data_);
