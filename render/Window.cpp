@@ -888,14 +888,15 @@ DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double 
 
 	std::deque<double> data_ = (mTorques->GetTorques())[idx];
 
-	if(idx == 0){
+	if(idx == 0)
 		offset_y *= 0.25;
-		ratio_y = 0.1;
-	}
 
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, name);
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, data_);
 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data_, red);
+	if(idx == 0){
+		DrawStringMean(x, y, w, h, ratio_y, offset_x, offset_y, offset, data_, green);
+	}
 }
 
 void
@@ -1146,6 +1147,54 @@ DrawString(double x, double y, std::string str, Eigen::Vector4d color)
 	unsigned int length = str.length();
 	for (unsigned int c = 0; c < length; c++)
 		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, str.at(c));
+}
+
+void
+Window::
+DrawStringMean(double x, double y, double w, double h, double ratio, double offset_x, double offset_y, double offset, std::vector<double> data, Eigen::Vector4d color)
+{
+	double sum = 0;
+	for(int i=0; i<data.size(); i++)
+		sum += data[i];
+
+	double mean = sum/(double)(data.size());
+
+	h -= 2*offset;
+	x += offset;
+	y += offset + ratio*h;
+	DrawString(x+w, y+mean*offset_y, std::to_string(mean), color);
+
+	mRI->setPenColor(color);
+	mRI->setLineWidth(1.5);
+
+	glBegin(GL_LINE_STRIP);
+	glVertex2f(x,         y+mean*offset_y);
+	glVertex2f(x+w-2*offset,y+mean*offset_y);
+	glEnd();
+}
+
+void
+Window::
+DrawStringMean(double x, double y, double w, double h, double ratio, double offset_x, double offset_y, double offset, std::deque<double> data, Eigen::Vector4d color)
+{
+	double sum = 0;
+	for(int i=0; i<data.size(); i++)
+		sum += data.at(i);
+
+	double mean = sum/(double)(data.size());
+
+	h -= 2*offset;
+	x += offset;
+	y += offset + ratio*h;
+	DrawString(x+w, y+mean*offset_y, std::to_string(mean), color);
+
+	mRI->setPenColor(color);
+	mRI->setLineWidth(1.5);
+
+	glBegin(GL_LINE_STRIP);
+	glVertex2f(x,         y+mean*offset_y);
+	glVertex2f(x+w-2*offset,y+mean*offset_y);
+	glEnd();
 }
 
 void
