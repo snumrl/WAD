@@ -912,6 +912,12 @@ DrawReward()
 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, reward, green);
 
 	y = 0.37;
+	std::deque<double> imit = map.at("imit");
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "imit");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, imit);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, imit, green);
+
+	y = 0.25;
 	std::deque<double> min = map.at("min");
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "min");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, min);

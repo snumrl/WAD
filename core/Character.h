@@ -177,6 +177,7 @@ private:
     std::deque<double> root_;
     std::deque<double> com_;
     std::deque<double> ee_;
+    std::deque<double> imit_;
     std::deque<double> min_;
 
     double mReward;
@@ -185,6 +186,7 @@ private:
     double end_eff_reward;
     double root_reward;
     double com_reward;
+    double imit_reward;
     double min_reward;
 
 	MuscleTuple mCurrentMuscleTuple;

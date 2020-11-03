@@ -406,6 +406,7 @@ Initialize_Rewards()
     end_eff_reward = 0;
     root_reward = 0;
     com_reward = 0;
+    imit_reward = 0;
     min_reward = 0;
 
     int reward_window = 70;
@@ -416,6 +417,7 @@ Initialize_Rewards()
     root_.resize(reward_window);
     ee_.resize(reward_window);
     com_.resize(reward_window);
+    imit_.resize(reward_window);
     min_.resize(reward_window);
 
 	mRewards;
@@ -425,6 +427,7 @@ Initialize_Rewards()
 	mRewards.insert(std::make_pair("root", root_));
 	mRewards.insert(std::make_pair("ee", ee_));
 	mRewards.insert(std::make_pair("com", com_));
+	mRewards.insert(std::make_pair("imit", imit_));
 	mRewards.insert(std::make_pair("min", min_));
 }
 
@@ -845,12 +848,13 @@ GetReward_Character()
 	root_reward = exp(-err_scale * root_scale * root_err);
 	com_reward = exp(-err_scale * com_scale * com_err);
 
-	double r_imitation = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
+	imit_reward = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
+	double r_imitation = imit_reward;
 
 	min_reward = this->GetTorqueReward();
 	double r_torque_min = min_reward;
 
-	double r_ = 0.5*r_imitation + 0.5*r_torque_min;
+	double r_ = 0.8*r_imitation + 0.2*r_torque_min;
 	// double r_ = r_imitation;
 
 	mSkeleton->setPositions(cur_pos);
@@ -1162,8 +1166,11 @@ SetRewards()
 	(mRewards.find("ee")->second).push_front(end_eff_reward);
 	(mRewards.find("com")->second).pop_back();
 	(mRewards.find("com")->second).push_front(com_reward);
+	(mRewards.find("imit")->second).pop_back();
+	(mRewards.find("imit")->second).push_front(imit_reward);
 	(mRewards.find("min")->second).pop_back();
 	(mRewards.find("min")->second).push_front(min_reward);
+
 }
 
 void
