@@ -864,29 +864,46 @@ double
 Character::
 GetTorqueReward()
 {
-	int cycle_step = 680;
-
 	std::vector<std::deque<double>> ts = mTorques->GetTorques();
 
 	int idx = 0;
+	double sum = 0.0;
 	for(int i=6; i<22; i++)
 	{
 		if(i==13 || i==14)
 			continue;
 
-		mTotalTorques -= fabs(ts[i].at(cycle_step));
-		mTotalTorques += fabs(ts[i].at(0));
+		sum += fabs(ts[i].at(0))/maxForces[i];
 		idx++;
 	}
 
-	double mTotalTorques_ = mTotalTorques;
-    mTotalTorques_ /= (double)(idx);
-    mTotalTorques_ /= (double)(cycle_step);
-    mTotalTorques_ /= (double)(910.0);
+	sum /= (double)(idx);
+	return exp(-1.0 * 10.0 * sum);
 
-	// std::cout << "torques : " << mTotalTorques_ << std::endl;
 
-	return exp(-1.0 * 40.0 * mTotalTorques_);
+	// int cycle_step = 680;
+
+	// std::vector<std::deque<double>> ts = mTorques->GetTorques();
+
+	// int idx = 0;
+	// for(int i=6; i<22; i++)
+	// {
+	// 	if(i==13 || i==14)
+	// 		continue;
+
+	// 	mTotalTorques -= fabs(ts[i].at(cycle_step));
+	// 	mTotalTorques += fabs(ts[i].at(0));
+	// 	idx++;
+	// }
+
+	// double mTotalTorques_ = mTotalTorques;
+ //    mTotalTorques_ /= (double)(idx);
+ //    mTotalTorques_ /= (double)(cycle_step);
+ //    mTotalTorques_ /= (double)(1820.0);
+	// mTotalTorques_
+	// // std::cout << "torques : " << mTotalTorques_ << std::endl;
+
+	// return exp(-1.0 * 40.0 * mTotalTorques_);
 }
 
 void
