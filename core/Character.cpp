@@ -842,8 +842,8 @@ GetReward_Character()
 	com_err = 0.1 * (comKinVel - comSimVel).squaredNorm();
 
 	pose_reward = exp(-err_scale * pose_scale * pose_err);
-	// vel_reward = exp(-err_scale * vel_scale * vel_err);
-	vel_reward = 1.0;
+	vel_reward = exp(-err_scale * vel_scale * vel_err);
+	// vel_reward = 1.0;
 	end_eff_reward = exp(-err_scale * end_eff_scale * end_eff_err);
 	root_reward = exp(-err_scale * root_scale * root_err);
 	com_reward = exp(-err_scale * com_scale * com_err);
