@@ -423,6 +423,10 @@ def Plot(y,title,num_fig=1,ylim=True,save=False):
 	plt.show()
 	if ylim:
 		plt.ylim([0,1])
+	if save:
+		x_len = len(y)
+		plt.savefig(str(x_len)+'.png')
+
 	plt.pause(0.001)
 
 import argparse
