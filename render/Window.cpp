@@ -1000,10 +1000,10 @@ DrawDeviceSignals()
 	std::deque<double> data_L = device->GetSignals(0);
 	std::deque<double> data_R = device->GetSignals(1);
 	if(mGraphMode == 0){
-		DrawLineStrip(p_x, p_y, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_L, 180);
-		DrawStringMax(p_x, p_y, p_h, ratio_y, offset_x, offset_y, offset, data_L, blue);
-		DrawLineStrip(p_x, p_y-3*0.16, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_R, 180);
-		DrawStringMax(p_x, p_y-3*0.16, p_h, ratio_y, offset_x, offset_y, offset, data_R, blue);
+		DrawLineStrip(p_x, p_y-1*0.16, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_L, 180);
+		DrawStringMax(p_x, p_y-1*0.16, p_h, ratio_y, offset_x, offset_y, offset, data_L, blue);
+		DrawLineStrip(p_x, p_y-4*0.16, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_R, 180);
+		DrawStringMax(p_x, p_y-4*0.16, p_h, ratio_y, offset_x, offset_y, offset, data_R, blue);
 	}
 
 	DrawGLEnd();

@@ -169,7 +169,7 @@ GetState()
     double history_window = 0.3;
     double history_interval = 0.1;
     int offset = (history_interval * mSimulationHz);
-    int history_num = (history_window/history_interval) + 1;
+    int history_num = (history_window+0.001)/(history_interval)+1;
 
     Eigen::VectorXd state(history_num*2);
 

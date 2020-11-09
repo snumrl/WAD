@@ -340,26 +340,49 @@ Initialize_MaxForces()
 
 	maxForces <<
 			0, 0, 0, 0, 0, 0,	//pelvis
-			150, 150, 150,		//Femur L
-			100,				//Tibia L
-			120, 120, 120,		//Talus L
-			30, 30, 			//Thumb, Pinky L
-			150, 150, 150,		//Femur R
-			100,				//Tibia R
-			120, 120, 120,		//Talus R
-			30, 30, 			//Thumb, Pinky R
-			80, 80, 80,			//Spine
-			80, 80, 80,			//Torso
-			30, 30, 30,			//Neck
-			30, 30, 30,			//Head
-			50, 50, 50,			//Shoulder L
-			50, 50, 50,			//Arm L
-			30,					//ForeArm L
-			30, 30, 30,			//Hand L
-			50, 50, 50,			//Shoulder R
-			50, 50, 50,			//Arm R
-			30,					//ForeArm R
-			30, 30, 30;			//Hand R
+			200, 200, 200,		//Femur L
+			200,				//Tibia L
+			200, 200, 200,		//Talus L
+			200, 200, 			//Thumb, Pinky L
+			200, 200, 200,		//Femur R
+			200,				//Tibia R
+			200, 200, 200,		//Talus R
+			200, 200, 			//Thumb, Pinky R
+			200, 200, 200,		//Spine
+			200, 200, 200,		//Torso
+			200, 200, 200,		//Neck
+			200, 200, 200,		//Head
+			200, 200, 200,		//Shoulder L
+			200, 200, 200,		//Arm L
+			200,				//ForeArm L
+			200, 200, 200,		//Hand L
+			200, 200, 200,		//Shoulder R
+			200, 200, 200,		//Arm R
+			200,				//ForeArm R
+			200, 200, 200;		//Hand R
+
+	// maxForces <<
+	// 		0, 0, 0, 0, 0, 0,	//pelvis
+	// 		150, 150, 150,		//Femur L
+	// 		100,				//Tibia L
+	// 		120, 120, 120,		//Talus L
+	// 		30, 30, 			//Thumb, Pinky L
+	// 		150, 150, 150,		//Femur R
+	// 		100,				//Tibia R
+	// 		120, 120, 120,		//Talus R
+	// 		30, 30, 			//Thumb, Pinky R
+	// 		80, 80, 80,			//Spine
+	// 		80, 80, 80,			//Torso
+	// 		30, 30, 30,			//Neck
+	// 		30, 30, 30,			//Head
+	// 		50, 50, 50,			//Shoulder L
+	// 		50, 50, 50,			//Arm L
+	// 		30,					//ForeArm L
+	// 		30, 30, 30,			//Hand L
+	// 		50, 50, 50,			//Shoulder R
+	// 		50, 50, 50,			//Arm R
+	// 		30,					//ForeArm R
+	// 		30, 30, 30;			//Hand R
 
 	double energy_ratio = 1.0;
 	maxForces *= energy_ratio;
@@ -851,11 +874,11 @@ GetReward_Character()
 	imit_reward = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
 	double r_imitation = imit_reward;
 
-	min_reward = this->GetTorqueReward();
-	double r_torque_min = min_reward;
+	// min_reward = this->GetTorqueReward();
+	// double r_torque_min = min_reward;
 
-	double r_ = 0.9*r_imitation + 0.1*r_torque_min;
-	// double r_ = r_imitation;
+	// double r_ = 0.9*r_imitation + 0.1*r_torque_min;
+	double r_ = r_imitation;
 
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
@@ -870,26 +893,42 @@ GetTorqueReward()
 {
 	std::vector<std::deque<double>> ts = mTorques->GetTorques();
 
-	int idx = 0;
-	double sum = 0.0;
-	sum += fabs(ts[6].at(0)) /maxForces[6];
-	sum += fabs(ts[9].at(0)) /maxForces[9];
-	sum += fabs(ts[10].at(0))/maxForces[10];
-	sum += fabs(ts[15].at(0))/maxForces[15];
-	sum += fabs(ts[18].at(0))/maxForces[18];
-	sum += fabs(ts[19].at(0))/maxForces[19];
-	idx = 6;
-	// for(int i=6; i<22; i++)
-	// {
-	// 	if(i==13 || i==14)
-	// 		continue;
+	double violation = 0.0;
+	if(fabs(ts[6].at(0)) > 0.9*maxForces[6])
+		violation += 1.0;
+	if(fabs(ts[9].at(0)) > 0.9*maxForces[9])
+		violation += 1.0;
+	if(fabs(ts[10].at(0)) > 0.9*maxForces[10])
+		violation += 1.0;
+	if(fabs(ts[15].at(0)) > 0.9*maxForces[15])
+		violation += 1.0;
+	if(fabs(ts[18].at(0)) > 0.9*maxForces[18])
+		violation += 1.0;
+	if(fabs(ts[19].at(0)) > 0.9*maxForces[19])
+		violation += 1.0;
 
-	// 	sum += fabs(ts[i].at(0))/maxForces[i];
-	// 	idx++;
-	// }
+	return -1 * violation;
 
-	sum /= (double)(idx);
-	return exp(-1.0 * 5.0 * sum);
+	// int idx = 0;
+	// double sum = 0.0;
+	// sum += fabs(ts[6].at(0)) /maxForces[6];
+	// sum += fabs(ts[9].at(0)) /maxForces[9];
+	// sum += fabs(ts[10].at(0))/maxForces[10];
+	// sum += fabs(ts[15].at(0))/maxForces[15];
+	// sum += fabs(ts[18].at(0))/maxForces[18];
+	// sum += fabs(ts[19].at(0))/maxForces[19];
+	// idx = 6;
+	// // for(int i=6; i<22; i++)
+	// // {
+	// // 	if(i==13 || i==14)
+	// // 		continue;
+
+	// // 	sum += fabs(ts[i].at(0))/maxForces[i];
+	// // 	idx++;
+	// // }
+
+	// sum /= (double)(idx);
+	// return exp(-1.0 * 5.0 * sum);
 
 
 	// int cycle_step = 680;
@@ -1219,12 +1258,19 @@ SetTorques(const Eigen::VectorXd& desTorques)
 	}
 
 	double sum = 0;
-	sum += fabs(desTorques[6]);
+	// sum += fabs(desTorques[6]);
+	// sum += fabs(desTorques[9]);
+	// sum += fabs(desTorques[10]);
+	// sum += fabs(desTorques[15]);
+	// sum += fabs(desTorques[18]);
+	// sum += fabs(desTorques[19]);
+	sum += desTorques.segment(6,3).norm();
 	sum += fabs(desTorques[9]);
-	sum += fabs(desTorques[10]);
-	sum += fabs(desTorques[15]);
+	sum += desTorques.segment(10,3).norm();
+	sum += desTorques.segment(15,3).norm();
 	sum += fabs(desTorques[18]);
-	sum += fabs(desTorques[19]);
+	sum += desTorques.segment(19,3).norm();
+
 	// for(int i=6; i<22; i++)
 	// {
 	// 	if(i==13 || i==14)
