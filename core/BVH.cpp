@@ -325,7 +325,7 @@ SetMotionFrames()
 				p.segment<3>(idx) = BallJoint::convertToPositions(R);
 
 				if(jointName == "Spine"){
-					// p[idx] -= 0.07;
+					p[idx] -= 0.07;
 					// p[idx] += 0.25;
 				}
 

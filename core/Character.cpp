@@ -338,51 +338,51 @@ Initialize_MaxForces()
 	// for(int i=6; i<maxForces.size(); i++)
 	// 	maxForces[i] = 200;
 
-	maxForces <<
-			0, 0, 0, 0, 0, 0,	//pelvis
-			200, 200, 200,		//Femur L
-			200,				//Tibia L
-			200, 200, 200,		//Talus L
-			200, 200, 			//Thumb, Pinky L
-			200, 200, 200,		//Femur R
-			200,				//Tibia R
-			200, 200, 200,		//Talus R
-			200, 200, 			//Thumb, Pinky R
-			200, 200, 200,		//Spine
-			200, 200, 200,		//Torso
-			200, 200, 200,		//Neck
-			200, 200, 200,		//Head
-			200, 200, 200,		//Shoulder L
-			200, 200, 200,		//Arm L
-			200,				//ForeArm L
-			200, 200, 200,		//Hand L
-			200, 200, 200,		//Shoulder R
-			200, 200, 200,		//Arm R
-			200,				//ForeArm R
-			200, 200, 200;		//Hand R
-
 	// maxForces <<
 	// 		0, 0, 0, 0, 0, 0,	//pelvis
-	// 		150, 150, 150,		//Femur L
-	// 		100,				//Tibia L
-	// 		120, 120, 120,		//Talus L
-	// 		30, 30, 			//Thumb, Pinky L
-	// 		150, 150, 150,		//Femur R
-	// 		100,				//Tibia R
-	// 		120, 120, 120,		//Talus R
-	// 		30, 30, 			//Thumb, Pinky R
-	// 		80, 80, 80,			//Spine
-	// 		80, 80, 80,			//Torso
-	// 		30, 30, 30,			//Neck
-	// 		30, 30, 30,			//Head
-	// 		50, 50, 50,			//Shoulder L
-	// 		50, 50, 50,			//Arm L
-	// 		30,					//ForeArm L
-	// 		30, 30, 30,			//Hand L
-	// 		50, 50, 50,			//Shoulder R
-	// 		50, 50, 50,			//Arm R
-	// 		30,					//ForeArm R
-	// 		30, 30, 30;			//Hand R
+	// 		200, 200, 200,		//Femur L
+	// 		200,				//Tibia L
+	// 		200, 200, 200,		//Talus L
+	// 		200, 200, 			//Thumb, Pinky L
+	// 		200, 200, 200,		//Femur R
+	// 		200,				//Tibia R
+	// 		200, 200, 200,		//Talus R
+	// 		200, 200, 			//Thumb, Pinky R
+	// 		200, 200, 200,		//Spine
+	// 		200, 200, 200,		//Torso
+	// 		200, 200, 200,		//Neck
+	// 		200, 200, 200,		//Head
+	// 		200, 200, 200,		//Shoulder L
+	// 		200, 200, 200,		//Arm L
+	// 		200,				//ForeArm L
+	// 		200, 200, 200,		//Hand L
+	// 		200, 200, 200,		//Shoulder R
+	// 		200, 200, 200,		//Arm R
+	// 		200,				//ForeArm R
+	// 		200, 200, 200;		//Hand R
+
+	maxForces <<
+			0, 0, 0, 0, 0, 0,	//pelvis
+			200, 100, 150,		//Femur L
+			100,				//Tibia L
+			150, 50, 50,		//Talus L
+			30, 30, 			//Thumb, Pinky L
+			200, 100, 150,		//Femur R
+			100,				//Tibia R
+			150, 50, 50,		//Talus R
+			30, 30, 			//Thumb, Pinky R
+			80, 80, 80,			//Spine
+			80, 80, 80,			//Torso
+			30, 30, 30,			//Neck
+			30, 30, 30,			//Head
+			50, 50, 50,			//Shoulder L
+			50, 50, 50,			//Arm L
+			30,					//ForeArm L
+			30, 30, 30,			//Hand L
+			50, 50, 50,			//Shoulder R
+			50, 50, 50,			//Arm R
+			30,					//ForeArm R
+			30, 30, 30;			//Hand R
 
 	double energy_ratio = 1.0;
 	maxForces *= energy_ratio;
@@ -978,7 +978,7 @@ SetDesiredTorques()
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction;
 	mDesiredTorque = this->GetSPDForces(p_des);
 
-	mDesiredTorque = 0.5*mDesiredTorque  + 0.5*mDesiredTorque_prev;
+	// mDesiredTorque = 0.5*mDesiredTorque  + 0.5*mDesiredTorque_prev;
 
 	for(int i=0; i<mDesiredTorque.size(); i++){
 		mDesiredTorque[i] = Utils::Clamp(mDesiredTorque[i], -maxForces[i], maxForces[i]);
@@ -1270,13 +1270,6 @@ SetTorques(const Eigen::VectorXd& desTorques)
 	sum += desTorques.segment(15,3).norm();
 	sum += fabs(desTorques[18]);
 	sum += desTorques.segment(19,3).norm();
-
-	// for(int i=6; i<22; i++)
-	// {
-	// 	if(i==13 || i==14)
-	// 		continue;
-	// 	sum += fabs(desTorques[i]);
-	// }
 
 	mTorques_dofs[0].pop_back();
 	mTorques_dofs[0].push_front(sum);
