@@ -425,7 +425,7 @@ def Plot(y,title,num_fig=1,ylim=True,save=False):
 		plt.ylim([0,1])
 	if save:
 		x_len = len(y)
-		plt.savefig(str(x_len)+'.png')
+		plt.savefig('../nn/'+str(x_len-1)+'.png')
 
 	plt.pause(0.001)
 
