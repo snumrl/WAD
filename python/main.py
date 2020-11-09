@@ -403,7 +403,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 plt.ion()
-def Plot(y,title,num_fig=1,ylim=True):
+def Plot(y,title,num_fig=1,ylim=True,save=False):
 	temp_y = np.zeros(y.shape)
 	if y.shape[0]>5:
 		temp_y[0] = y[0]
@@ -463,6 +463,9 @@ if __name__=="__main__":
 	for i in range(ppo.max_iteration-5):
 		ppo.Train()
 		rewards = ppo.Evaluate()
-		Plot(rewards,'reward',0,False)
+		if i%1000 is 0:
+			Plot(rewards,'reward',0,False,True)
+		else:
+			Plot(rewards,'reward',0,False,False)
 
 
