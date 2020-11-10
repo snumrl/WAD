@@ -467,7 +467,7 @@ if __name__=="__main__":
 	for i in range(ppo.max_iteration-5):
 		ppo.Train()
 		rewards = ppo.Evaluate()
-		if i%1000 is 0:
+		if (i%1000 is 0) or (i is ppo.max_iteration-6):
 			Plot(rewards,'reward',0,False,True)
 		else:
 			Plot(rewards,'reward',0,False,False)

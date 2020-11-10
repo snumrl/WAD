@@ -893,24 +893,24 @@ GetTorqueReward()
 {
 	std::vector<std::deque<double>> ts = mTorques->GetTorques();
 
-	double violation = 0.0;
-	if(fabs(ts[6].at(0)) > 0.9*maxForces[6])
-		violation += 1.0;
-	if(fabs(ts[9].at(0)) > 0.9*maxForces[9])
-		violation += 1.0;
-	if(fabs(ts[10].at(0)) > 0.9*maxForces[10])
-		violation += 1.0;
-	if(fabs(ts[15].at(0)) > 0.9*maxForces[15])
-		violation += 1.0;
-	if(fabs(ts[18].at(0)) > 0.9*maxForces[18])
-		violation += 1.0;
-	if(fabs(ts[19].at(0)) > 0.9*maxForces[19])
-		violation += 1.0;
+	// double violation = 0.0;
+	// if(fabs(ts[6].at(0)) > 0.9*maxForces[6])
+	// 	violation += 1.0;
+	// if(fabs(ts[9].at(0)) > 0.9*maxForces[9])
+	// 	violation += 1.0;
+	// if(fabs(ts[10].at(0)) > 0.9*maxForces[10])
+	// 	violation += 1.0;
+	// if(fabs(ts[15].at(0)) > 0.9*maxForces[15])
+	// 	violation += 1.0;
+	// if(fabs(ts[18].at(0)) > 0.9*maxForces[18])
+	// 	violation += 1.0;
+	// if(fabs(ts[19].at(0)) > 0.9*maxForces[19])
+	// 	violation += 1.0;
 
-	return -1 * violation;
+	// return -1 * violation;
 
-	// int idx = 0;
-	// double sum = 0.0;
+	int idx = 0;
+	double sum = 0.0;
 	// sum += fabs(ts[6].at(0)) /maxForces[6];
 	// sum += fabs(ts[9].at(0)) /maxForces[9];
 	// sum += fabs(ts[10].at(0))/maxForces[10];
@@ -918,16 +918,17 @@ GetTorqueReward()
 	// sum += fabs(ts[18].at(0))/maxForces[18];
 	// sum += fabs(ts[19].at(0))/maxForces[19];
 	// idx = 6;
-	// // for(int i=6; i<22; i++)
-	// // {
-	// // 	if(i==13 || i==14)
-	// // 		continue;
+	for(int i=6; i<22; i++)
+	{
+		if(i==13 || i==14)
+			continue;
 
-	// // 	sum += fabs(ts[i].at(0))/maxForces[i];
-	// // 	idx++;
-	// // }
+		sum += fabs(ts[i].at(0))/maxForces[i];
+		idx++;
+	}
 
-	// sum /= (double)(idx);
+	sum /= (double)(idx);
+	return 2.0 * (1.0 - sum);
 	// return exp(-1.0 * 5.0 * sum);
 
 
