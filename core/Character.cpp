@@ -466,10 +466,13 @@ Reset()
 	mSkeleton->clearExternalForces();
 
 	double worldTime = mWorld->getTime();
+
 	this->SetTargetPosAndVel(worldTime, mControlHz);
 
-	mSkeleton->setPositions(mTargetPositions);
-	mSkeleton->setVelocities(mTargetVelocities);
+	// mSkeleton->setPositions(mTargetPositions);
+	// mSkeleton->setVelocities(mTargetVelocities);
+	mSkeleton->setPositions(mTargetPositionsNoise);
+	mSkeleton->setVelocities(mTargetVelocitiesNoise);
 	mSkeleton->computeForwardKinematics(true,false,false);
 
 	mDesiredTorque.setZero();
@@ -874,11 +877,11 @@ GetReward_Character()
 	imit_reward = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
 	double r_imitation = imit_reward;
 
-	min_reward = this->GetTorqueReward();
-	double r_torque_min = min_reward;
+	// min_reward = this->GetTorqueReward();
+	// double r_torque_min = min_reward;
 
-	double r_ = 0.9*r_imitation + 0.1*r_torque_min;
-	// double r_ = r_imitation;
+	// double r_ = 0.9*r_imitation + 0.1*r_torque_min;
+	double r_ = r_imitation;
 
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
@@ -928,7 +931,7 @@ GetTorqueReward()
 	}
 
 	sum /= (double)(idx);
-	return 2.0 * (1.0 - sum);
+	return 0.5 * (1.0 - sum);
 	// return exp(-1.0 * 5.0 * sum);
 
 
@@ -1028,6 +1031,18 @@ SetTargetPosAndVel(double t, int controlHz)
 	std::pair<Eigen::VectorXd,Eigen::VectorXd> pv = this->GetTargetPosAndVel(t, 1.0/controlHz);
 	mTargetPositions = pv.first;
 	mTargetVelocities = pv.second;
+
+	double t_noise = (rand()%400) * 0.001;
+	t += (t_noise - 0.2);
+	if(t < 0)
+		t = 0;
+
+	std::pair<Eigen::VectorXd,Eigen::VectorXd> pv_noise = this->GetTargetPosAndVel(t, 1.0/controlHz);
+	mTargetPositionsNoise = pv_noise.first;
+	mTargetVelocitiesNoise = pv_noise.second;
+
+	double y_noise = (rand()%300) * 0.001 - 0.15;
+	mTargetPositionsNoise[3] += y_noise;
 }
 
 std::pair<Eigen::VectorXd,Eigen::VectorXd>

@@ -161,6 +161,9 @@ private:
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;
 
+	Eigen::VectorXd mTargetPositionsNoise;
+	Eigen::VectorXd mTargetVelocitiesNoise;
+
 	Eigen::VectorXd mDesiredTorque;
 	Eigen::VectorXd mDesiredTorque_prev;
 
