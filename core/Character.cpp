@@ -874,11 +874,11 @@ GetReward_Character()
 	imit_reward = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
 	double r_imitation = imit_reward;
 
-	// min_reward = this->GetTorqueReward();
-	// double r_torque_min = min_reward;
+	min_reward = this->GetTorqueReward();
+	double r_torque_min = min_reward;
 
-	// double r_ = 0.9*r_imitation + 0.1*r_torque_min;
-	double r_ = r_imitation;
+	double r_ = 0.9*r_imitation + 0.1*r_torque_min;
+	// double r_ = r_imitation;
 
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
