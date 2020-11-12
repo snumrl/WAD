@@ -877,11 +877,11 @@ GetReward_Character()
 	imit_reward = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
 	double r_imitation = imit_reward;
 
-	// min_reward = this->GetTorqueReward();
-	// double r_torque_min = min_reward;
+	min_reward = this->GetTorqueReward();
+	double r_torque_min = min_reward;
 
-	// double r_ = 0.9*r_imitation + 0.1*r_torque_min;
-	double r_ = r_imitation;
+	double r_ = 0.9*r_imitation + 0.1*r_torque_min;
+	// double r_ = r_imitation;
 
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
@@ -895,6 +895,19 @@ Character::
 GetTorqueReward()
 {
 	std::vector<std::deque<double>> ts = mTorques->GetTorques();
+
+	int idx = 0;
+	double sum = 0.0;
+	for(int i=6; i<maxForces.size(); i++)
+	{
+		if(fabs(ts[i].at(0)) > 0.4*maxForces[i])
+			sum += 1.0;
+		idx++;
+	}
+
+	sum /= (double)(idx);
+
+	return -1.0 * sum;
 
 	// double violation = 0.0;
 	// if(fabs(ts[6].at(0)) > 0.9*maxForces[6])
@@ -912,8 +925,8 @@ GetTorqueReward()
 
 	// return -1 * violation;
 
-	int idx = 0;
-	double sum = 0.0;
+	// int idx = 0;
+	// double sum = 0.0;
 	// sum += fabs(ts[6].at(0)) /maxForces[6];
 	// sum += fabs(ts[9].at(0)) /maxForces[9];
 	// sum += fabs(ts[10].at(0))/maxForces[10];
@@ -921,17 +934,17 @@ GetTorqueReward()
 	// sum += fabs(ts[18].at(0))/maxForces[18];
 	// sum += fabs(ts[19].at(0))/maxForces[19];
 	// idx = 6;
-	for(int i=6; i<22; i++)
-	{
-		if(i==13 || i==14)
-			continue;
+	// for(int i=6; i<22; i++)
+	// {
+	// 	if(i==13 || i==14)
+	// 		continue;
 
-		sum += fabs(ts[i].at(0))/maxForces[i];
-		idx++;
-	}
+	// 	sum += fabs(ts[i].at(0))/maxForces[i];
+	// 	idx++;
+	// }
 
-	sum /= (double)(idx);
-	return 0.5 * (1.0 - sum);
+	// sum /= (double)(idx);
+	// return 0.5 * (1.0 - sum);
 	// return exp(-1.0 * 5.0 * sum);
 
 
@@ -1032,17 +1045,22 @@ SetTargetPosAndVel(double t, int controlHz)
 	mTargetPositions = pv.first;
 	mTargetVelocities = pv.second;
 
-	double t_noise = (rand()%400) * 0.001;
-	t += (t_noise - 0.2);
-	if(t < 0)
-		t = 0;
+	// double t_noise = (rand()%400) * 0.001;
+	// t += (t_noise - 0.2);
+	// if(t < 0)
+	// 	t = 0;
 
-	std::pair<Eigen::VectorXd,Eigen::VectorXd> pv_noise = this->GetTargetPosAndVel(t, 1.0/controlHz);
-	mTargetPositionsNoise = pv_noise.first;
-	mTargetVelocitiesNoise = pv_noise.second;
+	// std::pair<Eigen::VectorXd,Eigen::VectorXd> pv_noise = this->GetTargetPosAndVel(t, 1.0/controlHz);
+	// mTargetPositionsNoise = pv_noise.first;
+	// mTargetVelocitiesNoise = pv_noise.second;
 
-	double y_noise = (rand()%300) * 0.001 - 0.15;
-	mTargetPositionsNoise[3] += y_noise;
+	mTargetPositionsNoise = pv.first;
+	mTargetVelocitiesNoise = pv.second;
+
+	double x_noise = (rand()%300) * 0.001 - 0.15;
+	double z_noise = (rand()%300) * 0.001 - 0.15;
+	mTargetPositionsNoise[3] += x_noise;
+	mTargetPositionsNoise[5] += z_noise;
 }
 
 std::pair<Eigen::VectorXd,Eigen::VectorXd>
