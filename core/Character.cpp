@@ -907,7 +907,7 @@ GetTorqueReward()
 
 	sum /= (double)(idx);
 
-	return -2.0 * sum;
+	return -10.0 * sum;
 
 	// double violation = 0.0;
 	// if(fabs(ts[6].at(0)) > 0.9*maxForces[6])
