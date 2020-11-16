@@ -167,7 +167,7 @@ GetState()
     //             root_linvel / 10., root_angvel/10., positions.tail<6>(), velocities.tail<6>()/10.;
 
     double history_window = 0.3;
-    double history_interval = 0.1;
+    double history_interval = 0.05;
     int offset = (history_interval * mSimulationHz);
     int history_num = (history_window+0.001)/(history_interval)+1;
 
