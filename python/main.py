@@ -17,6 +17,7 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 
 import numpy as np
+import mcmc
 from pymss import EnvManager
 from IPython import embed
 from Model import *
@@ -65,10 +66,25 @@ class ReplayBuffer(object):
 	def Clear(self):
 		self.buffer.clear()
 
+# Add Adaptive Sampling
+MarginalTransition = namedtuple('MarginalTransition', ('sb', 'v'))
+
+class MarginalBuffer(object):
+    def __init__(self, buff_size = 10000):
+        super(MarginalBuffer, self).__init__()
+        self.buffer = deque(maxlen=buff_size)
+
+    def Push(self, *_args):
+        self.buffer.append(MarginalTransition(*_args))
+
+    def Clear(self):
+        self.buffer.clear()
+
+
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
-		self.num_slaves = 16
+		self.num_slaves = 1
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
 		self.use_device = self.env.UseDevice()
@@ -131,6 +147,26 @@ class PPO(object):
 			if use_cuda:
 				self.muscle_model.cuda()
 
+		# ===== Adaptive Sampling setting ==== #
+
+		self.use_adaptive_sampling = self.env.UseAdaptiveSampling()
+		print("use : ", self.use_adaptive_sampling)
+		if self.use_adaptive_sampling:
+			self.num_paramstate = self.env.GetNumParamState()
+			self.marginal_buffer = MarginalBuffer(10000)
+			self.marginal_model = MarginalNN(self.num_paramstate)
+			self.marginal_value_avg = 1.
+			self.marginal_learning_rate = 5e-5
+			if use_cuda:
+				self.marginal_model.cuda()
+			self.marginal_optimizer = optim.Adam(self.marginal_model.parameters(), lr=self.marginal_learning_rate)
+			self.marginal_loss = 0.0
+
+			self.InitialParamStates = []
+			self.InitialParamStates_num = 1000
+
+			self.marginal_k = 5
+
 		# ========== Common setting ========== #
 		self.num_simulation_Hz = self.env.GetSimulationHz()
 		self.num_control_Hz = self.env.GetControlHz()
@@ -139,6 +175,8 @@ class PPO(object):
 		self.max_iteration = 15000
 		self.num_evaluation = 0
 		self.rewards = []
+
+		self.save_interval = 100
 
 		self.tic = time.time()
 		self.env.Resets(True)
@@ -159,8 +197,16 @@ class PPO(object):
 
 		if self.max_return_epoch == self.num_evaluation:
 			self.muscle_model.save('../nn/max_muscle.pt')
-		if self.num_evaluation%100 == 0:
-			self.muscle_model.save('../nn/'+str(self.num_evaluation//100)+'_muscle.pt')
+		if self.num_evaluation%self.save_interval == 0:
+			self.muscle_model.save('../nn/'+str(self.num_evaluation//self.save_interval)+'_muscle.pt')
+
+	def SaveModel_Marginal(self):
+		self.marginal_model.save('../nn/current_marginal.pt')
+
+		if self.max_return_epoch == self.num_evaluation:
+			self.marginal_model.save('../nn/max_marginal.pt')
+		if self.num_evaluation%self.save_interval == 0:
+			self.marginal_model.save('../nn/'+str(self.num_evaluation//self.save_interval)+'_marginal.pt')
 
 	def LoadModel(self, path):
 		self.model.load('../nn/'+path+'.pt')
@@ -169,7 +215,12 @@ class PPO(object):
 	def LoadModel_Muscle(self,path):
 		self.muscle_model.load('../nn/'+path+'_muscle.pt')
 
+	def LoadModel_Muscle(self,path):
+		self.marginal_model.load('../nn/'+path+'_marginal.pt')
+
 	def Train(self):
+		if self.use_adaptive_sampling:
+			self.GenerateInitialStates()
 		self.GenerateTransitions()
 		self.OptimizeModel()
 
@@ -178,23 +229,62 @@ class PPO(object):
 		self.OptimizeSimulationNN()
 		if self.use_muscle:
 			self.OptimizeMuscleNN()
+		if self.use_adaptive_sampling:
+			self.OptimizeMarginalNN()
+
+	def GenerateInitialStates(self):
+		min_v = self.env.GetMinV()
+		max_v = self.env.GetMaxV()
+
+		# target distribution
+		def target_dist(x):
+			marginal_value = self.marginal_model(Tensor(x)).cpu().detach().numpy().reshape(-1)
+			p = math.exp(self.marginal_k * (1. - marginal_value/self.marginal_value_avg))
+			return p
+
+		# inverse_target distribution
+		def inverse_target_dist(x):
+			marginal_value = self.marginal_model(Tensor(x)).cpu().detach().numpy().reshape(-1)
+			p = -math.exp(self.marginal_k * (1. - marginal_value/self.marginal_value_avg))
+			return p
+
+		# proposed distribution
+		def proposed_dist(x, min_v, max_v):
+			size = x.size
+			value = np.array([np.random.uniform(min_v[i], max_v[i]) for i in range(size)])
+
+			return value
+
+		mcmc_sampler = mcmc.MetropolisHasting(self.num_paramstate, min_v, max_v, target_dist, proposed_dist)
+
+		self.InitialParamStates.clear()
+		self.InitialParamStates = mcmc_sampler.get_sample(self.InitialParamStates_num)
 
 	def GenerateTransitions(self):
 		self.total_episodes = []
+
 		states = [None]*self.num_slaves
 		actions = [None]*self.num_slaves
 		rewards = [None]*self.num_slaves
 		states_next = [None]*self.num_slaves
+
 		states = self.env.GetStates()
 
 		local_step = 0
 		terminated = [False]*self.num_slaves
 		counter = 0
 
+		for j in range(self.num_slaves):
+			if self.use_adaptive_sampling:
+				initial_state = np.float32(random.choice(self.InitialParamStates))
+				self.env.SetParamState(j, initial_state)
+			# self.env.Reset(True, j)
+
 		while True:
 			counter += 1
 			if counter%10 == 0:
 				print('SIM : {}'.format(local_step),end='\r')
+
 			a_dist,v = self.model(Tensor(states))
 			actions = a_dist.sample().cpu().detach().numpy()
 			# actions = a_dist.loc.cpu().detach().numpy()
@@ -232,6 +322,9 @@ class PPO(object):
 					self.episodes[j] = EpisodeBuffer()
 
 					self.env.Reset(True,j)
+					if self.use_adaptive_sampling:
+						initial_state = np.float32(random.choice(self.InitialParamStates))
+						self.env.SetParamState(j, initial_state)
 
 			if local_step >= self.buffer_size:
 				break
@@ -243,6 +336,9 @@ class PPO(object):
 		self.replay_buffer.Clear()
 		if self.use_muscle:
 			self.muscle_buffer.Clear()
+		if self.use_adaptive_sampling:
+			self.marginal_buffer.Clear()
+
 		self.sum_return = 0.0
 		for epi in self.total_episodes:
 			data = epi.GetData()
@@ -266,6 +362,11 @@ class PPO(object):
 
 			for i in range(size):
 				self.replay_buffer.Push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
+
+			if self.use_adaptive_sampling:
+				for i in range(size):
+					self.marginal_buffer.Push(states[i][-self.num_paramstate:], values[i])
+
 		self.num_episode = len(self.total_episodes)
 		self.num_tuple = len(self.replay_buffer.buffer)
 		print('SIM : {}'.format(self.num_tuple))
@@ -358,6 +459,37 @@ class PPO(object):
 		self.loss_muscle = loss.cpu().detach().numpy().tolist()
 		print('')
 
+	def OptimizeMarginalNN(self):
+		marginal_transitions = np.array(self.marginal_buffer.buffer, dtype = object)
+		for j in range(self.num_epochs):
+			np.random.shuffle(marginal_transitions)
+			for i in range(len(marginal_transitions)//self.batch_size):
+				transitions = marginal_transitions[i*self.batch_size:(i+1)*self.batch_size]
+				batch = MarginalTransition(*zip(*transitions))
+
+				stack_sb = np.vstack(batch.sb).astype(np.float32)
+				stack_v = np.vstack(batch.v).astype(np.float32)
+
+				v = self.marginal_model(Tensor(stack_sb))
+
+				# Marginal Loss
+				loss_marginal = ((v-Tensor(stack_v)).pow(2)).mean()
+				self.marginal_loss = loss_marginal.cpu().detach().numpy().tolist()
+				self.marginal_optimizer.zero_grad()
+				loss_marginal.backward(retain_graph=True)
+
+				for param in self.marginal_model.parameters():
+					if param.grad != None:
+						param.grad.data.clamp_(-0.5, 0.5)
+				self.marginal_optimizer.step()
+
+				# Marginal value average
+				avg_marginal = Tensor(stack_v).mean().cpu().detach().numpy().tolist()
+				self.marginal_value_avg -= self.marginal_learning_rate * (self.marginal_value_avg - avg_marginal)
+
+			print('Optimizing margin nn : {}/{}'.format(j+1, self.num_epochs), end='\r')
+		print('')
+
 	def Evaluate(self):
 		self.num_evaluation = self.num_evaluation + 1
 		h = int((time.time() - self.tic)//3600.0)
@@ -395,6 +527,9 @@ class PPO(object):
 		self.SaveModel()
 		if self.use_muscle:
 			self.SaveModel_Muscle()
+		if self.use_adaptive_sampling:
+			self.SaveModel_Marginal()
+
 		print('=============================================')
 
 		return np.array(self.rewards)
@@ -436,6 +571,7 @@ if __name__=="__main__":
 	parser.add_argument('-d','--meta',help='meta file')
 	parser.add_argument('-m','--model',help='model path')
 	parser.add_argument('-u','--muscle',help='muscle path')
+	parser.add_argument('-a','--adaptive',help='adaptive sampling path')
 
 	args =parser.parse_args()
 	if args.meta is None:
@@ -461,6 +597,16 @@ if __name__=="__main__":
 	else:
 		if ppo.use_muscle:
 			ppo.SaveModel_Muscle()
+
+	if args.adaptive is not None:
+		if ppo.use_adaptive_sampling is False:
+			print("Dont put : -a command")
+			sys.exit()
+		else:
+			ppo.LoadModel_Marginal(args.adaptive)
+	else:
+		if ppo.use_adaptive_sampling:
+			ppo.SaveModel_Marginal()
 
 	print('num states: {}, num actions: {}'.format(ppo.env.GetNumState(),ppo.env.GetNumAction()))
 

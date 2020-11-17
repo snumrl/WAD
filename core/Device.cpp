@@ -7,7 +7,7 @@ using namespace dart::dynamics;
 
 Device::
 Device()
-:mNumState(0),mNumAction(0),mNumDof(0),mNumActiveDof(0),mRootJointDof(0),mUseNN(false),mTorqueMax(0.0),qr(0.0),ql(0.0),qr_prev(0.0),ql_prev(0.0)
+:mNumState(0),mNumAction(0),mNumDof(0),mNumActiveDof(0),mRootJointDof(0),mUseNN(false),mTorqueMax(0.0),qr(0.0),ql(0.0),qr_prev(0.0),ql_prev(0.0),mNumParamState(0)
 {
     mDelta_t = 180;
     mK_ = 15.0;
@@ -171,7 +171,8 @@ GetState()
     int offset = (history_interval * mSimulationHz);
     int history_num = (history_window+0.001)/(history_interval)+1;
 
-    Eigen::VectorXd state(history_num*2+1);
+    int adaptive_dim = mNumParamState;
+    Eigen::VectorXd state(history_num*2+adaptive_dim);
 
     double scaler = mK_/2.0;
     for(int i=0; i<history_num; i++)
@@ -183,7 +184,11 @@ GetState()
         state[i*2+1] = des_torque_r/scaler;
     }
 
-    state[history_num*2] = mK_/30.0;
+    for(int i=0; i<adaptive_dim; i++)
+    {
+        state[history_num*2 + i] = mParamState[i];
+    }
+    // state[history_num*2] = mK_/30.0;
 
     return state;
 }
@@ -240,10 +245,10 @@ SetDesiredTorques2()
     double beta_Rhip = 1.0;
 
     mDeviceSignals_y.pop_back();
-    mDeviceSignals_y.push_front(mK_*y);
+    mDeviceSignals_y.push_front(y);
 
     // double torque = k_ * y_delta_t;
-    double torque = mDeviceSignals_y.at(mDelta_t);
+    double torque = mK_ * mDeviceSignals_y.at(mDelta_t);
     double des_torque_l =  1*torque*beta_L*beta_Lhip;
     double des_torque_r = -1*torque*beta_R*beta_Rhip;
 
@@ -301,4 +306,52 @@ GetSignals(int idx)
         return mDeviceSignals_R;
     else if(idx==2)
         return mDeviceSignals_y;
+}
+
+void
+Device::
+SetNumParamState(int n)
+{
+    mNumParamState = n;
+    mParamState = Eigen::VectorXd::Zero(mNumParamState);
+}
+
+void
+Device::
+SetParamState(Eigen::VectorXd paramState)
+{
+    mParamState = paramState;
+    for(int i=0; i<paramState.size(); i++)
+    {
+        if(i==0)
+            mK_ = paramState[i] * 30.0;
+    }
+}
+
+Eigen::VectorXd
+Device::
+GetMinV()
+{
+    Eigen::VectorXd min_v(mNumParamState);
+    for(int i=0; i<min_v.size(); i++)
+    {
+        if(i==0) // k/30.0
+            min_v[i] = 0.2;
+    }
+
+    return min_v;
+}
+
+Eigen::VectorXd
+Device::
+GetMaxV()
+{
+    Eigen::VectorXd max_v(mNumParamState);
+    for(int i=0; i<max_v.size(); i++)
+    {
+        if(i==0) // k/30.0
+            max_v[i] = 1.0;
+    }
+
+    return max_v;
 }

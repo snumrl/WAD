@@ -122,7 +122,20 @@ public:
 	void SetRewards();
 	std::map<std::string, std::deque<double>> GetRewards(){return mRewards;}
 
+	double GetForceRatio(){return force_ratio;}
+	void SetForceRatio(double r);
+
+	double GetMassRatio(){return mass_ratio;}
+	void SetMassRatio(double r);
+
 	std::deque<double> GetSignals(int idx);
+
+	void SetNumParamState(int n);
+	int GetNumParamState(){return mNumParamState;}
+	void SetParamState(Eigen::VectorXd paramState);
+	Eigen::VectorXd GetParamState(){return mParamState;}
+	Eigen::VectorXd GetMinV();
+	Eigen::VectorXd GetMaxV();
 
 private:
 	dart::dynamics::SkeletonPtr mSkeleton;
@@ -155,7 +168,9 @@ private:
 
 	Eigen::Isometry3d mTc;
 	Eigen::VectorXd mKp, mKv;
+	Eigen::VectorXd defaultMass;
 	Eigen::VectorXd maxForces;
+	Eigen::VectorXd defaultForces;
 	Eigen::VectorXd mJointWeights;
 
 	Eigen::VectorXd mTargetPositions;
@@ -201,6 +216,9 @@ private:
 	dart::constraint::WeldJointConstraintPtr mWeldJoint_Hip;
     dart::constraint::WeldJointConstraintPtr mWeldJoint_LeftLeg;
     dart::constraint::WeldJointConstraintPtr mWeldJoint_RightLeg;
+
+    int mNumParamState;
+    Eigen::VectorXd mParamState;
 };
 
 };

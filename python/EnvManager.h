@@ -52,6 +52,13 @@ public:
 	np::ndarray GetMuscleTorques();
 	p::list GetMuscleTuples();
 
+	// adaptive sampling
+	bool UseAdaptiveSampling();
+	void SetParamState(int id, np::ndarray np_array);
+	int GetNumParamState();
+	np::ndarray GetMinV();
+	np::ndarray GetMaxV();
+
 private:
 	std::vector<MASS::Environment*> mEnvs;
 

@@ -49,11 +49,18 @@ public:
     // void SetSignals();
     std::deque<double> GetSignals(int idx);
 
-    void setDelta_t(int t){mDelta_t = t;}
-    void setK_(double k){mK_ = k;}
+    void SetDelta_t(int t){mDelta_t = t;}
+    int GetDelta_t(){return mDelta_t;}
 
-    int getDelta_t(){return mDelta_t;}
-    double getK_(){return mK_;}
+    void SetK_(double k){mK_ = k;}
+    double GetK_(){return mK_;}
+
+    void SetNumParamState(int n);
+    int GetNumParamState(){return mNumParamState;}
+    void SetParamState(Eigen::VectorXd paramState);
+    Eigen::VectorXd GetParamState(){return mParamState;}
+    Eigen::VectorXd GetMinV();
+    Eigen::VectorXd GetMaxV();
 
 private:
     dart::dynamics::SkeletonPtr mSkeleton;
@@ -88,6 +95,9 @@ private:
     int signal_size;
     int mDelta_t;
     double mK_;
+
+    int mNumParamState;
+    Eigen::VectorXd mParamState;
 };
 
 }

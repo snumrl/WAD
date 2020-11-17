@@ -12,9 +12,9 @@ using namespace MASS;
 
 Character::
 Character()
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mNumParamState(0)
 {
-	force_ratio = 1.0;
+	force_ratio = 0.8;
 	mass_ratio = 1.0;
 }
 
@@ -57,6 +57,15 @@ LoadSkeleton(const std::string& path,bool create_obj)
 		{
 			bvh_map.insert(std::make_pair(node->Attribute("name"),joint_elem->Attribute("bvh")));
 		}
+	}
+
+	int body_num = mSkeleton->getNumBodyNodes();
+	defaultMass = Eigen::VectorXd::Zero(body_num);
+	for(int i=0; i<body_num; i++)
+	{
+		dart::dynamics::BodyNode* body = mSkeleton->getBodyNode(i);
+		double mass = body->getMass();
+		defaultMass[i] = mass;
 	}
 
 	mBVH = new BVH(mSkeleton, bvh_map);
@@ -334,6 +343,7 @@ Initialize_MaxForces()
 {
 	int dof = mSkeleton->getNumDofs();
 	maxForces.resize(dof);
+	defaultForces.resize(dof);
 
 	// for(int i=0; i<6; i++)
 	// 	maxForces[i] = 0;
@@ -363,7 +373,7 @@ Initialize_MaxForces()
 	// 		200,				//ForeArm R
 	// 		200, 200, 200;		//Hand R
 
-	maxForces <<
+	defaultForces <<
 			0, 0, 0, 0, 0, 0,	//pelvis
 			200, 100, 150,		//Femur L
 			100,				//Tibia L
@@ -386,7 +396,7 @@ Initialize_MaxForces()
 			30,					//ForeArm R
 			30, 30, 30;			//Hand R
 
-	maxForces *= force_ratio;
+	maxForces = force_ratio * defaultForces;
 
 	// maxForces <<
 	// 		0, 0, 0, 0, 0, 0,	//pelvis
@@ -687,7 +697,8 @@ GetState_Character()
 		idx_angv_diff += 3;
 	}
 
-	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows());
+	int adaptive_dim = mNumParamState;
+	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+adaptive_dim);
 	// Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+1);
 
 	// double phase = this->GetPhase();
@@ -695,7 +706,10 @@ GetState_Character()
 	mSkeleton->setVelocities(cur_vel);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
-	state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
+	if(adaptive_dim > 0)
+		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,mParamState;
+	else
+		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
 	// state<<pos,ori,lin_v,ang_v,phase;
 
 	return state;
@@ -876,12 +890,11 @@ GetReward_Character()
 	imit_reward = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward;
 	double r_imitation = imit_reward;
 
-	min_reward = this->GetTorqueReward();
-	double r_torque_min = min_reward;
+	// min_reward = this->GetTorqueReward();
+	// double r_torque_min = min_reward;
 
-	double r_ = 0.9*r_imitation + 0.1*r_torque_min;
 	// double r_ = 0.9*r_imitation + 0.1*r_torque_min;
-	// double r_ = r_imitation;
+	double r_ = r_imitation;
 
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
@@ -1173,6 +1186,87 @@ Off_Device()
 
 void
 Character::
+SetForceRatio(double r)
+{
+	force_ratio = r;
+	maxForces = force_ratio * defaultForces;
+}
+
+void
+Character::
+SetMassRatio(double r)
+{
+	mass_ratio = r;
+	int body_num = mSkeleton->getNumBodyNodes();
+	for(int i=0; i<body_num; i++)
+	{
+		dart::dynamics::BodyNode* body = mSkeleton->getBodyNode(i);
+
+		dart::dynamics::Inertia inertia;
+
+		auto shape = body->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get();
+		double mass = mass_ratio * defaultMass[i];
+		inertia.setMass(mass);
+		inertia.setMoment(shape->computeInertia(mass));
+		body->setInertia(inertia);
+	}
+}
+
+void
+Character::
+SetNumParamState(int n)
+{
+	mNumParamState = n;
+	mParamState = Eigen::VectorXd::Zero(mNumParamState);
+}
+
+void
+Character::
+SetParamState(Eigen::VectorXd paramState)
+{
+	mParamState = paramState;
+	for(int i=0; i<paramState.size(); i++)
+	{
+		if(i==0)
+		{
+			force_ratio = paramState[i];
+			maxForces = force_ratio * defaultForces;
+			// for(int i=0; i<maxForces.size(); i++)
+			// 	maxForces[i] = force_ratio * defaultForces[i];
+		}
+	}
+}
+
+Eigen::VectorXd
+Character::
+GetMinV()
+{
+	Eigen::VectorXd min_v(mNumParamState);
+	for(int i=0; i<min_v.size(); i++)
+	{
+		if(i==0)
+			min_v[i] = 0.2;
+	}
+
+	return min_v;
+}
+
+Eigen::VectorXd
+Character::
+GetMaxV()
+{
+	Eigen::VectorXd max_v(mNumParamState);
+	for(int i=0; i<max_v.size(); i++)
+	{
+		if(i==0)
+			max_v[i] = 0.8;
+	}
+
+	return max_v;
+}
+
+void
+Character::
 SetRewards()
 {
 	(mRewards.find("reward")->second).pop_back();
@@ -1191,7 +1285,6 @@ SetRewards()
 	(mRewards.find("imit")->second).push_front(imit_reward);
 	(mRewards.find("min")->second).pop_back();
 	(mRewards.find("min")->second).push_front(min_reward);
-
 }
 
 void

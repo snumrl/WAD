@@ -79,6 +79,15 @@ Initialize(const std::string& meta_file, bool load_obj)
 			else
 				this->SetUseDeviceNN(false);
 		}
+		else if(!index.compare("use_adaptive_sampling"))
+		{
+			std::string str2;
+			ss>>str2;
+			if(!str2.compare("true"))
+				this->SetUseAdaptiveSampling(true);
+			else
+				this->SetUseAdaptiveSampling(false);
+		}
 		else if(!index.compare("con_hz")){
 			int hz;
 			ss>>hz;
@@ -115,6 +124,17 @@ Initialize(const std::string& meta_file, bool load_obj)
 				cyclic = true;
 			character->LoadBVH(std::string(MASS_ROOT_DIR)+str2,cyclic);
 		}
+		else if(!index.compare("character_param")){
+			int numParamState;
+			ss>>numParamState;
+			character->SetNumParamState(numParamState);
+		}
+		else if(!index.compare("device_param")){
+			int numParamState;
+			ss>>numParamState;
+			if(mUseDevice)
+				device->SetNumParamState(numParamState);
+		}
 	}
 	ifs.close();
 
@@ -149,6 +169,14 @@ Initialize()
 
 		mCharacter->SetDevice(mDevice);
 		mCharacter->SetConstraints();
+	}
+
+	if(mUseAdaptiveSampling)
+	{
+		int numParamState = mCharacter->GetNumParamState();
+		if(mUseDevice)
+			numParamState += mDevice->GetNumParamState();
+		this->SetNumParamState(numParamState);
 	}
 
 	mGround = MASS::BuildFromFile(std::string(MASS_ROOT_DIR)+std::string("/data/ground.xml"));
@@ -215,6 +243,80 @@ IsEndOfEpisode()
 		isTerminal =true;
 
 	return isTerminal;
+}
+
+void
+Environment::
+SetParamState(Eigen::VectorXd paramState)
+{
+	int paramState_Char = mCharacter->GetNumParamState();
+	mCharacter->SetParamState(paramState.segment(0,paramState_Char));
+
+	if(mUseDevice)
+	{
+		int paramState_Device = mDevice->GetNumParamState();
+		mDevice->SetParamState(paramState.segment(paramState_Char,paramState_Device));
+	}
+}
+
+Eigen::VectorXd
+Environment::
+GetParamState()
+{
+	int param_dim = 0;
+	int char_dim = mCharacter->GetNumParamState();
+	int device_dim = mDevice->GetNumParamState();
+
+	param_dim += char_dim;
+	if(mUseDevice)
+		param_dim += device_dim;
+
+	Eigen::VectorXd paramState(param_dim);
+	paramState << mCharacter->GetParamState();
+	if(mUseDevice)
+		paramState << mCharacter->GetParamState(),mDevice->GetParamState();
+
+	return paramState;
+}
+
+Eigen::VectorXd
+Environment::
+GetMinV()
+{
+	int param_dim = 0;
+	int char_dim = mCharacter->GetNumParamState();
+	int device_dim = mDevice->GetNumParamState();
+
+	param_dim += char_dim;
+	if(mUseDevice)
+		param_dim += device_dim;
+
+	Eigen::VectorXd min_v(param_dim);
+	min_v << mCharacter->GetMinV();
+	if(mUseDevice)
+		min_v << mCharacter->GetMinV(),mDevice->GetMinV();
+
+	return min_v;
+}
+
+Eigen::VectorXd
+Environment::
+GetMaxV()
+{
+	int param_dim = 0;
+	int char_dim = mCharacter->GetNumParamState();
+	int device_dim = mDevice->GetNumParamState();
+
+	param_dim += char_dim;
+	if(mUseDevice)
+		param_dim += device_dim;
+
+	Eigen::VectorXd max_v(param_dim);
+	max_v << mCharacter->GetMaxV();
+	if(mUseDevice)
+		max_v << mCharacter->GetMaxV(),mDevice->GetMaxV();
+
+	return max_v;
 }
 
 void

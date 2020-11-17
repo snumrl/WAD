@@ -329,6 +329,41 @@ GetMuscleTuples()
 
 	return all;
 }
+
+bool
+EnvManager::UseAdaptiveSampling()
+{
+	return mEnvs[0]->GetUseAdaptiveSampling();
+}
+
+void
+EnvManager::
+SetParamState(int id, np::ndarray np_array)
+{
+	mEnvs[id]->SetParamState(toEigenVector(np_array));
+}
+
+int
+EnvManager::
+GetNumParamState()
+{
+	return mEnvs[0]->GetNumParamState();
+}
+
+np::ndarray
+EnvManager::
+GetMinV()
+{
+	return toNumPyArray(mEnvs[0]->GetMinV());
+}
+
+np::ndarray
+EnvManager::
+GetMaxV()
+{
+	return toNumPyArray(mEnvs[0]->GetMaxV());
+}
+
 using namespace boost::python;
 
 BOOST_PYTHON_MODULE(pymss)
@@ -369,5 +404,10 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("GetNumTotalMuscleRelatedDofs",&EnvManager::GetNumTotalMuscleRelatedDofs)
 		.def("GetNumMuscles",&EnvManager::GetNumMuscles)
 		.def("GetMuscleTorques",&EnvManager::GetMuscleTorques)
-		.def("GetMuscleTuples",&EnvManager::GetMuscleTuples);
+		.def("GetMuscleTuples",&EnvManager::GetMuscleTuples)
+		.def("UseAdaptiveSampling", &EnvManager::UseAdaptiveSampling)
+		.def("SetParamState", &EnvManager::SetParamState)
+		.def("GetNumParamState", &EnvManager::GetNumParamState)
+		.def("GetMinV", &EnvManager::GetMinV)
+		.def("GetMaxV", &EnvManager::GetMaxV);
 }
