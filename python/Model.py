@@ -139,7 +139,7 @@ class SimulationNN(nn.Module):
 		v_out = F.relu(self.v_fc2(v_out))
 		v_out = self.v_fc3(v_out)
 
-		return p_out,v_out
+		return p_out, v_out
 
 	def load(self,path):
 		print('load simulation nn {}'.format(path))

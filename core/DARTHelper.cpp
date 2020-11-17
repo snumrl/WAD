@@ -246,9 +246,10 @@ Eigen::Matrix3d string_to_matrix3d(const std::string& input){
 
 	return res;
 }
+
 dart::dynamics::SkeletonPtr
 MASS::
-BuildFromFile(const std::string& path,bool create_obj)
+BuildFromFile(const std::string& path,bool create_obj,double mass_ratio)
 {
 	TiXmlDocument doc;
 	if(!doc.LoadFile(path)){
@@ -272,6 +273,7 @@ BuildFromFile(const std::string& path,bool create_obj)
 		TiXmlElement* body = node->FirstChildElement("Body");
 		std::string type = body->Attribute("type");
 		double mass = std::stod(body->Attribute("mass"));
+		mass *= mass_ratio;
 
 		std::string obj_file = "None";
 		if(body->Attribute("obj"))
@@ -305,7 +307,6 @@ BuildFromFile(const std::string& path,bool create_obj)
 		Eigen::Vector4d color = Eigen::Vector4d::Constant(0.0);
 		if(body->Attribute("color")!=nullptr)
 			color = string_to_vector4d(body->Attribute("color"));
-		// color[3] = 0.8;
 
 		dart::dynamics::Inertia inertia = MakeInertia(shape, mass);
 

@@ -14,6 +14,8 @@ Character::
 Character()
 	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false)
 {
+	force_ratio = 1.0;
+	mass_ratio = 1.0;
 }
 
 Character::
@@ -34,7 +36,7 @@ void
 Character::
 LoadSkeleton(const std::string& path,bool create_obj)
 {
-	mSkeleton = BuildFromFile(path,create_obj);
+	mSkeleton = BuildFromFile(path,create_obj,mass_ratio);
 	std::map<std::string,std::string> bvh_map;
 	TiXmlDocument doc;
 	doc.LoadFile(path);
@@ -384,8 +386,7 @@ Initialize_MaxForces()
 			30,					//ForeArm R
 			30, 30, 30;			//Hand R
 
-	double energy_ratio = 1.0;
-	maxForces *= energy_ratio;
+	maxForces *= force_ratio;
 
 	// maxForces <<
 	// 		0, 0, 0, 0, 0, 0,	//pelvis
@@ -466,13 +467,12 @@ Reset()
 	mSkeleton->clearExternalForces();
 
 	double worldTime = mWorld->getTime();
-
 	this->SetTargetPosAndVel(worldTime, mControlHz);
 
-	// mSkeleton->setPositions(mTargetPositions);
-	// mSkeleton->setVelocities(mTargetVelocities);
-	mSkeleton->setPositions(mTargetPositionsNoise);
-	mSkeleton->setVelocities(mTargetVelocitiesNoise);
+	mSkeleton->setPositions(mTargetPositions);
+	mSkeleton->setVelocities(mTargetVelocities);
+	// mSkeleton->setPositions(mTargetPositionsNoise);
+	// mSkeleton->setVelocities(mTargetVelocitiesNoise);
 	mSkeleton->computeForwardKinematics(true,false,false);
 
 	mDesiredTorque.setZero();
@@ -869,7 +869,6 @@ GetReward_Character()
 
 	pose_reward = exp(-err_scale * pose_scale * pose_err);
 	vel_reward = exp(-err_scale * vel_scale * vel_err);
-	// vel_reward = 1.0;
 	end_eff_reward = exp(-err_scale * end_eff_scale * end_eff_err);
 	root_reward = exp(-err_scale * root_scale * root_err);
 	com_reward = exp(-err_scale * com_scale * com_err);
@@ -881,6 +880,7 @@ GetReward_Character()
 	double r_torque_min = min_reward;
 
 	double r_ = 0.9*r_imitation + 0.1*r_torque_min;
+	// double r_ = 0.9*r_imitation + 0.1*r_torque_min;
 	// double r_ = r_imitation;
 
 	mSkeleton->setPositions(cur_pos);
@@ -895,82 +895,24 @@ Character::
 GetTorqueReward()
 {
 	std::vector<std::deque<double>> ts = mTorques->GetTorques();
-
 	int idx = 0;
 	double sum = 0.0;
 	for(int i=6; i<maxForces.size(); i++)
 	{
-		if(fabs(ts[i].at(0)) > 0.4*maxForces[i])
-			sum += 1.0;
+		double ratio = fabs(ts[i].at(0))/maxForces[i];
+		if(ratio > 0.4)
+			sum += ratio;
 		idx++;
 	}
-
+	// for(int i=6; i<maxForces.size(); i++)
+	// {
+	// 	if(fabs(ts[i].at(0)) > 0.4*maxForces[i])
+	// 		sum += 1.0;
+	// 	idx++;
+	// }
 	sum /= (double)(idx);
 
 	return -10.0 * sum;
-
-	// double violation = 0.0;
-	// if(fabs(ts[6].at(0)) > 0.9*maxForces[6])
-	// 	violation += 1.0;
-	// if(fabs(ts[9].at(0)) > 0.9*maxForces[9])
-	// 	violation += 1.0;
-	// if(fabs(ts[10].at(0)) > 0.9*maxForces[10])
-	// 	violation += 1.0;
-	// if(fabs(ts[15].at(0)) > 0.9*maxForces[15])
-	// 	violation += 1.0;
-	// if(fabs(ts[18].at(0)) > 0.9*maxForces[18])
-	// 	violation += 1.0;
-	// if(fabs(ts[19].at(0)) > 0.9*maxForces[19])
-	// 	violation += 1.0;
-
-	// return -1 * violation;
-
-	// int idx = 0;
-	// double sum = 0.0;
-	// sum += fabs(ts[6].at(0)) /maxForces[6];
-	// sum += fabs(ts[9].at(0)) /maxForces[9];
-	// sum += fabs(ts[10].at(0))/maxForces[10];
-	// sum += fabs(ts[15].at(0))/maxForces[15];
-	// sum += fabs(ts[18].at(0))/maxForces[18];
-	// sum += fabs(ts[19].at(0))/maxForces[19];
-	// idx = 6;
-	// for(int i=6; i<22; i++)
-	// {
-	// 	if(i==13 || i==14)
-	// 		continue;
-
-	// 	sum += fabs(ts[i].at(0))/maxForces[i];
-	// 	idx++;
-	// }
-
-	// sum /= (double)(idx);
-	// return 0.5 * (1.0 - sum);
-	// return exp(-1.0 * 5.0 * sum);
-
-
-	// int cycle_step = 680;
-
-	// std::vector<std::deque<double>> ts = mTorques->GetTorques();
-
-	// int idx = 0;
-	// for(int i=6; i<22; i++)
-	// {
-	// 	if(i==13 || i==14)
-	// 		continue;
-
-	// 	mTotalTorques -= fabs(ts[i].at(cycle_step));
-	// 	mTotalTorques += fabs(ts[i].at(0));
-	// 	idx++;
-	// }
-
-	// double mTotalTorques_ = mTotalTorques;
- //    mTotalTorques_ /= (double)(idx);
- //    mTotalTorques_ /= (double)(cycle_step);
- //    mTotalTorques_ /= (double)(1820.0);
-	// mTotalTorques_
-	// // std::cout << "torques : " << mTotalTorques_ << std::endl;
-
-	// return exp(-1.0 * 40.0 * mTotalTorques_);
 }
 
 void
@@ -1068,7 +1010,6 @@ Character::
 GetTargetPosAndVel(double t,double dt)
 {
 	double cycleTime = mBVH->GetMaxTime();
-	// std::cout << "time : " << cycleTime << std::endl;
 	int cycleCount = (int)(t/cycleTime);
 	double frameTime = t;
 	if(mBVH->IsCyclic())

@@ -136,7 +136,7 @@ class PPO(object):
 		self.num_control_Hz = self.env.GetControlHz()
 		self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
 
-		self.max_iteration = 10000
+		self.max_iteration = 15000
 		self.num_evaluation = 0
 		self.rewards = []
 
@@ -186,6 +186,7 @@ class PPO(object):
 		rewards = [None]*self.num_slaves
 		states_next = [None]*self.num_slaves
 		states = self.env.GetStates()
+
 		local_step = 0
 		terminated = [False]*self.num_slaves
 		counter = 0
@@ -300,9 +301,9 @@ class PPO(object):
 				surrogate1 = ratio * stack_gae
 				surrogate2 = torch.clamp(ratio,min =1.0-self.clip_ratio,max=1.0+self.clip_ratio) * stack_gae
 				loss_actor = - torch.min(surrogate1,surrogate2).mean()
+
 				'''Entropy Loss'''
 				loss_entropy = - self.w_entropy * a_dist.entropy().mean()
-
 
 				self.loss_actor = loss_actor.cpu().detach().numpy().tolist()
 				self.loss_critic = loss_critic.cpu().detach().numpy().tolist()
@@ -329,8 +330,7 @@ class PPO(object):
 				stack_JtA = np.vstack(batch.JtA).astype(np.float32)
 				stack_tau_des = np.vstack(batch.tau_des).astype(np.float32)
 				stack_L = np.vstack(batch.L).astype(np.float32)
-
-				stack_L = stack_L.reshape(self.muscle_batch_size,self.num_action,self.num_muscles)
+				stack_L = stack_L.reshape(self.muscle_batch_size, self.num_action, self.num_muscles)
 				stack_b = np.vstack(batch.b).astype(np.float32)
 
 				stack_JtA = Tensor(stack_JtA)

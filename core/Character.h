@@ -192,6 +192,9 @@ private:
     double imit_reward;
     double min_reward;
 
+    double force_ratio;
+    double mass_ratio;
+
 	MuscleTuple mCurrentMuscleTuple;
 	std::vector<MuscleTuple> mMuscleTuples;
 

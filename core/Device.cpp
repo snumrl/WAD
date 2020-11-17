@@ -171,7 +171,7 @@ GetState()
     int offset = (history_interval * mSimulationHz);
     int history_num = (history_window+0.001)/(history_interval)+1;
 
-    Eigen::VectorXd state(history_num*2);
+    Eigen::VectorXd state(history_num*2+1);
 
     double scaler = mK_/2.0;
     for(int i=0; i<history_num; i++)
@@ -182,6 +182,8 @@ GetState()
         state[i*2] = des_torque_l/scaler;
         state[i*2+1] = des_torque_r/scaler;
     }
+
+    state[history_num*2] = mK_/30.0;
 
     return state;
 }
