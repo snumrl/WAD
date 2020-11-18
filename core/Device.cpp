@@ -171,22 +171,25 @@ GetState()
     int offset = (history_interval * mSimulationHz);
     int history_num = (history_window+0.001)/(history_interval)+1;
 
-    int adaptive_dim = mNumParamState;
-    Eigen::VectorXd state(history_num*2+adaptive_dim);
+    int parameter_num = mNumParamState;
+    Eigen::VectorXd state(history_num*2+parameter_num);
 
-    double scaler = mK_/2.0;
+    double scaler = 2.0;
     for(int i=0; i<history_num; i++)
     {
-        double torque = mDeviceSignals_y.at(mDelta_t + i*offset);
+        double signal_y = mDeviceSignals_y.at(mDelta_t + i*offset);
+        double torque = mK_ * signal_y;
         double des_torque_l =  1*torque;
         double des_torque_r = -1*torque;
-        state[i*2] = des_torque_l/scaler;
-        state[i*2+1] = des_torque_r/scaler;
+
+        state[i*2] = signal_y * scaler;
+        state[i*2+1] = -signal_y * scaler;
     }
 
-    for(int i=0; i<adaptive_dim; i++)
+    for(int i=0; i<parameter_num; i++)
     {
-        state[history_num*2 + i] = mParamState[i];
+        // state[history_num*2 + i] = mParamState[i];
+        state[history_num*2 + i] = mK_/30.0;
     }
     // state[history_num*2] = mK_/30.0;
 
@@ -306,6 +309,14 @@ GetSignals(int idx)
         return mDeviceSignals_R;
     else if(idx==2)
         return mDeviceSignals_y;
+}
+
+void
+Device::
+SetK_(double k)
+{
+    mK_ = k;
+    mParamState[0] = mK_/30.0;
 }
 
 void

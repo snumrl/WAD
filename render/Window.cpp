@@ -57,7 +57,7 @@ Eigen::Vector4d blue(0.2, 0.2, 0.8, 1.0);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0),mParamMode(0)
 {
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
@@ -230,6 +230,66 @@ Param3(int idx)
 
 void
 Window::
+ParamChange(bool b)
+{
+	if(b)
+	{
+		if(mParamMode == 1)
+		{
+			double m_ratio = mEnv->GetCharacter()->GetMassRatio();
+			m_ratio += 0.10;
+			if(m_ratio > 1.5)
+				m_ratio = 1.5;
+			mEnv->GetCharacter()->SetMassRatio(m_ratio);
+		}
+		else if(mParamMode == 2)
+		{
+			double f_ratio = mEnv->GetCharacter()->GetForceRatio();
+			f_ratio += 0.05;
+			if(f_ratio > 0.8)
+				f_ratio = 0.8;
+			mEnv->GetCharacter()->SetForceRatio(f_ratio);
+		}
+		else if(mParamMode ==3)
+		{
+			double k_ = mEnv->GetDevice()->GetK_();
+			k_ += 1.0;
+			if(k_ > 30.0)
+				k_ = 30.0;
+			mEnv->GetDevice()->SetK_(k_);
+		}
+	}
+	else
+	{
+		if(mParamMode == 1)
+		{
+			double m_ratio = mEnv->GetCharacter()->GetMassRatio();
+			m_ratio -= 0.10;
+			if(m_ratio < 0.5001)
+				m_ratio = 0.5;
+			mEnv->GetCharacter()->SetMassRatio(m_ratio);
+		}
+		else if(mParamMode == 2)
+		{
+			double f_ratio = mEnv->GetCharacter()->GetForceRatio();
+			f_ratio -= 0.05;
+			if(f_ratio < 0.2001)
+				f_ratio = 0.2;
+			mEnv->GetCharacter()->SetForceRatio(f_ratio);
+		}
+		else if(mParamMode ==3)
+		{
+			double k_ = mEnv->GetDevice()->GetK_();
+			k_ -= 1.0;
+			if(k_ < 6)
+				k_ = 6;
+			mEnv->GetDevice()->SetK_(k_);
+		}
+	}
+}
+
+void
+Window::
 keyboard(unsigned char _key, int _x, int _y)
 {
 	double f_ = 0.0;
@@ -250,12 +310,17 @@ keyboard(unsigned char _key, int _x, int _y)
 		break;
 	case '\t': mGraphMode = (mGraphMode+1)%6;break;
 	case '`' : mCharacterMode = (mCharacterMode+1)%2; break;
-	case '1' : Param1(1); break;
-	case '2' : Param1(2); break;
-	case '3' : Param2(3); break;
-	case '4' : Param2(4); break;
-	case '5' : Param3(5); break;
-	case '6' : Param3(6); break;
+	case '1' : mParamMode = 1; break;
+	case '2' : mParamMode = 2; break;
+	case '3' : mParamMode = 3; break;
+	case '+' : ParamChange(true); break;
+	case '-' : ParamChange(false); break;
+	// case '1' : Param1(1); break;
+	// case '2' : Param1(2); break;
+	// case '3' : Param2(3); break;
+	// case '4' : Param2(4); break;
+	// case '5' : Param3(5); break;
+	// case '6' : Param3(6); break;
 	case 27 : exit(0);break;
 	default:
 		Win3D::keyboard(_key,_x,_y);break;
@@ -277,9 +342,6 @@ Window::
 Reset()
 {
 	mEnv->Reset();
-	std::cout << "Mass : " << mEnv->GetCharacter()->GetMassRatio() << std::endl;
-	std::cout << "Force : " << mEnv->GetCharacter()->GetForceRatio() << std::endl;
-	std::cout << "K : " << mEnv->GetDevice()->GetK_() << std::endl;
 }
 
 void

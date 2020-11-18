@@ -86,6 +86,7 @@ public:
 	void Param1(int idx);
 	void Param2(int idx);
 	void Param3(int idx);
+	void ParamChange(bool b);
 
 private:
 
@@ -109,6 +110,7 @@ private:
 	bool isDrawDevice;
 	int mGraphMode;
 	int mCharacterMode;
+	int mParamMode;
 
 	GLint oldMode;
 	Eigen::Affine3d mViewMatrix;

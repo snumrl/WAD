@@ -52,7 +52,7 @@ public:
     void SetDelta_t(int t){mDelta_t = t;}
     int GetDelta_t(){return mDelta_t;}
 
-    void SetK_(double k){mK_ = k;}
+    void SetK_(double k);
     double GetK_(){return mK_;}
 
     void SetNumParamState(int n);

@@ -150,7 +150,6 @@ class PPO(object):
 		# ===== Adaptive Sampling setting ==== #
 
 		self.use_adaptive_sampling = self.env.UseAdaptiveSampling()
-		print("use : ", self.use_adaptive_sampling)
 		if self.use_adaptive_sampling:
 			self.num_paramstate = self.env.GetNumParamState()
 			self.marginal_buffer = MarginalBuffer(10000)

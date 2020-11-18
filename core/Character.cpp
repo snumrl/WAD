@@ -707,7 +707,8 @@ GetState_Character()
 	mSkeleton->computeForwardKinematics(true, false, false);
 
 	if(adaptive_dim > 0)
-		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,mParamState;
+		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,force_ratio;
+		// state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,mParamState;
 	else
 		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
 	// state<<pos,ori,lin_v,ang_v,phase;
@@ -1190,6 +1191,8 @@ SetForceRatio(double r)
 {
 	force_ratio = r;
 	maxForces = force_ratio * defaultForces;
+
+	mParamState[0] = force_ratio;
 }
 
 void
@@ -1201,15 +1204,15 @@ SetMassRatio(double r)
 	for(int i=0; i<body_num; i++)
 	{
 		dart::dynamics::BodyNode* body = mSkeleton->getBodyNode(i);
-
 		dart::dynamics::Inertia inertia;
-
 		auto shape = body->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get();
 		double mass = mass_ratio * defaultMass[i];
 		inertia.setMass(mass);
 		inertia.setMoment(shape->computeInertia(mass));
 		body->setInertia(inertia);
 	}
+
+	mParamState[0] = mass_ratio;
 }
 
 void
@@ -1227,12 +1230,13 @@ SetParamState(Eigen::VectorXd paramState)
 	mParamState = paramState;
 	for(int i=0; i<paramState.size(); i++)
 	{
-		if(i==0)
+		if(i==0) // Force
 		{
-			force_ratio = paramState[i];
-			maxForces = force_ratio * defaultForces;
-			// for(int i=0; i<maxForces.size(); i++)
-			// 	maxForces[i] = force_ratio * defaultForces[i];
+			this->SetForceRatio(paramState[i]);
+		}
+		else if(i==1) // Mass
+		{
+			this->SetMassRatio(paramState[i]);
 		}
 	}
 }
