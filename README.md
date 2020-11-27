@@ -75,7 +75,7 @@ make -j8
 
 - Run python code (Learning code)
 ```bash
-cd ../pymss
+cd ../WAD
 source /path/to/virtualenv/
 python3 main.py --option --path
 ```
