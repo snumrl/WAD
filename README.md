@@ -3,7 +3,7 @@
 
 ## Abstract
 
-This codes is about the research "Walking Assistive Device"
+This code is about the research "Walking Assistive Device"
 
 ## How to install
 
