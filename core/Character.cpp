@@ -1143,7 +1143,7 @@ SetForceRatio(double r)
 	force_ratio = r;
 	mMaxForces = force_ratio * mDefaultForces;
 
-	mParamState[0] = force_ratio;
+	mParamState[1] = force_ratio;
 }
 
 void
@@ -1209,9 +1209,11 @@ Character::
 SetAdaptiveParams(std::string name, double lower, double upper)
 {
 	if(name == "mass"){
+		this->SetMassRatio(lower);
 		this->SetMinMaxV(0, lower, upper);
 	}
 	else if(name == "force"){
+		this->SetForceRatio(lower);
 		this->SetMinMaxV(1, lower, upper);
 	}
 }
@@ -1279,18 +1281,19 @@ SetTorques(const Eigen::VectorXd& desTorques)
 	}
 
 	double sum = 0;
-	// sum += fabs(desTorques[6]);
-	// sum += fabs(desTorques[9]);
-	// sum += fabs(desTorques[10]);
-	// sum += fabs(desTorques[15]);
-	// sum += fabs(desTorques[18]);
-	// sum += fabs(desTorques[19]);
 	sum += desTorques.segment(6,3).norm();
 	sum += fabs(desTorques[9]);
 	sum += desTorques.segment(10,3).norm();
 	sum += desTorques.segment(15,3).norm();
 	sum += fabs(desTorques[18]);
 	sum += desTorques.segment(19,3).norm();
+
+	// sum += fabs(desTorques[6]);
+	// sum += fabs(desTorques[9]);
+	// sum += fabs(desTorques[10]);
+	// sum += fabs(desTorques[15]);
+	// sum += fabs(desTorques[18]);
+	// sum += fabs(desTorques[19]);
 
 	mTorques_dofs[0].pop_back();
 	mTorques_dofs[0].push_front(sum);

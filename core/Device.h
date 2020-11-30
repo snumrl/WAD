@@ -49,7 +49,7 @@ public:
     // void SetSignals();
     std::deque<double> GetSignals(int idx);
 
-    void SetDelta_t(int t){mDelta_t = t;}
+    void SetDelta_t(double t);
     int GetDelta_t(){return mDelta_t;}
 
     void SetK_(double k);
@@ -97,6 +97,7 @@ private:
     int signal_size;
     int mDelta_t;
     double mK_;
+    double mK_scaler;
 
     int mNumParamState;
     Eigen::VectorXd mParamState;

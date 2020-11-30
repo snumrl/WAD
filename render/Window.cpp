@@ -187,8 +187,8 @@ ParamChange(bool b)
 		{
 			double f_ratio = mEnv->GetCharacter()->GetForceRatio();
 			f_ratio += 0.05;
-			if(f_ratio > 0.8)
-				f_ratio = 0.8;
+			if(f_ratio > 1.0)
+				f_ratio = 1.0;
 			mEnv->GetCharacter()->SetForceRatio(f_ratio);
 		}
 		else if(mParamMode ==3)

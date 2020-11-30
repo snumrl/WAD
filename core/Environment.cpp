@@ -154,6 +154,12 @@ Initialize(const std::string& meta_file, bool load_obj)
 			if(mUseAdaptiveSampling && mUseDevice)
 				device->SetAdaptiveParams("k", lower, upper);
 		}
+		else if(!index.compare("delta_t")){
+			double lower, upper;
+			ss>>lower>>upper;
+			if(mUseAdaptiveSampling && mUseDevice)
+				device->SetAdaptiveParams("delta_t", lower, upper);
+		}
 	}
 	ifs.close();
 	this->SetCharacter(character);

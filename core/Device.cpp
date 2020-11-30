@@ -11,6 +11,7 @@ Device()
 {
     mDelta_t = 180;
     mK_ = 15.0;
+    mK_scaler = 30.0;
 }
 
 Device::
@@ -187,10 +188,7 @@ GetState()
     }
 
     for(int i=0; i<parameter_num; i++)
-    {
         state[history_num*2 + i] = mParamState[i];
-        // state[history_num*2 + i] = mK_/30.0;
-    }
     // state[history_num*2] = mK_/30.0;
 
     return state;
@@ -316,7 +314,15 @@ Device::
 SetK_(double k)
 {
     mK_ = k;
-    mParamState[0] = mK_/30.0;
+    mParamState[0] = k/mK_scaler;
+}
+
+void
+Device::
+SetDelta_t(double t)
+{
+    mDelta_t = t * 600.0;
+    mParamState[1] = t;
 }
 
 void
@@ -337,7 +343,9 @@ SetParamState(Eigen::VectorXd paramState)
     for(int i=0; i<paramState.size(); i++)
     {
         if(i==0)
-            mK_ = paramState[i] * 30.0;
+            this->SetK_(paramState[i]);
+        else if(i==1)
+            this->SetDelta_t(paramState[i]);
     }
 }
 
@@ -346,6 +354,7 @@ Device::
 SetMinMaxV(int idx, double lower, double upper)
 {
     // 0 : k
+    // 1 : delta t
     mMin_v[idx] = lower;
     mMax_v[idx] = upper;
 }
@@ -355,6 +364,11 @@ Device::
 SetAdaptiveParams(std::string name, double lower, double upper)
 {
     if(name == "k"){
+        this->SetK_(lower*mK_scaler);
         this->SetMinMaxV(0, lower, upper);
+    }
+    else if(name == "delta_t"){
+        this->SetDelta_t(lower);
+        this->SetMinMaxV(1, lower, upper);
     }
 }
