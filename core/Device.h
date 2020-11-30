@@ -59,8 +59,10 @@ public:
     int GetNumParamState(){return mNumParamState;}
     void SetParamState(Eigen::VectorXd paramState);
     Eigen::VectorXd GetParamState(){return mParamState;}
-    Eigen::VectorXd GetMinV();
-    Eigen::VectorXd GetMaxV();
+    Eigen::VectorXd GetMinV(){return mMin_v;}
+    Eigen::VectorXd GetMaxV(){return mMax_v;}
+    void SetMinMaxV(int idx, double lower, double upper);
+    void SetAdaptiveParams(std::string name, double lower, double upper);
 
 private:
     dart::dynamics::SkeletonPtr mSkeleton;
@@ -98,6 +100,8 @@ private:
 
     int mNumParamState;
     Eigen::VectorXd mParamState;
+    Eigen::VectorXd mMin_v;
+    Eigen::VectorXd mMax_v;
 };
 
 }

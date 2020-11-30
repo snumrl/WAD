@@ -188,8 +188,8 @@ GetState()
 
     for(int i=0; i<parameter_num; i++)
     {
-        // state[history_num*2 + i] = mParamState[i];
-        state[history_num*2 + i] = mK_/30.0;
+        state[history_num*2 + i] = mParamState[i];
+        // state[history_num*2 + i] = mK_/30.0;
     }
     // state[history_num*2] = mK_/30.0;
 
@@ -325,6 +325,8 @@ SetNumParamState(int n)
 {
     mNumParamState = n;
     mParamState = Eigen::VectorXd::Zero(mNumParamState);
+    mMin_v = Eigen::VectorXd::Zero(mNumParamState);
+    mMax_v = Eigen::VectorXd::Zero(mNumParamState);
 }
 
 void
@@ -339,30 +341,20 @@ SetParamState(Eigen::VectorXd paramState)
     }
 }
 
-Eigen::VectorXd
+void
 Device::
-GetMinV()
+SetMinMaxV(int idx, double lower, double upper)
 {
-    Eigen::VectorXd min_v(mNumParamState);
-    for(int i=0; i<min_v.size(); i++)
-    {
-        if(i==0) // k/30.0
-            min_v[i] = 0.2;
-    }
-
-    return min_v;
+    // 0 : k
+    mMin_v[idx] = lower;
+    mMax_v[idx] = upper;
 }
 
-Eigen::VectorXd
+void
 Device::
-GetMaxV()
+SetAdaptiveParams(std::string name, double lower, double upper)
 {
-    Eigen::VectorXd max_v(mNumParamState);
-    for(int i=0; i<max_v.size(); i++)
-    {
-        if(i==0) // k/30.0
-            max_v[i] = 1.0;
+    if(name == "k"){
+        this->SetMinMaxV(0, lower, upper);
     }
-
-    return max_v;
 }

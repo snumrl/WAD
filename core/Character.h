@@ -103,7 +103,7 @@ public:
 	const std::vector<dart::dynamics::BodyNode*>& GetEndEffectors(){return mEndEffectors;}
 	Device* GetDevice(){return mDevice;}
 	BVH* GetBVH(){return mBVH;}
-	Eigen::VectorXd GetMaxForces(){return maxForces;}
+	Eigen::VectorXd GetMaxForces(){return mMaxForces;}
 
 	int GetNumMuscles(){return mNumMuscle;}
 	int GetNumState(){return mNumState;}
@@ -131,22 +131,21 @@ public:
 	std::deque<double> GetSignals(int idx);
 
 	void SetNumParamState(int n);
-	int GetNumParamState(){return mNumParamState;}
+	void SetMinMaxV(int idx, double lower, double upper);
+	void SetAdaptiveParams(std::string name, double lower, double upper);
 	void SetParamState(Eigen::VectorXd paramState);
+	int GetNumParamState(){return mNumParamState;}
 	Eigen::VectorXd GetParamState(){return mParamState;}
-	Eigen::VectorXd GetMinV();
-	Eigen::VectorXd GetMaxV();
+	Eigen::VectorXd GetMinV(){return mMin_v;}
+	Eigen::VectorXd GetMaxV(){return mMax_v;}
 
 private:
 	dart::dynamics::SkeletonPtr mSkeleton;
 	dart::simulation::WorldPtr mWorld;
+	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
 	BVH* mBVH;
 	Device* mDevice;
 	std::vector<Muscle*> mMuscles;
-	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
-
-	Torques* mTorques;
-	double mTotalTorques;
 
 	int mNumDof;
 	int mNumActiveDof;
@@ -155,35 +154,37 @@ private:
 	int mNumTotalRelatedDof;
 	int mNumMuscle;
 
+	int mControlHz;
+	int mSimulationHz;
+
 	bool mUseDevice;
 	bool mUseMuscle;
 	bool mOnDevice;
-
-	int mControlHz;
-	int mSimulationHz;
 
 	Eigen::VectorXd mAction;
 	Eigen::VectorXd mAction_prev;
 	Eigen::VectorXd mActivationLevels;
 
+	Eigen::VectorXd mAngVel;
+	Eigen::VectorXd mAngVel_prev;
+
 	Eigen::Isometry3d mTc;
 	Eigen::VectorXd mKp, mKv;
-	Eigen::VectorXd defaultMass;
-	Eigen::VectorXd maxForces;
-	Eigen::VectorXd defaultForces;
+
 	Eigen::VectorXd mJointWeights;
+	Eigen::VectorXd mDefaultMass;
+	Eigen::VectorXd mMaxForces;
+	Eigen::VectorXd mDefaultForces;
+
+	double mass_ratio;
+	double force_ratio;
 
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;
-
 	Eigen::VectorXd mTargetPositionsNoise;
 	Eigen::VectorXd mTargetVelocitiesNoise;
-
 	Eigen::VectorXd mDesiredTorque;
 	Eigen::VectorXd mDesiredTorque_prev;
-
-	std::deque<double> mFemurSignals_L;
-    std::deque<double> mFemurSignals_R;
 
 	double w_q,w_v,w_ee,w_com,w_character;
 	double r_q,r_v,r_ee,r_com,r_character;
@@ -195,20 +196,19 @@ private:
     std::deque<double> root_;
     std::deque<double> com_;
     std::deque<double> ee_;
+    std::deque<double> smooth_;
     std::deque<double> imit_;
     std::deque<double> min_;
 
     double mReward;
-    double pose_reward;
-    double vel_reward;
-    double end_eff_reward;
-    double root_reward;
     double com_reward;
+    double vel_reward;
+    double pose_reward;
+    double root_reward;
+    double end_eff_reward;
+    double smooth_reward;
     double imit_reward;
     double min_reward;
-
-    double force_ratio;
-    double mass_ratio;
 
 	MuscleTuple mCurrentMuscleTuple;
 	std::vector<MuscleTuple> mMuscleTuples;
@@ -217,8 +217,16 @@ private:
     dart::constraint::WeldJointConstraintPtr mWeldJoint_LeftLeg;
     dart::constraint::WeldJointConstraintPtr mWeldJoint_RightLeg;
 
+	Torques* mTorques;
+
+   	std::deque<double> mFemurSignals_L;
+    std::deque<double> mFemurSignals_R;
+
     int mNumParamState;
     Eigen::VectorXd mParamState;
+    Eigen::VectorXd mMin_v;
+    Eigen::VectorXd mMax_v;
+
 };
 
 };

@@ -57,7 +57,7 @@ Eigen::Vector4d blue(0.2, 0.2, 0.8, 1.0);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0),mParamMode(0)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0),mParamMode(0),mTalusL(false),mTalusR(false)
 {
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
@@ -68,6 +68,8 @@ Window(Environment* env)
 	mFocus = false;
 	mNNLoaded = false;
 	mOnDevice = env->GetCharacter()->GetOnDevice();
+
+	mFootinterval.resize(20);
 
 	mm = p::import("__main__");
 	mns = mm.attr("__dict__");
@@ -98,7 +100,6 @@ Window(Environment* env, const std::string& nn_path)
 	p::exec(str, mns);
 
 	nn_module = p::eval("SimulationNN(num_state,num_action)", mns);
-
 	p::object load = nn_module.attr("load");
 	load(nn_path);
 
@@ -166,66 +167,6 @@ LoadDeviceNN(const std::string& device_nn_path)
 
 	p::object load = device_nn_module.attr("load");
 	load(device_nn_path);
-}
-
-void
-Window::
-Param1(int idx)
-{
-	double m_ratio = mEnv->GetCharacter()->GetMassRatio();
-	if(idx == 1)
-	{
-		m_ratio += 0.10;
-		if(m_ratio > 1.5)
-			m_ratio = 1.5;
-	}
-	else if(idx == 2)
-	{
-		m_ratio -= 0.10;
-		if(m_ratio < 0.5001)
-			m_ratio = 0.5;
-	}
-	mEnv->GetCharacter()->SetMassRatio(m_ratio);
-}
-
-void
-Window::
-Param2(int idx)
-{
-	double f_ratio = mEnv->GetCharacter()->GetForceRatio();
-	if(idx == 3)
-	{
-		f_ratio += 0.05;
-		if(f_ratio > 0.8)
-			f_ratio = 0.8;
-	}
-	else if(idx == 4)
-	{
-		f_ratio -= 0.05;
-		if(f_ratio < 0.2001)
-			f_ratio = 0.2;
-	}
-	mEnv->GetCharacter()->SetForceRatio(f_ratio);
-}
-
-void
-Window::
-Param3(int idx)
-{
-	double k_ = mEnv->GetDevice()->GetK_();
-	if(idx == 5)
-	{
-		k_ += 1.0;
-		if(k_ > 30.0)
-			k_ = 30.0;
-	}
-	else if(idx == 6)
-	{
-		k_ -= 1.0;
-		if(k_ < 6)
-			k_ = 6;
-	}
-	mEnv->GetDevice()->SetK_(k_);
 }
 
 void
@@ -315,12 +256,6 @@ keyboard(unsigned char _key, int _x, int _y)
 	case '3' : mParamMode = 3; break;
 	case '+' : ParamChange(true); break;
 	case '-' : ParamChange(false); break;
-	// case '1' : Param1(1); break;
-	// case '2' : Param1(2); break;
-	// case '3' : Param2(3); break;
-	// case '4' : Param2(4); break;
-	// case '5' : Param3(5); break;
-	// case '6' : Param3(6); break;
 	case 27 : exit(0);break;
 	default:
 		Win3D::keyboard(_key,_x,_y);break;
@@ -341,6 +276,9 @@ void
 Window::
 Reset()
 {
+	mFootprint.clear();
+	mFootinterval.clear();
+	mFootinterval.resize(20);
 	mEnv->Reset();
 }
 
@@ -382,8 +320,52 @@ Step()
 	}
 
 	mEnv->GetReward();
+	this->SetTrajectory();
 
 	glutPostRedisplay();
+}
+
+void
+Window::
+SetTrajectory()
+{
+	const SkeletonPtr& skel = mEnv->GetCharacter()->GetSkeleton();
+	const BodyNode* talusR = skel->getBodyNode("TalusR");
+	const BodyNode* talusL = skel->getBodyNode("TalusL");
+
+	if(talusR->getCOM()[1] > 0.035)
+		mTalusR = false;
+	if(talusR->getCOM()[1] < 0.035 && !mTalusR)
+	{
+		mFootprint.push_back(talusR->getCOM());
+		int idx = mFootprint.size()-1;
+		if(idx > 0)
+		{
+			Eigen::Vector3d prev = mFootprint[idx-1];
+			Eigen::Vector3d cur = mFootprint[idx];
+			double len = (cur-prev).norm();
+			mFootinterval.pop_back();
+			mFootinterval.push_front(len);
+		}
+		mTalusR = true;
+	}
+
+	if(talusL->getCOM()[1] > 0.035)
+		mTalusL = false;
+	if(talusL->getCOM()[1] < 0.035 && !mTalusL)
+	{
+		mFootprint.push_back(talusL->getCOM());
+		int idx = mFootprint.size()-1;
+		if(idx > 0)
+		{
+			Eigen::Vector3d prev = mFootprint[idx-1];
+			Eigen::Vector3d cur = mFootprint[idx];
+			double len = (cur-prev).norm();
+			mFootinterval.pop_back();
+			mFootinterval.push_front(len);
+		}
+		mTalusL = true;
+	}
 }
 
 void
@@ -429,7 +411,10 @@ draw()
 	if(mEnv->GetUseDevice())
 		DrawDevice();
 
-	DrawParameter();
+	if(mEnv->GetNumParamState() > 0)
+		DrawParameter();
+	// DrawTrajectory();
+	// DrawStride();
 
 	SetFocus();
 }
@@ -894,6 +879,37 @@ DrawTarget()
 
 void
 Window::
+DrawTrajectory()
+{
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+
+	// Eigen::Vector4d color(0.5, 0.5, 0.5, 0.7);
+	// mRI->setPenColor(color);
+	// mRI->setLineWidth(8.0);
+
+	// glBegin(GL_LINE_STRIP);
+	// for(int i=0; i<mTrajectory.size(); i++)
+	// {
+	// 	glVertex3f(mTrajectory[i][0], 0.0, mTrajectory[i][2]);
+	// }
+	// glEnd();
+
+	Eigen::Vector4d color1(0.5, 0.8, 0.5, 0.7);
+	mRI->setPenColor(color1);
+	for(int i=0; i<mFootprint.size(); i++)
+	{
+		glPushMatrix();
+		glTranslatef(mFootprint[i][0], 0.0, mFootprint[i][2]);
+		glutSolidCube(0.05);
+		glPopMatrix();
+	}
+
+	glDisable(GL_COLOR_MATERIAL);
+}
+
+void
+Window::
 DrawFemurSignals()
 {
 	DrawGLBegin();
@@ -1066,6 +1082,31 @@ DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double 
 
 void
 Window::
+DrawStride()
+{
+	DrawGLBegin();
+
+	double w = 0.15;
+	double h = 0.11;
+	double x = 0.69;
+	double y = 0.47;
+
+	double offset_x = 0.003;
+	double offset_y = 1.0;
+	double offset = 0.005;
+	double ratio_y = 0.0;
+
+	y = 0.49;
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "stride");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, mFootinterval, 0.7, 0.8);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, mFootinterval, green, 0.7, 0.8);
+	// DrawStringMean(x, y, w, h, ratio_y, offset_x, offset_y, offset, mFootinterval, green);
+
+	DrawGLEnd();
+}
+
+void
+Window::
 DrawReward()
 {
 	DrawGLBegin();
@@ -1099,6 +1140,11 @@ DrawReward()
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "min");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, min);
 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, min, green);
+
+	y = 0.01;
+	std::deque<double> smooth = map.at("smooth");
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "smooth");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, smooth);
 
 	x = 0.85;
 	y = 0.49;
@@ -1406,6 +1452,33 @@ DrawStringMax(double x, double y, double h, double ratio, double offset_x, doubl
 
 void
 Window::
+DrawStringMax(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, std::deque<double> data, Eigen::Vector4d color, double lower, double upper)
+{
+	double max = 0;
+	int idx = 0;
+	for(int i=0; i<data.size(); i++)
+	{
+		if(data[i] > upper)
+			data[i] = upper;
+
+		if(data[i] < lower)
+			data[i] = lower;
+
+		if(data[i] > max)
+		{
+			max = data.at(i);
+			idx = i;
+		}
+	}
+
+	h -= 2*offset;
+	x += offset;
+	y += offset + ratio*h;
+	DrawString(x+idx*offset_x, y+(max-lower)*offset_y, std::to_string(max), color);
+}
+
+void
+Window::
 DrawStringMinMax(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, std::deque<double> data, Eigen::Vector4d color)
 {
 	double max = 0;
@@ -1575,6 +1648,30 @@ DrawLineStrip(double x, double y, double h, double ratio, double offset_x, doubl
 	//  glVertex2f(x + offset_x*(i-180), y + offset_y*(data.at(i)+0.5*data1.at(i-180)));
 	// glEnd();
 }
+
+void
+Window::
+DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::deque<double>& data, double lower, double upper)
+{
+	mRI->setPenColor(color);
+	mRI->setLineWidth(line_width);
+
+	h -= 2*offset;
+	x += offset;
+	y += offset + ratio*h;
+	glBegin(GL_LINE_STRIP);
+	for(int i=0; i<data.size(); i++)
+	{
+		if(data.at(i) < lower)
+			glVertex2f(x + offset_x*i, y);
+		else if(data.at(i) > upper)
+			glVertex2f(x + offset_x*i, y + offset_y*(upper));
+		else
+			glVertex2f(x + offset_x*i, y + offset_y*(data.at(i)-lower));
+	}
+	glEnd();
+}
+
 
 Eigen::VectorXd
 Window::

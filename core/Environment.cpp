@@ -127,23 +127,39 @@ Initialize(const std::string& meta_file, bool load_obj)
 		else if(!index.compare("character_param")){
 			int numParamState;
 			ss>>numParamState;
-			character->SetNumParamState(numParamState);
+			if(mUseAdaptiveSampling)
+				character->SetNumParamState(numParamState);
 		}
 		else if(!index.compare("device_param")){
 			int numParamState;
 			ss>>numParamState;
-			if(mUseDevice)
+			if(mUseAdaptiveSampling && mUseDevice)
 				device->SetNumParamState(numParamState);
+		}
+		else if(!index.compare("mass")){
+			double lower, upper;
+			ss>>lower>>upper;
+			if(mUseAdaptiveSampling)
+				character->SetAdaptiveParams("mass", lower, upper);
+		}
+		else if(!index.compare("force")){
+			double lower, upper;
+			ss>>lower>>upper;
+			if(mUseAdaptiveSampling)
+				character->SetAdaptiveParams("force", lower, upper);
+		}
+		else if(!index.compare("device_k")){
+			double lower, upper;
+			ss>>lower>>upper;
+			if(mUseAdaptiveSampling && mUseDevice)
+				device->SetAdaptiveParams("k", lower, upper);
 		}
 	}
 	ifs.close();
-
 	this->SetCharacter(character);
 	if(mUseDevice)
 		this->SetDevice(device);
-
 	this->Initialize();
-
 	// auto weld_pelvis = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Pelvis"));
 
 	// mWorld->getConstraintSolver()->addConstraint(weld_pelvis);
@@ -191,16 +207,13 @@ Reset(bool RSI)
 {
 	double t = 0.0;
 	if(RSI)
-	{
-		t = dart::math::random(0.0, mCharacter->GetBVH()->GetMaxTime()*0.9);
-	}
+		t = dart::math::random(0.0,mCharacter->GetBVH()->GetMaxTime()*0.9);
 
 	mWorld->reset();
 	mWorld->setTime(t);
 	mCharacter->Reset();
-	if(mUseDevice){
+	if(mUseDevice)
 		mDevice->Reset();
-	}
 }
 
 void
@@ -220,7 +233,6 @@ Step(bool onDevice)
 	}
 
 	mWorld->step();
-
 	mSimCount++;
 }
 
@@ -230,10 +242,12 @@ IsEndOfEpisode()
 {
 	bool isTerminal = false;
 
-	Eigen::VectorXd p = mCharacter->GetSkeleton()->getPositions();
-	Eigen::VectorXd v = mCharacter->GetSkeleton()->getVelocities();
+	auto char_skel = mCharacter->GetSkeleton();
 
-	double root_y = mCharacter->GetSkeleton()->getBodyNode(0)->getTransform().translation()[1] - mGround->getRootBodyNode()->getCOM()[1];
+	Eigen::VectorXd p = char_skel->getPositions();
+	Eigen::VectorXd v = char_skel->getVelocities();
+
+	double root_y = char_skel->getBodyNode(0)->getTransform().translation()[1] - mGround->getRootBodyNode()->getCOM()[1];
 
 	if(root_y < 1.3)
 		isTerminal =true;
@@ -243,80 +257,6 @@ IsEndOfEpisode()
 		isTerminal =true;
 
 	return isTerminal;
-}
-
-void
-Environment::
-SetParamState(Eigen::VectorXd paramState)
-{
-	int paramState_Char = mCharacter->GetNumParamState();
-	mCharacter->SetParamState(paramState.segment(0,paramState_Char));
-
-	if(mUseDevice)
-	{
-		int paramState_Device = mDevice->GetNumParamState();
-		mDevice->SetParamState(paramState.segment(paramState_Char,paramState_Device));
-	}
-}
-
-Eigen::VectorXd
-Environment::
-GetParamState()
-{
-	int param_dim = 0;
-	int char_dim = mCharacter->GetNumParamState();
-	int device_dim = mDevice->GetNumParamState();
-
-	param_dim += char_dim;
-	if(mUseDevice)
-		param_dim += device_dim;
-
-	Eigen::VectorXd paramState(param_dim);
-	paramState << mCharacter->GetParamState();
-	if(mUseDevice)
-		paramState << mCharacter->GetParamState(),mDevice->GetParamState();
-
-	return paramState;
-}
-
-Eigen::VectorXd
-Environment::
-GetMinV()
-{
-	int param_dim = 0;
-	int char_dim = mCharacter->GetNumParamState();
-	int device_dim = mDevice->GetNumParamState();
-
-	param_dim += char_dim;
-	if(mUseDevice)
-		param_dim += device_dim;
-
-	Eigen::VectorXd min_v(param_dim);
-	min_v << mCharacter->GetMinV();
-	if(mUseDevice)
-		min_v << mCharacter->GetMinV(),mDevice->GetMinV();
-
-	return min_v;
-}
-
-Eigen::VectorXd
-Environment::
-GetMaxV()
-{
-	int param_dim = 0;
-	int char_dim = mCharacter->GetNumParamState();
-	int device_dim = mDevice->GetNumParamState();
-
-	param_dim += char_dim;
-	if(mUseDevice)
-		param_dim += device_dim;
-
-	Eigen::VectorXd max_v(param_dim);
-	max_v << mCharacter->GetMaxV();
-	if(mUseDevice)
-		max_v << mCharacter->GetMaxV(),mDevice->GetMaxV();
-
-	return max_v;
 }
 
 void
@@ -390,4 +330,73 @@ Environment::
 GetNumAction_Device()
 {
 	return mDevice->GetNumAction();
+}
+
+void
+Environment::
+SetParamState(Eigen::VectorXd paramState)
+{
+	int paramState_Char = mCharacter->GetNumParamState();
+	mCharacter->SetParamState(paramState.segment(0,paramState_Char));
+
+	if(mUseDevice)
+	{
+		int paramState_Device = mDevice->GetNumParamState();
+		mDevice->SetParamState(paramState.segment(paramState_Char,paramState_Device));
+	}
+}
+
+Eigen::VectorXd
+Environment::
+GetParamState()
+{
+	int param_dim = 0;
+	int char_dim = mCharacter->GetNumParamState();
+	int device_dim = mDevice->GetNumParamState();
+
+	param_dim += char_dim;
+	if(mUseDevice)
+		param_dim += device_dim;
+
+	Eigen::VectorXd paramState(param_dim);
+	paramState << mCharacter->GetParamState();
+	if(mUseDevice)
+		paramState << mCharacter->GetParamState(),mDevice->GetParamState();
+
+	return paramState;
+}
+
+Eigen::VectorXd
+Environment::
+GetMinV()
+{
+	int param_dim = 0;
+	param_dim += mCharacter->GetNumParamState();
+	if(mUseDevice)
+		param_dim += mDevice->GetNumParamState();
+
+	Eigen::VectorXd min_v(param_dim);
+	min_v << mCharacter->GetMinV();
+	if(mUseDevice)
+		min_v << mCharacter->GetMinV(), mDevice->GetMinV();
+
+	return min_v;
+}
+
+Eigen::VectorXd
+Environment::
+GetMaxV()
+{
+	int param_dim = 0;
+	param_dim += mCharacter->GetNumParamState();
+	if(mUseDevice)
+		param_dim += mDevice->GetNumParamState();
+
+	Eigen::VectorXd max_v(param_dim);
+
+	max_v << mCharacter->GetMaxV();
+	if(mUseDevice)
+		max_v << mCharacter->GetMaxV(), mDevice->GetMaxV();
+
+	return max_v;
 }
