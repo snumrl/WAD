@@ -203,6 +203,8 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	int body_num = mSkeleton->getNumBodyNodes();
 	mAngVel.resize(body_num*3);
 	mAngVel_prev.resize(body_num*3);
+	mCurPos.setZero();
+	mPrevPos.setZero();
 
 	mDesiredTorque.resize(mNumDof);
 	mDesiredTorque_prev.resize(mNumDof);
@@ -437,7 +439,9 @@ Reset()
 	mFemurSignals_R.resize(1200);
 
 	mTorques->Reset();
-
+	mCurPos = mSkeleton->getCOM();
+	mPrevPos = mSkeleton->getCOM();
+	mCurVel = 0.0;
 	if(mUseMuscle)
 		Reset_Muscles();
 }
@@ -459,7 +463,22 @@ Step()
 {
 	SetDesiredTorques();
 	this->SetTorques();
+	this->SetCurVelocity();
 	mSkeleton->setForces(mDesiredTorque);
+}
+
+void
+Character::
+SetCurVelocity()
+{
+	mCurPos = mSkeleton->getCOM();
+	double time_step = mSkeleton->getTimeStep();
+	double x_diff = (mCurPos[0]-mPrevPos[0])/time_step;
+	double z_diff = (mCurPos[2]-mPrevPos[2])/time_step;
+
+	mCurVel = std::sqrt(x_diff*x_diff + z_diff*z_diff);
+	mCurVelH = 3.6 * mCurVel;
+	mPrevPos = mCurPos;
 }
 
 void

@@ -478,7 +478,7 @@ class PPO(object):
 				loss_marginal.backward(retain_graph=True)
 
 				for param in self.marginal_model.parameters():
-					if param.grad != None:
+					if param.grad is not None:
 						param.grad.data.clamp_(-0.5, 0.5)
 				self.marginal_optimizer.step()
 
