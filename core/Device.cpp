@@ -10,6 +10,7 @@ Device()
 :mNumState(0),mNumAction(0),mNumDof(0),mNumActiveDof(0),mRootJointDof(0),mUseNN(false),mTorqueMax(0.0),qr(0.0),ql(0.0),qr_prev(0.0),ql_prev(0.0),mNumParamState(0)
 {
     mDelta_t = 180;
+    mDelta_t_scaler = 600.0;
     mK_ = 15.0;
     mK_scaler = 30.0;
 }
@@ -321,7 +322,7 @@ void
 Device::
 SetDelta_t(double t)
 {
-    mDelta_t = t * 600.0;
+    mDelta_t = t * mDelta_t_scaler;
     mParamState[1] = t;
 }
 

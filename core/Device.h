@@ -96,6 +96,7 @@ private:
 
     int signal_size;
     int mDelta_t;
+    double mDelta_t_scaler;
     double mK_;
     double mK_scaler;
 

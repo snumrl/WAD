@@ -54,6 +54,8 @@ Eigen::Vector4d grey(0.6, 0.6, 0.6, 1.0);
 Eigen::Vector4d red(0.8, 0.2, 0.2, 1.0);
 Eigen::Vector4d green(0.2, 0.6, 0.2, 1.0);
 Eigen::Vector4d blue(0.2, 0.2, 0.8, 1.0);
+Eigen::Vector4d yellow(0.8, 0.8, 0.2, 1.0);
+Eigen::Vector4d purple(0.8, 0.2, 0.8, 1.0);
 
 Window::
 Window(Environment* env)
@@ -199,6 +201,15 @@ ParamChange(bool b)
 				k_ = 30.0;
 			mEnv->GetDevice()->SetK_(k_);
 		}
+		else if(mParamMode == 4)
+		{
+			double t_ = mEnv->GetDevice()->GetDelta_t();
+			t_ /= 600.0;
+			t_ += 0.01;
+			if(t_ > 0.5)
+				t_ = 0.5;
+			mEnv->GetDevice()->SetDelta_t(t_);
+		}
 	}
 	else
 	{
@@ -225,6 +236,15 @@ ParamChange(bool b)
 			if(k_ < 6)
 				k_ = 6;
 			mEnv->GetDevice()->SetK_(k_);
+		}
+		else if(mParamMode == 4)
+		{
+			double t_ = mEnv->GetDevice()->GetDelta_t();
+			t_ /= 600.0;
+			t_ -= 0.01;
+			if(t_ < 0.0)
+				t_ = 0.0;
+			mEnv->GetDevice()->SetDelta_t(t_);
 		}
 	}
 }
@@ -254,6 +274,7 @@ keyboard(unsigned char _key, int _x, int _y)
 	case '1' : mParamMode = 1; break;
 	case '2' : mParamMode = 2; break;
 	case '3' : mParamMode = 3; break;
+	case '4' : mParamMode = 4; break;
 	case '+' : ParamChange(true); break;
 	case '-' : ParamChange(false); break;
 	case 27 : exit(0);break;
@@ -425,7 +446,7 @@ DrawParameter()
 {
 	DrawGLBegin();
 
-	double w = 0.12;
+	double w = 0.16;
 	double h = 0.34;
 	double h_offset = 0.20;
 	double x = 0.69;
@@ -435,18 +456,27 @@ DrawParameter()
 
 	double m_ratio = mEnv->GetCharacter()->GetMassRatio();
 	DrawQuads(x+0.01, y+0.01, 0.02, (m_ratio)*h_offset, green);
-	DrawString(x+0.01, y+(m_ratio)*h_offset+0.02, std::to_string(m_ratio));
-	DrawString(x+0.00, y-0.02, "Mass");
 
 	double f_ratio = mEnv->GetCharacter()->GetForceRatio();
 	DrawQuads(x+0.05, y+0.01, 0.02, (f_ratio)*h_offset, red);
-	DrawString(x+0.05, y+(f_ratio)*h_offset+0.02, std::to_string(f_ratio));
-	DrawString(x+0.045, y-0.02, "Force");
 
 	double k_ = mEnv->GetDevice()->GetK_();
 	DrawQuads(x+0.09, y+0.01, 0.02, (k_/30.0)*h_offset, blue);
+
+	double t_ = mEnv->GetDevice()->GetDelta_t();
+	DrawQuads(x+0.13, y+0.01, 0.02, (t_/600.0*3.0)*h_offset, yellow);
+
+	DrawString(x+0.00, y+(m_ratio)*h_offset+0.02, std::to_string(m_ratio));
+	DrawString(x+0.00, y-0.02, "Mass");
+
+	DrawString(x+0.05, y+(f_ratio)*h_offset+0.02, std::to_string(f_ratio));
+	DrawString(x+0.04, y-0.02, "Force");
+
 	DrawString(x+0.09, y+(k_/30.0)*h_offset+0.02, std::to_string(k_));
-	DrawString(x+0.09, y-0.02, "Device");
+	DrawString(x+0.08, y-0.02, "Device");
+
+	DrawString(x+0.13, y+(t_/600.0*3.0)*h_offset+0.02, std::to_string(t_/600.0));
+	DrawString(x+0.125, y-0.02, "Delta t");
 
 	DrawGLEnd();
 }
