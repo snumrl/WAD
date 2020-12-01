@@ -4,7 +4,6 @@
 #include "Device.h"
 #include "BVH.h"
 #include "Utils.h"
-#include "DrawUtils.h"
 #include "Muscle.h"
 #include <iostream>
 #include <deque>
@@ -51,16 +50,19 @@ Eigen::Matrix3d R_z(double z)
 Eigen::Vector4d white(0.9, 0.9, 0.9, 1.0);
 Eigen::Vector4d black(0.1, 0.1, 0.1, 1.0);
 Eigen::Vector4d grey(0.6, 0.6, 0.6, 1.0);
-
 Eigen::Vector4d red(0.8, 0.2, 0.2, 1.0);
-Eigen::Vector4d red_trans(0.8, 0.2, 0.2, 0.2);
 Eigen::Vector4d green(0.2, 0.8, 0.2, 1.0);
-Eigen::Vector4d green_trans(0.2, 0.8, 0.2, 0.2);
 Eigen::Vector4d blue(0.2, 0.2, 0.8, 1.0);
-Eigen::Vector4d blue_trans(0.2, 0.2, 0.8, 0.2);
 Eigen::Vector4d yellow(0.8, 0.8, 0.2, 1.0);
-Eigen::Vector4d yellow_trans(0.8, 0.8, 0.2, 0.2);
 Eigen::Vector4d purple(0.8, 0.2, 0.8, 1.0);
+
+Eigen::Vector4d white_trans(0.9, 0.9, 0.9, 0.2);
+Eigen::Vector4d black_trans(0.1, 0.1, 0.1, 0.2);
+Eigen::Vector4d grey_trans(0.6, 0.6, 0.6, 0.2);
+Eigen::Vector4d red_trans(0.8, 0.2, 0.2, 0.2);
+Eigen::Vector4d green_trans(0.2, 0.8, 0.2, 0.2);
+Eigen::Vector4d blue_trans(0.2, 0.2, 0.8, 0.2);
+Eigen::Vector4d yellow_trans(0.8, 0.8, 0.2, 0.2);
 Eigen::Vector4d purple_trans(0.8, 0.2, 0.8, 0.2);
 
 Window::

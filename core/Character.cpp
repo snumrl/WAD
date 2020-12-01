@@ -196,7 +196,9 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 
 	mNumDof = mSkeleton->getNumDofs();
 	mNumActiveDof = mNumDof - mRootJointDof;
-	mNumState = this->GetState().rows();
+	mNumState = 0;
+	mNumState_Char = this->GetState().rows();
+	mNumState += mNumState_Char;
 
 	mAction.resize(mNumActiveDof);
 	mAction_prev.resize(mNumActiveDof);

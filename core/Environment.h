@@ -30,7 +30,11 @@ public:
 	double GetReward();
 
 	int GetNumState();
+
+	int GetNumState_Char();
+	int GetNumParamState_Char();
 	int GetNumState_Device();
+	int GetNumParamState_Device();
 	int GetNumAction();
 	int GetNumAction_Device();
 

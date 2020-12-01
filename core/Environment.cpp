@@ -319,9 +319,30 @@ GetNumState()
 
 int
 Environment::
+GetNumState_Char()
+{
+	return mCharacter->GetNumState_Char();
+}
+
+int
+Environment::
+GetNumParamState_Char()
+{
+	return mCharacter->GetNumParamState();
+}
+
+int
+Environment::
 GetNumState_Device()
 {
 	return mDevice->GetNumState();
+}
+
+int
+Environment::
+GetNumParamState_Device()
+{
+	return mDevice->GetNumParamState();
 }
 
 int

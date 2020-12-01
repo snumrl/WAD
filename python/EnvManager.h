@@ -33,6 +33,7 @@ public:
 	np::ndarray IsEndOfEpisodes();
 
 	int GetNumState();
+	int GetNumState_Char();
 	int GetNumState_Device();
 	int GetNumAction();
 	int GetNumAction_Device();
@@ -56,6 +57,8 @@ public:
 	bool UseAdaptiveSampling();
 	void SetParamState(int id, np::ndarray np_array);
 	int GetNumParamState();
+	int GetNumParamState_Char();
+	int GetNumParamState_Device();
 	np::ndarray GetMinV();
 	np::ndarray GetMaxV();
 

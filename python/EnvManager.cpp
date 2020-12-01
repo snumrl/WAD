@@ -192,6 +192,13 @@ GetNumState()
 
 int
 EnvManager::
+GetNumState_Char()
+{
+	return mEnvs[0]->GetNumState_Char();
+}
+
+int
+EnvManager::
 GetNumState_Device()
 {
 	return mEnvs[0]->GetNumState_Device();
@@ -350,6 +357,20 @@ GetNumParamState()
 	return mEnvs[0]->GetNumParamState();
 }
 
+int
+EnvManager::
+GetNumParamState_Char()
+{
+	return mEnvs[0]->GetNumParamState_Char();
+}
+
+int
+EnvManager::
+GetNumParamState_Device()
+{
+	return mEnvs[0]->GetNumParamState_Device();
+}
+
 np::ndarray
 EnvManager::
 GetMinV()
@@ -390,6 +411,7 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("IsEndOfEpisode",&EnvManager::IsEndOfEpisode)
 		.def("IsEndOfEpisodes",&EnvManager::IsEndOfEpisodes)
 		.def("GetNumState",&EnvManager::GetNumState)
+		.def("GetNumState_Char",&EnvManager::GetNumState_Char)
 		.def("GetNumState_Device",&EnvManager::GetNumState_Device)
 		.def("GetNumAction",&EnvManager::GetNumAction)
 		.def("GetNumAction_Device",&EnvManager::GetNumAction_Device)
@@ -408,6 +430,8 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("UseAdaptiveSampling", &EnvManager::UseAdaptiveSampling)
 		.def("SetParamState", &EnvManager::SetParamState)
 		.def("GetNumParamState", &EnvManager::GetNumParamState)
+		.def("GetNumParamState_Char", &EnvManager::GetNumParamState_Char)
+		.def("GetNumParamState_Device", &EnvManager::GetNumParamState_Device)
 		.def("GetMinV", &EnvManager::GetMinV)
 		.def("GetMaxV", &EnvManager::GetMaxV);
 }

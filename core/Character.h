@@ -107,6 +107,7 @@ public:
 
 	int GetNumMuscles(){return mNumMuscle;}
 	int GetNumState(){return mNumState;}
+	int GetNumState_Char(){return mNumState_Char;}
 	int GetNumDof(){return mNumDof;}
 	int GetNumActiveDof(){return mNumActiveDof;}
 	int GetNumAction(){return mNumActiveDof;}
@@ -155,6 +156,7 @@ private:
 	int mNumActiveDof;
 	int mRootJointDof;
 	int mNumState;
+	int mNumState_Char;
 	int mNumTotalRelatedDof;
 	int mNumMuscle;
 

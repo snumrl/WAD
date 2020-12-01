@@ -91,6 +91,10 @@ class PPO(object):
 
 		# ========== Character setting ========== #
 		self.num_state = self.env.GetNumState()
+		self.num_state_char = self.env.GetNumState_Char()
+		self.num_state_device = 0
+		if self.use_device:
+			self.num_state_device = self.env.GetNumState_Device()
 		self.num_action = self.env.GetNumAction()
 		self.rms = RunningMeanStd(shape=(self.num_state))
 
@@ -152,6 +156,9 @@ class PPO(object):
 		self.use_adaptive_sampling = self.env.UseAdaptiveSampling()
 		if self.use_adaptive_sampling:
 			self.num_paramstate = self.env.GetNumParamState()
+			self.num_paramstate_char = self.env.GetNumParamState_Char()
+			if self.use_device:
+				self.num_paramstate_device = self.env.GetNumParamState_Device()
 			self.marginal_buffer = MarginalBuffer(10000)
 			self.marginal_model = MarginalNN(self.num_paramstate)
 			self.marginal_value_avg = 1.
@@ -364,7 +371,12 @@ class PPO(object):
 
 			if self.use_adaptive_sampling:
 				for i in range(size):
-					self.marginal_buffer.Push(states[i][-self.num_paramstate:], values[i])
+					cur_state = states[i][self.num_state_char-self.num_paramstate_char:self.num_state_char]
+
+					if self.use_device:
+						cur_state = np.append(cur_state, states[i][self.num_state-self.num_paramstate_device:self.num_state])
+
+					self.marginal_buffer.Push(cur_state, values[i])
 
 		self.num_episode = len(self.total_episodes)
 		self.num_tuple = len(self.replay_buffer.buffer)
