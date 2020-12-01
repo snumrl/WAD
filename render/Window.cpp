@@ -53,15 +53,15 @@ Eigen::Vector4d black(0.1, 0.1, 0.1, 1.0);
 Eigen::Vector4d grey(0.6, 0.6, 0.6, 1.0);
 
 Eigen::Vector4d red(0.8, 0.2, 0.2, 1.0);
-Eigen::Vector4d red_trans(0.8, 0.2, 0.2, 0.5);
+Eigen::Vector4d red_trans(0.8, 0.2, 0.2, 0.2);
 Eigen::Vector4d green(0.2, 0.8, 0.2, 1.0);
 Eigen::Vector4d green_trans(0.2, 0.8, 0.2, 0.2);
 Eigen::Vector4d blue(0.2, 0.2, 0.8, 1.0);
-Eigen::Vector4d blue_trans(0.2, 0.2, 0.8, 0.5);
+Eigen::Vector4d blue_trans(0.2, 0.2, 0.8, 0.2);
 Eigen::Vector4d yellow(0.8, 0.8, 0.2, 1.0);
-Eigen::Vector4d yellow_trans(0.8, 0.8, 0.2, 0.5);
+Eigen::Vector4d yellow_trans(0.8, 0.8, 0.2, 0.2);
 Eigen::Vector4d purple(0.8, 0.2, 0.8, 1.0);
-Eigen::Vector4d purple_trans(0.8, 0.2, 0.8, 0.5);
+Eigen::Vector4d purple_trans(0.8, 0.2, 0.8, 0.2);
 
 Window::
 Window(Environment* env)
@@ -474,14 +474,10 @@ DrawParameter()
 	double m_ratio = mEnv->GetCharacter()->GetMassRatio();
 	DrawQuads(x+0.01, y+0.01, 0.02, (m_ratio)*h_offset, green);
 	DrawQuads(x+0.01, y+0.01+(m_ratio)*h_offset, 0.02, (max_v[0]-m_ratio)*h_offset, green_trans);
-	// DrawLineStipple(x+0.007, y+0.01+(min_v[0])*h_offset, x+0.033, y+0.01+(min_v[0])*h_offset, black, 3.0);
-	// DrawLineStipple(x+0.007, y+0.01+(max_v[0])*h_offset, x+0.033, y+0.01+(max_v[0])*h_offset, black, 3.0);
 
 	double f_ratio = mEnv->GetCharacter()->GetForceRatio();
 	DrawQuads(x+0.05, y+0.01, 0.02, (f_ratio)*h_offset, red);
 	DrawQuads(x+0.05, y+0.01+(f_ratio)*h_offset, 0.02, (max_v[1]-f_ratio)*h_offset, red_trans);
-	// DrawLineStipple(x+0.047, y+0.01+(min_v[1])*h_offset, x+0.073, y+0.01+(min_v[1])*h_offset, black, 3.0);
-	// DrawLineStipple(x+0.047, y+0.01+(max_v[1])*h_offset, x+0.073, y+0.01+(max_v[1])*h_offset, black, 3.0);
 
 	Eigen::VectorXd min_v_dev = mEnv->GetDevice()->GetMinV();
 	Eigen::VectorXd max_v_dev = mEnv->GetDevice()->GetMaxV();
@@ -489,14 +485,10 @@ DrawParameter()
 	double k_ = mEnv->GetDevice()->GetK_();
 	DrawQuads(x+0.09, y+0.01, 0.02, (k_/30.0)*h_offset, blue);
 	DrawQuads(x+0.09, y+0.01+(k_/30.0)*h_offset, 0.02, (max_v_dev[0]-k_/30.0)*h_offset, blue_trans);
-	// DrawLineStipple(x+0.087, y+0.01+(min_v_dev[0])*h_offset, x+0.113, y+0.01+(min_v_dev[0])*h_offset, black, 3.0);
-	// DrawLineStipple(x+0.087, y+0.01+(max_v_dev[0])*h_offset, x+0.113, y+0.01+(max_v_dev[0])*h_offset, black, 3.0);
 
 	double t_ = mEnv->GetDevice()->GetDelta_t();
 	DrawQuads(x+0.13, y+0.01, 0.02, 3.0*(t_/600.0)*h_offset, yellow);
 	DrawQuads(x+0.13, y+0.01+(t_/600.0)*h_offset, 0.02, (max_v_dev[1]-t_/600.0)*h_offset, yellow_trans);
-	// DrawLineStipple(x+0.127, y+0.01+3.0*(min_v_dev[1])*h_offset, x+0.153, y+0.01+3.0*(min_v_dev[1])*h_offset, black, 3.0);
-	// DrawLineStipple(x+0.127, y+0.01+3.0*(max_v_dev[1])*h_offset, x+0.153, y+0.01+3.0*(max_v_dev[1])*h_offset, black, 3.0);
 
 	DrawString(x+0.00, y+(m_ratio)*h_offset+0.02, std::to_string(m_ratio));
 	DrawString(x+0.00, y-0.02, "Mass");
