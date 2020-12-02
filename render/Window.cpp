@@ -183,39 +183,40 @@ void
 Window::
 ParamChange(bool b)
 {
+	Eigen::VectorXd min_v = mEnv->GetMinV();
+	Eigen::VectorXd max_v = mEnv->GetMaxV();
 	if(b)
 	{
 		if(mParamMode == 1)
 		{
 			double m_ratio = mEnv->GetCharacter()->GetMassRatio();
 			m_ratio += 0.10;
-			if(m_ratio > 1.5)
-				m_ratio = 1.5;
+			if(m_ratio > max_v[0])
+				m_ratio = max_v[0];
 			mEnv->GetCharacter()->SetMassRatio(m_ratio);
 		}
 		else if(mParamMode == 2)
 		{
 			double f_ratio = mEnv->GetCharacter()->GetForceRatio();
 			f_ratio += 0.05;
-			if(f_ratio > 1.0)
-				f_ratio = 1.0;
+			if(f_ratio > max_v[1])
+				f_ratio = max_v[1];
 			mEnv->GetCharacter()->SetForceRatio(f_ratio);
 		}
 		else if(mParamMode ==3)
 		{
 			double k_ = mEnv->GetDevice()->GetK_();
 			k_ += 2.0;
-			if(k_ > 30.0)
-				k_ = 30.0;
+			if(k_ > max_v[2]*30.0)
+				k_ = max_v[2]*30.0;
 			mEnv->GetDevice()->SetK_(k_);
 		}
 		else if(mParamMode == 4)
 		{
 			double t_ = mEnv->GetDevice()->GetDelta_t();
-			t_ /= 600.0;
 			t_ += 0.01;
-			if(t_ > 0.5)
-				t_ = 0.5;
+			if(t_ > max_v[3])
+				t_ = max_v[3];
 			mEnv->GetDevice()->SetDelta_t(t_);
 		}
 	}
@@ -225,33 +226,32 @@ ParamChange(bool b)
 		{
 			double m_ratio = mEnv->GetCharacter()->GetMassRatio();
 			m_ratio -= 0.10;
-			if(m_ratio < 0.5001)
-				m_ratio = 0.5;
+			if(m_ratio < min_v[0])
+				m_ratio = min_v[0];
 			mEnv->GetCharacter()->SetMassRatio(m_ratio);
 		}
 		else if(mParamMode == 2)
 		{
 			double f_ratio = mEnv->GetCharacter()->GetForceRatio();
 			f_ratio -= 0.05;
-			if(f_ratio < 0.2001)
-				f_ratio = 0.2;
+			if(f_ratio < min_v[1])
+				f_ratio = min_v[1];
 			mEnv->GetCharacter()->SetForceRatio(f_ratio);
 		}
 		else if(mParamMode ==3)
 		{
 			double k_ = mEnv->GetDevice()->GetK_();
 			k_ -= 2.0;
-			if(k_ < 6)
-				k_ = 6;
+			if(k_ < min_v[2]*30.0)
+				k_ = min_v[2]*30.0;
 			mEnv->GetDevice()->SetK_(k_);
 		}
 		else if(mParamMode == 4)
 		{
 			double t_ = mEnv->GetDevice()->GetDelta_t();
-			t_ /= 600.0;
 			t_ -= 0.01;
-			if(t_ < 0.0)
-				t_ = 0.0;
+			if(t_ < min_v[3])
+				t_ = min_v[3];
 			mEnv->GetDevice()->SetDelta_t(t_);
 		}
 	}
@@ -497,8 +497,8 @@ DrawParameter()
 	DrawQuads(x+0.09, y+0.01+(k_/30.0)*h_offset, 0.02, (max_v_dev[0]-k_/30.0)*h_offset, blue_trans);
 
 	double t_ = mEnv->GetDevice()->GetDelta_t();
-	DrawQuads(x+0.13, y+0.01, 0.02, 3.0*(t_/600.0)*h_offset, yellow);
-	DrawQuads(x+0.13, y+0.01+(t_/600.0)*h_offset, 0.02, (max_v_dev[1]-t_/600.0)*h_offset, yellow_trans);
+	DrawQuads(x+0.13, y+0.01, 0.02, 3.0*t_*h_offset, yellow);
+	DrawQuads(x+0.13, y+0.01+t_*h_offset, 0.02, (max_v_dev[1]-t_)*h_offset, yellow_trans);
 
 	DrawString(x+0.00, y+(m_ratio)*h_offset+0.02, std::to_string(m_ratio));
 	DrawString(x+0.00, y-0.02, "Mass");
@@ -509,7 +509,7 @@ DrawParameter()
 	DrawString(x+0.09, y+(k_/30.0)*h_offset+0.02, std::to_string(k_));
 	DrawString(x+0.08, y-0.02, "Device");
 
-	DrawString(x+0.13, y+(t_/600.0*3.0)*h_offset+0.02, std::to_string(t_/600.0));
+	DrawString(x+0.13, y+3.0*t_*h_offset+0.02, std::to_string(t_));
 	DrawString(x+0.125, y-0.02, "Delta t");
 
 	DrawGLEnd();

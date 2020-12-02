@@ -9,7 +9,7 @@ Device::
 Device()
 :mNumState(0),mNumAction(0),mNumDof(0),mNumActiveDof(0),mRootJointDof(0),mUseNN(false),mTorqueMax(0.0),qr(0.0),ql(0.0),qr_prev(0.0),ql_prev(0.0),mNumParamState(0)
 {
-    mDelta_t = 180;
+    mDelta_t = 0.3;
     mDelta_t_scaler = 600.0;
     mK_ = 15.0;
     mK_scaler = 30.0;
@@ -69,7 +69,8 @@ Initialize(dart::simulation::WorldPtr& wPtr, bool nn)
     else
         mRootJointDof = 0;
 
-    signal_size = 1200 + mDelta_t;
+    int delta_idx = (int)(mDelta_t*mDelta_t_scaler);
+    signal_size = 1200 + delta_idx;
     mDeviceSignals_y = std::deque<double>(signal_size,0);
     mDeviceSignals_L = std::deque<double>(signal_size,0);
     mDeviceSignals_R = std::deque<double>(signal_size,0);
@@ -179,7 +180,8 @@ GetState()
     double scaler = 2.0;
     for(int i=0; i<history_num; i++)
     {
-        double signal_y = mDeviceSignals_y.at(mDelta_t + i*offset);
+        int delta_idx = (int)(mDelta_t*mDelta_t_scaler);
+        double signal_y = mDeviceSignals_y.at(delta_idx + i*offset);
         double torque = mK_ * signal_y;
         double des_torque_l =  1*torque;
         double des_torque_r = -1*torque;
@@ -250,7 +252,8 @@ SetDesiredTorques2()
     mDeviceSignals_y.push_front(y);
 
     // double torque = k_ * y_delta_t;
-    double torque = mK_ * mDeviceSignals_y.at(mDelta_t);
+    int delta_idx = (int)(mDelta_t * mDelta_t_scaler);
+    double torque = mK_ * mDeviceSignals_y.at(delta_idx);
     double des_torque_l =  1*torque*beta_L*beta_Lhip;
     double des_torque_r = -1*torque*beta_R*beta_Rhip;
 
@@ -331,7 +334,7 @@ void
 Device::
 SetDelta_t(double t)
 {
-    mDelta_t = t * mDelta_t_scaler;
+    mDelta_t = t;
 
     double param = 0.0;
     if(mMax_v[0] == mMin_v[0])
@@ -365,7 +368,7 @@ SetParamState(Eigen::VectorXd paramState)
         param = paramState[i];
         param = mMin_v[i]+(mMax_v[i]-mMin_v[i])*(param+1.0)/2.0;
         if(i==0)
-            this->SetK_(param);
+            this->SetK_(param*mK_scaler);
         else if(i==1)
             this->SetDelta_t(param);
     }

@@ -50,7 +50,7 @@ public:
     std::deque<double> GetSignals(int idx);
 
     void SetDelta_t(double t);
-    int GetDelta_t(){return mDelta_t;}
+    double GetDelta_t(){return mDelta_t;}
 
     void SetK_(double k);
     double GetK_(){return mK_;}
@@ -95,7 +95,7 @@ private:
     double ql_prev;
 
     int signal_size;
-    int mDelta_t;
+    double mDelta_t;
     double mDelta_t_scaler;
     double mK_;
     double mK_scaler;
