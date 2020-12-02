@@ -453,7 +453,15 @@ void
 Window::
 DrawVelocity()
 {
+	DrawGLBegin();
 
+	double vel = mEnv->GetCharacter()->GetCurVelocity();
+	double vel_h = vel * 3.6;
+	bool big = true;
+
+	DrawString(0.70, 0.50, big, "Velocity : " + std::to_string(vel_h) + " km/h");
+
+	DrawGLEnd();
 }
 
 void
@@ -1417,6 +1425,22 @@ DrawString(double x, double y, std::string str)
 	unsigned int length = str.length();
 	for (unsigned int c = 0; c < length; c++)
 		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, str.at(c));
+}
+
+void
+Window::
+DrawString(double x, double y, bool big, std::string str)
+{
+	Eigen::Vector4d black(0.0, 0.0, 0.0, 1.0);
+	mRI->setPenColor(black);
+
+	glRasterPos2f(x, y);
+	unsigned int length = str.length();
+	for (unsigned int c = 0; c < length; c++)
+		if(big)
+			glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, str.at(c));
+		else
+			glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, str.at(c));
 }
 
 void

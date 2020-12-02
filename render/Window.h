@@ -73,6 +73,7 @@ public:
     void DrawBaseGraph(double x, double y, double w, double h, double ratio, double offset, std::string name);
     void DrawQuads(double x, double y, double w, double h, Eigen::Vector4d color);
     void DrawString(double x, double y, std::string str);
+    void DrawString(double x, double y, bool big, std::string str);
     void DrawString(double x, double y, std::string str, Eigen::Vector4d color);
     void DrawStringMean(double x, double y, double w, double h, double ratio, double offset_x, double offset_y, double offset, std::vector<double> data, Eigen::Vector4d color);
     void DrawStringMean(double x, double y, double w, double h, double ratio, double offset_x, double offset_y, double offset, std::deque<double> data, Eigen::Vector4d color);

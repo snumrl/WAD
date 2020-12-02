@@ -133,7 +133,6 @@ public:
 
 	void SetCurVelocity();
 	double GetCurVelocity(){return mCurVel;}
-	double GetCurVelocityH(){return mCurVelH;}
 
 	void SetNumParamState(int n);
 	void SetMinMaxV(int idx, double lower, double upper);
@@ -176,7 +175,6 @@ private:
 	Eigen::Vector3d mCurPos;
 	Eigen::Vector3d mPrevPos;
 	double mCurVel;
-	double mCurVelH;
 
 	Eigen::Isometry3d mTc;
 	Eigen::VectorXd mKp, mKv;

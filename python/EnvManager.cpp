@@ -183,6 +183,13 @@ IsEndOfEpisodes()
 	return toNumPyArray(is_end_vector);
 }
 
+double
+EnvManager::
+GetVelocity(int idx)
+{
+	return mEnvs[idx]->GetCharacter()->GetCurVelocity();
+}
+
 int
 EnvManager::
 GetNumState()
@@ -418,6 +425,7 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("GetNumSteps",&EnvManager::GetNumSteps)
 		.def("GetControlHz",&EnvManager::GetControlHz)
 		.def("GetSimulationHz",&EnvManager::GetSimulationHz)
+		.def("GetVelocity",&EnvManager::GetVelocity)
 		.def("UseMuscle",&EnvManager::UseMuscle)
 		.def("UseDevice",&EnvManager::UseDevice)
 		.def("UseDeviceNN",&EnvManager::UseDeviceNN)

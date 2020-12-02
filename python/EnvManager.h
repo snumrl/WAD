@@ -40,6 +40,7 @@ public:
 	int GetNumSteps();
 	int GetControlHz();
 	int GetSimulationHz();
+	double GetVelocity(int idx);
 
 	bool UseMuscle();
 	bool UseDevice();

@@ -479,7 +479,6 @@ SetCurVelocity()
 	double z_diff = (mCurPos[2]-mPrevPos[2])/time_step;
 
 	mCurVel = std::sqrt(x_diff*x_diff + z_diff*z_diff);
-	mCurVelH = 3.6 * mCurVel;
 	mPrevPos = mCurPos;
 }
 

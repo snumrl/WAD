@@ -374,7 +374,7 @@ class PPO(object):
 					cur_state = states[i][self.num_state_char-self.num_paramstate_char:self.num_state_char]
 
 					if self.use_device:
-						cur_state = np.append(cur_state, states[i][self.num_state-self.num_paramstate_device:self.num_state])
+						cur_state = np.append(cur_state, states[i][self.num_state-1-self.num_paramstate_device:self.num_state])
 
 					self.marginal_buffer.Push(cur_state, values[i])
 
