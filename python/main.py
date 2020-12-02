@@ -109,7 +109,7 @@ class PPO(object):
 		if use_cuda:
 			self.model.cuda()
 
-		self.buffer_size = 2048*3
+		self.buffer_size = 2048*4
 		self.batch_size = 128*2
 		self.replay_buffer = ReplayBuffer(30000)
 
@@ -117,7 +117,7 @@ class PPO(object):
 		self.lb = 0.99
 
 		self.default_clip_ratio = 0.2
-		self.default_learning_rate = 5.0*1E-5
+		self.default_learning_rate = 1.0*1E-5
 		self.clip_ratio = self.default_clip_ratio
 		self.learning_rate = self.default_learning_rate
 
@@ -257,7 +257,15 @@ class PPO(object):
 		# proposed distribution
 		def proposed_dist(x, min_v, max_v):
 			size = x.size
-			value = np.array([np.random.uniform(min_v[i], max_v[i]) for i in range(size)])
+			value = []
+			for i in range(size):
+				if min_v[i] == max_v[i]:
+					value.append(0.0)
+				else:
+					value.append(np.random.uniform(-1.0, 1.0))
+
+			value = np.array(value)
+			# value = np.array([np.random.uniform(min_v[i], max_v[i]) for i in range(size)])
 
 			return value
 
@@ -372,9 +380,8 @@ class PPO(object):
 			if self.use_adaptive_sampling:
 				for i in range(size):
 					cur_state = states[i][self.num_state_char-self.num_paramstate_char:self.num_state_char]
-
 					if self.use_device:
-						cur_state = np.append(cur_state, states[i][self.num_state-1-self.num_paramstate_device:self.num_state])
+						cur_state = np.append(cur_state, states[i][self.num_state-self.num_paramstate_device:self.num_state])
 
 					self.marginal_buffer.Push(cur_state, values[i])
 

@@ -315,7 +315,16 @@ Device::
 SetK_(double k)
 {
     mK_ = k;
-    mParamState[0] = k/mK_scaler;
+
+    double param = 0.0;
+    if(mMax_v[0] == mMin_v[0])
+        mParamState[0] = mMin_v[0];
+    else
+    {
+        double ratio = (mK_/mK_scaler-mMin_v[0])/(mMax_v[0]-mMin_v[0]);
+        param = ratio*2.0 - 1.0;
+        mParamState[0] = param;
+    }
 }
 
 void
@@ -323,7 +332,16 @@ Device::
 SetDelta_t(double t)
 {
     mDelta_t = t * mDelta_t_scaler;
-    mParamState[1] = t;
+
+    double param = 0.0;
+    if(mMax_v[0] == mMin_v[0])
+        mParamState[1] = mMin_v[0];
+    else
+    {
+        double ratio = (mK_/mK_scaler-mMin_v[0])/(mMax_v[0]-mMin_v[0]);
+        param = ratio*2.0 - 1.0;
+        mParamState[1] = param;
+    }
 }
 
 void
@@ -341,12 +359,15 @@ Device::
 SetParamState(Eigen::VectorXd paramState)
 {
     mParamState = paramState;
+    double param = 0.0;
     for(int i=0; i<paramState.size(); i++)
     {
+        param = paramState[i];
+        param = mMin_v[i]+(mMax_v[i]-mMin_v[i])*(param+1.0)/2.0;
         if(i==0)
-            this->SetK_(paramState[i]);
+            this->SetK_(param);
         else if(i==1)
-            this->SetDelta_t(paramState[i]);
+            this->SetDelta_t(param);
     }
 }
 

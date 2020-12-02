@@ -14,6 +14,7 @@ EnvManager(std::string meta_file,int num_envs)
 		MASS::Environment* env = mEnvs.back();
 
 		env->Initialize(meta_file,false);
+		env->SetId(i);
 	}
 }
 

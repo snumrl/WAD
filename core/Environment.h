@@ -15,6 +15,7 @@ public:
 	Environment();
 	~Environment();
 
+	void SetId(int i){mId = i;}
 	void Initialize(const std::string& meta_file, bool load_obj = false);
 	void Initialize();
 
@@ -72,7 +73,7 @@ private:
 	dart::dynamics::SkeletonPtr mGround;
 	Character* mCharacter;
 	Device* mDevice;
-
+	int mId;
 	int mControlHz;
 	int mSimulationHz;
 	int mNumSteps;

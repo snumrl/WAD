@@ -1163,7 +1163,15 @@ SetForceRatio(double r)
 	force_ratio = r;
 	mMaxForces = force_ratio * mDefaultForces;
 
-	mParamState[1] = force_ratio;
+	double param = 0.0;
+	if(mMax_v[0] == mMin_v[0])
+		mParamState[1] = mMin_v[0];
+	else
+	{
+		double ratio = (force_ratio-mMin_v[0])/(mMax_v[0]-mMin_v[0]);
+		param = ratio*2.0 - 1.0;
+		mParamState[1] = param;
+	}
 }
 
 void
@@ -1183,7 +1191,15 @@ SetMassRatio(double r)
 		body->setInertia(inertia);
 	}
 
-	mParamState[0] = mass_ratio;
+	double param = 0.0;
+	if(mMax_v[0] == mMin_v[0])
+		mParamState[0] = mMin_v[0];
+	else
+	{
+		double ratio = (mass_ratio-mMin_v[0])/(mMax_v[0]-mMin_v[0]);
+		param = ratio*2.0 - 1.0;
+		mParamState[0] = param;
+	}
 }
 
 void
@@ -1201,16 +1217,15 @@ Character::
 SetParamState(Eigen::VectorXd paramState)
 {
 	mParamState = paramState;
+	double param = 0.0;
 	for(int i=0; i<paramState.size(); i++)
 	{
+		param = paramState[i];
+		param = mMin_v[i]+(mMax_v[i]-mMin_v[i])*(param+1.0)/2.0;
 		if(i==0) // Mass
-		{
-			this->SetMassRatio(paramState[i]);
-		}
+			this->SetMassRatio(param);
 		else if(i==1) // Force
-		{
-		 	this->SetForceRatio(paramState[i]);
-		}
+		 	this->SetForceRatio(param);
 	}
 }
 
