@@ -1164,11 +1164,11 @@ SetForceRatio(double r)
 	mMaxForces = force_ratio * mDefaultForces;
 
 	double param = 0.0;
-	if(mMax_v[0] == mMin_v[0])
-		mParamState[1] = mMin_v[0];
+	if(mMax_v[1] == mMin_v[1])
+		mParamState[1] = mMin_v[1];
 	else
 	{
-		double ratio = (force_ratio-mMin_v[0])/(mMax_v[0]-mMin_v[0]);
+		double ratio = (force_ratio-mMin_v[1])/(mMax_v[1]-mMin_v[1]);
 		param = ratio*2.0 - 1.0;
 		mParamState[1] = param;
 	}
@@ -1244,12 +1244,12 @@ Character::
 SetAdaptiveParams(std::string name, double lower, double upper)
 {
 	if(name == "mass"){
-		this->SetMassRatio(lower);
 		this->SetMinMaxV(0, lower, upper);
+		this->SetMassRatio(lower);
 	}
 	else if(name == "force"){
-		this->SetForceRatio(lower);
 		this->SetMinMaxV(1, lower, upper);
+		this->SetForceRatio(lower);
 	}
 }
 

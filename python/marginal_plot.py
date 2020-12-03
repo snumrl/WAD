@@ -54,18 +54,6 @@ class Graph(object):
 
 		self.loadandplot(path)
 
-	# def next(self, event):
-	# 	self.count += 1
-	# 	ax.clear()
-	# 	self.loadandplot(path)
-
-	# def prev(self, event):
-	# 	self.count -= 1
-	# 	if self.count < 0:
-	# 		self.count = 0
-	# 	self.surf.remove()
-	# 	self.loadandplot()
-
 	def loadandplot(self, path):
 		self.marginal_model.load(path)
 		if self.dim == 2:
@@ -74,6 +62,7 @@ class Graph(object):
 					state = [self.X[0][i][j], 0.4, self.X[1][i][j], 0.3]
 					state = FloatTensor(np.array(state))
 					self.V[i][j] = self.marginal_model(state).cpu().detach().numpy()
+			self.ax.set_zlim(0.00, np.max(self.V))
 			self.surf = self.ax.plot_surface(self.X[0], self.X[1], self.V, linewidth = 0, antialiased = False)
 		else:
 			for i in range(self.n):
@@ -100,13 +89,5 @@ if __name__ == "__main__":
 
 	callback = Graph(env, dim, path)
 
-	# axprev = plt.axes([0.7, 0.05, 0.1, 0.075])
-	# axnext = plt.axes([0.81, 0.05, 0.1, 0.075])
-
-	# bnext = Button(axnext, 'Next')
-	# bnext.on_clicked(callback.next)
-
-	# bprev = Button(axprev, 'Previous')
-	# bprev.on_clicked(callback.prev)
 	plt.show()
 

@@ -337,11 +337,11 @@ SetDelta_t(double t)
     mDelta_t = t;
 
     double param = 0.0;
-    if(mMax_v[0] == mMin_v[0])
-        mParamState[1] = mMin_v[0];
+    if(mMax_v[1] == mMin_v[1])
+        mParamState[1] = mMin_v[1];
     else
     {
-        double ratio = (mK_/mK_scaler-mMin_v[0])/(mMax_v[0]-mMin_v[0]);
+        double ratio = (mK_/mK_scaler-mMin_v[1])/(mMax_v[1]-mMin_v[1]);
         param = ratio*2.0 - 1.0;
         mParamState[1] = param;
     }
@@ -389,11 +389,11 @@ Device::
 SetAdaptiveParams(std::string name, double lower, double upper)
 {
     if(name == "k"){
-        this->SetK_(lower*mK_scaler);
         this->SetMinMaxV(0, lower, upper);
+        this->SetK_(lower*mK_scaler);
     }
     else if(name == "delta_t"){
-        this->SetDelta_t(lower);
         this->SetMinMaxV(1, lower, upper);
+        this->SetDelta_t(lower);
     }
 }

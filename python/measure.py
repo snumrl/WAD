@@ -28,10 +28,22 @@ LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
+import matplotlib
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
+
+import argparse
+import os
+
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
-		self.num_slaves = 900
+		self.res = 21
+		self.res_tot = self.res*self.res
+		self.step = 10
+		self.num_slaves = self.res_tot
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
 		self.use_device = self.env.UseDevice()
@@ -108,27 +120,30 @@ class PPO(object):
 		self.marginal_model.load('../nn/'+path+'_marginal.pt')
 
 	def Measure(self):
-		self.counter = np.array([0 for i in range(900)])
-		self.velocities = np.array([0.0 for i in range(900)])
+		self.counter = np.array([0 for i in range(self.res_tot)])
+		self.velocities = np.array([0.0 for i in range(self.res_tot)])
 
-		min_v = self.env.GetMinV()
-		max_v = self.env.GetMaxV()
+		self.min_v = self.env.GetMinV()
+		self.max_v = self.env.GetMaxV()
+		param_size = len(self.min_v)
 
-		states = [None]*self.num_slaves
-		states = self.env.GetStates()
+		self.dt = np.array([(self.max_v[i]-self.min_v[i])/float(self.res-1) for i in range(param_size)])
+		self.dt_idx = np.array([i for i in range(param_size) if self.min_v[i]!=self.max_v[i]])
 
-		delta1 = (max_v[0] - min_v[0])/30.0
-		delta2 = (max_v[2] - min_v[2])/30.0
-
-		for i in range(0, 30):
-			for j in range(0, 30):
-				param_state = np.float32(np.array([min_v[0]+delta1*i, 0.4, min_v[2]+delta2*j, 0.3]))
-				self.env.SetParamState(i*30+j, param_state)
+		for i in range(self.res):
+			for j in range(self.res):
+				param_state = [self.min_v[0], self.min_v[1], self.min_v[2], self.min_v[3]]
+				param_state[self.dt_idx[0]] += self.dt[self.dt_idx[0]]*i
+				param_state[self.dt_idx[1]] += self.dt[self.dt_idx[1]]*j
+				param_state = np.float32(np.array(param_state))
+				self.env.SetParamState(i*self.res+j, param_state)
 		# for i in range(self.num_slaves):
 		# 	param_state = np.array([min_v[0]+0.1*(i/11), min_v[2]+0.08*(i%11)])
 		# 	self.env.SetParamState(i, param_state)
 
-		for i in range(300):
+		states = [None]*self.num_slaves
+		states = self.env.GetStates()
+		for i in range(self.step):
 			a_dist,v = self.model(Tensor(states))
 			actions = a_dist.sample().cpu().detach().numpy()
 			logprobs = a_dist.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
@@ -162,23 +177,35 @@ class PPO(object):
 			states = self.env.GetStates()
 			states = self.rms.apply(states)
 
-		for i in range(0, 900):
+		for i in range(self.res_tot):
 			if self.counter[i] == 0:
 				pass
 			else:
 				self.velocities[i] /= float(self.counter[i])
 
-		return self.velocities
+	def Plot(self):
+		fig = plt.figure()
+		ax = fig.gca(projection='3d')
+		ax.set_zlim(2.00, 6.00)
+		ax.zaxis.set_major_locator(LinearLocator(5))
+		ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+
+		X = []
+		X.append(np.arange(self.min_v[self.dt_idx[0]], self.max_v[self.dt_idx[0]]+self.dt[self.dt_idx[0]], self.dt[self.dt_idx[0]]))
+		X.append(np.arange(self.min_v[self.dt_idx[1]], self.max_v[self.dt_idx[1]]+self.dt[self.dt_idx[1]], self.dt[self.dt_idx[1]]))
+		X[0], X[1] = np.meshgrid(X[0], X[1])
+
+		V = np.zeros((self.res, self.res))
+		for i in range(self.res):
+			for j in range(self.res):
+				V[i][j] = self.velocities[i*self.res + j]
+		surf = ax.plot_surface(X[0], X[1], V, linewidth = 0, antialiased = True)
 
 
-import matplotlib
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
-import argparse
-import os
+		fig.colorbar(surf, shrink=0.5, aspect=5 )
+		plt.show()
+
 if __name__=="__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-d','--meta',help='meta file')
@@ -212,22 +239,6 @@ if __name__=="__main__":
 
 	print('num states: {}, num actions: {}'.format(ppo.env.GetNumState(),ppo.env.GetNumAction()))
 
-	velocities = ppo.Measure()
+	ppo.Measure()
+	ppo.Plot()
 
-	fig = plt.figure()
-	ax = fig.gca(projection='3d')
-	ax.zaxis.set_major_locator(LinearLocator(5))
-	ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
-
-	X = []
-	X.append(np.arange(0.5, 1.5, 1.0/30.0))
-	X.append(np.arange(0.2, 1.0, 0.8/30.0))
-	X[0], X[1] = np.meshgrid(X[0], X[1])
-
-	V = np.zeros((30, 30))
-	for i in range(30):
-		for j in range(30):
-			V[i][j] = velocities[i*30 + j]
-	surf = ax.plot_surface(X[0], X[1], V, linewidth = 0, antialiased = False)
-
-	plt.show()
