@@ -321,7 +321,9 @@ SetK_(double k)
 
     double param = 0.0;
     if(mMax_v[0] == mMin_v[0])
+    {
         mParamState[0] = mMin_v[0];
+    }
     else
     {
         double ratio = (mK_/mK_scaler-mMin_v[0])/(mMax_v[0]-mMin_v[0]);
@@ -338,7 +340,9 @@ SetDelta_t(double t)
 
     double param = 0.0;
     if(mMax_v[1] == mMin_v[1])
+    {
         mParamState[1] = mMin_v[1];
+    }
     else
     {
         double ratio = (mK_/mK_scaler-mMin_v[1])/(mMax_v[1]-mMin_v[1]);

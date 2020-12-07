@@ -10,7 +10,7 @@ device_file /data/device.xml
 bvh_file /data/motion/walk.bvh true
 character_param 2
 device_param 2
-mass 0.5 1.5
-force 0.4 0.4
+mass 1.0 1.0
+force 0.4 1.0
 device_k 0.2 1.0
 delta_t 0.3 0.3

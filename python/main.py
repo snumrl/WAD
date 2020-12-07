@@ -260,7 +260,7 @@ class PPO(object):
 			value = []
 			for i in range(size):
 				if min_v[i] == max_v[i]:
-					value.append(0.0)
+					value.append(min_v[i])
 				else:
 					value.append(np.random.uniform(-1.0, 1.0))
 
