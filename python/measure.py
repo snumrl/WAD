@@ -40,9 +40,9 @@ import os
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
-		self.res = 21
+		self.res = 12
 		self.res_tot = self.res*self.res
-		self.step = 10
+		self.step = 3000
 		self.num_slaves = self.res_tot
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
@@ -121,6 +121,7 @@ class PPO(object):
 
 	def Measure(self):
 		self.counter = np.array([0 for i in range(self.res_tot)])
+		self.rewards = np.array([0.0 for i in range(self.res_tot)])
 		self.velocities = np.array([0.0 for i in range(self.res_tot)])
 
 		self.min_v = self.env.GetMinV()
@@ -130,16 +131,14 @@ class PPO(object):
 		self.dt = np.array([(self.max_v[i]-self.min_v[i])/float(self.res-1) for i in range(param_size)])
 		self.dt_idx = np.array([i for i in range(param_size) if self.min_v[i]!=self.max_v[i]])
 
-		for i in range(self.res):
-			for j in range(self.res):
-				param_state = [self.min_v[0], self.min_v[1], self.min_v[2], self.min_v[3]]
-				param_state[self.dt_idx[0]] += self.dt[self.dt_idx[0]]*i
-				param_state[self.dt_idx[1]] += self.dt[self.dt_idx[1]]*j
-				param_state = np.float32(np.array(param_state))
-				self.env.SetParamState(i*self.res+j, param_state)
-		# for i in range(self.num_slaves):
-		# 	param_state = np.array([min_v[0]+0.1*(i/11), min_v[2]+0.08*(i%11)])
-		# 	self.env.SetParamState(i, param_state)
+		for i in range(self.res_tot):
+			idx_0 = int(i/self.res)
+			idx_1 = int(i%self.res)
+			param_state = [self.min_v[0], self.min_v[1], self.min_v[2], self.min_v[3]]
+			param_state[self.dt_idx[0]] += self.dt[self.dt_idx[0]]*idx_0
+			param_state[self.dt_idx[1]] += self.dt[self.dt_idx[1]]*idx_1
+			param_state = np.float32(np.array(param_state))
+			self.env.SetParamState(i, param_state)
 
 		states = [None]*self.num_slaves
 		states = self.env.GetStates()
@@ -150,7 +149,7 @@ class PPO(object):
 			values = v.cpu().detach().numpy().reshape(-1)
 			self.env.SetActions(actions)
 			if self.use_muscle:
-				for i in range(self.num_simulation_per_control):
+				for j in range(self.num_simulation_per_control):
 					mt = Tensor(self.env.GetMuscleTorques())
 					self.env.SetDesiredTorques()
 					dt = Tensor(self.env.GetDesiredTorques())
@@ -168,11 +167,21 @@ class PPO(object):
 					nan_occur = True
 				elif self.env.IsEndOfEpisode(j) is False:
 					terminated_state = False
-					self.velocities[j] += self.env.GetVelocity(j)*3.6
-					self.counter[j] += 1
+					vel = self.env.GetVelocity(j)*3.6
+					if (vel > 3.6 and vel < 5.0):
+						self.rewards[j] += self.env.GetReward(j)
+						self.velocities[j] += vel
+						self.counter[j] += 1
 
 				if terminated_state:
 					self.env.Reset(True,j)
+					idx_0 = int(j/self.res)
+					idx_1 = int(j%self.res)
+					param_state = [self.min_v[0], self.min_v[1], self.min_v[2], self.min_v[3]]
+					param_state[self.dt_idx[0]] += self.dt[self.dt_idx[0]]*idx_0
+					param_state[self.dt_idx[1]] += self.dt[self.dt_idx[1]]*idx_1
+					param_state = np.float32(np.array(param_state))
+					self.env.SetParamState(j, param_state)
 
 			states = self.env.GetStates()
 			states = self.rms.apply(states)
@@ -182,28 +191,42 @@ class PPO(object):
 				pass
 			else:
 				self.velocities[i] /= float(self.counter[i])
+				self.rewards[i] /= float(self.counter[i])
 
 	def Plot(self):
-		fig = plt.figure()
-		ax = fig.gca(projection='3d')
-		ax.set_zlim(2.00, 6.00)
-		ax.zaxis.set_major_locator(LinearLocator(5))
-		ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
-
 		X = []
 		X.append(np.arange(self.min_v[self.dt_idx[0]], self.max_v[self.dt_idx[0]]+self.dt[self.dt_idx[0]], self.dt[self.dt_idx[0]]))
 		X.append(np.arange(self.min_v[self.dt_idx[1]], self.max_v[self.dt_idx[1]]+self.dt[self.dt_idx[1]], self.dt[self.dt_idx[1]]))
 		X[0], X[1] = np.meshgrid(X[0], X[1])
+
+		fig = plt.figure()
+		ax = fig.gca(projection='3d')
+		ax.set_zlim(3.80, 5.00)
+		ax.zaxis.set_major_locator(LinearLocator(5))
+		ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
 
 		V = np.zeros((self.res, self.res))
 		for i in range(self.res):
 			for j in range(self.res):
 				V[i][j] = self.velocities[i*self.res + j]
 		surf = ax.plot_surface(X[0], X[1], V, linewidth = 0, antialiased = True)
+		# fig.colorbar(surf, shrink=0.5, aspect=5)
+		plt.savefig('../nn/vel.png')
 
+		fig = plt.figure()
+		ax = fig.gca(projection='3d')
+		ax.set_zlim(0.0, 0.5)
+		ax.zaxis.set_major_locator(LinearLocator(5))
+		ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
 
+		V = np.zeros((self.res, self.res))
+		for i in range(self.res):
+			for j in range(self.res):
+				V[i][j] = self.rewards[i*self.res + j]
+		surf = ax.plot_surface(X[0], X[1], V, linewidth = 0, antialiased = True)
+		plt.savefig('../nn/rew.png')
 
-		fig.colorbar(surf, shrink=0.5, aspect=5 )
+		# fig.colorbar(surf, shrink=0.5, aspect=5)
 		plt.show()
 
 if __name__=="__main__":

@@ -8,21 +8,19 @@ import numpy as np
 from matplotlib.widgets import Button
 from pymss import EnvManager
 
-
-
 use_cuda = torch.cuda.is_available()
 FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
-
 class Graph(object):
 	def __init__(self, env, dim, path):
 		self.domain = [0,2]
 		self.dim = len(self.domain)
 		self.count = 0
-		self.n = 100 # resolution
+		self.n = 50 # resolution
+		self.path = path
 
 		if self.dim == 1:
 			fig = plt.figure()
@@ -30,7 +28,7 @@ class Graph(object):
 		else:
 			fig = plt.figure()
 			self.ax = fig.gca(projection='3d')
-			self.ax.zaxis.set_major_locator(LinearLocator(5))
+			self.ax.zaxis.set_major_locator(LinearLocator(10))
 			self.ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
 
 		# Domain Range
@@ -52,7 +50,13 @@ class Graph(object):
 		elif self.dim == 2:
 			self.V = np.zeros((self.n, self.n))
 
-		self.loadandplot(path)
+		# for i in range(1,12):
+		# 	path = '../nn/'+str(i*5)+'_marginal.pt'
+		# 	self.ax.clear()
+		# 	self.loadandplot(path)
+		# 	plt.savefig('../nn/m_'+str(i*5)+'.png')
+
+		self.loadandplot(self.path)
 
 	def loadandplot(self, path):
 		self.marginal_model.load(path)
@@ -63,12 +67,27 @@ class Graph(object):
 					state = FloatTensor(np.array(state))
 					self.V[i][j] = self.marginal_model(state).cpu().detach().numpy()
 			self.ax.set_zlim(0.00, np.max(self.V))
+			# self.ax.set_zlim(0.00, 9.0)
 			self.surf = self.ax.plot_surface(self.X[0], self.X[1], self.V, linewidth = 0, antialiased = False)
 		else:
 			for i in range(self.n):
 				state = FloatTensor(np.array([self.X[i]]))
 				self.V[i] = self.marginal_model(state).cpu().detach().numpy()
 			self.ax.plot(self.X, self.V)
+
+	def next(self, event):
+		self.count += 1
+		ax.clear()
+		path = '../nn/'+str(self.count)+'_marginal.pt'
+		self.loadandplot(path)
+
+	def prev(self, event):
+		self.count -= 1
+		if self.count < 0:
+			self.count = 0
+		ax.clear()
+		path = '../nn/'+str(self.count)+'_marginal.pt'
+		self.loadandplot(path)
 
 import argparse
 if __name__ == "__main__":
@@ -88,6 +107,14 @@ if __name__ == "__main__":
 	dim = env.GetNumParamState()
 
 	callback = Graph(env, dim, path)
+
+	bNextAxes = plt.axes([0.7, 0.05, 0.1, 0.075])
+	bNext = Button(bNextAxes, 'Next')
+	bNext.on_clicked(callback.next)
+
+	bPrevAxes = plt.axes([0.8, 0.05, 0.1, 0.075])
+	bPrev = Button(bPrevAxes, 'Prev')
+	bPrev.on_clicked(callback.prev)
 
 	plt.show()
 

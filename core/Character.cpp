@@ -972,15 +972,6 @@ SetTargetPosAndVel(double t, int controlHz)
 	mTargetPositions = pv.first;
 	mTargetVelocities = pv.second;
 
-	// double t_noise = (rand()%400) * 0.001;
-	// t += (t_noise - 0.2);
-	// if(t < 0)
-	// 	t = 0;
-
-	// std::pair<Eigen::VectorXd,Eigen::VectorXd> pv_noise = this->GetTargetPosAndVel(t, 1.0/controlHz);
-	// mTargetPositionsNoise = pv_noise.first;
-	// mTargetVelocitiesNoise = pv_noise.second;
-
 	mTargetPositionsNoise = pv.first;
 	mTargetVelocitiesNoise = pv.second;
 
