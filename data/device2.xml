@@ -1,28 +1,28 @@
 <Skeleton name="Device">
     <Node name="Controller" parent="None" >
         <Body type="Box" mass="1.5" size="0.32 0.04 0.04" contact="Off" color="0.5 0.5 0.5 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 0.9809 -0.09"/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 1.06 -0.09"/>
         </Body>
         <Joint type="Free">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 0.9809 -0.0 "/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 1.06 -0.0 "/>
         </Joint>
     </Node>
 
     <Node name="ControllerLeft" parent="Controller" >
         <Body type="Box" mass="0.1" size="0.04 0.04 0.1340" contact="Off" color="0.5 0.5 0.5 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.14 0.9809 -0.0"/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.14 1.06 -0.0"/>
         </Body>
         <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.14 0.9809 -0.09"/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.14 1.06 -0.09"/>
         </Joint>
     </Node>
 
     <Node name="ControllerRight" parent="Controller" >
         <Body type="Box" mass="0.1" size="0.04 0.04 0.1340" contact="Off" color="0.5 0.5 0.5 1.0">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.14 0.9809 -0.0"/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.14 1.06 -0.0"/>
         </Body>
         <Joint type="Weld">
-            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.14 0.9809 -0.09"/>
+            <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.14 1.06 -0.09"/>
         </Joint>
     </Node>
 

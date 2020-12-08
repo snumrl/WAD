@@ -130,6 +130,7 @@ BVH::
 BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map)
 	:mSkeleton(skel),mBVHMap(bvh_map),mCyclic(true)
 {
+	mSpeedRatio = 1.0;
 }
 
 BVHNode*
@@ -312,9 +313,12 @@ SetMotionFrames()
 				p.segment<6>(idx) = FreeJoint::convertToPositions(T);
 
 				if(jointName == "Pelvis"){
-
 					p[idx]   *= mSpeedRatio;
 					p[idx+1] *= mSpeedRatio;
+					if(p[idx+2] > 0)
+						p[idx+2]   *= 0.8;
+					else
+						p[idx+2]   *= 0.4;
 					p[idx+2] *= mSpeedRatio;
 					p[idx+3] *= mSpeedRatio;
 					p[idx+4] *= 1.0;
@@ -325,18 +329,18 @@ SetMotionFrames()
 				p.segment<3>(idx) = BallJoint::convertToPositions(R);
 
 				if(jointName == "Spine"){
-					// p[idx] -= 0.07;
-					p[idx] += 0.25;
+					p[idx] -= 0.06;
+					// p[idx] += 0.25;
 				}
 
 				if(jointName == "Torso"){
-					p[idx] += 0.3;
+					// p[idx] += 0.3;
 					if(p[idx+2] > 0)
-						p[idx+2] *= 0.5;
+						p[idx+2] *= 0.3;
 				}
 
-				if(jointName == "ShoulderL" || jointName ==  "ShoulderR")
-					p[idx] -= 0.20;
+				// if(jointName == "ShoulderL" || jointName ==  "ShoulderR")
+				// 	p[idx] -= 0.20;
 
 				if(jointName == "ArmL")
 					p[idx+2] -= 0.1;
@@ -347,19 +351,15 @@ SetMotionFrames()
 				if(jointName == "FemurL" || jointName == "FemurR"){
 					p[idx]   *= mSpeedRatio;
 					p[idx+1] *= mSpeedRatio;
+					if(p[idx+2] > 0)
+						p[idx+2] *= 0.5;
 					p[idx+2] *= mSpeedRatio;
-					// p[idx]   *= 0.6;
-					// p[idx+1] *= 0.6;
-					// p[idx+2] *=0.6; // for speed 0.4
 				}
 
 				if(jointName == "TalusL" || jointName == "TalusR"){
 					p[idx]   *= mSpeedRatio;
 					p[idx+1] *= mSpeedRatio;
 					p[idx+2] *= mSpeedRatio;
-					// p[idx]   *= 0.6;
-					// p[idx+1] *= 0.6;
-					// p[idx+2] *=0.6; // for speed 0.4
 				}
 			}
 			else if(jn->getType()=="RevoluteJoint")
@@ -382,15 +382,11 @@ SetMotionFrames()
 				p[idx] = val;
 
 				if(jointName == "ForeArmL"){
-					// p[idx] *= 0.7;
 					p[idx] *= mSpeedRatio;
-					p[idx] -= 0.2 ;
 				}
 
 				if(jointName == "ForeArmR"){
-					// p[idx] *= 0.7;
 					p[idx] *= mSpeedRatio;
-					p[idx] += 0.2 ;
 				}
 
 				if(jointName == "TibiaL" || jointName == "TibiaR"){
@@ -406,8 +402,6 @@ SetMotionFrames()
 		}
 		mMotionFrames[i] = p;
 	}
-
-	// this->SetMotionTransform();
 }
 
 Eigen::VectorXd
@@ -455,7 +449,6 @@ SetMotionVelFrames()
 
 	mMotionVelFrames.row(mNumTotalFrames-1) = mMotionVelFrames.row(mNumTotalFrames-2);
 
-	//filtering
 	for (int i=0; i<dof; ++i)
 	{
 		Eigen::VectorXd x = mMotionVelFrames.col(i);

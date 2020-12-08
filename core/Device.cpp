@@ -7,14 +7,17 @@ using namespace dart::dynamics;
 
 Device::
 Device()
+:mNumState(0),mNumAction(0),mNumDof(0),mNumActiveDof(0),mRootJointDof(0),mUseNN(false),mTorqueMax(0.0),qr(0.0),ql(0.0),qr_prev(0.0),ql_prev(0.0),mNumParamState(0)
 {
-    mDelta_t = 180;
-    mK_ = 30.0;
+    mDelta_t = 0.3;
+    mDelta_t_scaler = 600.0;
+    mK_ = 15.0;
+    mK_scaler = 30.0;
 }
 
 Device::
 Device(dart::dynamics::SkeletonPtr dPtr)
-:mNumState(0),mNumAction(0),mNumDof(0),mNumActiveDof(0),mRootJointDof(0),mUseNN(false),mTorqueMax(0.0),qr(0.0),ql(0.0),qr_prev(0.0),ql_prev(0.0),mDelta_t(180),mK_(30.0)
+:Device()
 {
     mSkeleton = dPtr;
 }
@@ -37,6 +40,8 @@ Device::
 SetCharacter(Character* character)
 {
     mCharacter = character;
+    mSimulationHz = character->GetSimHz();
+    mControlHz = character->GetConHz();
 }
 
 void
@@ -64,7 +69,8 @@ Initialize(dart::simulation::WorldPtr& wPtr, bool nn)
     else
         mRootJointDof = 0;
 
-    signal_size = 1200 + mDelta_t;
+    int delta_idx = (int)(mDelta_t*mDelta_t_scaler);
+    signal_size = 1200 + delta_idx;
     mDeviceSignals_y = std::deque<double>(signal_size,0);
     mDeviceSignals_L = std::deque<double>(signal_size,0);
     mDeviceSignals_R = std::deque<double>(signal_size,0);
@@ -139,10 +145,10 @@ Step(double t)
     {
         SetDesiredTorques2();
 
-        Eigen::VectorXd tmp = Eigen::VectorXd::Zero(mDesiredTorque.size());
-        tmp[6] = mDesiredTorque[6]/10.0;
-        tmp[9] = mDesiredTorque[7]/10.0;
-        mSkeleton->setForces(tmp);
+        Eigen::VectorXd f = Eigen::VectorXd::Zero(mDesiredTorque.size());
+        f[6] = mDesiredTorque[6];
+        f[9] = mDesiredTorque[9];
+        mSkeleton->setForces(f);
     }
 }
 
@@ -163,18 +169,30 @@ GetState()
     // state << rotation.w(), rotation.x(), rotation.y(), rotation.z(),
     //             root_linvel / 10., root_angvel/10., positions.tail<6>(), velocities.tail<6>()/10.;
 
-    Eigen::VectorXd state(8);
-    int offset = (mDelta_t/3.0);
-    double scaler = mK_/2.0;
+    double history_window = 0.3;
+    double history_interval = 0.05;
+    int offset = (history_interval * mSimulationHz);
+    int history_num = (history_window+0.001)/(history_interval)+1;
 
-    for(int i=0; i<4; i++)
+    int parameter_num = mNumParamState;
+    Eigen::VectorXd state(history_num*2+parameter_num);
+
+    double scaler = 2.0;
+    for(int i=0; i<history_num; i++)
     {
-        double torque = mDeviceSignals_y.at(mDelta_t-i*offset);
+        int delta_idx = (int)(mDelta_t*mDelta_t_scaler);
+        double signal_y = mDeviceSignals_y.at(delta_idx + i*offset);
+        double torque = mK_ * signal_y;
         double des_torque_l =  1*torque;
         double des_torque_r = -1*torque;
-        state[i*2] = des_torque_l/scaler;
-        state[i*2+1] = des_torque_r/scaler;
+
+        state[i*2] = signal_y * scaler;
+        state[i*2+1] = -signal_y * scaler;
     }
+
+    for(int i=0; i<parameter_num; i++)
+        state[history_num*2 + i] = mParamState[i];
+    // state[history_num*2] = mK_/30.0;
 
     return state;
 }
@@ -231,10 +249,11 @@ SetDesiredTorques2()
     double beta_Rhip = 1.0;
 
     mDeviceSignals_y.pop_back();
-    mDeviceSignals_y.push_front(mK_*y);
+    mDeviceSignals_y.push_front(y);
 
     // double torque = k_ * y_delta_t;
-    double torque = mDeviceSignals_y.at(mDelta_t);
+    int delta_idx = (int)(mDelta_t * mDelta_t_scaler);
+    double torque = mK_ * mDeviceSignals_y.at(delta_idx);
     double des_torque_l =  1*torque*beta_L*beta_Lhip;
     double des_torque_r = -1*torque*beta_R*beta_Rhip;
 
@@ -245,7 +264,7 @@ SetDesiredTorques2()
     mDeviceSignals_R.push_front(des_torque_r);
 
     mDesiredTorque[6] = des_torque_l;
-    mDesiredTorque[7] = des_torque_r;
+    mDesiredTorque[9] = des_torque_r;
 }
 
 double
@@ -292,4 +311,93 @@ GetSignals(int idx)
         return mDeviceSignals_R;
     else if(idx==2)
         return mDeviceSignals_y;
+}
+
+void
+Device::
+SetK_(double k)
+{
+    mK_ = k;
+
+    double param = 0.0;
+    if(mMax_v[0] == mMin_v[0])
+    {
+        mParamState[0] = mMin_v[0];
+    }
+    else
+    {
+        double ratio = (mK_/mK_scaler-mMin_v[0])/(mMax_v[0]-mMin_v[0]);
+        param = ratio*2.0 - 1.0;
+        mParamState[0] = param;
+    }
+}
+
+void
+Device::
+SetDelta_t(double t)
+{
+    mDelta_t = t;
+
+    double param = 0.0;
+    if(mMax_v[1] == mMin_v[1])
+    {
+        mParamState[1] = mMin_v[1];
+    }
+    else
+    {
+        double ratio = (mK_/mK_scaler-mMin_v[1])/(mMax_v[1]-mMin_v[1]);
+        param = ratio*2.0 - 1.0;
+        mParamState[1] = param;
+    }
+}
+
+void
+Device::
+SetNumParamState(int n)
+{
+    mNumParamState = n;
+    mParamState = Eigen::VectorXd::Zero(mNumParamState);
+    mMin_v = Eigen::VectorXd::Zero(mNumParamState);
+    mMax_v = Eigen::VectorXd::Zero(mNumParamState);
+}
+
+void
+Device::
+SetParamState(Eigen::VectorXd paramState)
+{
+    mParamState = paramState;
+    double param = 0.0;
+    for(int i=0; i<paramState.size(); i++)
+    {
+        param = paramState[i];
+        param = mMin_v[i]+(mMax_v[i]-mMin_v[i])*(param+1.0)/2.0;
+        if(i==0)
+            this->SetK_(param*mK_scaler);
+        else if(i==1)
+            this->SetDelta_t(param);
+    }
+}
+
+void
+Device::
+SetMinMaxV(int idx, double lower, double upper)
+{
+    // 0 : k
+    // 1 : delta t
+    mMin_v[idx] = lower;
+    mMax_v[idx] = upper;
+}
+
+void
+Device::
+SetAdaptiveParams(std::string name, double lower, double upper)
+{
+    if(name == "k"){
+        this->SetMinMaxV(0, lower, upper);
+        this->SetK_(lower*mK_scaler);
+    }
+    else if(name == "delta_t"){
+        this->SetMinMaxV(1, lower, upper);
+        this->SetDelta_t(lower);
+    }
 }

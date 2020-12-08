@@ -15,6 +15,7 @@ public:
 	Environment();
 	~Environment();
 
+	void SetId(int i){mId = i;}
 	void Initialize(const std::string& meta_file, bool load_obj = false);
 	void Initialize();
 
@@ -30,7 +31,11 @@ public:
 	double GetReward();
 
 	int GetNumState();
+
+	int GetNumState_Char();
+	int GetNumParamState_Char();
 	int GetNumState_Device();
+	int GetNumParamState_Device();
 	int GetNumAction();
 	int GetNumAction_Device();
 
@@ -42,7 +47,6 @@ public:
 	void SetSimulationHz(int sim_hz) {mSimulationHz = sim_hz;}
 	void SetCharacter(Character* character) {mCharacter = character;}
 	void SetDevice(Device* device) {mDevice = device;}
-
 	bool GetUseMuscle(){return mUseMuscle;}
 	bool GetUseDevice(){return mUseDevice;}
 	bool GetUseDeviceNN(){return mUseDeviceNN;}
@@ -55,12 +59,21 @@ public:
 	const dart::simulation::WorldPtr& GetWorld(){return mWorld;}
 	std::map<std::string, std::deque<double>> GetRewards();
 
+	void SetUseAdaptiveSampling(bool use_adaptive_sampling){mUseAdaptiveSampling = use_adaptive_sampling;}
+	bool GetUseAdaptiveSampling(){return mUseAdaptiveSampling;}
+	void SetParamState(Eigen::VectorXd paramState);
+	Eigen::VectorXd GetParamState();
+	void SetNumParamState(int n){mNumParamState=n;}
+	int GetNumParamState(){return mNumParamState;}
+	Eigen::VectorXd GetMinV();
+	Eigen::VectorXd GetMaxV();
+
 private:
 	dart::simulation::WorldPtr mWorld;
 	dart::dynamics::SkeletonPtr mGround;
 	Character* mCharacter;
 	Device* mDevice;
-
+	int mId;
 	int mControlHz;
 	int mSimulationHz;
 	int mNumSteps;
@@ -71,6 +84,9 @@ private:
 
 	int mSimCount;
 	int mRandomSampleIndex;
+
+	bool mUseAdaptiveSampling;
+	int mNumParamState;
 };
 };
 

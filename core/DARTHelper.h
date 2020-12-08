@@ -27,7 +27,7 @@ dart::dynamics::RevoluteJoint::Properties* MakeRevoluteJointProperties(const std
 dart::dynamics::WeldJoint::Properties* MakeWeldJointProperties(const std::string& name,const Eigen::Isometry3d& parent_to_joint = Eigen::Isometry3d::Identity(),const Eigen::Isometry3d& child_to_joint = Eigen::Isometry3d::Identity());
 
 dart::dynamics::BodyNode* MakeBodyNode(const dart::dynamics::SkeletonPtr& skeleton,dart::dynamics::BodyNode* parent,dart::dynamics::Joint::Properties* joint_properties,const std::string& joint_type,dart::dynamics::Inertia inertia);
-dart::dynamics::SkeletonPtr BuildFromFile(const std::string& path,bool create_obj=false);
+dart::dynamics::SkeletonPtr BuildFromFile(const std::string& path, bool create_obj=false, double mass_ratio=1.0);
 };
 
 #endif

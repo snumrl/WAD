@@ -49,11 +49,20 @@ public:
     // void SetSignals();
     std::deque<double> GetSignals(int idx);
 
-    void setDelta_t(int t){mDelta_t = t;}
-    void setK_(double k){mK_ = k;}
+    void SetDelta_t(double t);
+    double GetDelta_t(){return mDelta_t;}
 
-    int getDelta_t(){return mDelta_t;}
-    double getK_(){return mK_;}
+    void SetK_(double k);
+    double GetK_(){return mK_;}
+
+    void SetNumParamState(int n);
+    int GetNumParamState(){return mNumParamState;}
+    void SetParamState(Eigen::VectorXd paramState);
+    Eigen::VectorXd GetParamState(){return mParamState;}
+    Eigen::VectorXd GetMinV(){return mMin_v;}
+    Eigen::VectorXd GetMaxV(){return mMax_v;}
+    void SetMinMaxV(int idx, double lower, double upper);
+    void SetAdaptiveParams(std::string name, double lower, double upper);
 
 private:
     dart::dynamics::SkeletonPtr mSkeleton;
@@ -65,6 +74,9 @@ private:
     int mNumDof;
     int mNumActiveDof;
     int mRootJointDof;
+
+    int mSimulationHz;
+    int mControlHz;
 
     bool mUseNN;
 
@@ -83,8 +95,15 @@ private:
     double ql_prev;
 
     int signal_size;
-    int mDelta_t;
+    double mDelta_t;
+    double mDelta_t_scaler;
     double mK_;
+    double mK_scaler;
+
+    int mNumParamState;
+    Eigen::VectorXd mParamState;
+    Eigen::VectorXd mMin_v;
+    Eigen::VectorXd mMax_v;
 };
 
 }

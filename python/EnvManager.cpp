@@ -14,6 +14,7 @@ EnvManager(std::string meta_file,int num_envs)
 		MASS::Environment* env = mEnvs.back();
 
 		env->Initialize(meta_file,false);
+		env->SetId(i);
 	}
 }
 
@@ -183,11 +184,25 @@ IsEndOfEpisodes()
 	return toNumPyArray(is_end_vector);
 }
 
+double
+EnvManager::
+GetVelocity(int idx)
+{
+	return mEnvs[idx]->GetCharacter()->GetCurVelocity();
+}
+
 int
 EnvManager::
 GetNumState()
 {
 	return mEnvs[0]->GetNumState();
+}
+
+int
+EnvManager::
+GetNumState_Char()
+{
+	return mEnvs[0]->GetNumState_Char();
 }
 
 int
@@ -329,6 +344,55 @@ GetMuscleTuples()
 
 	return all;
 }
+
+bool
+EnvManager::UseAdaptiveSampling()
+{
+	return mEnvs[0]->GetUseAdaptiveSampling();
+}
+
+void
+EnvManager::
+SetParamState(int id, np::ndarray np_array)
+{
+	mEnvs[id]->SetParamState(toEigenVector(np_array));
+}
+
+int
+EnvManager::
+GetNumParamState()
+{
+	return mEnvs[0]->GetNumParamState();
+}
+
+int
+EnvManager::
+GetNumParamState_Char()
+{
+	return mEnvs[0]->GetNumParamState_Char();
+}
+
+int
+EnvManager::
+GetNumParamState_Device()
+{
+	return mEnvs[0]->GetNumParamState_Device();
+}
+
+np::ndarray
+EnvManager::
+GetMinV()
+{
+	return toNumPyArray(mEnvs[0]->GetMinV());
+}
+
+np::ndarray
+EnvManager::
+GetMaxV()
+{
+	return toNumPyArray(mEnvs[0]->GetMaxV());
+}
+
 using namespace boost::python;
 
 BOOST_PYTHON_MODULE(pymss)
@@ -355,12 +419,14 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("IsEndOfEpisode",&EnvManager::IsEndOfEpisode)
 		.def("IsEndOfEpisodes",&EnvManager::IsEndOfEpisodes)
 		.def("GetNumState",&EnvManager::GetNumState)
+		.def("GetNumState_Char",&EnvManager::GetNumState_Char)
 		.def("GetNumState_Device",&EnvManager::GetNumState_Device)
 		.def("GetNumAction",&EnvManager::GetNumAction)
 		.def("GetNumAction_Device",&EnvManager::GetNumAction_Device)
 		.def("GetNumSteps",&EnvManager::GetNumSteps)
 		.def("GetControlHz",&EnvManager::GetControlHz)
 		.def("GetSimulationHz",&EnvManager::GetSimulationHz)
+		.def("GetVelocity",&EnvManager::GetVelocity)
 		.def("UseMuscle",&EnvManager::UseMuscle)
 		.def("UseDevice",&EnvManager::UseDevice)
 		.def("UseDeviceNN",&EnvManager::UseDeviceNN)
@@ -369,5 +435,12 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("GetNumTotalMuscleRelatedDofs",&EnvManager::GetNumTotalMuscleRelatedDofs)
 		.def("GetNumMuscles",&EnvManager::GetNumMuscles)
 		.def("GetMuscleTorques",&EnvManager::GetMuscleTorques)
-		.def("GetMuscleTuples",&EnvManager::GetMuscleTuples);
+		.def("GetMuscleTuples",&EnvManager::GetMuscleTuples)
+		.def("UseAdaptiveSampling", &EnvManager::UseAdaptiveSampling)
+		.def("SetParamState", &EnvManager::SetParamState)
+		.def("GetNumParamState", &EnvManager::GetNumParamState)
+		.def("GetNumParamState_Char", &EnvManager::GetNumParamState_Char)
+		.def("GetNumParamState_Device", &EnvManager::GetNumParamState_Device)
+		.def("GetMinV", &EnvManager::GetMinV)
+		.def("GetMaxV", &EnvManager::GetMaxV);
 }

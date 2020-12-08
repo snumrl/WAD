@@ -95,7 +95,7 @@ private:
 	int mNumTotalChannels;
 	int mNumTotalFrames;
 
-	double mSpeedRatio = 0.6;
+	double mSpeedRatio;
 
 	BVHNode* mRoot;
 	dart::dynamics::SkeletonPtr mSkeleton;
