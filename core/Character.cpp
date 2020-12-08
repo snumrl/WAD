@@ -12,7 +12,8 @@ using namespace MASS;
 
 Character::
 Character()
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mNumParamState(0)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),
+	(false),mNumParamState(0)
 {
 	force_ratio = 1.0;
 	mass_ratio = 1.0;
@@ -285,12 +286,12 @@ Initialize_JointWeights()
 	mJointWeights.resize(num_joint);
 
 	mJointWeights <<
-		1.0,					//Pelvis
+		1.0,                    //Pelvis
 		0.5, 0.3, 0.2, 0.1, 0.1,//Left Leg
 		0.5, 0.3, 0.2, 0.1, 0.1,//Right Leg
-		0.5, 0.5, 0.2, 0.2,		//Torso & Neck
-		0.3, 0.2, 0.2, 0.1,		//Left Arm
-		0.3, 0.2, 0.2, 0.1;		//Right Arm
+		0.5, 0.5, 0.2, 0.2,     //Torso & Neck
+		0.3, 0.2, 0.2, 0.1,     //Left Arm
+		0.3, 0.2, 0.2, 0.1;     //Right Arm
 
 	mJointWeights /= mJointWeights.sum();
 }
@@ -304,50 +305,50 @@ Initialize_MaxForces()
 	mDefaultForces.resize(dof);
 
 	// mMaxForces <<
-	// 		0, 0, 0, 0, 0, 0,	//pelvis
-	// 		200, 200, 200,		//Femur L
-	// 		200,				//Tibia L
-	// 		200, 200, 200,		//Talus L
-	// 		200, 200, 			//Thumb, Pinky L
-	// 		200, 200, 200,		//Femur R
-	// 		200,				//Tibia R
-	// 		200, 200, 200,		//Talus R
-	// 		200, 200, 			//Thumb, Pinky R
-	// 		200, 200, 200,		//Spine
-	// 		200, 200, 200,		//Torso
-	// 		200, 200, 200,		//Neck
-	// 		200, 200, 200,		//Head
-	// 		200, 200, 200,		//Shoulder L
-	// 		200, 200, 200,		//Arm L
-	// 		200,				//ForeArm L
-	// 		200, 200, 200,		//Hand L
-	// 		200, 200, 200,		//Shoulder R
-	// 		200, 200, 200,		//Arm R
-	// 		200,				//ForeArm R
-	// 		200, 200, 200;		//Hand R
+	//      0, 0, 0, 0, 0, 0,   //pelvis
+	//      200, 200, 200,      //Femur L
+	//      200,                //Tibia L
+	//      200, 200, 200,      //Talus L
+	//      200, 200,           //Thumb, Pinky L
+	//      200, 200, 200,      //Femur R
+	//      200,                //Tibia R
+	//      200, 200, 200,      //Talus R
+	//      200, 200,           //Thumb, Pinky R
+	//      200, 200, 200,      //Spine
+	//      200, 200, 200,      //Torso
+	//      200, 200, 200,      //Neck
+	//      200, 200, 200,      //Head
+	//      200, 200, 200,      //Shoulder L
+	//      200, 200, 200,      //Arm L
+	//      200,                //ForeArm L
+	//      200, 200, 200,      //Hand L
+	//      200, 200, 200,      //Shoulder R
+	//      200, 200, 200,      //Arm R
+	//      200,                //ForeArm R
+	//      200, 200, 200;      //Hand R
 
 	mDefaultForces <<
-			0, 0, 0, 0, 0, 0,	//pelvis
-			200, 100, 150,		//Femur L
-			100,				//Tibia L
-			150, 50, 50,		//Talus L
-			30, 30, 			//Thumb, Pinky L
-			200, 100, 150,		//Femur R
-			100,				//Tibia R
-			150, 50, 50,		//Talus R
-			30, 30, 			//Thumb, Pinky R
-			80, 80, 80,			//Spine
-			80, 80, 80,			//Torso
-			30, 30, 30,			//Neck
-			30, 30, 30,			//Head
-			50, 50, 50,			//Shoulder L
-			50, 50, 50,			//Arm L
-			30,					//ForeArm L
-			30, 30, 30,			//Hand L
-			50, 50, 50,			//Shoulder R
-			50, 50, 50,			//Arm R
-			30,					//ForeArm R
-			30, 30, 30;			//Hand R
+			0, 0, 0, 0, 0, 0,   //pelvis
+			200, 100, 150,      //Femur L
+			100,                //Tibia L
+			150, 50, 50,        //Talus L
+			30, 30,             //Thumb, Pinky L
+			200, 100, 150,      //Femur R
+			100,                //Tibia R
+			150, 50, 50,        //Talus R
+			30, 30,             //Thumb, Pinky R
+			80, 80, 80,         //Spine
+			80, 80, 80,         //Torso
+			30, 30, 30,         //Neck
+			30, 30, 30,         //Head
+			50, 50, 50,         //Shoulder L
+			50, 50, 50,         //Arm L
+			30,                 //ForeArm L
+			30, 30, 30,         //Hand L
+			50, 50, 50,         //Shoulder R
+			50, 50, 50,         //Arm R
+			30,                 //ForeArm R
+			30, 30, 30;         //Hand R
 
 	mMaxForces = force_ratio * mDefaultForces;
 }
@@ -372,25 +373,25 @@ Initialize_Rewards()
 {
 	mReward = 0;
 	pose_reward = 0;
-    vel_reward = 0;
-    end_eff_reward = 0;
-    root_reward = 0;
-    com_reward = 0;
-    smooth_reward = 0;
-    imit_reward = 0;
-    min_reward = 0;
+	vel_reward = 0;
+	end_eff_reward = 0;
+	root_reward = 0;
+	com_reward = 0;
+	smooth_reward = 0;
+	imit_reward = 0;
+	min_reward = 0;
 
-    int reward_window = 70;
+	int reward_window = 70;
 
-    reward_.resize(reward_window);
-    pose_.resize(reward_window);
-    vel_.resize(reward_window);
-    root_.resize(reward_window);
-    ee_.resize(reward_window);
-    com_.resize(reward_window);
-    smooth_.resize(reward_window);
-    imit_.resize(reward_window);
-    min_.resize(reward_window);
+	reward_.resize(reward_window);
+	pose_.resize(reward_window);
+	vel_.resize(reward_window);
+	root_.resize(reward_window);
+	ee_.resize(reward_window);
+	com_.resize(reward_window);
+	smooth_.resize(reward_window);
+	imit_.resize(reward_window);
+	min_.resize(reward_window);
 
 	mRewards;
 	mRewards.insert(std::make_pair("reward", reward_));
@@ -748,7 +749,7 @@ GetReward_Character()
 		Eigen::Vector4d cur_ee = Utils::GetPoint4d(ees[i]->getCOM());
 		ee_diff.segment<3>(i*3) = (origin_trans_sim * cur_ee).segment(0,3);
 		Eigen::Isometry3d cur_ee_trans = Utils::GetBodyTransform(ees[i]);
-		cur_ee_trans = origin_trans_sim	* cur_ee_trans;
+		cur_ee_trans = origin_trans_sim * cur_ee_trans;
 		Eigen::Quaterniond cur_ee_ori(cur_ee_trans.rotation());
 		ee_ori_diff[i] = cur_ee_ori;
 	}
@@ -839,7 +840,7 @@ GetReward_Character()
 		ee_diff.segment<3>(i*3) -= (origin_trans_kin*cur_ee).segment(0,3);
 
 		Eigen::Isometry3d cur_ee_trans = Utils::GetBodyTransform(ees[i]);
-		cur_ee_trans = origin_trans_kin	* cur_ee_trans;
+		cur_ee_trans = origin_trans_kin * cur_ee_trans;
 		Eigen::Quaterniond cur_ee_ori(cur_ee_trans.rotation());
 
 		double theta_ = Utils::QuatDiffTheta(ee_ori_diff[i], cur_ee_ori);
@@ -891,9 +892,9 @@ GetTorqueReward()
 	}
 	// for(int i=6; i<mMaxForces.size(); i++)
 	// {
-	// 	if(fabs(ts[i].at(0)) > 0.4*mMaxForces[i])
-	// 		sum += 1.0;
-	// 	idx++;
+	//  if(fabs(ts[i].at(0)) > 0.4*mMaxForces[i])
+	//      sum += 1.0;
+	//  idx++;
 	// }
 	sum /= (double)(idx);
 
@@ -1220,7 +1221,7 @@ SetParamState(Eigen::VectorXd paramState)
 		if(i==0) // Mass
 			this->SetMassRatio(param);
 		else if(i==1) // Force
-		 	this->SetForceRatio(param);
+			this->SetForceRatio(param);
 	}
 }
 
@@ -1244,6 +1245,7 @@ SetAdaptiveParams(std::string name, double lower, double upper)
 	}
 	else if(name == "force"){
 		this->SetMinMaxV(1, lower, upper);
+		this->Initialize_MaxForces();
 		this->SetForceRatio(lower);
 	}
 }

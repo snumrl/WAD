@@ -255,7 +255,7 @@ IsEndOfEpisode()
 
 	double root_y = char_skel->getBodyNode(0)->getTransform().translation()[1] - mGround->getRootBodyNode()->getCOM()[1];
 
-	if(root_y < 1.3)
+	if(root_y < 1.4)
 		isTerminal =true;
 	else if (dart::math::isNan(p) || dart::math::isNan(v))
 		isTerminal =true;

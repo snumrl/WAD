@@ -40,9 +40,9 @@ import os
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
-		self.res = 12
+		self.res = 21
 		self.res_tot = self.res*self.res
-		self.step = 3000
+		self.step = 2000
 		self.num_slaves = self.res_tot
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
@@ -168,10 +168,9 @@ class PPO(object):
 				elif self.env.IsEndOfEpisode(j) is False:
 					terminated_state = False
 					vel = self.env.GetVelocity(j)*3.6
-					if (vel > 3.6 and vel < 5.0):
-						self.rewards[j] += self.env.GetReward(j)
-						self.velocities[j] += vel
-						self.counter[j] += 1
+					self.rewards[j] += self.env.GetReward(j)
+					self.velocities[j] += vel
+					self.counter[j] += 1
 
 				if terminated_state:
 					self.env.Reset(True,j)
@@ -201,7 +200,7 @@ class PPO(object):
 
 		fig = plt.figure()
 		ax = fig.gca(projection='3d')
-		ax.set_zlim(3.80, 5.00)
+		ax.set_zlim(3.50, 5.50)
 		ax.zaxis.set_major_locator(LinearLocator(5))
 		ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
 
