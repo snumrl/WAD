@@ -1003,6 +1003,7 @@ GetTargetPositions(double t,double dt,int frame,int frameNext, double frameFract
 	return p;
 }
 
+
 Eigen::VectorXd
 Character::
 GetTargetVelocities(double t,double dt,int frame,int frameNext, double frameFraction)
