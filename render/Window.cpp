@@ -656,14 +656,6 @@ DrawShapeFrame(const ShapeFrame* sf)
 	mRI->transform(sf->getRelativeTransform());
 
 	mColor = va->getRGBA();
-	if(isDrawTarget)
-	{
-		mColor[0] = 1.0;
-		mColor[1] = 0.6;
-		mColor[2] = 0.6;
-		mColor[3] = 0.3;
-	}
-
 	DrawShape(sf->getShape().get(), mColor);
 	mRI->popMatrix();
 }
@@ -680,9 +672,16 @@ DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_COLOR_MATERIAL);
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	
 	if(mDrawOBJ == false)
 	{
 		mRI->setPenColor(color);
+		if(isDrawTarget){
+			Eigen::Vector4d target_color;
+			target_color << 1.0, 0.6, 0.6, 0.3;
+			mRI->setPenColor(target_color);
+		}
+
 		if (shape->is<SphereShape>())
 		{
 			const auto* sphere = static_cast<const SphereShape*>(shape);
@@ -712,9 +711,13 @@ DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 				mRI->setPenColor(device_color);
 				mShapeRenderer.renderMesh(mesh, false, y, device_color);
 			}
-			else{
-				glDisable(GL_COLOR_MATERIAL);
-				mShapeRenderer.renderMesh(mesh, false, y, color);
+			else{				
+				mShapeRenderer.renderMesh(mesh, false, y, color);							
+				if(isDrawTarget){
+					Eigen::Vector4d target_color;
+					target_color << 1.0, 0.6, 0.6, 0.3;
+					mRI->setPenColor(target_color);
+				}
 			}
 		}
 	}
