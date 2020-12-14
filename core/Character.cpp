@@ -70,15 +70,15 @@ LoadSkeleton(const std::string& path,bool create_obj)
 		mDefaultMass[i] = mass;
 	}
 
-	for(int i=2; i<11; i++)
-	{
-		double ratio = 0.1*i;
-		BVH* newBVH = new BVH(mSkeleton, bvh_map, 0.1*i);
-		mBVHset.push_back(newBVH);
-		if(i==2)
-			mBVH = newBVH;
-	}
-	// mBVH = new BVH(mSkeleton, bvh_map);
+	// for(int i=2; i<11; i++)
+	// {
+	// 	double ratio = 0.1*i;
+	// 	BVH* newBVH = new BVH(mSkeleton, bvh_map, 0.1*i);
+	// 	mBVHset.push_back(newBVH);
+	// 	if(i==2)
+	// 		mBVH = newBVH;
+	// }
+	mBVH = new BVH(mSkeleton, bvh_map, 0.4);
 }
 
 void
@@ -90,11 +90,11 @@ LoadBVH(const std::string& path,bool cyclic)
 		return;
 	}
 
-	for(int i=2; i<11; i++)
-	{
-		mBVHset.at(i-2)->Parse(path, cyclic);
-	}
-	// mBVH->Parse(path, cyclic);
+	// for(int i=2; i<11; i++)
+	// {
+	// 	mBVHset.at(i-2)->Parse(path, cyclic);
+	// }
+	mBVH->Parse(path, cyclic);
 }
 
 void

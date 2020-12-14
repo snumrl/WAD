@@ -330,17 +330,17 @@ SetMotionFrames()
 
 				if(jointName == "Spine"){
 					p[idx] -= 0.06;
-					// p[idx] += 0.25;
+					p[idx] += 0.25;
 				}
 
 				if(jointName == "Torso"){
-					// p[idx] += 0.3;
+					p[idx] += 0.3;
 					if(p[idx+2] > 0)
 						p[idx+2] *= 0.3;
 				}
 
-				// if(jointName == "ShoulderL" || jointName ==  "ShoulderR")
-				// 	p[idx] -= 0.20;
+				if(jointName == "ShoulderL" || jointName == "ShoulderR")
+					p[idx] -= 0.3;
 
 				if(jointName == "ArmL")
 					p[idx+2] -= 0.1;

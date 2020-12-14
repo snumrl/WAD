@@ -84,7 +84,7 @@ class MarginalBuffer(object):
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
-		self.num_slaves = 16
+		self.num_slaves = 32
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
 		self.use_device = self.env.UseDevice()
