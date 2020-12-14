@@ -8,6 +8,11 @@ skel_file /data/human_.xml
 muscle_file /data/muscle284.xml
 device_file /data/device.xml
 bvh_file /data/motion/walk.bvh true
-character_param 0
-device_param 0
+character_param 3
+device_param 2
+mass 1.0 1.0
+force 0.4 1.0
+speed 0.2 1.0
+device_k 0.5 0.5
+delta_t 0.3 0.3
 

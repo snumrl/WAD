@@ -109,7 +109,7 @@ class PPO(object):
 		if use_cuda:
 			self.model.cuda()
 
-		self.buffer_size = 2048*1
+		self.buffer_size = 2048*4
 		self.batch_size = 128*2
 		self.replay_buffer = ReplayBuffer(30000)
 
