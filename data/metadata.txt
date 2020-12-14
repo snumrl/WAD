@@ -4,7 +4,7 @@ use_device_nn false
 use_adaptive_sampling true
 con_hz 30
 sim_hz 600
-skel_file /data/human_.xml
+skel_file /data/human_tmp.xml
 muscle_file /data/muscle284.xml
 device_file /data/device.xml
 bvh_file /data/motion/walk.bvh true
