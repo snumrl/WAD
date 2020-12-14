@@ -704,33 +704,17 @@ DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 		if (shape->is<MeshShape>())
 		{
 			const auto& mesh = static_cast<const MeshShape*>(shape);
-			glDisable(GL_COLOR_MATERIAL);
 			float y = mEnv->GetGround()->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(mEnv->GetGround()->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
-			Eigen::Vector4d mesh_color;
-			if(isDrawTarget)
-				mesh_color << color[0], color[1], color[2], color[3];
-			else
-				mesh_color << 0.6, 0.6, 1.0, 1.0;
-			mShapeRenderer.renderMesh(mesh, false, y, mesh_color);
-		}
 
-		if(isDrawDevice)
-		{
-			mRI->setPenColor(color);
-			if (shape->is<SphereShape>())
-			{
-				const auto* sphere = static_cast<const SphereShape*>(shape);
-				mRI->drawSphere(sphere->getRadius());
+			if(isDrawDevice){
+				Eigen::Vector4d device_color;
+				device_color << 0.3, 0.3, 0.3, 1.0;
+				mRI->setPenColor(device_color);
+				mShapeRenderer.renderMesh(mesh, false, y, device_color);
 			}
-			else if (shape->is<BoxShape>())
-			{
-				const auto* box = static_cast<const BoxShape*>(shape);
-				mRI->drawCube(box->getSize());
-			}
-			else if (shape->is<CapsuleShape>())
-			{
-				const auto* capsule = static_cast<const CapsuleShape*>(shape);
-				mRI->drawCapsule(capsule->getRadius(), capsule->getHeight());
+			else{
+				glDisable(GL_COLOR_MATERIAL);
+				mShapeRenderer.renderMesh(mesh, false, y, color);
 			}
 		}
 	}

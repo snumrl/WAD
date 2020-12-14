@@ -151,7 +151,7 @@ void ShapeRenderer::renderMesh(const MeshShape *meshShape, bool drawShadows, flo
 
     Eigen::Vector3d scale = meshShape->getScale();
 
-    glColor4f(color[0],color[1],color[2],color[3]);
+    // glColor4f(color[0],color[1],color[2],color[3]);
     glPushMatrix();
     glScaled(scale[0], scale[1], scale[2]);
     glPushAttrib(GL_POLYGON_BIT | GL_LIGHTING_BIT);

@@ -32,7 +32,7 @@ void
 Device::
 LoadSkeleton(const std::string& path)
 {
-    mSkeleton = BuildFromFile(path);
+    mSkeleton = BuildFromFile(path, true);
 }
 
 void
