@@ -148,6 +148,12 @@ Initialize(const std::string& meta_file, bool load_obj)
 			if(mUseAdaptiveSampling)
 				character->SetAdaptiveParams("force", lower, upper);
 		}
+		else if(!index.compare("speed")){
+			double lower, upper;
+			ss>>lower>>upper;
+			if(mUseAdaptiveSampling)
+				character->SetAdaptiveParams("speed", lower, upper);
+		}
 		else if(!index.compare("device_k")){
 			double lower, upper;
 			ss>>lower>>upper;

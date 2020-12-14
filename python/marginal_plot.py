@@ -41,7 +41,7 @@ class Graph(object):
 
 		self.X[0], self.X[1] = np.meshgrid(self.X[0], self.X[1])
 
-		self.marginal_model = MarginalNN(4)
+		self.marginal_model = MarginalNN(5)
 		if use_cuda:
 			self.marginal_model.cuda()
 
@@ -50,11 +50,11 @@ class Graph(object):
 		elif self.dim == 2:
 			self.V = np.zeros((self.n, self.n))
 
-		for i in range(1,8):
-			path = '../nn/'+str(i*5)+'_marginal.pt'
-			self.ax.clear()
-			self.loadandplot(path)
-			plt.savefig('../nn/m_'+str(i*5)+'.png')
+		# for i in range(1,4):
+		# 	path = '../nn/'+str(i*5)+'_marginal.pt'
+		# 	self.ax.clear()
+		# 	self.loadandplot(path)
+		# 	plt.savefig('../nn/m_'+str(i*5)+'.png')
 
 		self.loadandplot(self.path)
 
@@ -64,11 +64,11 @@ class Graph(object):
 			for i in range(self.n):
 				for j in range(self.n):
 					# state = [self.X[0][i][j], 0.4, self.X[1][i][j], 0.3]
-					state = [1.0, self.X[0][i][j], self.X[1][i][j], 0.3]
+					state = [1.0, self.X[0][i][j], self.X[1][i][j], 1.0, 0.3]
 					state = FloatTensor(np.array(state))
 					self.V[i][j] = self.marginal_model(state).cpu().detach().numpy()
-			# self.ax.set_zlim(0.00, np.max(self.V))
-			self.ax.set_zlim(0.00, 12.0)
+			self.ax.set_zlim(0.00, np.max(self.V))
+			# self.ax.set_zlim(0.00, 12.0)
 			self.surf = self.ax.plot_surface(self.X[0], self.X[1], self.V, linewidth = 0, antialiased = False)
 		else:
 			for i in range(self.n):
@@ -78,7 +78,7 @@ class Graph(object):
 
 	def next(self, event):
 		self.count += 1
-		ax.clear()
+		self.ax.clear()
 		path = '../nn/'+str(self.count)+'_marginal.pt'
 		self.loadandplot(path)
 
@@ -86,7 +86,7 @@ class Graph(object):
 		self.count -= 1
 		if self.count < 0:
 			self.count = 0
-		ax.clear()
+		self.ax.clear()
 		path = '../nn/'+str(self.count)+'_marginal.pt'
 		self.loadandplot(path)
 

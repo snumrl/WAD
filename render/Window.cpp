@@ -67,7 +67,7 @@ Eigen::Vector4d purple_trans(0.8, 0.2, 0.8, 0.2);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0),mParamMode(0),mTalusL(false),mTalusR(false)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0),mParamMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false)
 {
 	mBackground[0] = 1.0;
 	mBackground[1] = 1.0;
@@ -205,18 +205,27 @@ ParamChange(bool b)
 		}
 		else if(mParamMode ==3)
 		{
-			double k_ = mEnv->GetDevice()->GetK_();
-			k_ += 2.0;
-			if(k_ > max_v[2]*30.0)
-				k_ = max_v[2]*30.0;
-			mEnv->GetDevice()->SetK_(k_);
+			double s_ratio = mEnv->GetCharacter()->GetSpeedRatio();
+			s_ratio += 0.1;
+			if(s_ratio > max_v[2])
+				s_ratio = max_v[2];
+			mEnv->GetCharacter()->SetSpeedRatio(s_ratio);
+			mEnv->GetCharacter()->SetBVHidx(s_ratio);
 		}
 		else if(mParamMode == 4)
 		{
+			double k_ = mEnv->GetDevice()->GetK_();
+			k_ += 2.0;
+			if(k_ > max_v[3]*30.0)
+				k_ = max_v[3]*30.0;
+			mEnv->GetDevice()->SetK_(k_);
+		}
+		else if(mParamMode == 5)
+		{
 			double t_ = mEnv->GetDevice()->GetDelta_t();
 			t_ += 0.01;
-			if(t_ > max_v[3])
-				t_ = max_v[3];
+			if(t_ > max_v[4])
+				t_ = max_v[4];
 			mEnv->GetDevice()->SetDelta_t(t_);
 		}
 	}
@@ -240,18 +249,27 @@ ParamChange(bool b)
 		}
 		else if(mParamMode ==3)
 		{
-			double k_ = mEnv->GetDevice()->GetK_();
-			k_ -= 2.0;
-			if(k_ < min_v[2]*30.0)
-				k_ = min_v[2]*30.0;
-			mEnv->GetDevice()->SetK_(k_);
+			double s_ratio = mEnv->GetCharacter()->GetSpeedRatio();
+			s_ratio -= 0.1;
+			if(s_ratio < min_v[2])
+				s_ratio = min_v[2];
+			mEnv->GetCharacter()->SetSpeedRatio(s_ratio);
+			mEnv->GetCharacter()->SetBVHidx(s_ratio);
 		}
 		else if(mParamMode == 4)
 		{
+			double k_ = mEnv->GetDevice()->GetK_();
+			k_ -= 2.0;
+			if(k_ < min_v[3]*30.0)
+				k_ = min_v[3]*30.0;
+			mEnv->GetDevice()->SetK_(k_);
+		}
+		else if(mParamMode == 5)
+		{
 			double t_ = mEnv->GetDevice()->GetDelta_t();
 			t_ -= 0.01;
-			if(t_ < min_v[3])
-				t_ = min_v[3];
+			if(t_ < min_v[4])
+				t_ = min_v[4];
 			mEnv->GetDevice()->SetDelta_t(t_);
 		}
 	}
@@ -273,6 +291,7 @@ keyboard(unsigned char _key, int _x, int _y)
 	case 't': mDrawTarget = !mDrawTarget;break;
 	case ' ': mSimulating = !mSimulating;break;
 	case 'c': mDrawCharacter = !mDrawCharacter;break;
+	case 'p': mDrawParameter = !mDrawParameter;break;
 	case 'd':
 		if(mEnv->GetUseDevice())
 			mOnDevice = !mOnDevice;
@@ -283,6 +302,7 @@ keyboard(unsigned char _key, int _x, int _y)
 	case '2' : mParamMode = 2; break;
 	case '3' : mParamMode = 3; break;
 	case '4' : mParamMode = 4; break;
+	case '5' : mParamMode = 4; break;
 	case '+' : ParamChange(true); break;
 	case '-' : ParamChange(false); break;
 	case 27 : exit(0);break;
@@ -440,12 +460,13 @@ draw()
 	if(mEnv->GetUseDevice())
 		DrawDevice();
 
-	if(mEnv->GetNumParamState() > 0)
+	if(mEnv->GetNumParamState() > 0 && mDrawParameter)
+	{
 		DrawParameter();
+		DrawVelocity();
+	}
 	// DrawTrajectory();
 	// DrawStride();
-	DrawVelocity();
-
 	SetFocus();
 }
 
@@ -470,7 +491,7 @@ DrawParameter()
 {
 	DrawGLBegin();
 
-	double w = 0.16;
+	double w = 0.20;
 	double h = 0.34;
 	double h_offset = 0.20;
 	double x = 0.69;
@@ -489,16 +510,20 @@ DrawParameter()
 	DrawQuads(x+0.05, y+0.01, 0.02, (f_ratio)*h_offset, red);
 	DrawQuads(x+0.05, y+0.01+(f_ratio)*h_offset, 0.02, (max_v[1]-f_ratio)*h_offset, red_trans);
 
+	double s_ratio = mEnv->GetCharacter()->GetSpeedRatio();
+	DrawQuads(x+0.09, y+0.01, 0.02, (s_ratio)*h_offset, purple);
+	DrawQuads(x+0.09, y+0.01+(s_ratio)*h_offset, 0.02, (max_v[2]-s_ratio)*h_offset, purple_trans);
+
 	Eigen::VectorXd min_v_dev = mEnv->GetDevice()->GetMinV();
 	Eigen::VectorXd max_v_dev = mEnv->GetDevice()->GetMaxV();
 
 	double k_ = mEnv->GetDevice()->GetK_();
-	DrawQuads(x+0.09, y+0.01, 0.02, (k_/30.0)*h_offset, blue);
-	DrawQuads(x+0.09, y+0.01+(k_/30.0)*h_offset, 0.02, (max_v_dev[0]-k_/30.0)*h_offset, blue_trans);
+	DrawQuads(x+0.13, y+0.01, 0.02, (k_/30.0)*h_offset, blue);
+	DrawQuads(x+0.13, y+0.01+(k_/30.0)*h_offset, 0.02, (max_v_dev[0]-k_/30.0)*h_offset, blue_trans);
 
 	double t_ = mEnv->GetDevice()->GetDelta_t();
-	DrawQuads(x+0.13, y+0.01, 0.02, 3.0*t_*h_offset, yellow);
-	DrawQuads(x+0.13, y+0.01+t_*h_offset, 0.02, (max_v_dev[1]-t_)*h_offset, yellow_trans);
+	DrawQuads(x+0.17, y+0.01, 0.02, 3.0*t_*h_offset, yellow);
+	DrawQuads(x+0.17, y+0.01+t_*h_offset, 0.02, (max_v_dev[1]-t_)*h_offset, yellow_trans);
 
 	DrawString(x+0.00, y+(m_ratio)*h_offset+0.02, std::to_string(m_ratio));
 	DrawString(x+0.00, y-0.02, "Mass");
@@ -506,11 +531,14 @@ DrawParameter()
 	DrawString(x+0.05, y+(f_ratio)*h_offset+0.02, std::to_string(f_ratio));
 	DrawString(x+0.04, y-0.02, "Force");
 
-	DrawString(x+0.09, y+(k_/30.0)*h_offset+0.02, std::to_string(k_));
-	DrawString(x+0.08, y-0.02, "Device");
+	DrawString(x+0.09, y+(s_ratio)*h_offset+0.02, std::to_string(s_ratio));
+	DrawString(x+0.075, y-0.02, "Speed");
 
-	DrawString(x+0.13, y+3.0*t_*h_offset+0.02, std::to_string(t_));
-	DrawString(x+0.125, y-0.02, "Delta t");
+	DrawString(x+0.13, y+(k_/30.0)*h_offset+0.02, std::to_string(k_));
+	DrawString(x+0.12, y-0.02, "Device");
+
+	DrawString(x+0.17, y+3.0*t_*h_offset+0.02, std::to_string(t_));
+	DrawString(x+0.165, y-0.02, "Delta t");
 
 	DrawGLEnd();
 }

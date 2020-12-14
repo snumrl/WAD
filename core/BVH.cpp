@@ -127,10 +127,10 @@ GetNode(const std::string& name)
 }
 
 BVH::
-BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map)
+BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map, double ratio)
 	:mSkeleton(skel),mBVHMap(bvh_map),mCyclic(true)
 {
-	mSpeedRatio = 1.0;
+	mSpeedRatio = ratio;
 }
 
 BVHNode*

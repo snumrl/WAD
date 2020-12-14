@@ -104,6 +104,7 @@ private:
 	bool mDrawCharacter;
 	bool mDrawTarget;
 	bool mDrawGraph;
+	bool mDrawParameter;
 	bool mDrawArrow;
 	bool mDrawOBJ;
 	bool mDrawShadow;

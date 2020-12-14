@@ -12,11 +12,12 @@ using namespace MASS;
 
 Character::
 Character()
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),
-	(false),mNumParamState(0)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mNumParamState(0)
 {
 	force_ratio = 1.0;
 	mass_ratio = 1.0;
+	speed_ratio = 1.0;
+	curBVHidx = 0;
 }
 
 Character::
@@ -38,7 +39,7 @@ Character::
 LoadSkeleton(const std::string& path,bool create_obj)
 {
 	mSkeleton = BuildFromFile(path,create_obj,mass_ratio);
-	std::map<std::string,std::string> bvh_map;
+	// std::map<std::string,std::string> bvh_map;
 	TiXmlDocument doc;
 	doc.LoadFile(path);
 	TiXmlElement* skel_elem = doc.FirstChildElement("Skeleton");
@@ -69,7 +70,15 @@ LoadSkeleton(const std::string& path,bool create_obj)
 		mDefaultMass[i] = mass;
 	}
 
-	mBVH = new BVH(mSkeleton, bvh_map);
+	for(int i=2; i<11; i++)
+	{
+		double ratio = 0.1*i;
+		BVH* newBVH = new BVH(mSkeleton, bvh_map, 0.1*i);
+		mBVHset.push_back(newBVH);
+		if(i==2)
+			mBVH = newBVH;
+	}
+	// mBVH = new BVH(mSkeleton, bvh_map);
 }
 
 void
@@ -81,7 +90,11 @@ LoadBVH(const std::string& path,bool cyclic)
 		return;
 	}
 
-	mBVH->Parse(path, cyclic);
+	for(int i=2; i<11; i++)
+	{
+		mBVHset.at(i-2)->Parse(path, cyclic);
+	}
+	// mBVH->Parse(path, cyclic);
 }
 
 void
@@ -1150,6 +1163,36 @@ Off_Device()
 
 void
 Character::
+SetBVHidx(double r)
+{
+	double r10 = r * 10.99;
+	int idx = (int)(r10/1.0) - 2;
+	mBVH = mBVHset.at(idx);
+	curBVHidx = idx;
+	this->Reset();
+}
+
+void
+Character::
+SetSpeedRatio(double r)
+{
+	speed_ratio = r;
+
+	double param = 0.0;
+	if(mMax_v[2] == mMin_v[2])
+	{
+		mParamState[2] = mMin_v[2];
+	}
+	else
+	{
+		double ratio = (r-mMin_v[2])/(mMax_v[2]-mMin_v[2]);
+		param = ratio*2.0 - 1.0;
+		mParamState[2] = param;
+	}
+}
+
+void
+Character::
 SetForceRatio(double r)
 {
 	force_ratio = r;
@@ -1222,6 +1265,10 @@ SetParamState(Eigen::VectorXd paramState)
 			this->SetMassRatio(param);
 		else if(i==1) // Force
 			this->SetForceRatio(param);
+		else if(i==2){
+			this->SetSpeedRatio(param);
+			this->SetBVHidx(param);
+		}
 	}
 }
 
@@ -1247,6 +1294,10 @@ SetAdaptiveParams(std::string name, double lower, double upper)
 		this->SetMinMaxV(1, lower, upper);
 		this->Initialize_MaxForces();
 		this->SetForceRatio(lower);
+	}
+	else if(name == "speed"){
+		this->SetMinMaxV(2, lower, upper);
+		this->SetSpeedRatio(lower);
 	}
 }
 

@@ -129,6 +129,10 @@ public:
 	double GetMassRatio(){return mass_ratio;}
 	void SetMassRatio(double r);
 
+	double GetSpeedRatio(){return speed_ratio;}
+	void SetSpeedRatio(double r);
+	void SetBVHidx(double r);
+
 	std::deque<double> GetSignals(int idx);
 
 	void SetCurVelocity();
@@ -148,6 +152,8 @@ private:
 	dart::simulation::WorldPtr mWorld;
 	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
 	BVH* mBVH;
+	std::vector<BVH*> mBVHset;
+	std::map<std::string,std::string> bvh_map;
 	Device* mDevice;
 	std::vector<Muscle*> mMuscles;
 
@@ -161,6 +167,8 @@ private:
 
 	int mControlHz;
 	int mSimulationHz;
+
+	int curBVHidx;
 
 	bool mUseDevice;
 	bool mUseMuscle;
@@ -186,6 +194,7 @@ private:
 
 	double mass_ratio;
 	double force_ratio;
+	double speed_ratio;
 
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;

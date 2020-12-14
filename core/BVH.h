@@ -58,7 +58,7 @@ private:
 class BVH
 {
 public:
-	BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map);
+	BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map, double ratio);
 
 	BVHNode* ReadHierarchy(BVHNode* parent,const std::string& name,int& channel_offset,std::ifstream& is);
 	void Parse(const std::string& file,bool cyclic=true);
