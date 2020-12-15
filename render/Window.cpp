@@ -67,12 +67,12 @@ Eigen::Vector4d purple_trans(0.8, 0.2, 0.8, 0.2);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0),mParamMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawCharacter(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0),mParamMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false)
 {
-	mBackground[0] = 1.0;
-	mBackground[1] = 1.0;
-	mBackground[2] = 0.9;
-	mBackground[3] = 0.5;
+	mBackground[0] = 0.96;
+	mBackground[1] = 0.96;
+	mBackground[2] = 0.97;
+	mBackground[3] = 0.7;
 	SetFocus();
 	mZoom = 0.25;
 	mFocus = false;
@@ -354,7 +354,7 @@ Step()
 
 	if(mEnv->GetUseMuscle())
 	{
-		int inference_per_sim = 2;
+		int inference_per_sim = 1;
 		for(int i=0; i<num; i+=inference_per_sim){
 			Eigen::VectorXd mt = mEnv->GetCharacter()->GetMuscleTorques();
 			mEnv->GetCharacter()->SetActivationLevels(GetActivationFromNN(mt));
@@ -560,16 +560,16 @@ DrawGround()
 	float y = ground->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(ground->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
 
 	int count = 0;
-	double w = 1.0;
-	double h = 1.0;
-	for(double x=-100.0; x<=100.0; x+=1.0)
+	double w = 2.0;
+	double h = 2.0;
+	for(double x=-100.0; x<=100.0; x+=2.0)
 	{
-		for(double z=-100.0; z<=100.0; z+=1.0)
+		for(double z=-100.0; z<=100.0; z+=2.0)
 		{
 			if(count%2==0)
-				glColor3f(0.85, 0.83, 0.81);
+				glColor3f(0.82, 0.80, 0.78);
 			else
-				glColor3f(0.75, 0.73, 0.71);
+				glColor3f(0.72, 0.70, 0.68);
 
 			glBegin(GL_QUADS);
 			glVertex3f(x  , y, z  );
@@ -592,9 +592,11 @@ DrawCharacter()
 
 	if(mDrawCharacter)
 	{
+		isDrawCharacter = true;
 		DrawSkeleton(skeleton);
 		if(mEnv->GetUseMuscle())
 			DrawMuscles(mEnv->GetCharacter()->GetMuscles());
+		isDrawCharacter = false;
 	}
 
 	if(mDrawTarget)
@@ -656,6 +658,12 @@ DrawShapeFrame(const ShapeFrame* sf)
 	mRI->transform(sf->getRelativeTransform());
 
 	mColor = va->getRGBA();
+	if(isDrawCharacter && mDrawOBJ)
+		mColor << 0.75, 0.75, 0.75, 1.0;
+	if(isDrawTarget)
+		mColor << 1.0, 0.6, 0.6, 0.3;
+	if(isDrawDevice)
+		mColor << 0.3, 0.3, 0.3, 1.0;
 	DrawShape(sf->getShape().get(), mColor);
 	mRI->popMatrix();
 }
@@ -672,16 +680,9 @@ DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_COLOR_MATERIAL);
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	
+	mRI->setPenColor(color);
 	if(mDrawOBJ == false)
 	{
-		mRI->setPenColor(color);
-		if(isDrawTarget){
-			Eigen::Vector4d target_color;
-			target_color << 1.0, 0.6, 0.6, 0.3;
-			mRI->setPenColor(target_color);
-		}
-
 		if (shape->is<SphereShape>())
 		{
 			const auto* sphere = static_cast<const SphereShape*>(shape);
@@ -705,20 +706,7 @@ DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 			const auto& mesh = static_cast<const MeshShape*>(shape);
 			float y = mEnv->GetGround()->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(mEnv->GetGround()->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
 
-			if(isDrawDevice){
-				Eigen::Vector4d device_color;
-				device_color << 0.3, 0.3, 0.3, 1.0;
-				mRI->setPenColor(device_color);
-				mShapeRenderer.renderMesh(mesh, false, y, device_color);
-			}
-			else{				
-				mShapeRenderer.renderMesh(mesh, false, y, color);							
-				if(isDrawTarget){
-					Eigen::Vector4d target_color;
-					target_color << 1.0, 0.6, 0.6, 0.3;
-					mRI->setPenColor(target_color);
-				}
-			}
+			mShapeRenderer.renderMesh(mesh, false, y, color);
 		}
 	}
 	glDisable(GL_COLOR_MATERIAL);
@@ -840,102 +828,6 @@ DrawMuscles(const std::vector<Muscle*>& muscles)
 	{
         double a = muscle->GetActivation();
         Eigen::Vector4d color(1.0+(3.0*a), 1.0, 1.0, 1.0);
-        std::string m_name = muscle->GetName();
-
-      //   if(muscle->GetFemur())
-      //   {
-      //   	color[0] = 1.4;
-      //   	color[1] = 1.0;
-      //   	color[2] = 0.0;
-      //   	color[3] = 1.0;
-      //   	glColor4dv(color.data());
-	    	// mShapeRenderer.renderMuscle(muscle);
-      //   }
-
-       // Front
-      //   if(!m_name.compare("L_Rectus_Abdominis1") || !m_name.compare("R_Rectus_Abdominis1")){
-      //   	color[0] = 1.0;
-      //   	color[1] = 0.0;
-      //   	color[2] = 0.0;
-      //   	color[3] = 1.0;
-      //   	glColor4dv(color.data());
-	    	// mShapeRenderer.renderMuscle(muscle);
-      //   }
-
-      //   if(!m_name.compare("L_Transversus_Abdominis4") || !m_name.compare("R_Transversus_Abdominis4")){
-      //   	color[0] = 0.0;
-      //   	color[1] = 1.0;
-      //   	color[2] = 0.0;
-      //   	color[3] = 1.0;
-      //   	glColor4dv(color.data());
-	    	// mShapeRenderer.renderMuscle(muscle);
-      //   }
-
-        // Back
-      //   if(!m_name.compare("L_Multifidus") || !m_name.compare("R_Multifidus")){
-      //   	color[0] = 1.0;
-      //   	color[1] = 0.0;
-      //   	color[2] = 0.0;
-      //   	color[3] = 1.0;
-      //   	glColor4dv(color.data());
-	    	// mShapeRenderer.renderMuscle(muscle);
-      //   }
-
-      //   if(!m_name.compare("L_Quadratus_Lumborum1") || !m_name.compare("R_Quadratus_Lumborum1")){
-      //   	color[0] = 1.0;
-      //   	color[1] = 0.0;
-      //   	color[2] = 1.0;
-      //   	color[3] = 1.0;
-      //   	glColor4dv(color.data());
-	    	// mShapeRenderer.renderMuscle(muscle);
-      //   }
-
-      //   if(!m_name.compare("L_Transversus_Abdominis") || !m_name.compare("R_Transversus_Abdominis")){
-      //   	color[0] = 0.0;
-      //   	color[1] = 0.0;
-      //   	color[2] = 1.0;
-      //   	color[3] = 1.0;
-      //   	glColor4dv(color.data());
-	    	// mShapeRenderer.renderMuscle(muscle);
-      //   }
-
-      //   if(!m_name.compare("L_Longissimus_Thoracis") || !m_name.compare("R_Longissimus_Thoracis")){
-      //   	color[0] = 0.0;
-      //   	color[1] = 1.0;
-      //   	color[2] = 0.0;
-      //   	color[3] = 1.0;
-      //   	glColor4dv(color.data());
-	    	// mShapeRenderer.renderMuscle(muscle);
-      //   }
-
-        // Rest
-      //   if(!m_name.compare("L_Psoas_Minor") || !m_name.compare("R_Psoas_Minor")){
-      //   	color[0] = 0.0;
-      //   	color[1] = 1.0;
-      //   	color[2] = 0.0;
-      //   	color[3] = 1.0;
-      //   	glColor4dv(color.data());
-	    	// mShapeRenderer.renderMuscle(muscle);
-      //   }
-
-      //   if(!m_name.compare("L_Transversus_Abdominis2") || !m_name.compare("R_Transversus_Abdominis2")){
-      //   	color[0] = 1.0;
-      //   	color[1] = 0.0;
-      //   	color[2] = 1.0;
-      //   	color[3] = 1.0;
-      //   	glColor4dv(color.data());
-	    	// mShapeRenderer.renderMuscle(muscle);
-      //   }
-
-      //   if(!m_name.compare("L_Serratus_Posterior_Inferior") || !m_name.compare("R_Serratus_Posterior_Inferior")){
-      //   	color[0] = 0.0;
-      //   	color[1] = 0.0;
-      //   	color[2] = 1.0;
-      //   	color[3] = 1.0;
-      //   	glColor4dv(color.data());
-	    	// mShapeRenderer.renderMuscle(muscle);
-      //   }
-
         glColor4dv(color.data());
 	    mShapeRenderer.renderMuscle(muscle);
 	}

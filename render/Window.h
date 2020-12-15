@@ -112,6 +112,7 @@ private:
 	bool mMuscleNNLoaded;
 	bool mDeviceNNLoaded;
 	bool mOnDevice;
+	bool isDrawCharacter;
 	bool isDrawTarget;
 	bool isDrawDevice;
 	int mGraphMode;
