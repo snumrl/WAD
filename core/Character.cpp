@@ -78,7 +78,7 @@ LoadSkeleton(const std::string& path,bool create_obj)
 	// 	if(i==2)
 	// 		mBVH = newBVH;
 	// }
-	mBVH = new BVH(mSkeleton, bvh_map, 0.6);
+	mBVH = new BVH(mSkeleton, bvh_map, 1.0);
 }
 
 void
@@ -132,7 +132,8 @@ LoadMuscles(const std::string& path)
 				break;
 			}
 
-			if(body == "FemurL" || body == "FemurR"){
+			// if(body == "FemurL" || body == "FemurR"){
+			if(body == "FemurL"){
 				muscle_elem->SetFemur(true);
 			}
 
@@ -170,7 +171,7 @@ LoadMuscles(const std::string& path)
 			if(muscle_elem->GetFemur())
 			{
 				muscle_elem->SetMt0Ratio(1.0);
-				muscle_elem->SetF0Ratio(0.4);
+				muscle_elem->SetF0Ratio(0.3);
 			} // femur
 
 			mMuscles.push_back(muscle_elem);

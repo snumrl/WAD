@@ -182,12 +182,13 @@ GetState()
     {
         int delta_idx = (int)(mDelta_t*mDelta_t_scaler);
         double signal_y = mDeviceSignals_y.at(delta_idx + i*offset);
-        double torque = mK_ * signal_y;
-        double des_torque_l =  1*torque;
-        double des_torque_r = -1*torque;
+        double torque_l = mK_ * signal_y;
+        double torque_r = mK_ * signal_y;
+        double des_torque_l =  1*torque_l;
+        double des_torque_r = -1*torque_r;
 
-        state[i*2] = signal_y * scaler;
-        state[i*2+1] = -signal_y * scaler;
+        state[i*2] = des_torque_l/mK_ * scaler;
+        state[i*2+1] = des_torque_r/mK_ * scaler;
     }
 
     for(int i=0; i<parameter_num; i++)
@@ -253,9 +254,10 @@ SetDesiredTorques2()
 
     // double torque = k_ * y_delta_t;
     int delta_idx = (int)(mDelta_t * mDelta_t_scaler);
-    double torque = mK_ * mDeviceSignals_y.at(delta_idx);
-    double des_torque_l =  1*torque*beta_L*beta_Lhip;
-    double des_torque_r = -1*torque*beta_R*beta_Rhip;
+    double torque_l = mK_ * mDeviceSignals_y.at(delta_idx);
+    double torque_r = mK_ * mDeviceSignals_y.at(delta_idx);
+    double des_torque_l =  1*torque_l*beta_L*beta_Lhip;
+    double des_torque_r = -1*torque_r*beta_R*beta_Rhip;
 
     mDeviceSignals_L.pop_back();
     mDeviceSignals_L.push_front(des_torque_l);
@@ -345,7 +347,7 @@ SetDelta_t(double t)
     }
     else
     {
-        double ratio = (mK_/mK_scaler-mMin_v[1])/(mMax_v[1]-mMin_v[1]);
+        double ratio = (mDelta_t-mMin_v[1])/(mMax_v[1]-mMin_v[1]);
         param = ratio*2.0 - 1.0;
         mParamState[1] = param;
     }
