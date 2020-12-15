@@ -127,10 +127,9 @@ GetNode(const std::string& name)
 }
 
 BVH::
-BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map, double ratio)
+BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map)
 	:mSkeleton(skel),mBVHMap(bvh_map),mCyclic(true)
 {
-	mSpeedRatio = ratio;
 }
 
 BVHNode*
@@ -315,14 +314,14 @@ SetMotionFrames()
 				if(jointName == "Pelvis"){
 					p[idx]   *= mSpeedRatio;
 					p[idx+1] *= mSpeedRatio;
-					if(p[idx+2] > 0)
-						p[idx+2]   *= 0.8;
-					else
-						p[idx+2]   *= 0.4;
 					p[idx+2] *= mSpeedRatio;
 					p[idx+3] *= mSpeedRatio;
 					p[idx+4] *= 1.0;
 					p[idx+5] *= mSpeedRatio;
+					if(p[idx+2] > 0)
+						p[idx+2]   *= 0.8;
+					else
+						p[idx+2]   *= 0.4;
 				}
 			}
 			else if(jn->getType()=="BallJoint"){
@@ -351,9 +350,9 @@ SetMotionFrames()
 				if(jointName == "FemurL" || jointName == "FemurR"){
 					p[idx]   *= mSpeedRatio;
 					p[idx+1] *= mSpeedRatio;
+					p[idx+2] *= mSpeedRatio;
 					if(p[idx+2] > 0)
 						p[idx+2] *= 0.5;
-					p[idx+2] *= mSpeedRatio;
 				}
 
 				if(jointName == "TalusL" || jointName == "TalusR"){
@@ -381,17 +380,11 @@ SetMotionFrames()
 
 				p[idx] = val;
 
-				if(jointName == "ForeArmL"){
+				if(jointName == "ForeArmL" || jointName == "ForeArmR")
 					p[idx] *= mSpeedRatio;
-				}
 
-				if(jointName == "ForeArmR"){
+				if(jointName == "TibiaL" || jointName == "TibiaR")
 					p[idx] *= mSpeedRatio;
-				}
-
-				if(jointName == "TibiaL" || jointName == "TibiaR"){
-					p[idx] *= mSpeedRatio;
-				}
 
 				if(jointName == "FootThumbL" || jointName == "FootThumbR")
 					p[idx] *= mSpeedRatio;

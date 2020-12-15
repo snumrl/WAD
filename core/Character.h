@@ -153,7 +153,6 @@ private:
 	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
 	BVH* mBVH;
 	std::vector<BVH*> mBVHset;
-	std::map<std::string,std::string> bvh_map;
 	Device* mDevice;
 	std::vector<Muscle*> mMuscles;
 
@@ -164,25 +163,23 @@ private:
 	int mNumState_Char;
 	int mNumTotalRelatedDof;
 	int mNumMuscle;
+	int mNumBodyNodes;
 
 	int mControlHz;
 	int mSimulationHz;
-
-	int curBVHidx;
 
 	bool mUseDevice;
 	bool mUseMuscle;
 	bool mOnDevice;
 
 	Eigen::VectorXd mAction;
-	Eigen::VectorXd mAction_prev;
 	Eigen::VectorXd mActivationLevels;
 
+	double mCurVel;
 	Eigen::VectorXd mAngVel;
 	Eigen::VectorXd mAngVel_prev;
 	Eigen::Vector3d mCurPos;
 	Eigen::Vector3d mPrevPos;
-	double mCurVel;
 
 	Eigen::Isometry3d mTc;
 	Eigen::VectorXd mKp, mKv;
@@ -195,13 +192,11 @@ private:
 	double mass_ratio;
 	double force_ratio;
 	double speed_ratio;
+	int curBVHidx;
 
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;
-	Eigen::VectorXd mTargetPositionsNoise;
-	Eigen::VectorXd mTargetVelocitiesNoise;
 	Eigen::VectorXd mDesiredTorque;
-	Eigen::VectorXd mDesiredTorque_prev;
 
 	double w_q,w_v,w_ee,w_com,w_character;
 	double r_q,r_v,r_ee,r_com,r_character;

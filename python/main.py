@@ -1,27 +1,27 @@
-import math
-import random
-import time
 import os
 import sys
-from datetime import datetime
-
-import collections
-from collections import namedtuple
-from collections import deque
-from itertools import count
-
+import math
+import time
+import random
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
 
-import numpy as np
+import collections
+from collections import namedtuple
+from collections import deque
+from itertools import count
+from datetime import datetime
+
 import mcmc
 from pymss import EnvManager
 from IPython import embed
 from Model import *
 from RunningMeanStd import *
+
 use_cuda = torch.cuda.is_available()
 FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
@@ -68,7 +68,6 @@ class ReplayBuffer(object):
 
 # Add Adaptive Sampling
 MarginalTransition = namedtuple('MarginalTransition', ('sb', 'v'))
-
 class MarginalBuffer(object):
     def __init__(self, buff_size = 10000):
         super(MarginalBuffer, self).__init__()
@@ -79,7 +78,6 @@ class MarginalBuffer(object):
 
     def Clear(self):
         self.buffer.clear()
-
 
 class PPO(object):
 	def __init__(self,meta_file):
@@ -178,10 +176,9 @@ class PPO(object):
 		self.num_control_Hz = self.env.GetControlHz()
 		self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
 
+		self.rewards = []
 		self.max_iteration = 15000
 		self.num_evaluation = 0
-		self.rewards = []
-
 		self.save_interval = 100
 
 		self.tic = time.time()
@@ -194,9 +191,9 @@ class PPO(object):
 		if self.max_return_epoch == self.num_evaluation:
 			self.model.save('../nn/max.pt')
 			self.rms.save('max')
-		if self.num_evaluation%100 == 0:
-			self.model.save('../nn/'+str(self.num_evaluation//100)+'.pt')
-			self.rms.save(str(self.num_evaluation//100))
+		if self.num_evaluation%self.save_interval == 0:
+			self.model.save('../nn/'+str(self.num_evaluation//self.save_interval)+'.pt')
+			self.rms.save(str(self.num_evaluation//self.save_interval))
 
 	def SaveModel_Muscle(self):
 		self.muscle_model.save('../nn/current_muscle.pt')
@@ -276,24 +273,22 @@ class PPO(object):
 
 	def GenerateTransitions(self):
 		self.total_episodes = []
-
-		states = [None]*self.num_slaves
 		actions = [None]*self.num_slaves
 		rewards = [None]*self.num_slaves
+		states = [None]*self.num_slaves
 		states_next = [None]*self.num_slaves
+		terminated = [False]*self.num_slaves
 
 		states = self.env.GetStates()
 
-		local_step = 0
-		terminated = [False]*self.num_slaves
-		counter = 0
-
-		for j in range(self.num_slaves):
-			if self.use_adaptive_sampling:
+		if self.use_adaptive_sampling:
+			for j in range(self.num_slaves):
 				initial_state = np.float32(random.choice(self.InitialParamStates))
 				self.env.SetParamState(j, initial_state)
 			# self.env.Reset(True, j)
 
+		counter = 0
+		local_step = 0
 		while True:
 			counter += 1
 			if counter%10 == 0:
@@ -301,7 +296,6 @@ class PPO(object):
 
 			a_dist,v = self.model(Tensor(states))
 			actions = a_dist.sample().cpu().detach().numpy()
-			# actions = a_dist.loc.cpu().detach().numpy()
 			logprobs = a_dist.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
 			values = v.cpu().detach().numpy().reshape(-1)
 			self.env.SetActions(actions)
@@ -435,6 +429,7 @@ class PPO(object):
 					if param.grad is not None:
 						param.grad.data.clamp_(-0.5,0.5)
 				self.optimizer.step()
+
 			print('Optimizing sim nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
 		print('')
 
@@ -462,9 +457,7 @@ class PPO(object):
 
 				loss_reg = (activation).pow(2).mean()
 				loss_target = (((tau-stack_tau_des)/100.0).pow(2)).mean()
-
 				loss = 0.01*loss_reg + loss_target
-				# loss = loss_target
 
 				self.optimizer_muscle.zero_grad()
 				loss.backward(retain_graph=True)
@@ -531,7 +524,6 @@ class PPO(object):
 		if self.use_muscle:
 			print('||Loss Muscle              : {:.4f}'.format(self.loss_muscle))
 		print('||Noise                    : {:.3f}'.format(self.model.log_std.exp().mean()))
-		# print('||Noise                    : {:.3f}'.format(self.model.p_out_std.exp().mean()))
 		print('||Num Transition So far    : {}'.format(self.num_tuple_so_far))
 		print('||Num Transition           : {}'.format(self.num_tuple))
 		print('||Num Episode              : {}'.format(self.num_episode))
@@ -539,8 +531,8 @@ class PPO(object):
 		print('||Avg Return per episode   : {:.3f}'.format(self.sum_return/self.num_episode))
 		print('||Avg Reward per transition: {:.3f}'.format(self.sum_return/self.num_tuple))
 		print('||Avg Step per episode     : {:.1f}'.format(self.num_tuple/self.num_episode))
-		print('||Max Avg Retun So far     : {:.3f} at #{}'.format(self.max_return,self.max_return_epoch))
-		self.rewards.append(self.sum_return/self.num_episode)
+		print('||Max Avg Retun So far     : {:.3f} at #{}'.format(self.max_return, self.max_return_epoch))
+		print('=============================================')
 
 		self.SaveModel()
 		if self.use_muscle:
@@ -548,13 +540,11 @@ class PPO(object):
 		if self.use_adaptive_sampling:
 			self.SaveModel_Marginal()
 
-		print('=============================================')
-
+		self.rewards.append(self.sum_return/self.num_episode)
 		return np.array(self.rewards)
 
 import matplotlib
 import matplotlib.pyplot as plt
-
 plt.ion()
 def Plot(y,title,num_fig=1,ylim=True,save=False):
 	temp_y = np.zeros(y.shape)

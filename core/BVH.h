@@ -58,18 +58,19 @@ private:
 class BVH
 {
 public:
-	BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map, double ratio);
+	BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map);
 
 	BVHNode* ReadHierarchy(BVHNode* parent,const std::string& name,int& channel_offset,std::ifstream& is);
 	void Parse(const std::string& file,bool cyclic=true);
 
 	Eigen::Matrix3d Get(const std::string& bvh_node);
-	// Eigen::VectorXd GetMotion(double t);
 	Eigen::VectorXd GetMotion(int k);
 	Eigen::VectorXd GetMotionVel(int k);
+	double GetSpeedRatio(){return mSpeedRatio;}
 
 	void SetSkeleton(const dart::dynamics::SkeletonPtr& skel){mSkeleton = skel;}
 	void SetBVHMap(const std::map<std::string,std::string>& bvh_map){mBVHMap = bvh_map;}
+	void SetSpeedRatio(double ratio){mSpeedRatio = ratio;}
 
 	void SetMotionTransform();
 	void SetMotionFrames();
@@ -91,10 +92,9 @@ public:
 
 private:
 	bool mCyclic;
-	double mTimeStep;
 	int mNumTotalChannels;
 	int mNumTotalFrames;
-
+	double mTimeStep;
 	double mSpeedRatio;
 
 	BVHNode* mRoot;

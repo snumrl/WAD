@@ -74,7 +74,6 @@ private:
     int mNumDof;
     int mNumActiveDof;
     int mRootJointDof;
-
     int mSimulationHz;
     int mControlHz;
 

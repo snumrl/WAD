@@ -33,8 +33,8 @@ public:
 	double Getf_p();
 	double Getl_mt();
 	std::string GetName(){return name;}
-	void SetFemur(bool b){mIsFemur = b;}
-	bool GetFemur(){return mIsFemur;}
+	void SetFemur(bool b){isFemur = b;}
+	bool GetFemur(){return isFemur;}
 
 	Eigen::MatrixXd GetJacobianTranspose();
 	Eigen::MatrixXd GetReducedJacobianTranspose();
@@ -58,7 +58,7 @@ private:
 	std::vector<Eigen::Vector3d> mCachedAnchorPositions;
 	std::vector<Eigen::MatrixXd> mCachedJs;
 
-	bool mIsFemur = false;
+	bool isFemur = false;
 
 public:
 	//Dynamics

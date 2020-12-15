@@ -117,7 +117,6 @@ Initialize(const std::string& meta_file, bool load_obj)
 		}
 		else if(!index.compare("bvh_file")){
 			std::string str2,str3;
-
 			ss>>str2>>str3;
 			bool cyclic = false;
 			if(!str3.compare("true"))
@@ -172,8 +171,8 @@ Initialize(const std::string& meta_file, bool load_obj)
 	if(mUseDevice)
 		this->SetDevice(device);
 	this->Initialize();
-	// auto weld_pelvis = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Pelvis"));
 
+	// auto weld_pelvis = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Pelvis"));
 	// mWorld->getConstraintSolver()->addConstraint(weld_pelvis);
 }
 

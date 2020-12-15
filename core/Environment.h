@@ -73,19 +73,19 @@ private:
 	dart::dynamics::SkeletonPtr mGround;
 	Character* mCharacter;
 	Device* mDevice;
+
 	int mId;
 	int mControlHz;
 	int mSimulationHz;
 	int mNumSteps;
+	int mSimCount;
+	int mRandomSampleIndex;
 
 	bool mUseMuscle;
 	bool mUseDevice;
 	bool mUseDeviceNN;
-
-	int mSimCount;
-	int mRandomSampleIndex;
-
 	bool mUseAdaptiveSampling;
+
 	int mNumParamState;
 };
 };

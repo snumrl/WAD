@@ -42,6 +42,8 @@ public:
 	Eigen::VectorXd GetActionFromNN_Device();
 	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt);
 
+	void ParamChange(bool b);
+
 	void DrawGround();
 	void DrawCharacter();
 	void DrawEntity(const dart::dynamics::Entity* entity);
@@ -49,12 +51,10 @@ public:
 	void DrawSkeleton(const dart::dynamics::SkeletonPtr& skel);
 	void DrawShapeFrame(const dart::dynamics::ShapeFrame* shapeFrame);
 	void DrawShape(const dart::dynamics::Shape* shape,const Eigen::Vector4d& color);
-
+	void DrawTarget();
 	void DrawMuscles(const std::vector<Muscle*>& muscles);
 	void DrawShadow(const Eigen::Vector3d& scale, const aiScene* mesh,double y);
 	void DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine3d& M,double y);
-
-	void DrawTarget();
 
 	void DrawReward();
 	void DrawTorques();
@@ -91,14 +91,14 @@ public:
     void DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::deque<double>& data, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1);
     void DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::deque<double>& data, int idx, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1, int idx1);
 
-	void ParamChange(bool b);
-
 private:
 
 	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module,rms_module;
 
 	Environment* mEnv;
 	Torques* mTorques;
+	ShapeRenderer mShapeRenderer;
+
 	bool mFocus;
 	bool mSimulating;
 	bool mDrawCharacter;
@@ -115,6 +115,7 @@ private:
 	bool isDrawCharacter;
 	bool isDrawTarget;
 	bool isDrawDevice;
+
 	int mGraphMode;
 	int mCharacterMode;
 	int mParamMode;
@@ -128,8 +129,6 @@ private:
 
 	std::vector<Eigen::Vector3d> mFootprint;
 	std::deque<double> mFootinterval;
-
-	ShapeRenderer mShapeRenderer;
 };
 };
 

@@ -36,10 +36,10 @@ Character::
 
 void
 Character::
-LoadSkeleton(const std::string& path,bool create_obj)
+LoadSkeleton(const std::string& path, bool create_obj)
 {
 	mSkeleton = BuildFromFile(path,create_obj,mass_ratio);
-	// std::map<std::string,std::string> bvh_map;
+	std::map<std::string,std::string> bvh_map;
 	TiXmlDocument doc;
 	doc.LoadFile(path);
 	TiXmlElement* skel_elem = doc.FirstChildElement("Skeleton");
@@ -49,36 +49,30 @@ LoadSkeleton(const std::string& path,bool create_obj)
 		{
 			std::string ee =node->Attribute("endeffector");
 			if(ee == "True")
-			{
 				mEndEffectors.push_back(mSkeleton->getBodyNode(std::string(node->Attribute("name"))));
-			}
 		}
 
 		TiXmlElement* joint_elem = node->FirstChildElement("Joint");
 		if(joint_elem->Attribute("bvh")!=nullptr)
-		{
 			bvh_map.insert(std::make_pair(node->Attribute("name"),joint_elem->Attribute("bvh")));
-		}
 	}
 
-	int body_num = mSkeleton->getNumBodyNodes();
-	mDefaultMass = Eigen::VectorXd::Zero(body_num);
-	for(int i=0; i<body_num; i++)
-	{
-		dart::dynamics::BodyNode* body = mSkeleton->getBodyNode(i);
-		double mass = body->getMass();
-		mDefaultMass[i] = mass;
-	}
+	mNumBodyNodes = mSkeleton->getNumBodyNodes();
+	mDefaultMass = Eigen::VectorXd::Zero(mNumBodyNodes);
+	for(int i=0; i<mNumBodyNodes; i++)
+		mDefaultMass[i] = mSkeleton->getBodyNode(i)->getMass();
 
 	// for(int i=2; i<11; i++)
 	// {
 	// 	double ratio = 0.1*i;
-	// 	BVH* newBVH = new BVH(mSkeleton, bvh_map, 0.1*i);
+	// 	BVH* newBVH = new BVH(mSkeleton, bvh_map);
+	//  newBVH->SetSpeedRatio(0.1*i);
 	// 	mBVHset.push_back(newBVH);
 	// 	if(i==2)
 	// 		mBVH = newBVH;
 	// }
-	mBVH = new BVH(mSkeleton, bvh_map, 1.0);
+	mBVH = new BVH(mSkeleton, bvh_map);
+	mBVH->SetSpeedRatio(1.0);
 }
 
 void
@@ -133,11 +127,10 @@ LoadMuscles(const std::string& path)
 			}
 
 			// if(body == "FemurL" || body == "FemurR"){
-			if(body == "FemurL"){
+			if(body == "FemurL")
 				muscle_elem->SetFemur(true);
-			}
 
-			if(i==0||i==num_waypoints-1)
+			if(i == 0 || i == num_waypoints-1)
 				muscle_elem->AddAnchor(mSkeleton->getBodyNode(body),glob_pos);
 			else
 				muscle_elem->AddAnchor(mSkeleton,mSkeleton->getBodyNode(body),glob_pos,2);
@@ -216,15 +209,12 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	mNumState += mNumState_Char;
 
 	mAction.resize(mNumActiveDof);
-	mAction_prev.resize(mNumActiveDof);
-	int body_num = mSkeleton->getNumBodyNodes();
-	mAngVel.resize(body_num*3);
-	mAngVel_prev.resize(body_num*3);
+	mAngVel.resize(mNumBodyNodes*3);
+	mAngVel_prev.resize(mNumBodyNodes*3);
 	mCurPos.setZero();
 	mPrevPos.setZero();
 
 	mDesiredTorque.resize(mNumDof);
-	mDesiredTorque_prev.resize(mNumDof);
 
 	mFemurSignals_L.resize(1200);
 	mFemurSignals_R.resize(1200);
@@ -407,7 +397,6 @@ Initialize_Rewards()
 	imit_.resize(reward_window);
 	min_.resize(reward_window);
 
-	mRewards;
 	mRewards.insert(std::make_pair("reward", reward_));
 	mRewards.insert(std::make_pair("pose", pose_));
 	mRewards.insert(std::make_pair("vel", vel_));
@@ -435,20 +424,17 @@ Reset()
 
 	mSkeleton->setPositions(mTargetPositions);
 	mSkeleton->setVelocities(mTargetVelocities);
-	// mSkeleton->setPositions(mTargetPositionsNoise);
-	// mSkeleton->setVelocities(mTargetVelocitiesNoise);
 	mSkeleton->computeForwardKinematics(true,false,false);
 
 	mDesiredTorque.setZero();
-	mDesiredTorque_prev.setZero();
+
 	mAction.setZero();
-	mAction_prev.setZero();
 	mAngVel.setZero();
-	int body_num = mSkeleton->getNumBodyNodes();
-	for(int i=0; i<body_num; i++)
-	{
+	for(int i=0; i<mNumBodyNodes; i++)
 		mAngVel_prev.segment<3>(i*3) = mSkeleton->getBodyNode(i)->getAngularVelocity();
-	}
+	mCurPos = mSkeleton->getCOM();
+	mPrevPos = mSkeleton->getCOM();
+	mCurVel = 0.0;
 
 	mFemurSignals_L.clear();
 	mFemurSignals_L.resize(1200);
@@ -456,9 +442,7 @@ Reset()
 	mFemurSignals_R.resize(1200);
 
 	mTorques->Reset();
-	mCurPos = mSkeleton->getCOM();
-	mPrevPos = mSkeleton->getCOM();
-	mCurVel = 0.0;
+
 	if(mUseMuscle)
 		Reset_Muscles();
 }
@@ -479,9 +463,10 @@ Character::
 Step()
 {
 	SetDesiredTorques();
+	mSkeleton->setForces(mDesiredTorque);
+
 	this->SetTorques();
 	this->SetCurVelocity();
-	mSkeleton->setForces(mDesiredTorque);
 }
 
 void
@@ -572,12 +557,10 @@ GetState_Character()
 
 	Eigen::VectorXd pos,ori,lin_v,ang_v;
 
-	int body_num = mSkeleton->getNumBodyNodes();
-
-	pos.resize(body_num*3+1); //3dof + root world y
-	ori.resize(body_num*4);   //4dof (quaternion)
-	lin_v.resize(body_num*3);
-	ang_v.resize(body_num*3); //dof - root_dof
+	pos.resize(mNumBodyNodes*3+1); //3dof + root world y
+	ori.resize(mNumBodyNodes*4);   //4dof (quaternion)
+	lin_v.resize(mNumBodyNodes*3);
+	ang_v.resize(mNumBodyNodes*3); //dof - root_dof
 
 	dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
 	Eigen::Isometry3d trans = Utils::GetBodyTransform(root);
@@ -590,7 +573,7 @@ GetState_Character()
 	int idx_ori = 0;
 	int idx_linv = 0;
 	int idx_angv = 0;
-	for(int i=0; i<body_num; i++)
+	for(int i=0; i<mNumBodyNodes; i++)
 	{
 		dart::dynamics::BodyNode* body = mSkeleton->getBodyNode(i);
 		trans = Utils::GetBodyTransform(body);
@@ -624,10 +607,10 @@ GetState_Character()
 
 	Eigen::VectorXd pos_diff,ori_diff,lin_v_diff,ang_v_diff;
 
-	pos_diff.resize(body_num*3+1); //3dof + root world y
-	ori_diff.resize(body_num*4); //4dof (quaternion)
-	lin_v_diff.resize(body_num*3);
-	ang_v_diff.resize(body_num*3); //dof - root_dof
+	pos_diff.resize(mNumBodyNodes*3+1); //3dof + root world y
+	ori_diff.resize(mNumBodyNodes*4); //4dof (quaternion)
+	lin_v_diff.resize(mNumBodyNodes*3);
+	ang_v_diff.resize(mNumBodyNodes*3); //dof - root_dof
 
 	dart::dynamics::BodyNode* root_kin = mSkeleton->getBodyNode(0);
 	Eigen::Isometry3d trans_kin = Utils::GetBodyTransform(root_kin);
@@ -641,7 +624,7 @@ GetState_Character()
 	int idx_ori_diff = 0;
 	int idx_linv_diff = 0;
 	int idx_angv_diff = 0;
-	for(int i=0; i<body_num; i++)
+	for(int i=0; i<mNumBodyNodes; i++)
 	{
 		dart::dynamics::BodyNode* body_kin = mSkeleton->getBodyNode(i);
 		trans_kin = Utils::GetBodyTransform(body_kin);
@@ -673,16 +656,13 @@ GetState_Character()
 		idx_angv_diff += 3;
 	}
 
-	int adaptive_dim = mNumParamState;
-	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+adaptive_dim);
-	// Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+1);
+	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+mNumParamState);
 
-	// double phase = this->GetPhase();
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
-	if(adaptive_dim > 0)
+	if(mNumParamState > 0)
 		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,mParamState;
 	else
 		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
@@ -705,9 +685,7 @@ Character::
 GetReward()
 {
 	r_character = this->GetReward_Character();
-
 	mReward = r_character;
-
 	this->SetRewards();
 
 	return mReward;
@@ -805,12 +783,11 @@ GetReward_Character()
 		vel_err += w * curr_vel_err;
 	}
 
-	int body_num = mSkeleton->getNumBodyNodes();
-	for(int i=0; i<body_num; i++)
+	for(int i=0; i<mNumBodyNodes; i++)
 	{
 		mAngVel.segment<3>(i*3) = mSkeleton->getBodyNode(i)->getAngularVelocity();
 
-		smooth_err += 1.0/(double)(body_num) * (mAngVel.segment<3>(i*3) - mAngVel_prev.segment<3>(i*3)).squaredNorm();
+		smooth_err += 1.0/(double)(mNumBodyNodes) * (mAngVel.segment<3>(i*3) - mAngVel_prev.segment<3>(i*3)).squaredNorm();
 	}
 	mAngVel_prev = mAngVel;
 
@@ -921,8 +898,6 @@ SetAction(const Eigen::VectorXd& a)
 {
 	double action_scale = 0.1;
 	mAction = a*action_scale;
-	// mAction = mAction*0.5 + mAction_prev*0.5;
-	// mAction_prev = mAction;
 
 	double t = mWorld->getTime();
 	this->SetTargetPosAndVel(t, mControlHz);
@@ -932,12 +907,9 @@ void
 Character::
 SetDesiredTorques()
 {
-	mDesiredTorque_prev = mDesiredTorque;
 	Eigen::VectorXd p_des = mTargetPositions;
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction;
 	mDesiredTorque = this->GetSPDForces(p_des);
-
-	// mDesiredTorque = 0.5*mDesiredTorque  + 0.5*mDesiredTorque_prev;
 
 	for(int i=0; i<mDesiredTorque.size(); i++){
 		mDesiredTorque[i] = Utils::Clamp(mDesiredTorque[i], -mMaxForces[i], mMaxForces[i]);
@@ -945,11 +917,9 @@ SetDesiredTorques()
 
 	mFemurSignals_L.pop_back();
 	mFemurSignals_L.push_front(mDesiredTorque[6]);
-	// mFemurSignals_L.push_front(mDesiredTorque.segment(9, 3).norm());
 
 	mFemurSignals_R.pop_back();
 	mFemurSignals_R.push_front(mDesiredTorque[15]);
-	// mFemurSignals_R.push_front(mDesiredTorque.segment(13,3).norm());
 }
 
 Eigen::VectorXd
@@ -986,14 +956,6 @@ SetTargetPosAndVel(double t, int controlHz)
 	std::pair<Eigen::VectorXd,Eigen::VectorXd> pv = this->GetTargetPosAndVel(t, 1.0/controlHz);
 	mTargetPositions = pv.first;
 	mTargetVelocities = pv.second;
-
-	mTargetPositionsNoise = pv.first;
-	mTargetVelocitiesNoise = pv.second;
-
-	double x_noise = (rand()%300) * 0.001 - 0.15;
-	double z_noise = (rand()%300) * 0.001 - 0.15;
-	mTargetPositionsNoise[3] += x_noise;
-	mTargetPositionsNoise[5] += z_noise;
 }
 
 std::pair<Eigen::VectorXd,Eigen::VectorXd>
@@ -1164,31 +1126,30 @@ Off_Device()
 
 void
 Character::
-SetBVHidx(double r)
+SetMassRatio(double r)
 {
-	double r10 = r * 10.99;
-	int idx = (int)(r10/1.0) - 2;
-	mBVH = mBVHset.at(idx);
-	curBVHidx = idx;
-	this->Reset();
-}
-
-void
-Character::
-SetSpeedRatio(double r)
-{
-	speed_ratio = r;
+	mass_ratio = r;
+	for(int i=0; i<mNumBodyNodes; i++)
+	{
+		dart::dynamics::BodyNode* body = mSkeleton->getBodyNode(i);
+		dart::dynamics::Inertia inertia;
+		auto shape = body->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get();
+		double mass = mass_ratio * mDefaultMass[i];
+		inertia.setMass(mass);
+		inertia.setMoment(shape->computeInertia(mass));
+		body->setInertia(inertia);
+	}
 
 	double param = 0.0;
-	if(mMax_v[2] == mMin_v[2])
+	if(mMax_v[0] == mMin_v[0])
 	{
-		mParamState[2] = mMin_v[2];
+		mParamState[0] = mMin_v[0];
 	}
 	else
 	{
-		double ratio = (r-mMin_v[2])/(mMax_v[2]-mMin_v[2]);
+		double ratio = (mass_ratio-mMin_v[0])/(mMax_v[0]-mMin_v[0]);
 		param = ratio*2.0 - 1.0;
-		mParamState[2] = param;
+		mParamState[0] = param;
 	}
 }
 
@@ -1214,32 +1175,32 @@ SetForceRatio(double r)
 
 void
 Character::
-SetMassRatio(double r)
+SetSpeedRatio(double r)
 {
-	mass_ratio = r;
-	int body_num = mSkeleton->getNumBodyNodes();
-	for(int i=0; i<body_num; i++)
-	{
-		dart::dynamics::BodyNode* body = mSkeleton->getBodyNode(i);
-		dart::dynamics::Inertia inertia;
-		auto shape = body->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get();
-		double mass = mass_ratio * mDefaultMass[i];
-		inertia.setMass(mass);
-		inertia.setMoment(shape->computeInertia(mass));
-		body->setInertia(inertia);
-	}
+	speed_ratio = r;
 
 	double param = 0.0;
-	if(mMax_v[0] == mMin_v[0])
+	if(mMax_v[2] == mMin_v[2])
 	{
-		mParamState[0] = mMin_v[0];
+		mParamState[2] = mMin_v[2];
 	}
 	else
 	{
-		double ratio = (mass_ratio-mMin_v[0])/(mMax_v[0]-mMin_v[0]);
+		double ratio = (r-mMin_v[2])/(mMax_v[2]-mMin_v[2]);
 		param = ratio*2.0 - 1.0;
-		mParamState[0] = param;
+		mParamState[2] = param;
 	}
+}
+
+void
+Character::
+SetBVHidx(double r)
+{
+	double r10 = r * 10.99;
+	int idx = (int)(r10/1.0) - 2;
+	mBVH = mBVHset.at(idx);
+	curBVHidx = idx;
+	this->Reset();
 }
 
 void
@@ -1266,7 +1227,7 @@ SetParamState(Eigen::VectorXd paramState)
 			this->SetMassRatio(param);
 		else if(i==1) // Force
 			this->SetForceRatio(param);
-		else if(i==2){
+		else if(i==2){ // Speed
 			this->SetSpeedRatio(param);
 			this->SetBVHidx(param);
 		}
@@ -1279,6 +1240,7 @@ SetMinMaxV(int idx, double lower, double upper)
 {
 	// 0 : mass
 	// 1 : force
+	// 2 : speed
 	mMin_v[idx] = lower;
 	mMax_v[idx] = upper;
 }
