@@ -67,15 +67,14 @@ Eigen::Vector4d purple_trans(0.8, 0.2, 0.8, 0.2);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawCharacter(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0),mParamMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawCharacter(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0),mParamMode(0),mViewMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false)
 {
 	mBackground[0] = 0.96;
 	mBackground[1] = 0.96;
 	mBackground[2] = 0.97;
 	mBackground[3] = 0.7;
 	SetFocus();
-	mZoom = 0.25;
-	mFocus = false;
+	mZoom = 0.30;
 	mNNLoaded = false;
 	mOnDevice = env->GetCharacter()->GetOnDevice();
 
@@ -158,6 +157,7 @@ LoadMuscleNN(const std::string& muscle_nn_path)
 
 	p::object load = muscle_nn_module.attr("load");
 	load(muscle_nn_path);
+	std::cout << "load muscle" << std::endl;
 }
 
 void
@@ -296,6 +296,7 @@ keyboard(unsigned char _key, int _x, int _y)
 		if(mEnv->GetUseDevice())
 			mOnDevice = !mOnDevice;
 		break;
+	case 'v' : mViewMode = (mViewMode+1)%3;break;
 	case '\t': mGraphMode = (mGraphMode+1)%6;break;
 	case '`' : mCharacterMode = (mCharacterMode+1)%2; break;
 	case '1' : mParamMode = 1; break;
@@ -368,8 +369,8 @@ Step()
 			mEnv->Step(mOnDevice);
 	}
 
-	mEnv->GetReward();
-	this->SetTrajectory();
+	// mEnv->GetReward();
+	// this->SetTrajectory();
 
 	glutPostRedisplay();
 }
@@ -424,8 +425,20 @@ SetFocus()
 	if(mFocus)
 	{
 		mTrans = -mEnv->GetWorld()->getSkeleton("Human")->getRootBodyNode()->getCOM();
-		mTrans[1] -= 0.3;
+		mTrans[1] -= 0.1;
 		mTrans *= 1000.0;
+
+		Eigen::Quaterniond origin_r = mTrackBall.getCurrQuat();
+		if (mViewMode == 1 && Eigen::AngleAxisd(origin_r).angle() < 0.5 * M_PI)
+		{
+			Eigen::Quaterniond r = Eigen::Quaterniond(Eigen::AngleAxisd(1 * 0.01 * M_PI, Eigen::Vector3d::UnitY())) * origin_r;
+			mTrackBall.setQuaternion(r);
+			}
+		else if (mViewMode == 2 && Eigen::AngleAxisd(origin_r).axis()[1] > 0)
+		{
+			Eigen::Quaterniond r = Eigen::Quaterniond(Eigen::AngleAxisd(-1 * 0.01 * M_PI, Eigen::Vector3d::UnitY())) * origin_r;
+			mTrackBall.setQuaternion(r);
+		}
 	}
 }
 
@@ -465,8 +478,10 @@ draw()
 		DrawParameter();
 		DrawVelocity();
 	}
+
 	// DrawTrajectory();
 	// DrawStride();
+
 	SetFocus();
 }
 

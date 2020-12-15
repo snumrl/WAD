@@ -132,8 +132,8 @@ class PPO(object):
 		self.dt_idx = np.array([i for i in range(param_size) if self.min_v[i]!=self.max_v[i]])
 
 		for i in range(self.res_tot):
-			idx_0 = int(i/self.res)
-			idx_1 = int(i%self.res)
+			idx_0 = int(i%self.res)
+			idx_1 = int(i/self.res)
 			param_state = [self.min_v[0], self.min_v[1], self.min_v[2], self.min_v[3]]
 			param_state[self.dt_idx[0]] += self.dt[self.dt_idx[0]]*idx_0
 			param_state[self.dt_idx[1]] += self.dt[self.dt_idx[1]]*idx_1
@@ -174,8 +174,8 @@ class PPO(object):
 
 				if terminated_state:
 					self.env.Reset(True,j)
-					idx_0 = int(j/self.res)
-					idx_1 = int(j%self.res)
+					idx_0 = int(j%self.res)
+					idx_1 = int(j/self.res)
 					param_state = [self.min_v[0], self.min_v[1], self.min_v[2], self.min_v[3]]
 					param_state[self.dt_idx[0]] += self.dt[self.dt_idx[0]]*idx_0
 					param_state[self.dt_idx[1]] += self.dt[self.dt_idx[1]]*idx_1

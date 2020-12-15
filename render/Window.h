@@ -119,6 +119,7 @@ private:
 	int mGraphMode;
 	int mCharacterMode;
 	int mParamMode;
+	int mViewMode;
 
 	bool mTalusL;
 	bool mTalusR;

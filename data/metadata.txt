@@ -1,7 +1,7 @@
-use_muscle true
-use_device false
+use_muscle false
+use_device true
 use_device_nn false
-use_adaptive_sampling false
+use_adaptive_sampling true
 con_hz 30
 sim_hz 600
 skel_file /data/human_tmp.xml
@@ -11,8 +11,8 @@ bvh_file /data/motion/walk.bvh true
 character_param 3
 device_param 2
 mass 1.0 1.0
-force 0.4 1.0
+force 0.4 0.4
 speed 0.2 1.0
-device_k 0.5 0.5
+device_k 0.2 1.0
 delta_t 0.3 0.3
 

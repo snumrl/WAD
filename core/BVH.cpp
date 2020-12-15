@@ -329,17 +329,17 @@ SetMotionFrames()
 
 				if(jointName == "Spine"){
 					p[idx] -= 0.06;
-					p[idx] += 0.25;
+					// p[idx] += 0.25;
 				}
 
 				if(jointName == "Torso"){
-					p[idx] += 0.3;
+					// p[idx] += 0.3;
 					if(p[idx+2] > 0)
 						p[idx+2] *= 0.3;
 				}
 
-				if(jointName == "ShoulderL" || jointName == "ShoulderR")
-					p[idx] -= 0.3;
+				// if(jointName == "ShoulderL" || jointName == "ShoulderR")
+				// 	p[idx] -= 0.3;
 
 				if(jointName == "ArmL")
 					p[idx+2] -= 0.1;
@@ -363,7 +363,7 @@ SetMotionFrames()
 			}
 			else if(jn->getType()=="RevoluteJoint")
 			{
-				Eigen::Vector3d u =dynamic_cast<RevoluteJoint*>(jn)->getAxis();
+				Eigen::Vector3d u = dynamic_cast<RevoluteJoint*>(jn)->getAxis();
 				Eigen::Vector3d aa = BallJoint::convertToPositions(R);
 				double val;
 				if((u-Eigen::Vector3d::UnitX()).norm()<1E-4)

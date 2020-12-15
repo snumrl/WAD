@@ -62,17 +62,16 @@ LoadSkeleton(const std::string& path, bool create_obj)
 	for(int i=0; i<mNumBodyNodes; i++)
 		mDefaultMass[i] = mSkeleton->getBodyNode(i)->getMass();
 
-	// for(int i=2; i<11; i++)
-	// {
-	// 	double ratio = 0.1*i;
-	// 	BVH* newBVH = new BVH(mSkeleton, bvh_map);
-	//  newBVH->SetSpeedRatio(0.1*i);
-	// 	mBVHset.push_back(newBVH);
-	// 	if(i==2)
-	// 		mBVH = newBVH;
-	// }
-	mBVH = new BVH(mSkeleton, bvh_map);
-	mBVH->SetSpeedRatio(1.0);
+	for(int i=2; i<11; i++)
+	{
+		BVH* newBVH = new BVH(mSkeleton, bvh_map);
+		newBVH->SetSpeedRatio(0.1*i);
+		mBVHset.push_back(newBVH);
+		if(i==2)
+			mBVH = newBVH;
+	}
+	// mBVH = new BVH(mSkeleton, bvh_map);
+	// mBVH->SetSpeedRatio(1.0);
 }
 
 void
@@ -84,11 +83,11 @@ LoadBVH(const std::string& path,bool cyclic)
 		return;
 	}
 
-	// for(int i=2; i<11; i++)
-	// {
-	// 	mBVHset.at(i-2)->Parse(path, cyclic);
-	// }
-	mBVH->Parse(path, cyclic);
+	for(int i=2; i<11; i++)
+	{
+		mBVHset.at(i-2)->Parse(path, cyclic);
+	}
+	// mBVH->Parse(path, cyclic);
 }
 
 void
@@ -126,9 +125,10 @@ LoadMuscles(const std::string& path)
 				break;
 			}
 
-			// if(body == "FemurL" || body == "FemurR"){
-			if(body == "FemurL")
+			if(body == "FemurL" || body == "FemurR")
 				muscle_elem->SetFemur(true);
+			// if(body == "FemurL")
+			// 	muscle_elem->SetFemur(true);
 
 			if(i == 0 || i == num_waypoints-1)
 				muscle_elem->AddAnchor(mSkeleton->getBodyNode(body),glob_pos);
@@ -164,7 +164,7 @@ LoadMuscles(const std::string& path)
 			if(muscle_elem->GetFemur())
 			{
 				muscle_elem->SetMt0Ratio(1.0);
-				muscle_elem->SetF0Ratio(0.4);
+				muscle_elem->SetF0Ratio(1.0);
 			} // femur
 
 			mMuscles.push_back(muscle_elem);
@@ -1201,6 +1201,8 @@ SetBVHidx(double r)
 	mBVH = mBVHset.at(idx);
 	curBVHidx = idx;
 	this->Reset();
+	if(mUseDevice)
+		mDevice->Reset();
 }
 
 void
