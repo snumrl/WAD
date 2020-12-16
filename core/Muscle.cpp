@@ -41,6 +41,7 @@ Muscle(std::string _name,double _f0,double _lm0,double _lt0,double _pen_angle,do
 	:name(_name),f0(_f0),l_m0(_lm0),l_mt(1.0),l_t0(_lt0),l_mt0(0.0),activation(0.0),f_toe(0.33),k_toe(3.0),k_lin(51.878788),e_toe(0.02),e_t0(0.033),k_pe(4.0),e_mo(0.6),gamma(0.5),l_mt_max(lmax)
 {
 	l_m = l_mt - l_t0;
+	f0_default = f0;
 }
 
 Muscle::
@@ -286,16 +287,6 @@ GetRelatedJtA()
 	Eigen::VectorXd A = GetForceJacobianAndPassive().first;
 	Eigen::VectorXd JtA_reduced = Jt_reduced*A;
 	return JtA_reduced;
-
-	// Eigen::MatrixXd Jt = GetJacobianTranspose();
-	// Eigen::VectorXd A = GetForceJacobianAndPassive().first;
-	// Eigen::VectorXd JtA = Jt*A;
-	// Eigen::VectorXd JtA_reduced = Eigen::VectorXd::Zero(num_related_dofs);
-
-	// for(int i =0;i<num_related_dofs;i++)
-	// 	JtA_reduced[i] = JtA[related_dof_indices[i]];
-
-	// return JtA_reduced;
 }
 
 Eigen::MatrixXd
@@ -378,44 +369,6 @@ GetForceJacobianAndPassive()
 	return std::make_pair(A,p);
 }
 
-std::vector<dart::dynamics::Joint*>
-Muscle::
-GetRelatedJoints()
-{
-	auto skel = mAnchors[0]->bodynodes[0]->getSkeleton();
-	std::map<dart::dynamics::Joint*,int> jns;
-	std::vector<dart::dynamics::Joint*> jns_related;
-	for(int i=0; i<skel->getNumJoints(); i++)
-		jns.insert(std::make_pair(skel->getJoint(i),0));
-
-	Eigen::VectorXd dl_dtheta = Getdl_dtheta();
-	for(int i=0; i<dl_dtheta.rows(); i++)
-	{
-		if(std::abs(dl_dtheta[i])>1E-6)
-			jns[skel->getDof(i)->getJoint()]+=1;
-	}
-
-	for(auto jn : jns)
-	{
-		if(jn.second>0)
-			jns_related.push_back(jn.first);
-	}
-
-	return jns_related;
-}
-
-std::vector<dart::dynamics::BodyNode*>
-Muscle::
-GetRelatedBodyNodes()
-{
-	std::vector<dart::dynamics::BodyNode*> bns_related;
-	auto rjs = GetRelatedJoints();
-	for(auto joint : rjs)
-		bns_related.push_back(joint->getChildBodyNode());
-
-	return bns_related;
-}
-
 void
 Muscle::
 ComputeJacobians()
@@ -431,31 +384,6 @@ ComputeJacobians()
 			mCachedJs[i] += mAnchors[i]->weights[j]*skel->getLinearJacobian(mAnchors[i]->bodynodes[j],mAnchors[i]->local_positions[j]);
 		}
 	}
-}
-
-Eigen::VectorXd
-Muscle::
-Getdl_dtheta()
-{
-	ComputeJacobians();
-	const auto& skel = mAnchors[0]->bodynodes[0]->getSkeleton();
-	Eigen::VectorXd dl_dtheta(skel->getNumDofs());
-	dl_dtheta.setZero();
-	for(int i=0; i<mAnchors.size()-1; i++)
-	{
-		Eigen::Vector3d pi = mCachedAnchorPositions[i+1] - mCachedAnchorPositions[i];
-		Eigen::MatrixXd dpi_dtheta = mCachedJs[i+1] - mCachedJs[i];
-		Eigen::VectorXd dli_d_theta = (dpi_dtheta.transpose()*pi)/(l_mt0*pi.norm());
-		dl_dtheta += dli_d_theta;
-	}
-
-	for(int i=0; i<dl_dtheta.rows(); i++)
-	{
-		if(std::abs(dl_dtheta[i])<1E-6)
-			dl_dtheta[i] = 0.0;
-	}
-
-	return dl_dtheta;
 }
 
 double
@@ -497,4 +425,20 @@ Muscle::
 g_al(double _l_m)
 {
 	return exp(-(_l_m-1.0)*(_l_m-1.0)/gamma);
+}
+
+void
+Muscle::
+SetMt0Ratio(double ratio)
+{
+	l_mt0_ratio = ratio;
+	l_mt0 = l_mt0_default * l_mt0_ratio;
+}
+
+void
+Muscle::
+SetF0Ratio(double ratio)
+{
+	f0_ratio = ratio;
+	f0 = f0_default * f0_ratio;
 }

@@ -43,12 +43,7 @@ public:
 	int GetNumRelatedDofs(){return num_related_dofs;};
 	Eigen::VectorXd GetRelatedJtA();
 
-	std::vector<dart::dynamics::Joint*> GetRelatedJoints();
-	std::vector<dart::dynamics::BodyNode*> GetRelatedBodyNodes();
 	void ComputeJacobians();
-	Eigen::VectorXd Getdl_dtheta();
-
-
 private:
 	std::string name;
 	std::vector<Anchor*> mAnchors;
@@ -73,8 +68,17 @@ public:
 	void SetF0(double f){ f0 = f;}
 	double GetF0(){ return f0;}
 
-	void SetMt0Ratio(double ratio){l_mt0 *= ratio;}
-	void SetF0Ratio(double ratio){f0 *= ratio;}
+	void SetMt0(double mt){ l_mt0 = mt;}
+	double GetMt0(){ return l_mt0;}
+
+	void SetMt0Ratio(double ratio);
+	void SetF0Ratio(double ratio);
+	void SetMt0Default(){l_mt0_default = l_mt0;}
+
+	double GetF0Ratio(){return f0_ratio;}
+	double GetF0Default(){return f0_default;}
+	double GetMt0Ratio(){return l_mt0_ratio;}
+	double GetMt0Default(){return l_mt0_default;}
 
 private:
 
@@ -84,6 +88,8 @@ private:
 
 	double f0;
 	double l_mt0,l_m0,l_t0;
+	double l_mt0_default, f0_default;
+	double l_mt0_ratio, f0_ratio;
 
 	double f_toe,e_toe,k_toe,k_lin,e_t0; //For g_t
 	double k_pe,e_mo; //For g_pl

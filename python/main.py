@@ -262,8 +262,6 @@ class PPO(object):
 					value.append(np.random.uniform(-1.0, 1.0))
 
 			value = np.array(value)
-			# value = np.array([np.random.uniform(min_v[i], max_v[i]) for i in range(size)])
-
 			return value
 
 		mcmc_sampler = mcmc.MetropolisHasting(self.num_paramstate, min_v, max_v, target_dist, proposed_dist)

@@ -155,6 +155,7 @@ private:
 	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
 
 	std::vector<Muscle*> mMuscles;
+	std::vector<Muscle*> mMuscles_Femur;
 	Device* mDevice;
 	BVH* mBVH;
 	std::vector<BVH*> mBVHset;

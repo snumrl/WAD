@@ -98,7 +98,7 @@ LoadMuscles(const std::string& path)
 		double pa = std::stod(unit->Attribute("pen_angle"));
 		double lmax = std::stod(unit->Attribute("lmax"));
 		Muscle* muscle_elem = new Muscle(name,f0,lm,lt,pa,lmax);
-		bool isValid = true;
+
 		int num_waypoints = 0;
 		for(TiXmlElement* waypoint = unit->FirstChildElement("Waypoint");waypoint!=nullptr;waypoint = waypoint->NextSiblingElement("Waypoint"))
 			num_waypoints++;
@@ -109,56 +109,35 @@ LoadMuscles(const std::string& path)
 			Eigen::Vector3d glob_pos = string_to_vector3d(waypoint->Attribute("p"));
 			if(mSkeleton->getBodyNode(body) == NULL)
 			{
-				isValid = false;
-				break;
+				std::cout << body << " node is NULL" << std::endl;
+				return;
 			}
 
-			if(body == "FemurL" || body == "FemurR")
-				muscle_elem->SetFemur(true);
-			// if(body == "FemurL")
+			// if(body == "FemurL" || body == "FemurR")
 			// 	muscle_elem->SetFemur(true);
+			if(body == "FemurL")
+				muscle_elem->SetFemur(true);
 
 			if(i == 0 || i == num_waypoints-1)
 				muscle_elem->AddAnchor(mSkeleton->getBodyNode(body),glob_pos);
 			else
 				muscle_elem->AddAnchor(mSkeleton,mSkeleton->getBodyNode(body),glob_pos,2);
+
+			muscle_elem->SetMt0Default();
 			i++;
 		}
 
-		if(isValid){
-			std::string muscle_name = muscle_elem->GetName();
-			if(!muscle_name.compare("L_Rectus_Abdominis1")||
-			!muscle_name.compare("R_Rectus_Abdominis1")||
-			!muscle_name.compare("L_Transversus_Abdominis4")||
-			!muscle_name.compare("R_Transversus_Abdominis4"))
-			{
-				muscle_elem->SetMt0Ratio(1.0);
-				muscle_elem->SetF0Ratio(1.0);
-			} // front
+		std::string muscle_name = muscle_elem->GetName();
 
-			if(!muscle_name.compare("L_Multifidus")||
-			!muscle_name.compare("R_Multifidus")||
-			!muscle_name.compare("L_Quadratus_Lumborum1")||
-			!muscle_name.compare("R_Quadratus_Lumborum1")||
-			!muscle_name.compare("L_Transversus_Abdominis")||
-			!muscle_name.compare("R_Transversus_Abdominis")||
-			!muscle_name.compare("L_Longissimus_Thoracis")||
-			!muscle_name.compare("R_Longissimus_Thoracis"))
-			{
-				muscle_elem->SetMt0Ratio(1.0);
-				muscle_elem->SetF0Ratio(1.0);
-			} // back
-
-			if(muscle_elem->GetFemur())
-			{
-				muscle_elem->SetMt0Ratio(1.0);
-				muscle_elem->SetF0Ratio(1.0);
-			} // femur
-
-			mMuscles.push_back(muscle_elem);
+		if(muscle_elem->GetFemur())
+		{
+			muscle_elem->SetMt0Ratio(1.0);
+			muscle_elem->SetF0Ratio(1.0);
+			mMuscles_Femur.push_back(muscle_elem);
 		}
-	}
 
+		mMuscles.push_back(muscle_elem);
+	}
 	mNumMuscle = mMuscles.size();
 }
 
@@ -1146,7 +1125,14 @@ Character::
 SetForceRatio(double r)
 {
 	force_ratio = r;
-	mMaxForces = force_ratio * mDefaultForces;
+
+	if(mUseMuscle)
+	{
+		for(int i=0; i<mMuscles_Femur.size(); i++)
+			mMuscles_Femur.at(i)->SetF0Ratio(force_ratio);
+	}
+	else
+		mMaxForces = force_ratio * mDefaultForces;
 
 	double param = 0.0;
 	if(mMax_v[1] == mMin_v[1])
