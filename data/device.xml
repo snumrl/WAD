@@ -1,6 +1,6 @@
 <Skeleton name="Device">
     <Node name="Controller" parent="None" >
-        <Body type="Box" mass="1.5" size="0.32 0.04 0.04" contact="Off" color="0.5 0.5 0.5 1.0" obj="controller.obj">
+        <Body type="Box" mass="1.5" size="0.32 0.04 0.04" contact="Off" color="0.5 0.5 0.5 1.0" obj="controller2.obj">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0 0.9809 -0.09"/>
         </Body>
         <Joint type="Free">

@@ -522,16 +522,16 @@ DrawParameter()
 		Eigen::VectorXd max_v = mEnv->GetCharacter()->GetMaxV();
 
 		double m_ratio = mEnv->GetCharacter()->GetMassRatio();
-		DrawQuads(x+0.01, y+0.01, 0.02, (m_ratio)*h_offset, green);
-		DrawQuads(x+0.01, y+0.01+(m_ratio)*h_offset, 0.02, (max_v[0]-m_ratio)*h_offset, green_trans);
+		DrawQuads(x+0.01, y+0.01, 0.02, (m_ratio)*h_offset, red);
+		DrawQuads(x+0.01, y+0.01+(m_ratio)*h_offset, 0.02, (max_v[0]-m_ratio)*h_offset, red_trans);
 
 		double f_ratio = mEnv->GetCharacter()->GetForceRatio();
-		DrawQuads(x+0.05, y+0.01, 0.02, (f_ratio)*h_offset, red);
-		DrawQuads(x+0.05, y+0.01+(f_ratio)*h_offset, 0.02, (max_v[1]-f_ratio)*h_offset, red_trans);
+		DrawQuads(x+0.05, y+0.01, 0.02, (f_ratio)*h_offset, yellow);
+		DrawQuads(x+0.05, y+0.01+(f_ratio)*h_offset, 0.02, (max_v[1]-f_ratio)*h_offset, yellow_trans);
 
 		double s_ratio = mEnv->GetCharacter()->GetSpeedRatio();
-		DrawQuads(x+0.09, y+0.01, 0.02, (s_ratio)*h_offset, purple);
-		DrawQuads(x+0.09, y+0.01+(s_ratio)*h_offset, 0.02, (max_v[2]-s_ratio)*h_offset, purple_trans);
+		DrawQuads(x+0.09, y+0.01, 0.02, (s_ratio)*h_offset, green);
+		DrawQuads(x+0.09, y+0.01+(s_ratio)*h_offset, 0.02, (max_v[2]-s_ratio)*h_offset, green_trans);
 
 		DrawString(x+0.00, y+(m_ratio)*h_offset+0.02, std::to_string(m_ratio));
 		DrawString(x+0.00, y-0.02, "Mass");
@@ -553,8 +553,8 @@ DrawParameter()
 		DrawQuads(x+0.13, y+0.01+(k_/30.0)*h_offset, 0.02, (max_v_dev[0]-k_/30.0)*h_offset, blue_trans);
 
 		double t_ = mEnv->GetDevice()->GetDelta_t();
-		DrawQuads(x+0.17, y+0.01, 0.02, 3.0*t_*h_offset, yellow);
-		DrawQuads(x+0.17, y+0.01+t_*h_offset, 0.02, (max_v_dev[1]-t_)*h_offset, yellow_trans);
+		DrawQuads(x+0.17, y+0.01, 0.02, 3.0*t_*h_offset, purple);
+		DrawQuads(x+0.17, y+0.01+t_*h_offset, 0.02, (max_v_dev[1]-t_)*h_offset, purple_trans);
 
 		DrawString(x+0.13, y+(k_/30.0)*h_offset+0.02, std::to_string(k_));
 		DrawString(x+0.12, y-0.02, "Device");
