@@ -183,6 +183,8 @@ void
 Window::
 ParamChange(bool b)
 {
+	if(!mEnv->GetUseAdaptiveSampling())
+		return;
 	Eigen::VectorXd min_v = mEnv->GetMinV();
 	Eigen::VectorXd max_v = mEnv->GetMaxV();
 	if(b)
@@ -303,7 +305,7 @@ keyboard(unsigned char _key, int _x, int _y)
 	case '2' : mParamMode = 2; break;
 	case '3' : mParamMode = 3; break;
 	case '4' : mParamMode = 4; break;
-	case '5' : mParamMode = 4; break;
+	case '5' : mParamMode = 5; break;
 	case '+' : ParamChange(true); break;
 	case '-' : ParamChange(false); break;
 	case 27 : exit(0);break;

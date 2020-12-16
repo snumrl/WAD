@@ -17,7 +17,6 @@ Character()
 	force_ratio = 1.0;
 	mass_ratio = 1.0;
 	speed_ratio = 1.0;
-	curBVHidx = 0;
 }
 
 Character::
@@ -39,7 +38,6 @@ Character::
 LoadSkeleton(const std::string& path, bool create_obj)
 {
 	mSkeleton = BuildFromFile(path,create_obj,mass_ratio);
-	std::map<std::string,std::string> bvh_map;
 	TiXmlDocument doc;
 	doc.LoadFile(path);
 	TiXmlElement* skel_elem = doc.FirstChildElement("Skeleton");
@@ -62,32 +60,22 @@ LoadSkeleton(const std::string& path, bool create_obj)
 	for(int i=0; i<mNumBodyNodes; i++)
 		mDefaultMass[i] = mSkeleton->getBodyNode(i)->getMass();
 
-	for(int i=2; i<11; i++)
-	{
-		BVH* newBVH = new BVH(mSkeleton, bvh_map);
-		newBVH->SetSpeedRatio(0.1*i);
-		mBVHset.push_back(newBVH);
-		if(i==2)
-			mBVH = newBVH;
-	}
-	// mBVH = new BVH(mSkeleton, bvh_map);
-	// mBVH->SetSpeedRatio(1.0);
+	mBVH = new BVH(mSkeleton, bvh_map);
+	mBVH->SetSpeedRatio(speed_ratio);
 }
 
 void
 Character::
-LoadBVH(const std::string& path,bool cyclic)
+LoadBVH(const std::string& path, bool cyclic)
 {
 	if(mBVH == nullptr){
 		std::cout<<"Initialize BVH class first"<<std::endl;
 		return;
 	}
 
-	for(int i=2; i<11; i++)
-	{
-		mBVHset.at(i-2)->Parse(path, cyclic);
-	}
-	// mBVH->Parse(path, cyclic);
+	bvh_path = path;
+	bvh_cyclic = cyclic;
+	mBVH->Parse(path, cyclic);
 }
 
 void
@@ -1194,12 +1182,63 @@ SetSpeedRatio(double r)
 
 void
 Character::
+SetBVHset(double lower, double upper)
+{
+	if(lower == upper)
+	{
+		mBVH->SetSpeedRatio(lower);
+		mBVH->SetParsed(false);
+		mBVHset.push_back(mBVH);
+		return;
+	}
+
+	int idx_lower = lower * 10.0;
+	int idx_upper = upper * 10.0;
+	int idx_exist = mBVH->GetSpeedRatio()*10.0;
+	BVH* exist_bvh = mBVH;
+	for(int i=idx_lower; i < (idx_upper+1); i++)
+	{
+		if(i == idx_exist){
+			mBVHset.push_back(exist_bvh);
+			continue;
+		}
+
+		BVH* newBVH = new BVH(mSkeleton, bvh_map);
+		newBVH->SetSpeedRatio(0.1*i);
+		mBVHset.push_back(newBVH);
+		if(i==idx_lower)
+			mBVH = newBVH;
+	}
+}
+
+void
+Character::
+LoadBVHset(double lower, double upper)
+{
+	int idx_lower = lower * 10.0;
+	int idx_upper = upper * 10.0;
+	int num = idx_upper - idx_lower + 1;
+	for(int i=0; i<num; i++)
+	{
+		if(!(mBVHset.at(i)->IsParsed())){
+			mBVHset.at(i)->Parse(bvh_path, bvh_cyclic);
+		}
+	}
+}
+
+void
+Character::
 SetBVHidx(double r)
 {
-	double r10 = r * 10.99;
-	int idx = (int)(r10/1.0) - 2;
+	double speed_max = mMax_v[2];
+	double speed_min = mMin_v[2];
+
+	double idx_max = speed_max * 10.0;
+	double idx_min = speed_min * 10.0;
+	double range = r*(idx_max - idx_min + 0.99);
+	int idx = (int)(range/1.0);
 	mBVH = mBVHset.at(idx);
-	curBVHidx = idx;
+
 	this->Reset();
 	if(mUseDevice)
 		mDevice->Reset();
@@ -1262,6 +1301,8 @@ SetAdaptiveParams(std::string name, double lower, double upper)
 	}
 	else if(name == "speed"){
 		this->SetMinMaxV(2, lower, upper);
+		this->SetBVHset(lower, upper);
+		this->LoadBVHset(lower, upper);
 		this->SetSpeedRatio(lower);
 	}
 }

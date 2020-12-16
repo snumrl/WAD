@@ -42,6 +42,7 @@ public:
 
 	void LoadSkeleton(const std::string& path,bool create_obj = false);
 	void LoadBVH(const std::string& path,bool cyclic=true);
+	void LoadBVHset(double lower, double upper);
 	void LoadMuscles(const std::string& path);
 
 	void SetWorld(dart::simulation::WorldPtr& wPtr){ mWorld = wPtr; }
@@ -132,6 +133,7 @@ public:
 	double GetSpeedRatio(){return speed_ratio;}
 	void SetSpeedRatio(double r);
 	void SetBVHidx(double r);
+	void SetBVHset(double lower, double upper);
 
 	std::deque<double> GetSignals(int idx);
 
@@ -151,10 +153,14 @@ private:
 	dart::dynamics::SkeletonPtr mSkeleton;
 	dart::simulation::WorldPtr mWorld;
 	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
+
+	std::vector<Muscle*> mMuscles;
+	Device* mDevice;
 	BVH* mBVH;
 	std::vector<BVH*> mBVHset;
-	Device* mDevice;
-	std::vector<Muscle*> mMuscles;
+	std::map<std::string,std::string> bvh_map;
+	std::string bvh_path;
+	bool bvh_cyclic;
 
 	int mNumDof;
 	int mNumActiveDof;
@@ -192,7 +198,6 @@ private:
 	double mass_ratio;
 	double force_ratio;
 	double speed_ratio;
-	int curBVHidx;
 
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;

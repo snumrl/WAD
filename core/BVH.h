@@ -89,8 +89,11 @@ public:
 	const Eigen::Isometry3d& GetT1(){return T1;}
 	bool IsCyclic(){return mCyclic;}
 	Eigen::VectorXd GetCycleOffset(){return mCycleOffset;}
+	bool IsParsed(){return mParse;}
+	void SetParsed(bool p){mParse = p;}
 
 private:
+	bool mParse;
 	bool mCyclic;
 	int mNumTotalChannels;
 	int mNumTotalFrames;

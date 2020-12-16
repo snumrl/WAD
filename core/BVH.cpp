@@ -128,7 +128,7 @@ GetNode(const std::string& name)
 
 BVH::
 BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map)
-	:mSkeleton(skel),mBVHMap(bvh_map),mCyclic(true)
+	:mSkeleton(skel),mBVHMap(bvh_map),mCyclic(true),mParse(false)
 {
 }
 
@@ -197,6 +197,7 @@ void
 BVH::
 Parse(const std::string& file,bool cyclic)
 {
+	mParse = true;
 	mCyclic = cyclic;
 	std::ifstream is(file);
 
