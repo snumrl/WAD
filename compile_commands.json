@@ -1,0 +1,62 @@
+[
+{
+  "directory": "/home/jaedong/Lab/WAD/build/core",
+  "command": "/usr/bin/c++  -DMASS_ROOT_DIR=\\\"/home/jaedong/Lab/WAD\\\" -isystem /home/jaedong/pkgenv/include -isystem /home/jaedong/pkgenv/include/bullet -isystem /home/jaedong/pkgenv/include/eigen3 -isystem /home/jaedong/pkgenv/include/fcl  -O3 -DNDEBUG   -fPIC -std=gnu++11 -Wdeprecated-declarations -DHAVE_CSTDDEF -march=native -o CMakeFiles/mss.dir/BVH.cpp.o -c /home/jaedong/Lab/WAD/core/BVH.cpp",
+  "file": "/home/jaedong/Lab/WAD/core/BVH.cpp"
+},
+{
+  "directory": "/home/jaedong/Lab/WAD/build/core",
+  "command": "/usr/bin/c++  -DMASS_ROOT_DIR=\\\"/home/jaedong/Lab/WAD\\\" -isystem /home/jaedong/pkgenv/include -isystem /home/jaedong/pkgenv/include/bullet -isystem /home/jaedong/pkgenv/include/eigen3 -isystem /home/jaedong/pkgenv/include/fcl  -O3 -DNDEBUG   -fPIC -std=gnu++11 -Wdeprecated-declarations -DHAVE_CSTDDEF -march=native -o CMakeFiles/mss.dir/Character.cpp.o -c /home/jaedong/Lab/WAD/core/Character.cpp",
+  "file": "/home/jaedong/Lab/WAD/core/Character.cpp"
+},
+{
+  "directory": "/home/jaedong/Lab/WAD/build/core",
+  "command": "/usr/bin/c++  -DMASS_ROOT_DIR=\\\"/home/jaedong/Lab/WAD\\\" -isystem /home/jaedong/pkgenv/include -isystem /home/jaedong/pkgenv/include/bullet -isystem /home/jaedong/pkgenv/include/eigen3 -isystem /home/jaedong/pkgenv/include/fcl  -O3 -DNDEBUG   -fPIC -std=gnu++11 -Wdeprecated-declarations -DHAVE_CSTDDEF -march=native -o CMakeFiles/mss.dir/DARTHelper.cpp.o -c /home/jaedong/Lab/WAD/core/DARTHelper.cpp",
+  "file": "/home/jaedong/Lab/WAD/core/DARTHelper.cpp"
+},
+{
+  "directory": "/home/jaedong/Lab/WAD/build/core",
+  "command": "/usr/bin/c++  -DMASS_ROOT_DIR=\\\"/home/jaedong/Lab/WAD\\\" -isystem /home/jaedong/pkgenv/include -isystem /home/jaedong/pkgenv/include/bullet -isystem /home/jaedong/pkgenv/include/eigen3 -isystem /home/jaedong/pkgenv/include/fcl  -O3 -DNDEBUG   -fPIC -std=gnu++11 -Wdeprecated-declarations -DHAVE_CSTDDEF -march=native -o CMakeFiles/mss.dir/Device.cpp.o -c /home/jaedong/Lab/WAD/core/Device.cpp",
+  "file": "/home/jaedong/Lab/WAD/core/Device.cpp"
+},
+{
+  "directory": "/home/jaedong/Lab/WAD/build/core",
+  "command": "/usr/bin/c++  -DMASS_ROOT_DIR=\\\"/home/jaedong/Lab/WAD\\\" -isystem /home/jaedong/pkgenv/include -isystem /home/jaedong/pkgenv/include/bullet -isystem /home/jaedong/pkgenv/include/eigen3 -isystem /home/jaedong/pkgenv/include/fcl  -O3 -DNDEBUG   -fPIC -std=gnu++11 -Wdeprecated-declarations -DHAVE_CSTDDEF -march=native -o CMakeFiles/mss.dir/Environment.cpp.o -c /home/jaedong/Lab/WAD/core/Environment.cpp",
+  "file": "/home/jaedong/Lab/WAD/core/Environment.cpp"
+},
+{
+  "directory": "/home/jaedong/Lab/WAD/build/core",
+  "command": "/usr/bin/c++  -DMASS_ROOT_DIR=\\\"/home/jaedong/Lab/WAD\\\" -isystem /home/jaedong/pkgenv/include -isystem /home/jaedong/pkgenv/include/bullet -isystem /home/jaedong/pkgenv/include/eigen3 -isystem /home/jaedong/pkgenv/include/fcl  -O3 -DNDEBUG   -fPIC -std=gnu++11 -Wdeprecated-declarations -DHAVE_CSTDDEF -march=native -o CMakeFiles/mss.dir/Muscle.cpp.o -c /home/jaedong/Lab/WAD/core/Muscle.cpp",
+  "file": "/home/jaedong/Lab/WAD/core/Muscle.cpp"
+},
+{
+  "directory": "/home/jaedong/Lab/WAD/build/core",
+  "command": "/usr/bin/c++  -DMASS_ROOT_DIR=\\\"/home/jaedong/Lab/WAD\\\" -isystem /home/jaedong/pkgenv/include -isystem /home/jaedong/pkgenv/include/bullet -isystem /home/jaedong/pkgenv/include/eigen3 -isystem /home/jaedong/pkgenv/include/fcl  -O3 -DNDEBUG   -fPIC -std=gnu++11 -Wdeprecated-declarations -DHAVE_CSTDDEF -march=native -o CMakeFiles/mss.dir/Utils.cpp.o -c /home/jaedong/Lab/WAD/core/Utils.cpp",
+  "file": "/home/jaedong/Lab/WAD/core/Utils.cpp"
+},
+{
+  "directory": "/home/jaedong/Lab/WAD/build/render",
+  "command": "/usr/bin/c++  -DMASS_ROOT_DIR=\\\"/home/jaedong/Lab/WAD\\\" -I/home/jaedong/Lab/WAD/render/../core -isystem /home/jaedong/pkgenv/include -I/usr/include/python3.6m -isystem /home/jaedong/pkgenv/include/bullet -isystem /home/jaedong/pkgenv/include/eigen3 -isystem /home/jaedong/pkgenv/include/fcl  -O3 -DNDEBUG   -fPIC -std=gnu++11 -Wdeprecated-declarations -DHAVE_CSTDDEF -march=native -o CMakeFiles/render.dir/ShapeRenderer.cpp.o -c /home/jaedong/Lab/WAD/render/ShapeRenderer.cpp",
+  "file": "/home/jaedong/Lab/WAD/render/ShapeRenderer.cpp"
+},
+{
+  "directory": "/home/jaedong/Lab/WAD/build/render",
+  "command": "/usr/bin/c++  -DMASS_ROOT_DIR=\\\"/home/jaedong/Lab/WAD\\\" -I/home/jaedong/Lab/WAD/render/../core -isystem /home/jaedong/pkgenv/include -I/usr/include/python3.6m -isystem /home/jaedong/pkgenv/include/bullet -isystem /home/jaedong/pkgenv/include/eigen3 -isystem /home/jaedong/pkgenv/include/fcl  -O3 -DNDEBUG   -fPIC -std=gnu++11 -Wdeprecated-declarations -DHAVE_CSTDDEF -march=native -o CMakeFiles/render.dir/Window.cpp.o -c /home/jaedong/Lab/WAD/render/Window.cpp",
+  "file": "/home/jaedong/Lab/WAD/render/Window.cpp"
+},
+{
+  "directory": "/home/jaedong/Lab/WAD/build/render",
+  "command": "/usr/bin/c++  -DMASS_ROOT_DIR=\\\"/home/jaedong/Lab/WAD\\\" -I/home/jaedong/Lab/WAD/render/../core -isystem /home/jaedong/pkgenv/include -I/usr/include/python3.6m -isystem /home/jaedong/pkgenv/include/bullet -isystem /home/jaedong/pkgenv/include/eigen3 -isystem /home/jaedong/pkgenv/include/fcl  -O3 -DNDEBUG   -fPIC -std=gnu++11 -Wdeprecated-declarations -DHAVE_CSTDDEF -march=native -o CMakeFiles/render.dir/main.cpp.o -c /home/jaedong/Lab/WAD/render/main.cpp",
+  "file": "/home/jaedong/Lab/WAD/render/main.cpp"
+},
+{
+  "directory": "/home/jaedong/Lab/WAD/build/python",
+  "command": "/usr/bin/c++  -DMASS_ROOT_DIR=\\\"/home/jaedong/Lab/WAD\\\" -Dpymss_EXPORTS -I/home/jaedong/Lab/WAD/python/../core -I/usr/include/python3.6m -isystem /home/jaedong/pkgenv/include -isystem /home/jaedong/pkgenv/include/bullet -isystem /home/jaedong/pkgenv/include/eigen3 -isystem /home/jaedong/pkgenv/include/fcl   -fopenmp -O3 -DNDEBUG -fPIC   -fPIC -std=gnu++11 -Wdeprecated-declarations -DHAVE_CSTDDEF -march=native -o CMakeFiles/pymss.dir/EnvManager.cpp.o -c /home/jaedong/Lab/WAD/python/EnvManager.cpp",
+  "file": "/home/jaedong/Lab/WAD/python/EnvManager.cpp"
+},
+{
+  "directory": "/home/jaedong/Lab/WAD/build/python",
+  "command": "/usr/bin/c++  -DMASS_ROOT_DIR=\\\"/home/jaedong/Lab/WAD\\\" -Dpymss_EXPORTS -I/home/jaedong/Lab/WAD/python/../core -I/usr/include/python3.6m -isystem /home/jaedong/pkgenv/include -isystem /home/jaedong/pkgenv/include/bullet -isystem /home/jaedong/pkgenv/include/eigen3 -isystem /home/jaedong/pkgenv/include/fcl   -fopenmp -O3 -DNDEBUG -fPIC   -fPIC -std=gnu++11 -Wdeprecated-declarations -DHAVE_CSTDDEF -march=native -o CMakeFiles/pymss.dir/NumPyHelper.cpp.o -c /home/jaedong/Lab/WAD/python/NumPyHelper.cpp",
+  "file": "/home/jaedong/Lab/WAD/python/NumPyHelper.cpp"
+}
+]
