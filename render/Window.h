@@ -66,6 +66,7 @@ public:
 	void DrawParameter();
 	void DrawTrajectory();
 	void DrawStride();
+	void DrawCoT();
 	void DrawVelocity();
 
 	void DrawGLBegin();

@@ -32,8 +32,8 @@ class Graph(object):
 			self.ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
 
 		# Domain Range
-		self.lo = [env.GetMinV()[1], env.GetMinV()[2]]
-		self.hi = [env.GetMaxV()[1], env.GetMaxV()[2]]
+		self.lo = [env.GetMinV()[2], env.GetMinV()[3]]
+		self.hi = [env.GetMaxV()[2], env.GetMaxV()[3]]
 
 		self.X = []
 		for i in range(self.dim):
@@ -63,8 +63,7 @@ class Graph(object):
 		if self.dim == 2:
 			for i in range(self.n):
 				for j in range(self.n):
-					# state = [self.X[0][i][j], 0.4, self.X[1][i][j], 0.3]
-					state = [1.0, self.X[0][i][j], self.X[1][i][j], 1.0, 0.3]
+					state = [1.0, 0.6, self.X[0][i][j], self.X[1][i][j], 0.3]
 					state = FloatTensor(np.array(state))
 					self.V[i][j] = self.marginal_model(state).cpu().detach().numpy()
 			self.ax.set_zlim(0.00, np.max(self.V))

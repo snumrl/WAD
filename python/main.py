@@ -82,7 +82,7 @@ class MarginalBuffer(object):
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
-		self.num_slaves = 16
+		self.num_slaves = 15
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
 		self.use_device = self.env.UseDevice()
@@ -107,15 +107,15 @@ class PPO(object):
 		if use_cuda:
 			self.model.cuda()
 
-		self.buffer_size = 2048*3
-		self.batch_size = 128*2
+		self.buffer_size = 2048*2
+		self.batch_size = 128*1
 		self.replay_buffer = ReplayBuffer(30000)
 
 		self.gamma = 0.99
 		self.lb = 0.99
 
 		self.default_clip_ratio = 0.2
-		self.default_learning_rate = 1.0*1E-4
+		self.default_learning_rate = 1.0*1E-5
 		self.clip_ratio = self.default_clip_ratio
 		self.learning_rate = self.default_learning_rate
 
@@ -179,7 +179,7 @@ class PPO(object):
 		self.rewards = []
 		self.max_iteration = 15000
 		self.num_evaluation = 0
-		self.save_interval = 100
+		self.save_interval = 50
 
 		self.tic = time.time()
 		self.env.Resets(True)
@@ -218,7 +218,7 @@ class PPO(object):
 	def LoadModel_Muscle(self,path):
 		self.muscle_model.load('../nn/'+path+'_muscle.pt')
 
-	def LoadModel_Muscle(self,path):
+	def LoadModel_Marginal(self,path):
 		self.marginal_model.load('../nn/'+path+'_marginal.pt')
 
 	def Train(self):
@@ -283,7 +283,6 @@ class PPO(object):
 			for j in range(self.num_slaves):
 				initial_state = np.float32(random.choice(self.InitialParamStates))
 				self.env.SetParamState(j, initial_state)
-			# self.env.Reset(True, j)
 
 		counter = 0
 		local_step = 0

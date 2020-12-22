@@ -135,7 +135,18 @@ public:
 	void SetBVHidx(double r);
 	void SetBVHset(double lower, double upper);
 
+	bool isEdgeTime();
 	std::deque<double> GetSignals(int idx);
+
+	Eigen::Vector3d GetContactForceL(){return mContactForceL;}
+	Eigen::Vector3d GetContactForceR(){return mContactForceR;}
+	double GetContactForceL_norm(){return mContactForceL_norm;}
+	double GetContactForceR_norm(){return mContactForceR_norm;}
+
+	void SetCoT();
+	double GetCoT(){return mCurCoT;}
+
+	void SetCollisionForce();
 
 	void SetCurVelocity();
 	double GetCurVelocity(){return mCurVel;}
@@ -182,11 +193,16 @@ private:
 	Eigen::VectorXd mAction;
 	Eigen::VectorXd mActivationLevels;
 
+	double mCurCoT;
 	double mCurVel;
 	Eigen::VectorXd mAngVel;
 	Eigen::VectorXd mAngVel_prev;
-	Eigen::Vector3d mCurPos;
-	Eigen::Vector3d mPrevPos;
+	Eigen::VectorXd mPos;
+	Eigen::VectorXd mPos_prev;
+	Eigen::VectorXd mPosTmp;
+	Eigen::VectorXd mPosTmp_prev;
+	Eigen::Vector3d mRootPos;
+	Eigen::Vector3d mRootPos_prev;
 
 	Eigen::Isometry3d mTc;
 	Eigen::VectorXd mKp, mKv;
@@ -196,9 +212,16 @@ private:
 	Eigen::VectorXd mMaxForces;
 	Eigen::VectorXd mDefaultForces;
 
+	Eigen::Vector3d mContactForceL;
+	Eigen::Vector3d mContactForceR;
+	double mContactForceL_norm;
+	double mContactForceR_norm;
+
 	double mass_ratio;
 	double force_ratio;
 	double speed_ratio;
+
+	int mStepCnt;
 
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;
@@ -215,6 +238,7 @@ private:
     std::deque<double> com_;
     std::deque<double> ee_;
     std::deque<double> smooth_;
+    std::deque<double> contact_;
     std::deque<double> imit_;
     std::deque<double> min_;
 
@@ -225,6 +249,7 @@ private:
     double root_reward;
     double end_eff_reward;
     double smooth_reward;
+    double contact_reward;
     double imit_reward;
     double min_reward;
 

@@ -7,12 +7,13 @@
 #include "Muscle.h"
 #include <iostream>
 #include <deque>
+#include <ctime>
 using namespace MASS;
 using namespace dart;
 using namespace dart::dynamics;
 using namespace dart::simulation;
 using namespace dart::gui;
-
+using namespace std;
 Eigen::Matrix3d
 R_x(double x)
 {
@@ -75,6 +76,10 @@ Window(Environment* env)
 	mBackground[3] = 0.7;
 	SetFocus();
 	mZoom = 0.30;
+	Eigen::Quaterniond origin_r = mTrackBall.getCurrQuat();
+	Eigen::Quaterniond r = Eigen::Quaterniond(Eigen::AngleAxisd(1 * 0.05 * M_PI, Eigen::Vector3d::UnitX())) * origin_r;
+	mTrackBall.setQuaternion(r);
+
 	mNNLoaded = false;
 	mOnDevice = env->GetCharacter()->GetOnDevice();
 
@@ -371,7 +376,7 @@ Step()
 			mEnv->Step(mOnDevice);
 	}
 
-	// mEnv->GetReward();
+	mEnv->GetReward();
 	// this->SetTrajectory();
 
 	glutPostRedisplay();
@@ -427,18 +432,20 @@ SetFocus()
 	if(mFocus)
 	{
 		mTrans = -mEnv->GetWorld()->getSkeleton("Human")->getRootBodyNode()->getCOM();
-		mTrans[1] -= 0.1;
+		// mTrans[1] -= 0.2;
 		mTrans *= 1000.0;
 
 		Eigen::Quaterniond origin_r = mTrackBall.getCurrQuat();
 		if (mViewMode == 1 && Eigen::AngleAxisd(origin_r).angle() < 0.5 * M_PI)
 		{
-			Eigen::Quaterniond r = Eigen::Quaterniond(Eigen::AngleAxisd(1 * 0.01 * M_PI, Eigen::Vector3d::UnitY())) * origin_r;
+			Eigen::Vector3d axis(0.0, cos(0.05*M_PI), sin(0.05*M_PI));
+			Eigen::Quaterniond r = Eigen::Quaterniond(Eigen::AngleAxisd(1 * 0.01 * M_PI, axis)) * origin_r;
 			mTrackBall.setQuaternion(r);
 			}
 		else if (mViewMode == 2 && Eigen::AngleAxisd(origin_r).axis()[1] > 0)
 		{
-			Eigen::Quaterniond r = Eigen::Quaterniond(Eigen::AngleAxisd(-1 * 0.01 * M_PI, Eigen::Vector3d::UnitY())) * origin_r;
+			Eigen::Vector3d axis(0.0, cos(0.05*M_PI), sin(0.05*M_PI));
+			Eigen::Quaterniond r = Eigen::Quaterniond(Eigen::AngleAxisd(-1 * 0.01 * M_PI, axis)) * origin_r;
 			mTrackBall.setQuaternion(r);
 		}
 	}
@@ -478,13 +485,28 @@ draw()
 	if(mEnv->GetNumParamState() > 0 && mDrawParameter)
 	{
 		DrawParameter();
-		DrawVelocity();
 	}
 
+	this->DrawVelocity();
+	this->DrawCoT();
 	// DrawTrajectory();
 	// DrawStride();
 
 	SetFocus();
+}
+
+void
+Window::
+DrawCoT()
+{
+	DrawGLBegin();
+
+	double cot = mEnv->GetCharacter()->GetCoT();
+	bool big = true;
+
+	DrawString(0.70, 0.47, big, "CoT : " + std::to_string(cot));
+
+	DrawGLEnd();
 }
 
 void
@@ -494,10 +516,10 @@ DrawVelocity()
 	DrawGLBegin();
 
 	double vel = mEnv->GetCharacter()->GetCurVelocity();
-	double vel_h = vel * 3.6;
+	double vel_h = vel;
 	bool big = true;
 
-	DrawString(0.70, 0.50, big, "Velocity : " + std::to_string(vel_h) + " km/h");
+	DrawString(0.70, 0.50, big, "Velocity : " + std::to_string(vel_h) + " m/s");
 
 	DrawGLEnd();
 }
@@ -1147,9 +1169,12 @@ DrawReward()
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, pose);
 
 	y = 0.37;
-	std::deque<double> vel = map.at("vel");
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "vel");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, vel);
+	std::deque<double> contact = map.at("contact");
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "contact");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, contact);
+	// std::deque<double> vel = map.at("vel");
+	// DrawBaseGraph(x, y, w, h, ratio_y, offset, "vel");
+	// DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, vel);
 
 	y = 0.25;
 	std::deque<double> ee = map.at("ee");

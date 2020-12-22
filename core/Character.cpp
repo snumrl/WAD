@@ -6,13 +6,14 @@
 #include "Utils.h"
 #include "dart/gui/gui.hpp"
 #include <tinyxml.h>
+#include <ctime>
 using namespace dart;
 using namespace dart::dynamics;
 using namespace MASS;
 
 Character::
 Character()
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mNumParamState(0)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mNumParamState(0),mStepCnt(0)
 {
 	force_ratio = 1.0;
 	mass_ratio = 1.0;
@@ -113,10 +114,10 @@ LoadMuscles(const std::string& path)
 				return;
 			}
 
-			// if(body == "FemurL" || body == "FemurR")
-			// 	muscle_elem->SetFemur(true);
-			if(body == "FemurL")
+			if(body == "FemurL" || body == "FemurR")
 				muscle_elem->SetFemur(true);
+			// if(body == "FemurL")
+			//  muscle_elem->SetFemur(true);
 
 			if(i == 0 || i == num_waypoints-1)
 				muscle_elem->AddAnchor(mSkeleton->getBodyNode(body),glob_pos);
@@ -178,8 +179,10 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	mAction.resize(mNumActiveDof);
 	mAngVel.resize(mNumBodyNodes*3);
 	mAngVel_prev.resize(mNumBodyNodes*3);
-	mCurPos.setZero();
-	mPrevPos.setZero();
+	mPos.resize(mNumBodyNodes*3);
+	mPos_prev.resize(mNumBodyNodes*3);
+	mRootPos.setZero();
+	mRootPos_prev.setZero();
 
 	mDesiredTorque.resize(mNumDof);
 
@@ -192,6 +195,9 @@ Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
 	this->Initialize_Rewards();
 	this->Initialize_JointWeights();
 	this->Initialize_MaxForces();
+
+	mContactForceL = Eigen::Vector3d::Zero();
+	mContactForceR = Eigen::Vector3d::Zero();
 
 	this->Reset();
 }
@@ -275,51 +281,51 @@ Initialize_MaxForces()
 	mMaxForces.resize(dof);
 	mDefaultForces.resize(dof);
 
-	// mMaxForces <<
-	//      0, 0, 0, 0, 0, 0,   //pelvis
-	//      200, 200, 200,      //Femur L
-	//      200,                //Tibia L
-	//      200, 200, 200,      //Talus L
-	//      200, 200,           //Thumb, Pinky L
-	//      200, 200, 200,      //Femur R
-	//      200,                //Tibia R
-	//      200, 200, 200,      //Talus R
-	//      200, 200,           //Thumb, Pinky R
-	//      200, 200, 200,      //Spine
-	//      200, 200, 200,      //Torso
-	//      200, 200, 200,      //Neck
-	//      200, 200, 200,      //Head
-	//      200, 200, 200,      //Shoulder L
-	//      200, 200, 200,      //Arm L
-	//      200,                //ForeArm L
-	//      200, 200, 200,      //Hand L
-	//      200, 200, 200,      //Shoulder R
-	//      200, 200, 200,      //Arm R
-	//      200,                //ForeArm R
-	//      200, 200, 200;      //Hand R
-
 	mDefaultForces <<
-			0, 0, 0, 0, 0, 0,   //pelvis
-			200, 100, 150,      //Femur L
-			100,                //Tibia L
-			150, 50, 50,        //Talus L
-			30, 30,             //Thumb, Pinky L
-			200, 100, 150,      //Femur R
-			100,                //Tibia R
-			150, 50, 50,        //Talus R
-			30, 30,             //Thumb, Pinky R
-			80, 80, 80,         //Spine
-			80, 80, 80,         //Torso
-			30, 30, 30,         //Neck
-			30, 30, 30,         //Head
-			50, 50, 50,         //Shoulder L
-			50, 50, 50,         //Arm L
-			30,                 //ForeArm L
-			30, 30, 30,         //Hand L
-			50, 50, 50,         //Shoulder R
-			50, 50, 50,         //Arm R
-			30,                 //ForeArm R
-			30, 30, 30;         //Hand R
+		 0, 0, 0, 0, 0, 0,   //pelvis
+		 300, 300, 300,      //Femur L
+		 300,                //Tibia L
+		 300, 300, 300,      //Talus L
+		 300, 300,           //Thumb, Pinky L
+		 300, 300, 300,      //Femur R
+		 300,                //Tibia R
+		 300, 300, 300,      //Talus R
+		 300, 300,           //Thumb, Pinky R
+		 300, 300, 300,      //Spine
+		 300, 300, 300,      //Torso
+		 300, 300, 300,      //Neck
+		 300, 300, 300,      //Head
+		 300, 300, 300,      //Shoulder L
+		 300, 300, 300,      //Arm L
+		 300,                //ForeArm L
+		 300, 300, 300,      //Hand L
+		 300, 300, 300,      //Shoulder R
+		 300, 300, 300,      //Arm R
+		 300,                //ForeArm R
+		 300, 300, 300;      //Hand R
+
+	// mDefaultForces <<
+	//      0, 0, 0, 0, 0, 0,   //pelvis
+	//      200, 100, 150,      //Femur L
+	//      100,                //Tibia L
+	//      150, 50, 50,        //Talus L
+	//      30, 30,             //Thumb, Pinky L
+	//      200, 100, 150,      //Femur R
+	//      100,                //Tibia R
+	//      150, 50, 50,        //Talus R
+	//      30, 30,             //Thumb, Pinky R
+	//      80, 80, 80,         //Spine
+	//      80, 80, 80,         //Torso
+	//      30, 30, 30,         //Neck
+	//      30, 30, 30,         //Head
+	//      50, 50, 50,         //Shoulder L
+	//      50, 50, 50,         //Arm L
+	//      30,                 //ForeArm L
+	//      30, 30, 30,         //Hand L
+	//      50, 50, 50,         //Shoulder R
+	//      50, 50, 50,         //Arm R
+	//      30,                 //ForeArm R
+	//      30, 30, 30;         //Hand R
 
 	mMaxForces = force_ratio * mDefaultForces;
 }
@@ -349,6 +355,7 @@ Initialize_Rewards()
 	root_reward = 0;
 	com_reward = 0;
 	smooth_reward = 0;
+	contact_reward = 0;
 	imit_reward = 0;
 	min_reward = 0;
 
@@ -361,6 +368,7 @@ Initialize_Rewards()
 	ee_.resize(reward_window);
 	com_.resize(reward_window);
 	smooth_.resize(reward_window);
+	contact_.resize(reward_window);
 	imit_.resize(reward_window);
 	min_.resize(reward_window);
 
@@ -371,6 +379,7 @@ Initialize_Rewards()
 	mRewards.insert(std::make_pair("ee", ee_));
 	mRewards.insert(std::make_pair("com", com_));
 	mRewards.insert(std::make_pair("smooth", smooth_));
+	mRewards.insert(std::make_pair("contact", contact_));
 	mRewards.insert(std::make_pair("imit", imit_));
 	mRewards.insert(std::make_pair("min", min_));
 }
@@ -397,11 +406,16 @@ Reset()
 
 	mAction.setZero();
 	mAngVel.setZero();
-	for(int i=0; i<mNumBodyNodes; i++)
+	mPos.setZero();
+	for(int i=0; i<mNumBodyNodes; i++){
 		mAngVel_prev.segment<3>(i*3) = mSkeleton->getBodyNode(i)->getAngularVelocity();
-	mCurPos = mSkeleton->getCOM();
-	mPrevPos = mSkeleton->getCOM();
+		mPos_prev.segment<3>(i*3) = mSkeleton->getBodyNode(i)->getCOM();
+	}
+	mRootPos = mSkeleton->getCOM();
+	mRootPos_prev = mSkeleton->getCOM();
 	mCurVel = 0.0;
+	mCurCoT = 0.0;
+	mStepCnt = 0;
 
 	mFemurSignals_L.clear();
 	mFemurSignals_L.resize(1200);
@@ -431,22 +445,113 @@ Step()
 {
 	SetDesiredTorques();
 	mSkeleton->setForces(mDesiredTorque);
+	if(mStepCnt == 20)
+		mStepCnt = 0;
+	mStepCnt++;
 
 	this->SetTorques();
 	this->SetCurVelocity();
+	this->SetCoT();
+	this->SetCollisionForce();
+}
+
+void
+Character::
+SetCollisionForce()
+{
+	if(mStepCnt == 1){
+		mContactForceL.setZero();
+		mContactForceR.setZero();
+		mContactForceL_norm = 0;
+		mContactForceR_norm = 0;
+	}
+	dart::dynamics::BodyNode* bn_TalusL = mSkeleton->getBodyNode("TalusL");
+	dart::dynamics::BodyNode* bn_TalusR = mSkeleton->getBodyNode("TalusR");
+	const dart::collision::CollisionResult& result = mWorld->getLastCollisionResult();
+	for(const auto& contact : result.getContacts())
+	{
+		for(const auto& shapeNode : bn_TalusL->getShapeNodesWith<dart::dynamics::CollisionAspect>())
+		{
+			if(shapeNode == contact.collisionObject1->getShapeFrame() ||
+				shapeNode == contact.collisionObject2->getShapeFrame())
+			{
+				mContactForceL += contact.force;
+				mContactForceL_norm += contact.force.norm();
+			}
+		}
+
+		for(const auto& shapeNode : bn_TalusR->getShapeNodesWith<dart::dynamics::CollisionAspect>())
+		{
+			if(shapeNode == contact.collisionObject1->getShapeFrame() ||
+				shapeNode == contact.collisionObject2->getShapeFrame())
+			{
+				mContactForceR += contact.force;
+				mContactForceR_norm += contact.force.norm();
+			}
+		}
+	}
+}
+
+void
+Character::
+SetCoT()
+{
+	int joint_num = mSkeleton->getNumJoints();
+	Eigen::VectorXd vel = mSkeleton->getVelocities();
+	Eigen::VectorXd tor = mDesiredTorque;
+	// double vel_tor = vel.dot(tor);
+	double vel_tor = 0.0;
+
+	int idx = 6;
+	for(int i=1; i<joint_num; i++)
+	{
+		auto* joint = mSkeleton->getJoint(i);
+		if(joint->getType()=="RevoluteJoint"){
+			double cur = vel[idx] * tor[idx];
+			vel_tor += fabs(cur);
+			idx += 1;
+		}
+		else if(joint->getType()=="BallJoint"){
+			double cur = vel.segment(idx,3).dot(tor.segment(idx,3));
+			vel_tor += fabs(cur);
+			idx += 3;
+		}
+	}
+
+	vel_tor = vel.dot(tor);
+
+	double g = 9.8;
+	double v = mCurVel;
+	double m = 0.0;
+	for(int i=0; i<mNumBodyNodes; i++)
+	{
+		m += mSkeleton->getBodyNode(i)->getMass();
+	}
+
+	if(v == 0){
+		mCurCoT = 0;
+		return;
+	}
+
+	mCurCoT *= (mStepCnt-1);
+	mCurCoT += vel_tor / (m * g * v);
+	mCurCoT /= mStepCnt;
 }
 
 void
 Character::
 SetCurVelocity()
 {
-	mCurPos = mSkeleton->getCOM();
+	mRootPos = mSkeleton->getCOM();
 	double time_step = mSkeleton->getTimeStep();
-	double x_diff = (mCurPos[0]-mPrevPos[0])/time_step;
-	double z_diff = (mCurPos[2]-mPrevPos[2])/time_step;
+	double x_diff = (mRootPos[0]-mRootPos_prev[0])/time_step;
+	double z_diff = (mRootPos[2]-mRootPos_prev[2])/time_step;
 
-	mCurVel = std::sqrt(x_diff*x_diff + z_diff*z_diff);
-	mPrevPos = mCurPos;
+	// mCurVel = std::sqrt(x_diff*x_diff + z_diff*z_diff);
+	mCurVel *= (mStepCnt-1);
+	mCurVel += std::sqrt(x_diff*x_diff + z_diff*z_diff);
+	mCurVel /= mStepCnt;
+	mRootPos_prev = mRootPos;
 }
 
 void
@@ -641,10 +746,16 @@ double
 Character::
 GetPhase()
 {
-	double worldTime = mWorld->getTime();
-	double t_phase = mBVH->GetMaxTime();
-	double phi = std::fmod(worldTime, t_phase)/t_phase;
-	return phi;
+	double t = mWorld->getTime();
+	double cycleTime = mBVH->GetMaxTime();
+	int cycleCount = (int)(t/cycleTime);
+	double phase = t;
+	if(mBVH->IsCyclic())
+		phase = t - cycleCount*cycleTime;
+	if(phase < 0)
+		phase += cycleTime;
+
+	return phase;
 }
 
 double
@@ -662,12 +773,14 @@ double
 Character::
 GetReward_Character()
 {
-	double pose_scale = 2.0;
+	double pose_scale = 5.0;
 	double vel_scale = 0.1;
 	double end_eff_scale = 20.0;
-	double root_scale = 5.0;
+	double root_scale = 2.0;
 	double com_scale = 10.0;
-	double smooth_scale = 0.05;
+	double smooth_vel_scale = 0.0;
+	double smooth_pos_scale = 1.0;
+	double contact_scale = 0.02;
 	double err_scale = 2.0;  // error scale
 
 	double pose_err = 0;
@@ -675,7 +788,9 @@ GetReward_Character()
 	double end_eff_err = 0;
 	double root_err = 0;
 	double com_err = 0;
-	double smooth_err = 0;
+	double smooth_vel_err = 0;
+	double smooth_pos_err = 0;
+	double contact_err = 0;
 
 	double reward = 0;
 
@@ -753,10 +868,13 @@ GetReward_Character()
 	for(int i=0; i<mNumBodyNodes; i++)
 	{
 		mAngVel.segment<3>(i*3) = mSkeleton->getBodyNode(i)->getAngularVelocity();
+		mPos.segment<3>(i*3) = mSkeleton->getBodyNode(i)->getCOM();
 
-		smooth_err += 1.0/(double)(mNumBodyNodes) * (mAngVel.segment<3>(i*3) - mAngVel_prev.segment<3>(i*3)).squaredNorm();
+		smooth_vel_err += (mAngVel.segment<3>(i*3) - mAngVel_prev.segment<3>(i*3)).squaredNorm()*M_PI/180.0;
+		smooth_pos_err += (mPos.segment<3>(i*3) - mPos_prev.segment<3>(i*3)).squaredNorm();
 	}
 	mAngVel_prev = mAngVel;
+	mPos_prev = mPos;
 
 	mSkeleton->setPositions(mTargetPositions);
 	mSkeleton->setVelocities(mTargetVelocities);
@@ -811,14 +929,25 @@ GetReward_Character()
 
 	com_err = 0.1 * (comKinVel - comSimVel).squaredNorm();
 
+	contact_err = (mContactForceL_norm + mContactForceR_norm)/20.0;
+	contact_err /= 74.2;
+	if(contact_err < 5.0)
+		contact_err = 0.0;
+	else
+		contact_err -= 5.0;
+
 	pose_reward = exp(-err_scale * pose_scale * pose_err);
 	vel_reward = exp(-err_scale * vel_scale * vel_err);
 	end_eff_reward = exp(-err_scale * end_eff_scale * end_eff_err);
 	root_reward = exp(-err_scale * root_scale * root_err);
 	com_reward = exp(-err_scale * com_scale * com_err);
-	smooth_reward = exp(-err_scale * smooth_scale * smooth_err);
+	smooth_reward  = exp(-err_scale * smooth_pos_scale * smooth_pos_err);
+	smooth_reward *= exp(-err_scale * smooth_vel_scale * smooth_vel_err);
+	contact_reward = exp(-err_scale * contact_scale * contact_err);
 
-	imit_reward = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward * smooth_reward;
+	// imit_reward = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward * smooth_reward;
+	imit_reward = pose_reward * end_eff_reward * root_reward * com_reward * smooth_reward * contact_reward;
+
 	double r_imitation = imit_reward;
 
 	// min_reward = this->GetTorqueReward();
@@ -832,6 +961,27 @@ GetReward_Character()
 	mSkeleton->computeForwardKinematics(true, false, false);
 
 	return r_;
+}
+
+bool
+Character::
+isEdgeTime()
+{
+	double t = mWorld->getTime();
+	double cycleTime = mBVH->GetMaxTime();
+	int cycleCount = (int)(t/cycleTime);
+	double frameTime = t;
+	if(mBVH->IsCyclic())
+		frameTime = t - cycleCount*cycleTime;
+	if(frameTime < 0)
+		frameTime += cycleTime;
+
+	if(frameTime < 0.0333*2)
+		return true;
+	if(frameTime > (cycleTime - 0.0333*2))
+		return true;
+
+	return false;
 }
 
 double
@@ -874,6 +1024,7 @@ void
 Character::
 SetDesiredTorques()
 {
+
 	Eigen::VectorXd p_des = mTargetPositions;
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction;
 	mDesiredTorque = this->GetSPDForces(p_des);
@@ -903,12 +1054,14 @@ GetSPDForces(const Eigen::VectorXd& p_desired)
 	Eigen::VectorXd q = mSkeleton->getPositions();
 	Eigen::VectorXd dq = mSkeleton->getVelocities();
 	double dt = mSkeleton->getTimeStep();
-	Eigen::MatrixXd M_inv = (mSkeleton->getMassMatrix() + Eigen::MatrixXd(dt*mKv.asDiagonal())).inverse();
+	Eigen::MatrixXf M = (mSkeleton->getMassMatrix() + Eigen::MatrixXd(dt * mKv.asDiagonal())).cast<float>();
+	Eigen::MatrixXd M_inv = M.inverse().cast<double>();
+	// Eigen::MatrixXd M_inv = (mSkeleton->getMassMatrix() + Eigen::MatrixXd(dt*mKv.asDiagonal())).inverse();
 	Eigen::VectorXd qdqdt = q + dq*dt;
 
 	Eigen::VectorXd p_diff = -mKp.cwiseProduct(mSkeleton->getPositionDifferences(qdqdt,p_desired));
 	Eigen::VectorXd v_diff = -mKv.cwiseProduct(dq);
-	Eigen::VectorXd ddq = M_inv*(-mSkeleton->getCoriolisAndGravityForces() + p_diff + v_diff+mSkeleton->getConstraintForces());
+	Eigen::VectorXd ddq = M_inv*(-mSkeleton->getCoriolisAndGravityForces() + p_diff + v_diff + mSkeleton->getConstraintForces());
 	Eigen::VectorXd tau = p_diff + v_diff - dt*mKv.cwiseProduct(ddq);
 
 	tau.head<6>().setZero();
@@ -1311,6 +1464,8 @@ SetRewards()
 	(mRewards.find("com")->second).push_front(com_reward);
 	(mRewards.find("smooth")->second).pop_back();
 	(mRewards.find("smooth")->second).push_front(smooth_reward);
+	(mRewards.find("contact")->second).pop_back();
+	(mRewards.find("contact")->second).push_front(contact_reward);
 	(mRewards.find("imit")->second).pop_back();
 	(mRewards.find("imit")->second).push_front(imit_reward);
 	(mRewards.find("min")->second).pop_back();
