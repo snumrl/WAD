@@ -67,6 +67,7 @@ public:
 	void DrawTrajectory();
 	void DrawStride();
 	void DrawCoT();
+	void DrawContactForce();
 	void DrawVelocity();
 
 	void DrawGLBegin();
@@ -112,7 +113,7 @@ private:
 	bool mNNLoaded;
 	bool mMuscleNNLoaded;
 	bool mDeviceNNLoaded;
-	bool mOnDevice;
+	bool mDevice_On;
 	bool isDrawCharacter;
 	bool isDrawTarget;
 	bool isDrawDevice;

@@ -13,7 +13,7 @@ using namespace MASS;
 
 Character::
 Character()
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mNumParamState(0),mStepCnt(0)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mNumParamState(0),mStepCnt(0),mStepCnt_total(0)
 {
 	force_ratio = 1.0;
 	mass_ratio = 1.0;
@@ -327,7 +327,10 @@ Initialize_MaxForces()
 	//      30,                 //ForeArm R
 	//      30, 30, 30;         //Hand R
 
-	mMaxForces = force_ratio * mDefaultForces;
+	if(mUseMuscle)
+		mMaxForces = 1.0 * 	mDefaultForces;
+	else
+		mMaxForces = force_ratio * mDefaultForces;
 }
 
 void
@@ -357,6 +360,7 @@ Initialize_Rewards()
 	smooth_reward = 0;
 	contact_reward = 0;
 	imit_reward = 0;
+	effi_reward = 0;
 	min_reward = 0;
 
 	int reward_window = 70;
@@ -368,9 +372,10 @@ Initialize_Rewards()
 	ee_.resize(reward_window);
 	com_.resize(reward_window);
 	smooth_.resize(reward_window);
-	contact_.resize(reward_window);
 	imit_.resize(reward_window);
 	min_.resize(reward_window);
+	contact_.resize(reward_window);
+	effi_.resize(reward_window);
 
 	mRewards.insert(std::make_pair("reward", reward_));
 	mRewards.insert(std::make_pair("pose", pose_));
@@ -379,9 +384,10 @@ Initialize_Rewards()
 	mRewards.insert(std::make_pair("ee", ee_));
 	mRewards.insert(std::make_pair("com", com_));
 	mRewards.insert(std::make_pair("smooth", smooth_));
-	mRewards.insert(std::make_pair("contact", contact_));
 	mRewards.insert(std::make_pair("imit", imit_));
 	mRewards.insert(std::make_pair("min", min_));
+	mRewards.insert(std::make_pair("contact", contact_));
+	mRewards.insert(std::make_pair("effi", effi_));
 }
 
 void
@@ -448,6 +454,7 @@ Step()
 	if(mStepCnt == 20)
 		mStepCnt = 0;
 	mStepCnt++;
+	mStepCnt_total++;
 
 	this->SetTorques();
 	this->SetCurVelocity();
@@ -462,9 +469,11 @@ SetCollisionForce()
 	if(mStepCnt == 1){
 		mContactForceL.setZero();
 		mContactForceR.setZero();
-		mContactForceL_norm = 0;
-		mContactForceR_norm = 0;
+		mContactForceL_cur_norm = 0;
+		mContactForceR_cur_norm = 0;
 	}
+	double forceL = 0;
+	double forceR = 0;
 	dart::dynamics::BodyNode* bn_TalusL = mSkeleton->getBodyNode("TalusL");
 	dart::dynamics::BodyNode* bn_TalusR = mSkeleton->getBodyNode("TalusR");
 	const dart::collision::CollisionResult& result = mWorld->getLastCollisionResult();
@@ -476,7 +485,7 @@ SetCollisionForce()
 				shapeNode == contact.collisionObject2->getShapeFrame())
 			{
 				mContactForceL += contact.force;
-				mContactForceL_norm += contact.force.norm();
+				forceL += contact.force.norm();
 			}
 		}
 
@@ -486,10 +495,21 @@ SetCollisionForce()
 				shapeNode == contact.collisionObject2->getShapeFrame())
 			{
 				mContactForceR += contact.force;
-				mContactForceR_norm += contact.force.norm();
+				forceR += contact.force.norm();
 			}
 		}
 	}
+
+	mContactForceL_cur_norm += forceL;
+	mContactForceR_cur_norm += forceR;
+
+	mContactForceL_norm *= (mStepCnt_total-1);
+	mContactForceL_norm += forceL;
+	mContactForceL_norm /= mStepCnt_total;
+
+	mContactForceR_norm *= (mStepCnt_total-1);
+	mContactForceR_norm += forceR;
+	mContactForceR_norm /= mStepCnt_total;
 }
 
 void
@@ -518,7 +538,7 @@ SetCoT()
 		}
 	}
 
-	vel_tor = vel.dot(tor);
+	// vel_tor = vel.dot(tor);
 
 	double g = 9.8;
 	double v = mCurVel;
@@ -533,9 +553,9 @@ SetCoT()
 		return;
 	}
 
-	mCurCoT *= (mStepCnt-1);
+	mCurCoT *= (mStepCnt_total-1);
 	mCurCoT += vel_tor / (m * g * v);
-	mCurCoT /= mStepCnt;
+	mCurCoT /= mStepCnt_total;
 }
 
 void
@@ -548,9 +568,10 @@ SetCurVelocity()
 	double z_diff = (mRootPos[2]-mRootPos_prev[2])/time_step;
 
 	// mCurVel = std::sqrt(x_diff*x_diff + z_diff*z_diff);
-	mCurVel *= (mStepCnt-1);
+	mCurVel *= (mStepCnt_total-1);
 	mCurVel += std::sqrt(x_diff*x_diff + z_diff*z_diff);
-	mCurVel /= mStepCnt;
+	mCurVel /= mStepCnt_total;
+
 	mRootPos_prev = mRootPos;
 }
 
@@ -590,6 +611,8 @@ Step_Muscles(int simCount, int randomSampleIndex)
 		mCurrentMuscleTuple.tau_des = mDesiredTorque.tail(mDesiredTorque.rows()-mRootJointDof);
 		mMuscleTuples.push_back(mCurrentMuscleTuple);
 	}
+
+	this->SetTorques();
 }
 
 Eigen::VectorXd
@@ -601,19 +624,27 @@ GetState()
 	Eigen::VectorXd state_character = this->GetState_Character();
 	state_dim += state_character.rows();
 
-	Eigen::VectorXd state_device;
-	if(mUseDevice)
-	{
-		state_device = mDevice->GetState();
-		state_dim += state_device.rows();
-	}
-
 	Eigen::VectorXd state(state_dim);
 	state << state_character;
+
 	if(mUseDevice)
+	{
+		Eigen::VectorXd state_device;
+		state_device = this->GetState_Device();
+		state_dim += state_device.rows();
+
+		state.resize(state_dim);
 		state << state_character, state_device;
+	}
 
 	return state;
+}
+
+Eigen::VectorXd
+Character::
+GetState_Device()
+{
+	return mDevice->GetState();
 }
 
 Eigen::VectorXd
@@ -762,8 +793,9 @@ double
 Character::
 GetReward()
 {
-	r_character = this->GetReward_Character();
-	mReward = r_character;
+	double reward_character = this->GetReward_Character();
+	mReward = reward_character;
+
 	this->SetRewards();
 
 	return mReward;
@@ -773,6 +805,20 @@ double
 Character::
 GetReward_Character()
 {
+	imit_reward = GetReward_Character_Imitation();
+	effi_reward = GetReward_Character_Efficiency();
+
+	double r = imit_reward * effi_reward;
+
+	return r;
+}
+
+double::
+Character::
+GetReward_Character_Imitation()
+{
+	double err_scale = 2.0;  // error scale
+
 	double pose_scale = 5.0;
 	double vel_scale = 0.1;
 	double end_eff_scale = 20.0;
@@ -780,8 +826,6 @@ GetReward_Character()
 	double com_scale = 10.0;
 	double smooth_vel_scale = 0.0;
 	double smooth_pos_scale = 1.0;
-	double contact_scale = 0.02;
-	double err_scale = 2.0;  // error scale
 
 	double pose_err = 0;
 	double vel_err = 0;
@@ -790,9 +834,6 @@ GetReward_Character()
 	double com_err = 0;
 	double smooth_vel_err = 0;
 	double smooth_pos_err = 0;
-	double contact_err = 0;
-
-	double reward = 0;
 
 	Eigen::VectorXd cur_pos = mSkeleton->getPositions();
 	Eigen::VectorXd cur_vel = mSkeleton->getVelocities();
@@ -929,13 +970,6 @@ GetReward_Character()
 
 	com_err = 0.1 * (comKinVel - comSimVel).squaredNorm();
 
-	contact_err = (mContactForceL_norm + mContactForceR_norm)/20.0;
-	contact_err /= 74.2;
-	if(contact_err < 5.0)
-		contact_err = 0.0;
-	else
-		contact_err -= 5.0;
-
 	pose_reward = exp(-err_scale * pose_scale * pose_err);
 	vel_reward = exp(-err_scale * vel_scale * vel_err);
 	end_eff_reward = exp(-err_scale * end_eff_scale * end_eff_err);
@@ -943,24 +977,73 @@ GetReward_Character()
 	com_reward = exp(-err_scale * com_scale * com_err);
 	smooth_reward  = exp(-err_scale * smooth_pos_scale * smooth_pos_err);
 	smooth_reward *= exp(-err_scale * smooth_vel_scale * smooth_vel_err);
-	contact_reward = exp(-err_scale * contact_scale * contact_err);
 
 	// imit_reward = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward * smooth_reward;
-	imit_reward = pose_reward * end_eff_reward * root_reward * com_reward * smooth_reward * contact_reward;
-
-	double r_imitation = imit_reward;
-
-	// min_reward = this->GetTorqueReward();
-	// double r_torque_min = min_reward;
-
-	// double r_ = 0.9*r_imitation + 0.1*r_torque_min;
-	double r_ = r_imitation;
+	imit_reward = pose_reward * end_eff_reward * root_reward * com_reward * smooth_reward;
 
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
-	return r_;
+	return imit_reward;
+}
+
+double
+Character::
+GetReward_Character_Efficiency()
+{
+	// double r_TorqueMin = this->GetReward_TorqueMin();
+	double r_TorqueMin = 1.0;
+	double r_ContactForce = this->GetReward_ContactForce();
+
+	double r = r_TorqueMin * r_ContactForce;
+
+	return r;
+}
+
+double
+Character::
+GetReward_ContactForce()
+{
+	double err_scale = 2.0;
+	double contact_scale = 0.02;
+	double contact_err = 0;
+
+	contact_err = (mContactForceL_cur_norm + mContactForceR_cur_norm)/20.0;
+	contact_err /= 74.2;
+
+	if(contact_err < 5.0)
+		contact_err = 0.0;
+	else
+		contact_err -= 5.0;
+
+	contact_reward = exp(-err_scale * contact_scale * contact_err);
+	return contact_reward;
+}
+
+double
+Character::
+GetReward_TorqueMin()
+{
+	std::vector<std::deque<double>> ts = mTorques->GetTorques();
+	int idx = 0;
+	double sum = 0.0;
+	for(int i=6; i<mMaxForces.size(); i++)
+	{
+		double ratio = fabs(ts[i].at(0))/mMaxForces[i];
+		if(ratio > 0.4)
+			sum += ratio;
+		idx++;
+	}
+	// for(int i=6; i<mMaxForces.size(); i++)
+	// {
+	//  if(fabs(ts[i].at(0)) > 0.4*mMaxForces[i])
+	//      sum += 1.0;
+	//  idx++;
+	// }
+	sum /= (double)(idx);
+
+	return -10.0 * sum;
 }
 
 bool
@@ -982,31 +1065,6 @@ isEdgeTime()
 		return true;
 
 	return false;
-}
-
-double
-Character::
-GetTorqueReward()
-{
-	std::vector<std::deque<double>> ts = mTorques->GetTorques();
-	int idx = 0;
-	double sum = 0.0;
-	for(int i=6; i<mMaxForces.size(); i++)
-	{
-		double ratio = fabs(ts[i].at(0))/mMaxForces[i];
-		if(ratio > 0.4)
-			sum += ratio;
-		idx++;
-	}
-	// for(int i=6; i<mMaxForces.size(); i++)
-	// {
-	//  if(fabs(ts[i].at(0)) > 0.4*mMaxForces[i])
-	//      sum += 1.0;
-	//  idx++;
-	// }
-	sum /= (double)(idx);
-
-	return -10.0 * sum;
 }
 
 void
@@ -1171,7 +1229,7 @@ Character::
 SetDevice(Device* device)
 {
 	mDevice = device;
-	mOnDevice = true;
+	mDevice_On = true;
 	mUseDevice = true;
 
 	mNumState += mDevice->GetState().rows();
@@ -1209,22 +1267,22 @@ RemoveConstraints()
 
 void
 Character::
-SetOnDevice(bool onDevice)
+SetDevice_OnOff(bool on)
 {
-	if(onDevice ^ mOnDevice)
+	if(on^mDevice_On)
 	{
-		if(onDevice)
-			this->On_Device();
+		if(on)
+			this->SetDevice_On();
 		else
-			this->Off_Device();
+			this->SetDevice_Off();
 	}
 
-	mOnDevice = onDevice;
+	mDevice_On = on;
 }
 
 void
 Character::
-On_Device()
+SetDevice_On()
 {
 	mDevice->Reset();
 
@@ -1236,7 +1294,7 @@ On_Device()
 
 void
 Character::
-Off_Device()
+SetDevice_Off()
 {
 	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_Hip);
 	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_LeftLeg);
@@ -1452,6 +1510,7 @@ SetRewards()
 {
 	(mRewards.find("reward")->second).pop_back();
 	(mRewards.find("reward")->second).push_front(mReward);
+
 	(mRewards.find("pose")->second).pop_back();
 	(mRewards.find("pose")->second).push_front(pose_reward);
 	(mRewards.find("vel")->second).pop_back();
@@ -1464,12 +1523,15 @@ SetRewards()
 	(mRewards.find("com")->second).push_front(com_reward);
 	(mRewards.find("smooth")->second).pop_back();
 	(mRewards.find("smooth")->second).push_front(smooth_reward);
-	(mRewards.find("contact")->second).pop_back();
-	(mRewards.find("contact")->second).push_front(contact_reward);
 	(mRewards.find("imit")->second).pop_back();
 	(mRewards.find("imit")->second).push_front(imit_reward);
+
 	(mRewards.find("min")->second).pop_back();
 	(mRewards.find("min")->second).push_front(min_reward);
+	(mRewards.find("contact")->second).pop_back();
+	(mRewards.find("contact")->second).push_front(contact_reward);
+	(mRewards.find("effi")->second).pop_back();
+	(mRewards.find("effi")->second).push_front(effi_reward);
 }
 
 void

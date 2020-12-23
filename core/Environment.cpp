@@ -36,10 +36,11 @@ Initialize(const std::string& meta_file, bool load_obj)
 		return;
 	}
 
-	std::string str, index;
-	std::stringstream ss;
 	MASS::Character* character = new MASS::Character();
 	MASS::Device* device;
+
+	std::string str, index;
+	std::stringstream ss;
 	while(!ifs.eof())
 	{
 		ss.clear();
@@ -229,7 +230,7 @@ Reset(bool RSI)
 
 void
 Environment::
-Step(bool onDevice)
+Step(bool device_onoff)
 {
 	if(mUseMuscle)
 		mCharacter->Step_Muscles(mSimCount, mRandomSampleIndex);
@@ -238,8 +239,8 @@ Step(bool onDevice)
 
 	if(mUseDevice)
 	{
-		mCharacter->SetOnDevice(onDevice);
-		if(onDevice)
+		mCharacter->SetDevice_OnOff(device_onoff);
+		if(device_onoff)
 			mDevice->Step((double)mSimCount/(double)mNumSteps);
 	}
 

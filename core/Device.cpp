@@ -40,8 +40,8 @@ Device::
 SetCharacter(Character* character)
 {
     mCharacter = character;
-    mSimulationHz = character->GetSimHz();
-    mControlHz = character->GetConHz();
+    mSimulationHz = character->GetSimulationHz();
+    mControlHz = character->GetControlHz();
 }
 
 void

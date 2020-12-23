@@ -20,7 +20,7 @@ public:
 	void Initialize();
 
 	void Reset(bool RSI = true);
-	void Step(bool onDevice);
+	void Step(bool device_onoff);
 	bool IsEndOfEpisode();
 	void SetAction(const Eigen::VectorXd& a);
 	void SetAction_Device(const Eigen::VectorXd& a);

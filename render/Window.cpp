@@ -68,7 +68,7 @@ Eigen::Vector4d purple_trans(0.8, 0.2, 0.8, 0.2);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mOnDevice(false),isDrawCharacter(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0),mParamMode(0),mViewMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mDevice_On(false),isDrawCharacter(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0),mParamMode(0),mViewMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false)
 {
 	mBackground[0] = 0.96;
 	mBackground[1] = 0.96;
@@ -81,8 +81,7 @@ Window(Environment* env)
 	mTrackBall.setQuaternion(r);
 
 	mNNLoaded = false;
-	mOnDevice = env->GetCharacter()->GetOnDevice();
-
+	mDevice_On = env->GetCharacter()->GetDevice_OnOff();
 	mFootinterval.resize(20);
 
 	mm = p::import("__main__");
@@ -170,7 +169,7 @@ Window::
 LoadDeviceNN(const std::string& device_nn_path)
 {
 	mDeviceNNLoaded = true;
-	mOnDevice = true;
+	mDevice_On = true;
 
 	boost::python::str str;
 	str = ("num_state_device = "+std::to_string(mEnv->GetCharacter()->GetDevice()->GetNumState())).c_str();
@@ -301,7 +300,7 @@ keyboard(unsigned char _key, int _x, int _y)
 	case 'p': mDrawParameter = !mDrawParameter;break;
 	case 'd':
 		if(mEnv->GetUseDevice())
-			mOnDevice = !mOnDevice;
+			mDevice_On = !mDevice_On;
 		break;
 	case 'v' : mViewMode = (mViewMode+1)%3;break;
 	case '\t': mGraphMode = (mGraphMode+1)%6;break;
@@ -367,13 +366,13 @@ Step()
 			Eigen::VectorXd mt = mEnv->GetCharacter()->GetMuscleTorques();
 			mEnv->GetCharacter()->SetActivationLevels(GetActivationFromNN(mt));
 			for(int j=0; j<inference_per_sim; j++)
-				mEnv->Step(mOnDevice);
+				mEnv->Step(mDevice_On);
 		}
 	}
 	else
 	{
 		for(int i=0; i<num; i++)
-			mEnv->Step(mOnDevice);
+			mEnv->Step(mDevice_On);
 	}
 
 	mEnv->GetReward();
@@ -489,10 +488,27 @@ draw()
 
 	this->DrawVelocity();
 	this->DrawCoT();
+	this->DrawContactForce();
 	// DrawTrajectory();
 	// DrawStride();
 
 	SetFocus();
+}
+
+void
+Window::
+DrawContactForce()
+{
+	DrawGLBegin();
+
+	double fL = mEnv->GetCharacter()->GetContactForceL_norm();
+	double fR = mEnv->GetCharacter()->GetContactForceR_norm();
+	bool big = true;
+
+	DrawString(0.70, 0.44, big, "Contact L : " + std::to_string(fL));
+	DrawString(0.70, 0.41, big, "Contact R : " + std::to_string(fR));
+
+	DrawGLEnd();
 }
 
 void
@@ -1199,7 +1215,7 @@ Window::
 DrawDevice()
 {
 	Character* character = mEnv->GetCharacter();
-	if(character->GetOnDevice())
+	if(character->GetDevice_OnOff())
 	{
 		isDrawDevice = true;
 		DrawSkeleton(mEnv->GetDevice()->GetSkeleton());

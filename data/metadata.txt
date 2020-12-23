@@ -1,5 +1,5 @@
 use_muscle false
-use_device false
+use_device true
 use_device_nn false
 use_adaptive_sampling false
 con_hz 30
@@ -15,4 +15,3 @@ force 0.6 0.6
 speed 0.4 1.0
 device_k 0.3 1.0
 delta_t 0.3 0.3
-

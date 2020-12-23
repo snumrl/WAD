@@ -80,7 +80,7 @@ public:
 	void DrawRecursive(BVHNode* node);
 
 	int GetNumTotalFrames(){return mNumTotalFrames;}
-	double GetMaxTime(){return (mNumTotalFrames)*mTimeStep;}
+	double GetMaxTime() {return (mNumTotalFrames)*mTimeStep;}
 	double GetTimeStep(){return mTimeStep;}
 
 	const dart::dynamics::SkeletonPtr& GetSkeleton(){return mSkeleton;}
