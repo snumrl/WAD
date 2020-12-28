@@ -130,6 +130,7 @@ BVH::
 BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map)
 	:mSkeleton(skel),mBVHMap(bvh_map),mCyclic(true),mParse(false)
 {
+	mSpeedRatio = 1.0;
 }
 
 BVHNode*
@@ -195,7 +196,7 @@ ReadHierarchy(BVHNode* parent,const std::string& name,int& channel_offset,std::i
 
 void
 BVH::
-Parse(const std::string& file,bool cyclic)
+Parse(const std::string& file, bool cyclic)
 {
 	mParse = true;
 	mCyclic = cyclic;
@@ -205,9 +206,10 @@ Parse(const std::string& file,bool cyclic)
 
 	if(!is)
 	{
-		std::cout<<"Can't Open File"<<std::endl;
+		std::cout<<"Can't Open BVH File"<<std::endl;
 		return;
 	}
+
 	while(is>>buffer)
 	{
 		if(!strcmp(buffer,"HIERARCHY"))

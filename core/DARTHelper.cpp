@@ -249,7 +249,7 @@ Eigen::Matrix3d string_to_matrix3d(const std::string& input){
 
 dart::dynamics::SkeletonPtr
 MASS::
-BuildFromFile(const std::string& path,bool create_obj,double mass_ratio)
+BuildFromFile(const std::string& path, bool load_obj, double mass_ratio)
 {
 	TiXmlDocument doc;
 	if(!doc.LoadFile(path)){
@@ -379,7 +379,7 @@ BuildFromFile(const std::string& path,bool create_obj,double mass_ratio)
 		bn->getShapeNodesWith<VisualAspect>().back()->getVisualAspect()->setColor(color_joint);
 		bn->getShapeNodesWith<VisualAspect>().back()->setRelativeTransform(child_to_joint);
 
-		if(obj_file!="None" && create_obj)
+		if(obj_file!="None" && load_obj)
 		{
 			std::string obj_path = std::string(MASS_ROOT_DIR)+"/data/OBJ/"+obj_file;
 			const aiScene* scene = MeshShape::loadMesh(std::string(obj_path));

@@ -6,20 +6,10 @@ using namespace MASS;
 using namespace dart::dynamics;
 
 Device::
-Device()
-:mNumState(0),mNumAction(0),mNumDof(0),mNumActiveDof(0),mRootJointDof(0),mUseNN(false),mTorqueMax(0.0),qr(0.0),ql(0.0),qr_prev(0.0),ql_prev(0.0),mNumParamState(0)
+Device(dart::simulation::WorldPtr& wPtr)
+:mUseDeviceNN(false),mNumParamState(0)
 {
-    mDelta_t = 0.3;
-    mDelta_t_scaler = 600.0;
-    mK_ = 15.0;
-    mK_scaler = 30.0;
-}
-
-Device::
-Device(dart::dynamics::SkeletonPtr dPtr)
-:Device()
-{
-    mSkeleton = dPtr;
+    mWorld = wPtr;
 }
 
 Device::
@@ -30,62 +20,53 @@ Device::
 
 void
 Device::
-LoadSkeleton(const std::string& path)
+LoadSkeleton(const std::string& path, bool load_obj)
 {
-    mSkeleton = BuildFromFile(path, true);
+    mSkeleton = BuildFromFile(path, load_obj);
 }
 
 void
 Device::
-SetCharacter(Character* character)
-{
-    mCharacter = character;
-    mSimulationHz = character->GetSimulationHz();
-    mControlHz = character->GetControlHz();
-}
-
-void
-Device::
-Initialize(dart::simulation::WorldPtr& wPtr, bool nn)
+Initialize()
 {
     if(mSkeleton == nullptr)
     {
-        std::cout<<"Initialize Device First"<<std::endl;
+        std::cout<<"Load Device First"<<std::endl;
         exit(0);
     }
 
-    this->SetWorld(wPtr);
     mWorld->addSkeleton(mSkeleton);
 
-    mUseNN = nn;
-
-    const std::string& type =
-        mSkeleton->getRootBodyNode()->getParentJoint()->getType();
-
-    if(type == "FreeJoint")
-        mRootJointDof = 6;
-    else if(type == "PlanarJoint")
-        mRootJointDof = 3;
-    else
-        mRootJointDof = 0;
-
-    int delta_idx = (int)(mDelta_t*mDelta_t_scaler);
-    signal_size = 1200 + delta_idx;
-    mDeviceSignals_y = std::deque<double>(signal_size,0);
-    mDeviceSignals_L = std::deque<double>(signal_size,0);
-    mDeviceSignals_R = std::deque<double>(signal_size,0);
-
+    mRootJointDof = 6;
     mNumDof = mSkeleton->getNumDofs();
     mNumActiveDof = mNumDof-mRootJointDof;
-    mNumState = this->GetState().rows();
     mNumAction = mNumActiveDof;
-    mAction.resize(mNumAction);
+    mAction = Eigen::VectorXd::Zero(mNumAction);
+    mDesiredTorque = Eigen::VectorXd::Zero(mNumDof);
+
+    mDelta_t = 0.3;
+    mDelta_t_scaler = mSimulationHz;
+    mDelta_t_idx = (int)(mDelta_t*mDelta_t_scaler);
+    mK_ = 15.0;
+    mK_scaler = 30.0;
+
+    mDeviceSignals_y = std::deque<double>(1200+180, 0);
+    mDeviceSignals_L = std::deque<double>(1200+180, 0);
+    mDeviceSignals_R = std::deque<double>(1200+180, 0);
 
     mTorqueMax = 15.0;
 
-    mDesiredTorque = Eigen::VectorXd::Zero(mNumDof);
-
+    mNumState = this->GetState().rows();
     this->Reset();
+}
+
+void
+Device::
+SetHz(int sHz, int cHz)
+{
+    mSimulationHz = sHz;
+    mControlHz = cHz;
+    this->SetNumSteps(mSimulationHz/mControlHz);
 }
 
 void
@@ -111,12 +92,14 @@ Reset()
     mSkeleton->setVelocities(v);
     mSkeleton->computeForwardKinematics(true, false, false);
 
-    mDeviceSignals_y.clear();
-    mDeviceSignals_y.resize(signal_size);
-    mDeviceSignals_L.clear();
-    mDeviceSignals_L.resize(signal_size);
-    mDeviceSignals_R.clear();
-    mDeviceSignals_R.resize(signal_size);
+    mAction.setZero();
+    mDesiredTorque.setZero();
+
+    for(int i=0; i<mDeviceSignals_y.size(); i++){
+        mDeviceSignals_y.at(i) = 0.0;
+        mDeviceSignals_L.at(i) = 0.0;
+        mDeviceSignals_R.at(i) = 0.0;
+    }
 
     qr = 0.0;
     ql = 0.0;
@@ -135,7 +118,7 @@ void
 Device::
 Step(double t)
 {
-    if(mUseNN)
+    if(mUseDeviceNN)
     {
         SetDesiredTorques(t);
         // SetSignals();
@@ -144,11 +127,7 @@ Step(double t)
     else
     {
         SetDesiredTorques2();
-
-        Eigen::VectorXd f = Eigen::VectorXd::Zero(mDesiredTorque.size());
-        f[6] = mDesiredTorque[6];
-        f[9] = mDesiredTorque[9];
-        mSkeleton->setForces(f);
+        mSkeleton->setForces(mDesiredTorque);
     }
 }
 
@@ -176,12 +155,10 @@ GetState()
 
     int parameter_num = mNumParamState;
     Eigen::VectorXd state(history_num*2+parameter_num);
-
     double scaler = 2.0;
     for(int i=0; i<history_num; i++)
     {
-        int delta_idx = (int)(mDelta_t*mDelta_t_scaler);
-        double signal_y = mDeviceSignals_y.at(delta_idx + i*offset);
+        double signal_y = mDeviceSignals_y.at(mDelta_t_idx + i*offset);
         double torque_l = mK_ * signal_y;
         double torque_r = mK_ * signal_y;
         double des_torque_l =  1*torque_l;
@@ -193,7 +170,6 @@ GetState()
 
     for(int i=0; i<parameter_num; i++)
         state[history_num*2 + i] = mParamState[i];
-    // state[history_num*2] = mK_/30.0;
 
     return state;
 }
@@ -224,6 +200,8 @@ void
 Device::
 SetDesiredTorques2()
 {
+    mDesiredTorque.setZero();
+
     if(qr==0.0 && ql==0.0 && qr_prev==0.0 && ql_prev==0.0)
     {
         ql = GetAngleQ("FemurL");
@@ -253,9 +231,8 @@ SetDesiredTorques2()
     mDeviceSignals_y.push_front(y);
 
     // double torque = k_ * y_delta_t;
-    int delta_idx = (int)(mDelta_t * mDelta_t_scaler);
-    double torque_l = mK_ * mDeviceSignals_y.at(delta_idx);
-    double torque_r = mK_ * mDeviceSignals_y.at(delta_idx);
+    double torque_l = mK_ * mDeviceSignals_y.at(mDelta_t_idx);
+    double torque_r = mK_ * mDeviceSignals_y.at(mDelta_t_idx);
     double des_torque_l =  1*torque_l*beta_L*beta_Lhip;
     double des_torque_r = -1*torque_r*beta_R*beta_Rhip;
 
@@ -339,6 +316,7 @@ Device::
 SetDelta_t(double t)
 {
     mDelta_t = t;
+    mDelta_t_idx = (int)(mDelta_t*mDelta_t_scaler);
 
     double param = 0.0;
     if(mMax_v[1] == mMin_v[1])
@@ -388,6 +366,26 @@ SetMinMaxV(int idx, double lower, double upper)
     // 1 : delta t
     mMin_v[idx] = lower;
     mMax_v[idx] = upper;
+}
+
+void
+Device::
+SetAdaptiveParams(std::map<std::string, std::pair<double, double>>& p)
+{
+    for(auto p_ : p){
+        std::string name = p_.first;
+        double lower = (p_.second).first;
+        double upper = (p_.second).second;
+
+        if(name == "k"){
+            this->SetMinMaxV(0, lower, upper);
+            this->SetK_(lower*mK_scaler);
+        }
+        else if(name == "delta_t"){
+            this->SetMinMaxV(1, lower, upper);
+            this->SetDelta_t(lower);
+        }
+    }
 }
 
 void

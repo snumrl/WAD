@@ -23,18 +23,20 @@ struct MuscleTuple
 class Character
 {
 public:
-	Character();
+	Character(dart::simulation::WorldPtr& wPtr);
 	~Character();
 
-	void LoadSkeleton(const std::string& path,bool create_obj = false);
+	void LoadSkeleton(const std::string& path, bool load_obj);
 	void LoadBVH(const std::string& path,bool cyclic=true);
 	void LoadBVHset(double lower, double upper);
 	void LoadMuscles(const std::string& path);
 
-	void Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz);
+	void Initialize();
 	void Initialize_Muscles();
 	void Initialize_Rewards();
-	void Initialize_MaxForces();
+	void Initialize_Forces();
+	void Initialize_Mass();
+	void Initialize_Speed();
 	void Initialize_JointWeights();
 
 	void SetWorld(dart::simulation::WorldPtr& wPtr){ mWorld = wPtr; }
@@ -42,10 +44,13 @@ public:
 
 	double GetPhase();
 
+	void SetHz(int sHz, int cHz);
 	int GetSimulationHz(){ return mSimulationHz; }
-	void SetSimulationHz(int hz){ mSimulationHz = hz; }
+	void SetSimulationHz(int hz){ mSimulationHz=hz; }
 	int GetControlHz(){ return mControlHz; }
-	void SetControlHz(int hz){ mControlHz = hz; }
+	void SetControlHz(int hz){ mControlHz=hz; }
+	int GetNumSteps(){ return mNumSteps; }
+	void SetNumSteps(int step){ mNumSteps=step; }
 
 	Eigen::VectorXd GetPDParameters_Kp(){ return mKp; }
 	Eigen::VectorXd GetPDParameters_Kv(){ return mKv; }
@@ -113,14 +118,17 @@ public:
 	int GetNumMuscles(){return mNumMuscle;}
 	int GetNumState(){return mNumState;}
 	int GetNumState_Char(){return mNumState_Char;}
-	int GetNumDof(){return mNumDof;}
+	int GetNumDof(){return mDof;}
 	int GetNumActiveDof(){return mNumActiveDof;}
 	int GetNumAction(){return mNumActiveDof;}
 	int GetRootJointDof(){return mRootJointDof;}
 	int GetNumTotalRelatedDofs(){return mNumTotalRelatedDof;}
 
-	void SetUseMuscle(bool b);
+	void SetUseMuscle(bool b){mUseMuscle = b;}
 	bool GetUseMuscle(){return mUseMuscle;}
+
+	void SetUseDevice(bool b){mUseDevice = b;}
+	bool GetUseDevice(){return mUseDevice;}
 
 	void SetTorques();
 	Torques* GetTorques(){return mTorques;}
@@ -128,29 +136,29 @@ public:
 	void SetRewards();
 	std::map<std::string, std::deque<double>> GetRewards(){return mRewards;}
 
-	double GetForceRatio(){return force_ratio;}
+	double GetForceRatio(){return mForceRatio;}
 	void SetForceRatio(double r);
 
-	double GetMassRatio(){return mass_ratio;}
+	double GetMassRatio(){return mMassRatio;}
 	void SetMassRatio(double r);
 
-	double GetSpeedRatio(){return speed_ratio;}
+	double GetSpeedRatio(){return mSpeedRatio;}
 	void SetSpeedRatio(double r);
 	void SetBVHidx(double r);
-	void SetBVHset(double lower, double upper);
 
 	bool isEdgeTime();
 	std::deque<double> GetSignals(int idx);
 
-	Eigen::Vector3d GetContactForceL(){return mContactForceL;}
-	Eigen::Vector3d GetContactForceR(){return mContactForceR;}
-	double GetContactForceL_norm(){return mContactForceL_norm;}
-	double GetContactForceR_norm(){return mContactForceR_norm;}
+	std::vector<Eigen::Vector3d> GetContactForces(){return mContactForces; }
+	std::vector<double> GetContactForcesNormAvg(){return mContactForces_norm; }
+	std::vector<double> GetContactForcesNorm(){return mContactForces_cur_norm; }
+
+	void SetMeasure();
 
 	void SetCoT();
 	double GetCoT(){return mCurCoT;}
 
-	void SetCollisionForce();
+	void SetContactForce();
 
 	void SetCurVelocity();
 	double GetCurVelocity(){return mCurVel;}
@@ -158,6 +166,7 @@ public:
 	void SetNumParamState(int n);
 	void SetMinMaxV(int idx, double lower, double upper);
 	void SetAdaptiveParams(std::string name, double lower, double upper);
+	void SetAdaptiveParams(std::map<std::string, std::pair<double, double>>& p);
 	void SetParamState(Eigen::VectorXd paramState);
 	int GetNumParamState(){return mNumParamState;}
 	Eigen::VectorXd GetParamState(){return mParamState;}
@@ -165,19 +174,22 @@ public:
 	Eigen::VectorXd GetMaxV(){return mMax_v;}
 
 private:
-	dart::dynamics::SkeletonPtr mSkeleton;
 	dart::simulation::WorldPtr mWorld;
+	dart::dynamics::SkeletonPtr mSkeleton;
 	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
 	std::vector<Muscle*> mMuscles;
 	std::vector<Muscle*> mMuscles_Femur;
-	Device* mDevice;
-	BVH* mBVH;
-	std::vector<BVH*> mBVHset;
-	std::map<std::string,std::string> bvh_map;
-	std::string bvh_path;
-	bool bvh_cyclic;
 
-	int mNumDof;
+	BVH* mBVH;
+	std::string mBVHpath;
+	std::vector<BVH*> mBVHset;
+	std::map<std::string,std::string> mBVHmap;
+	bool mBVHcyclic;
+
+	Device* mDevice;
+	Torques* mTorques;
+
+	int mDof;
 	int mNumActiveDof;
 	int mRootJointDof;
 	int mNumState;
@@ -185,19 +197,36 @@ private:
 	int mNumTotalRelatedDof;
 	int mNumMuscle;
 	int mNumBodyNodes;
+	int mNumJoints;
 
 	int mControlHz;
 	int mSimulationHz;
+	int mNumSteps;
 
 	bool mUseDevice;
 	bool mUseMuscle;
 	bool mDevice_On;
 
-	Eigen::VectorXd mAction;
-	Eigen::VectorXd mActivationLevels;
+	double mMassRatio;
+	double mForceRatio;
+	double mSpeedRatio;
+
+	int mStepCnt;
+	int mStepCnt_total;
 
 	double mCurCoT;
 	double mCurVel;
+
+	Eigen::Isometry3d mTc;
+	Eigen::VectorXd mKp, mKv;
+
+	Eigen::VectorXd mTargetPositions;
+	Eigen::VectorXd mTargetVelocities;
+	Eigen::VectorXd mDesiredTorque;
+
+	Eigen::VectorXd mAction;
+	Eigen::VectorXd mActivationLevels;
+
 	Eigen::VectorXd mAngVel;
 	Eigen::VectorXd mAngVel_prev;
 	Eigen::VectorXd mPos;
@@ -207,31 +236,22 @@ private:
 	Eigen::Vector3d mRootPos;
 	Eigen::Vector3d mRootPos_prev;
 
-	Eigen::Isometry3d mTc;
-	Eigen::VectorXd mKp, mKv;
-
 	Eigen::VectorXd mJointWeights;
 	Eigen::VectorXd mDefaultMass;
 	Eigen::VectorXd mMaxForces;
 	Eigen::VectorXd mDefaultForces;
 
-	Eigen::Vector3d mContactForceL;
-	Eigen::Vector3d mContactForceR;
+	std::vector<Eigen::Vector3d> mContactForces;
+	std::vector<double> mContactForces_cur_norm;
+	std::vector<double> mContactForces_norm;
+
 	double mContactForceL_norm;
 	double mContactForceR_norm;
 	double mContactForceL_cur_norm;
 	double mContactForceR_cur_norm;
 
-	double mass_ratio;
-	double force_ratio;
-	double speed_ratio;
-
-	int mStepCnt;
-	int mStepCnt_total;
-
-	Eigen::VectorXd mTargetPositions;
-	Eigen::VectorXd mTargetVelocities;
-	Eigen::VectorXd mDesiredTorque;
+   	std::deque<double> mFemurSignals_L;
+    std::deque<double> mFemurSignals_R;
 
 	std::map<std::string, std::deque<double>> mRewards;
     std::deque<double> reward_;
@@ -265,16 +285,10 @@ private:
     dart::constraint::WeldJointConstraintPtr mWeldJoint_LeftLeg;
     dart::constraint::WeldJointConstraintPtr mWeldJoint_RightLeg;
 
-	Torques* mTorques;
-
-   	std::deque<double> mFemurSignals_L;
-    std::deque<double> mFemurSignals_R;
-
     int mNumParamState;
     Eigen::VectorXd mParamState;
     Eigen::VectorXd mMin_v;
     Eigen::VectorXd mMax_v;
-
 };
 
 class Torques
@@ -285,11 +299,11 @@ public:
 	void Initialize(dart::dynamics::SkeletonPtr skel);
 	void Reset();
 	void SetTorques(const Eigen::VectorXd& desTorques);
-	std::vector<std::deque<double>>& GetTorques(){return mTorques_dofs;}
+	std::vector<std::deque<double>>& GetTorques(){return mTorquesDofs;}
 
 private:
-	int num_dofs;
-	std::vector<std::deque<double>> mTorques_dofs;
+	int mDof;
+	std::vector<std::deque<double>> mTorquesDofs;
 };
 
 };

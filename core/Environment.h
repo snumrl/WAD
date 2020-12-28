@@ -15,10 +15,13 @@ public:
 	Environment();
 	~Environment();
 
-	void SetId(int i){mId = i;}
-	void Initialize(const std::string& meta_file, bool load_obj = false);
-	void Initialize();
+	void Initialize(const std::string& meta_file, bool load_obj);
 
+	void ParseMetaFile(const std::string& meta_file);
+	void ParseAdaptiveFile(const std::string& adaptive_file);
+
+	void SetWorld();
+	void SetId(int i){mId = i;}
 	void Reset(bool RSI = true);
 	void Step(bool device_onoff);
 	bool IsEndOfEpisode();
@@ -45,6 +48,7 @@ public:
 	void SetUseDeviceNN(bool use_device_nn){mUseDeviceNN = use_device_nn;}
 	void SetControlHz(int con_hz) {mControlHz = con_hz;}
 	void SetSimulationHz(int sim_hz) {mSimulationHz = sim_hz;}
+	void SetNumSteps(int n) {mNumSteps = n;}
 	void SetCharacter(Character* character) {mCharacter = character;}
 	void SetDevice(Device* device) {mDevice = device;}
 	bool GetUseMuscle(){return mUseMuscle;}
@@ -59,7 +63,9 @@ public:
 	const dart::simulation::WorldPtr& GetWorld(){return mWorld;}
 	std::map<std::string, std::deque<double>> GetRewards();
 
-	void SetUseAdaptiveSampling(bool use_adaptive_sampling){mUseAdaptiveSampling = use_adaptive_sampling;}
+	void SetAdaptiveParamNums();
+	void SetAdaptiveParams();
+	void SetUseAdaptiveSampling(bool b){mUseAdaptiveSampling = b;}
 	bool GetUseAdaptiveSampling(){return mUseAdaptiveSampling;}
 	void SetParamState(Eigen::VectorXd paramState);
 	Eigen::VectorXd GetParamState();
@@ -74,6 +80,14 @@ private:
 	Character* mCharacter;
 	Device* mDevice;
 
+	std::map<std::string, std::string> mLoadInfo;
+	std::string mSkelFile;
+	std::string mMuscleFile;
+	std::string mDeviceFile;
+	std::string mBVHFile;
+
+	bool mCyclic;
+
 	int mId;
 	int mControlHz;
 	int mSimulationHz;
@@ -87,6 +101,10 @@ private:
 	bool mUseAdaptiveSampling;
 
 	int mNumParamState;
+	int mNumParamState_Character;
+	int mNumParamState_Device;
+	std::map<std::string, std::pair<double, double>> mParam_Character;
+	std::map<std::string, std::pair<double, double>> mParam_Device;
 };
 };
 

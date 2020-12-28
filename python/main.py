@@ -107,7 +107,7 @@ class PPO(object):
 		if use_cuda:
 			self.model.cuda()
 
-		self.buffer_size = 2048*2
+		self.buffer_size = 256*2
 		self.batch_size = 128*1
 		self.replay_buffer = ReplayBuffer(30000)
 
@@ -370,6 +370,8 @@ class PPO(object):
 
 			if self.use_adaptive_sampling:
 				for i in range(size):
+					# print("state char : ",self.num_state_char)
+					# print("state char : ",self.num_paramstate_char)
 					cur_state = states[i][self.num_state_char-self.num_paramstate_char:self.num_state_char]
 					if self.use_device:
 						cur_state = np.append(cur_state, states[i][self.num_state-self.num_paramstate_device:self.num_state])
@@ -478,6 +480,7 @@ class PPO(object):
 				stack_sb = np.vstack(batch.sb).astype(np.float32)
 				stack_v = np.vstack(batch.v).astype(np.float32)
 
+				# embed()
 				v = self.marginal_model(Tensor(stack_sb))
 
 				# Marginal Loss

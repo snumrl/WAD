@@ -8,15 +8,14 @@ namespace MASS
 class Device
 {
 public:
-    Device();
-    Device(dart::dynamics::SkeletonPtr dPtr);
+    Device(dart::simulation::WorldPtr& wPtr);
     ~Device();
 
-    void LoadSkeleton(const std::string& path);
-    void Initialize(dart::simulation::WorldPtr& wPtr, bool nn);
+    void LoadSkeleton(const std::string& path, bool load_obj);
+    void Initialize();
 
     void SetWorld(dart::simulation::WorldPtr& wPtr){ mWorld = wPtr; }
-    void SetCharacter(Character* character);
+    void SetCharacter(Character* character){mCharacter = character;}
     const dart::dynamics::SkeletonPtr& GetSkeleton(){ return mSkeleton; }
 
     void Reset();
@@ -40,6 +39,7 @@ public:
     int GetNumDofs(){ return mNumDof;}
     int GetNumActiveDof(){ return mNumActiveDof;}
     int GetRootJointDof(){ return mRootJointDof;}
+    void SetUseDeviceNN(bool b){ mUseDeviceNN = b; }
 
     // Common
     void SetTorqueMax(double m){ mTorqueMax = m;}
@@ -55,13 +55,24 @@ public:
     void SetK_(double k);
     double GetK_(){return mK_;}
 
+    void SetHz(int cHz, int sHz);
+    void SetControlHz(int hz){mControlHz = hz;}
+    int GetControlHz(){return mControlHz;}
+    void SetSimulationHz(int hz){mSimulationHz = hz;}
+    int GetSimulationHz(){return mSimulationHz;}
+    int GetNumSteps(){ return mNumSteps; }
+    void SetNumSteps(int step){ mNumSteps=step; }
+
     void SetNumParamState(int n);
     int GetNumParamState(){return mNumParamState;}
+
     void SetParamState(Eigen::VectorXd paramState);
     Eigen::VectorXd GetParamState(){return mParamState;}
+
     Eigen::VectorXd GetMinV(){return mMin_v;}
     Eigen::VectorXd GetMaxV(){return mMax_v;}
     void SetMinMaxV(int idx, double lower, double upper);
+    void SetAdaptiveParams(std::map<std::string, std::pair<double, double>>& p);
     void SetAdaptiveParams(std::string name, double lower, double upper);
 
 private:
@@ -76,8 +87,9 @@ private:
     int mRootJointDof;
     int mSimulationHz;
     int mControlHz;
+    int mNumSteps;
 
-    bool mUseNN;
+    bool mUseDeviceNN;
 
     double mTorqueMax;
     Eigen::VectorXd mAction;
@@ -93,9 +105,9 @@ private:
     double qr_prev;
     double ql_prev;
 
-    int signal_size;
     double mDelta_t;
     double mDelta_t_scaler;
+    int mDelta_t_idx;
     double mK_;
     double mK_scaler;
 

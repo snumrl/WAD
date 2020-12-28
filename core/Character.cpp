@@ -12,12 +12,14 @@ using namespace dart::dynamics;
 using namespace MASS;
 
 Character::
-Character()
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mNumParamState(0),mStepCnt(0),mStepCnt_total(0)
+Character(dart::simulation::WorldPtr& wPtr)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mDevice_On(false),mNumParamState(0)
 {
-	force_ratio = 1.0;
-	mass_ratio = 1.0;
-	speed_ratio = 1.0;
+	this->SetWorld(wPtr);
+
+	mMassRatio = 1.0;
+	mForceRatio = 1.0;
+	mSpeedRatio = 1.0;
 }
 
 Character::
@@ -36,15 +38,16 @@ Character::
 
 void
 Character::
-LoadSkeleton(const std::string& path, bool create_obj)
+LoadSkeleton(const std::string& path, bool load_obj)
 {
-	mSkeleton = BuildFromFile(path,create_obj,mass_ratio);
+	mSkeleton = BuildFromFile(path, load_obj, mMassRatio);
+
 	TiXmlDocument doc;
 	doc.LoadFile(path);
 	TiXmlElement* skel_elem = doc.FirstChildElement("Skeleton");
-	for(TiXmlElement* node = skel_elem->FirstChildElement("Node");node != nullptr;node = node->NextSiblingElement("Node"))
+	for(TiXmlElement* node = skel_elem->FirstChildElement("Node"); node != nullptr; node = node->NextSiblingElement("Node"))
 	{
-		if(node->Attribute("endeffector")!=nullptr)
+		if(node->Attribute("endeffector") != nullptr)
 		{
 			std::string ee =node->Attribute("endeffector");
 			if(ee == "True")
@@ -52,31 +55,24 @@ LoadSkeleton(const std::string& path, bool create_obj)
 		}
 
 		TiXmlElement* joint_elem = node->FirstChildElement("Joint");
-		if(joint_elem->Attribute("bvh")!=nullptr)
-			bvh_map.insert(std::make_pair(node->Attribute("name"),joint_elem->Attribute("bvh")));
+		if(joint_elem->Attribute("bvh") != nullptr)
+			mBVHmap.insert(std::make_pair(node->Attribute("name"),joint_elem->Attribute("bvh")));
 	}
-
-	mNumBodyNodes = mSkeleton->getNumBodyNodes();
-	mDefaultMass = Eigen::VectorXd::Zero(mNumBodyNodes);
-	for(int i=0; i<mNumBodyNodes; i++)
-		mDefaultMass[i] = mSkeleton->getBodyNode(i)->getMass();
-
-	mBVH = new BVH(mSkeleton, bvh_map);
-	mBVH->SetSpeedRatio(speed_ratio);
 }
 
 void
 Character::
 LoadBVH(const std::string& path, bool cyclic)
 {
-	if(mBVH == nullptr){
-		std::cout<<"Initialize BVH class first"<<std::endl;
+	if(path == ""){
+		std::cout<<"BVH path is NULL"<<std::endl;
 		return;
 	}
 
-	bvh_path = path;
-	bvh_cyclic = cyclic;
-	mBVH->Parse(path, cyclic);
+	mBVHpath = path;
+	mBVHcyclic = cyclic;
+	mBVH = new BVH(mSkeleton, mBVHmap);
+	mBVH->Parse(mBVHpath, mBVHcyclic);
 }
 
 void
@@ -85,7 +81,7 @@ LoadMuscles(const std::string& path)
 {
 	TiXmlDocument doc;
 	if(!doc.LoadFile(path)){
-		std::cout << "Can't open file : " << path << std::endl;
+		std::cout << "Can't open Muscle file : " << path << std::endl;
 		return;
 	}
 
@@ -144,71 +140,222 @@ LoadMuscles(const std::string& path)
 
 void
 Character::
-Initialize(dart::simulation::WorldPtr& wPtr, int conHz, int simHz)
+Initialize()
 {
-	if(mSkeleton == nullptr)
-	{
+	if(mSkeleton == nullptr) {
 		std::cout<<"Initialize Character First"<<std::endl;
 		exit(0);
 	}
 
-	this->SetWorld(wPtr);
 	mWorld->addSkeleton(mSkeleton);
 
-	mControlHz = conHz;
-	mSimulationHz = simHz;
+	mDof = mSkeleton->getNumDofs();
+	mNumBodyNodes = mSkeleton->getNumBodyNodes();
+	mNumJoints = mSkeleton->getNumJoints();
+
 	this->SetPDParameters();
 	this->SetTargetPosAndVel(0, mControlHz);
 
-	const std::string& type =
-		mSkeleton->getRootBodyNode()->getParentJoint()->getType();
-
-	if(type == "FreeJoint")
-		mRootJointDof = 6;
-	else if(type == "PlanarJoint")
-		mRootJointDof = 3;
-	else
-		mRootJointDof = 0;
-
-	mNumDof = mSkeleton->getNumDofs();
-	mNumActiveDof = mNumDof - mRootJointDof;
-	mNumState = 0;
+	mRootJointDof = 6;
+	mNumActiveDof = mDof - mRootJointDof;
 	mNumState_Char = this->GetState().rows();
-	mNumState += mNumState_Char;
+	mNumState = mNumState_Char;
 
-	mAction.resize(mNumActiveDof);
-	mAngVel.resize(mNumBodyNodes*3);
-	mAngVel_prev.resize(mNumBodyNodes*3);
-	mPos.resize(mNumBodyNodes*3);
-	mPos_prev.resize(mNumBodyNodes*3);
-	mRootPos.setZero();
-	mRootPos_prev.setZero();
+	mStepCnt = 0;
+	mStepCnt_total = 0;
 
-	mDesiredTorque.resize(mNumDof);
+	mTc = mBVH->GetT0();
+	mTc.translation()[1] = 0.0;
 
-	mFemurSignals_L.resize(1200);
-	mFemurSignals_R.resize(1200);
+	mAction = Eigen::VectorXd::Zero(mNumActiveDof);
+	mDesiredTorque = Eigen::VectorXd::Zero(mDof);
+
+	mAngVel = Eigen::VectorXd::Zero(mNumBodyNodes*3);
+	mAngVel_prev = Eigen::VectorXd::Zero(mNumBodyNodes*3);
+
+	mPos = Eigen::VectorXd::Zero(mNumBodyNodes*3);
+	mPos_prev = Eigen::VectorXd::Zero(mNumBodyNodes*3);
+
+	mFemurSignals_L = std::deque<double>(1200);
+	mFemurSignals_R = std::deque<double>(1200);
+
+	mContactForces.push_back(Eigen::Vector3d::Zero());
+	mContactForces.push_back(Eigen::Vector3d::Zero());
+	mContactForces_norm.push_back(0.0);
+	mContactForces_norm.push_back(0.0);
+	mContactForces_cur_norm.push_back(0.0);
+	mContactForces_cur_norm.push_back(0.0);
 
 	mTorques = new Torques();
 	mTorques->Initialize(mSkeleton);
 
-	this->Initialize_Rewards();
 	this->Initialize_JointWeights();
-	this->Initialize_MaxForces();
-
-	mContactForceL = Eigen::Vector3d::Zero();
-	mContactForceR = Eigen::Vector3d::Zero();
+	this->Initialize_Rewards();
+	this->Initialize_Forces();
+	this->Initialize_Mass();
+	if(mUseMuscle)
+		this->Initialize_Muscles();
 
 	this->Reset();
 }
 
 void
 Character::
+Initialize_JointWeights()
+{
+	mJointWeights.resize(mNumJoints);
+
+	mJointWeights <<
+		1.0,                    //Pelvis
+		0.5, 0.3, 0.2, 0.1, 0.1,//Left Leg
+		0.5, 0.3, 0.2, 0.1, 0.1,//Right Leg
+		0.5, 0.5, 0.2, 0.2,     //Torso & Neck
+		0.3, 0.2, 0.2, 0.1,     //Left Arm
+		0.3, 0.2, 0.2, 0.1;     //Right Arm
+
+	mJointWeights /= mJointWeights.sum();
+}
+
+void
+Character::
+Initialize_Mass()
+{
+	mDefaultMass = Eigen::VectorXd::Zero(mNumBodyNodes);
+	for(int i=0; i<mNumBodyNodes; i++)
+		mDefaultMass[i] = mSkeleton->getBodyNode(i)->getMass();
+}
+
+void
+Character::
+Initialize_Forces()
+{
+	mMaxForces.resize(mDof);
+	mDefaultForces.resize(mDof);
+
+	mDefaultForces <<
+		 0, 0, 0, 0, 0, 0,   //pelvis
+		 300, 300, 300,      //Femur L
+		 300,                //Tibia L
+		 300, 300, 300,      //Talus L
+		 300, 300,           //Thumb, Pinky L
+		 300, 300, 300,      //Femur R
+		 300,                //Tibia R
+		 300, 300, 300,      //Talus R
+		 300, 300,           //Thumb, Pinky R
+		 300, 300, 300,      //Spine
+		 300, 300, 300,      //Torso
+		 300, 300, 300,      //Neck
+		 300, 300, 300,      //Head
+		 300, 300, 300,      //Shoulder L
+		 300, 300, 300,      //Arm L
+		 300,                //ForeArm L
+		 300, 300, 300,      //Hand L
+		 300, 300, 300,      //Shoulder R
+		 300, 300, 300,      //Arm R
+		 300,                //ForeArm R
+		 300, 300, 300;      //Hand R
+
+	// mDefaultForces <<
+	//      0, 0, 0, 0, 0, 0,   //pelvis
+	//      200, 100, 150,      //Femur L
+	//      100,                //Tibia L
+	//      150, 50, 50,        //Talus L
+	//      30, 30,             //Thumb, Pinky L
+	//      200, 100, 150,      //Femur R
+	//      100,                //Tibia R
+	//      150, 50, 50,        //Talus R
+	//      30, 30,             //Thumb, Pinky R
+	//      80, 80, 80,         //Spine
+	//      80, 80, 80,         //Torso
+	//      30, 30, 30,         //Neck
+	//      30, 30, 30,         //Head
+	//      50, 50, 50,         //Shoulder L
+	//      50, 50, 50,         //Arm L
+	//      30,                 //ForeArm L
+	//      30, 30, 30,         //Hand L
+	//      50, 50, 50,         //Shoulder R
+	//      50, 50, 50,         //Arm R
+	//      30,                 //ForeArm R
+	//      30, 30, 30;         //Hand R
+
+	mMaxForces = mForceRatio * mDefaultForces;
+}
+
+void
+Character::
+Initialize_Muscles()
+{
+	mNumTotalRelatedDof = 0;
+	for(auto m : this->GetMuscles()){
+		m->Update();
+		mNumTotalRelatedDof += m->GetNumRelatedDofs();
+	}
+
+	mCurrentMuscleTuple.JtA = Eigen::VectorXd::Zero(mNumTotalRelatedDof);
+	mCurrentMuscleTuple.L = Eigen::MatrixXd::Zero(mNumActiveDof, mNumMuscle);
+	mCurrentMuscleTuple.b = Eigen::VectorXd::Zero(mNumActiveDof);
+	mCurrentMuscleTuple.tau_des = Eigen::VectorXd::Zero(mNumActiveDof);
+	mActivationLevels = Eigen::VectorXd::Zero(mNumMuscle);
+}
+
+void
+Character::
+Initialize_Rewards()
+{
+	mReward = 0;
+	pose_reward = 0;
+	vel_reward = 0;
+	end_eff_reward = 0;
+	root_reward = 0;
+	com_reward = 0;
+	smooth_reward = 0;
+	contact_reward = 0;
+	imit_reward = 0;
+	effi_reward = 0;
+	min_reward = 0;
+
+	int reward_window = 70;
+
+	reward_ = std::deque<double>(reward_window);
+	pose_ = std::deque<double>(reward_window);
+	vel_ = std::deque<double>(reward_window);
+	root_ = std::deque<double>(reward_window);
+	ee_ = std::deque<double>(reward_window);
+	com_ = std::deque<double>(reward_window);
+	smooth_ = std::deque<double>(reward_window);
+	imit_ = std::deque<double>(reward_window);
+	min_ = std::deque<double>(reward_window);
+	contact_ = std::deque<double>(reward_window);
+	effi_ = std::deque<double>(reward_window);
+
+	mRewards.insert(std::make_pair("reward", reward_));
+	mRewards.insert(std::make_pair("pose", pose_));
+	mRewards.insert(std::make_pair("vel", vel_));
+	mRewards.insert(std::make_pair("root", root_));
+	mRewards.insert(std::make_pair("ee", ee_));
+	mRewards.insert(std::make_pair("com", com_));
+	mRewards.insert(std::make_pair("smooth", smooth_));
+	mRewards.insert(std::make_pair("imit", imit_));
+	mRewards.insert(std::make_pair("min", min_));
+	mRewards.insert(std::make_pair("contact", contact_));
+	mRewards.insert(std::make_pair("effi", effi_));
+}
+
+void
+Character::
+SetHz(int sHz, int cHz)
+{
+	mSimulationHz = sHz;
+	mControlHz = cHz;
+	this->SetNumSteps(mSimulationHz/mControlHz);
+}
+
+void
+Character::
 SetPDParameters()
 {
-	int dof = mSkeleton->getNumDofs();
-	mKp.resize(dof);
-	mKv.resize(dof);
+	mKp.resize(mDof);
+	mKv.resize(mDof);
 
 	mKp << 0, 0, 0, 0, 0, 0,
 		500, 500, 500,
@@ -257,146 +404,8 @@ SetPDParameters()
 
 void
 Character::
-Initialize_JointWeights()
-{
-	int num_joint = mSkeleton->getNumJoints();
-	mJointWeights.resize(num_joint);
-
-	mJointWeights <<
-		1.0,                    //Pelvis
-		0.5, 0.3, 0.2, 0.1, 0.1,//Left Leg
-		0.5, 0.3, 0.2, 0.1, 0.1,//Right Leg
-		0.5, 0.5, 0.2, 0.2,     //Torso & Neck
-		0.3, 0.2, 0.2, 0.1,     //Left Arm
-		0.3, 0.2, 0.2, 0.1;     //Right Arm
-
-	mJointWeights /= mJointWeights.sum();
-}
-
-void
-Character::
-Initialize_MaxForces()
-{
-	int dof = mSkeleton->getNumDofs();
-	mMaxForces.resize(dof);
-	mDefaultForces.resize(dof);
-
-	mDefaultForces <<
-		 0, 0, 0, 0, 0, 0,   //pelvis
-		 300, 300, 300,      //Femur L
-		 300,                //Tibia L
-		 300, 300, 300,      //Talus L
-		 300, 300,           //Thumb, Pinky L
-		 300, 300, 300,      //Femur R
-		 300,                //Tibia R
-		 300, 300, 300,      //Talus R
-		 300, 300,           //Thumb, Pinky R
-		 300, 300, 300,      //Spine
-		 300, 300, 300,      //Torso
-		 300, 300, 300,      //Neck
-		 300, 300, 300,      //Head
-		 300, 300, 300,      //Shoulder L
-		 300, 300, 300,      //Arm L
-		 300,                //ForeArm L
-		 300, 300, 300,      //Hand L
-		 300, 300, 300,      //Shoulder R
-		 300, 300, 300,      //Arm R
-		 300,                //ForeArm R
-		 300, 300, 300;      //Hand R
-
-	// mDefaultForces <<
-	//      0, 0, 0, 0, 0, 0,   //pelvis
-	//      200, 100, 150,      //Femur L
-	//      100,                //Tibia L
-	//      150, 50, 50,        //Talus L
-	//      30, 30,             //Thumb, Pinky L
-	//      200, 100, 150,      //Femur R
-	//      100,                //Tibia R
-	//      150, 50, 50,        //Talus R
-	//      30, 30,             //Thumb, Pinky R
-	//      80, 80, 80,         //Spine
-	//      80, 80, 80,         //Torso
-	//      30, 30, 30,         //Neck
-	//      30, 30, 30,         //Head
-	//      50, 50, 50,         //Shoulder L
-	//      50, 50, 50,         //Arm L
-	//      30,                 //ForeArm L
-	//      30, 30, 30,         //Hand L
-	//      50, 50, 50,         //Shoulder R
-	//      50, 50, 50,         //Arm R
-	//      30,                 //ForeArm R
-	//      30, 30, 30;         //Hand R
-
-	if(mUseMuscle)
-		mMaxForces = 1.0 * 	mDefaultForces;
-	else
-		mMaxForces = force_ratio * mDefaultForces;
-}
-
-void
-Character::
-Initialize_Muscles()
-{
-	mUseMuscle = true;
-	mNumTotalRelatedDof = 0;
-	for(auto m : this->GetMuscles()){
-		m->Update();
-		mNumTotalRelatedDof += m->GetNumRelatedDofs();
-	}
-
-	Reset_Muscles();
-}
-
-void
-Character::
-Initialize_Rewards()
-{
-	mReward = 0;
-	pose_reward = 0;
-	vel_reward = 0;
-	end_eff_reward = 0;
-	root_reward = 0;
-	com_reward = 0;
-	smooth_reward = 0;
-	contact_reward = 0;
-	imit_reward = 0;
-	effi_reward = 0;
-	min_reward = 0;
-
-	int reward_window = 70;
-
-	reward_.resize(reward_window);
-	pose_.resize(reward_window);
-	vel_.resize(reward_window);
-	root_.resize(reward_window);
-	ee_.resize(reward_window);
-	com_.resize(reward_window);
-	smooth_.resize(reward_window);
-	imit_.resize(reward_window);
-	min_.resize(reward_window);
-	contact_.resize(reward_window);
-	effi_.resize(reward_window);
-
-	mRewards.insert(std::make_pair("reward", reward_));
-	mRewards.insert(std::make_pair("pose", pose_));
-	mRewards.insert(std::make_pair("vel", vel_));
-	mRewards.insert(std::make_pair("root", root_));
-	mRewards.insert(std::make_pair("ee", ee_));
-	mRewards.insert(std::make_pair("com", com_));
-	mRewards.insert(std::make_pair("smooth", smooth_));
-	mRewards.insert(std::make_pair("imit", imit_));
-	mRewards.insert(std::make_pair("min", min_));
-	mRewards.insert(std::make_pair("contact", contact_));
-	mRewards.insert(std::make_pair("effi", effi_));
-}
-
-void
-Character::
 Reset()
 {
-	mTc = mBVH->GetT0();
-	mTc.translation()[1] = 0.0;
-
 	mSkeleton->clearConstraintImpulses();
 	mSkeleton->clearInternalForces();
 	mSkeleton->clearExternalForces();
@@ -408,28 +417,33 @@ Reset()
 	mSkeleton->setVelocities(mTargetVelocities);
 	mSkeleton->computeForwardKinematics(true,false,false);
 
+	mAction.setZero();
 	mDesiredTorque.setZero();
 
-	mAction.setZero();
 	mAngVel.setZero();
 	mPos.setZero();
+
 	for(int i=0; i<mNumBodyNodes; i++){
 		mAngVel_prev.segment<3>(i*3) = mSkeleton->getBodyNode(i)->getAngularVelocity();
 		mPos_prev.segment<3>(i*3) = mSkeleton->getBodyNode(i)->getCOM();
 	}
+
 	mRootPos = mSkeleton->getCOM();
 	mRootPos_prev = mSkeleton->getCOM();
+
+	for (int i=0; i<mFemurSignals_L.size(); i++){
+		mFemurSignals_L.at(i) = 0.0;
+		mFemurSignals_R.at(i) = 0.0;
+	}
+
+	mContactForces.at(0).setZero();
+	mContactForces.at(1).setZero();
+
 	mCurVel = 0.0;
 	mCurCoT = 0.0;
 	mStepCnt = 0;
 
-	mFemurSignals_L.clear();
-	mFemurSignals_L.resize(1200);
-	mFemurSignals_R.clear();
-	mFemurSignals_R.resize(1200);
-
 	mTorques->Reset();
-
 	if(mUseMuscle)
 		Reset_Muscles();
 }
@@ -438,11 +452,11 @@ void
 Character::
 Reset_Muscles()
 {
-	mCurrentMuscleTuple.JtA = Eigen::VectorXd::Zero(mNumTotalRelatedDof);
-	mCurrentMuscleTuple.L = Eigen::MatrixXd::Zero(mNumActiveDof, mNumMuscle);
-	mCurrentMuscleTuple.b = Eigen::VectorXd::Zero(mNumActiveDof);
-	mCurrentMuscleTuple.tau_des = Eigen::VectorXd::Zero(mNumActiveDof);
-	mActivationLevels = Eigen::VectorXd::Zero(mNumMuscle);
+	(mCurrentMuscleTuple.JtA).setZero();
+	(mCurrentMuscleTuple.L).setZero();
+	(mCurrentMuscleTuple.b).setZero();
+	(mCurrentMuscleTuple.tau_des).setZero();
+	mActivationLevels.setZero();
 }
 
 void
@@ -451,27 +465,75 @@ Step()
 {
 	SetDesiredTorques();
 	mSkeleton->setForces(mDesiredTorque);
+
 	if(mStepCnt == 20)
 		mStepCnt = 0;
 	mStepCnt++;
 	mStepCnt_total++;
 
-	this->SetTorques();
-	this->SetCurVelocity();
-	this->SetCoT();
-	this->SetCollisionForce();
+	this->SetMeasure();
 }
 
 void
 Character::
-SetCollisionForce()
+Step_Muscles(int simCount, int randomSampleIndex)
+{
+	int count = 0;
+	for(auto muscle : mMuscles)
+	{
+		muscle->SetActivation(mActivationLevels[count++]);
+		muscle->Update();
+		muscle->ApplyForceToBody();
+	}
+
+	if(simCount == randomSampleIndex)
+	{
+		int m = mMuscles.size();
+		Eigen::MatrixXd JtA = Eigen::MatrixXd::Zero(mDof,m);
+		Eigen::VectorXd Jtp = Eigen::VectorXd::Zero(mDof);
+
+		for(int i=0; i<mMuscles.size(); i++)
+		{
+			auto muscle = mMuscles[i];
+			// muscle->Update();
+			Eigen::MatrixXd Jt = muscle->GetJacobianTranspose();
+			auto Ap = muscle->GetForceJacobianAndPassive();
+
+			JtA.block(0,i,mDof,1) = Jt*Ap.first;
+			Jtp += Jt*Ap.second;
+		}
+
+		mCurrentMuscleTuple.JtA = GetMuscleTorques();
+		mCurrentMuscleTuple.L =JtA.block(mRootJointDof,0,mDof-mRootJointDof,m);
+		mCurrentMuscleTuple.b =Jtp.segment(mRootJointDof,mDof-mRootJointDof);
+		mCurrentMuscleTuple.tau_des = mDesiredTorque.tail(mDesiredTorque.rows()-mRootJointDof);
+		mMuscleTuples.push_back(mCurrentMuscleTuple);
+	}
+
+	this->SetMeasure();
+}
+
+void
+Character::
+SetMeasure()
+{
+	this->SetContactForce();
+	this->SetCoT();
+	this->SetCurVelocity();
+	this->SetTorques();
+}
+
+void
+Character::
+SetContactForce()
 {
 	if(mStepCnt == 1){
-		mContactForceL.setZero();
-		mContactForceR.setZero();
-		mContactForceL_cur_norm = 0;
-		mContactForceR_cur_norm = 0;
+		for(int i=0; i<mContactForces.size();i++)
+			mContactForces.at(i).setZero();
+		for(int i=0; i<mContactForces_cur_norm.size();i++)
+			mContactForces_cur_norm.at(i) = 0.0;
 	}
+
 	double forceL = 0;
 	double forceR = 0;
 	dart::dynamics::BodyNode* bn_TalusL = mSkeleton->getBodyNode("TalusL");
@@ -484,7 +546,7 @@ SetCollisionForce()
 			if(shapeNode == contact.collisionObject1->getShapeFrame() ||
 				shapeNode == contact.collisionObject2->getShapeFrame())
 			{
-				mContactForceL += contact.force;
+				mContactForces.at(0) += contact.force;
 				forceL += contact.force.norm();
 			}
 		}
@@ -494,36 +556,35 @@ SetCollisionForce()
 			if(shapeNode == contact.collisionObject1->getShapeFrame() ||
 				shapeNode == contact.collisionObject2->getShapeFrame())
 			{
-				mContactForceR += contact.force;
+				mContactForces.at(1) += contact.force;
 				forceR += contact.force.norm();
 			}
 		}
 	}
 
-	mContactForceL_cur_norm += forceL;
-	mContactForceR_cur_norm += forceR;
+	mContactForces_cur_norm.at(0) += forceL;
+	mContactForces_cur_norm.at(1) += forceR;
 
-	mContactForceL_norm *= (mStepCnt_total-1);
-	mContactForceL_norm += forceL;
-	mContactForceL_norm /= mStepCnt_total;
+	mContactForces_norm.at(0) *= (mStepCnt_total-1);
+	mContactForces_norm.at(0) += forceL;
+	mContactForces_norm.at(0) /= mStepCnt_total;
 
-	mContactForceR_norm *= (mStepCnt_total-1);
-	mContactForceR_norm += forceR;
-	mContactForceR_norm /= mStepCnt_total;
+	mContactForces_norm.at(1) *= (mStepCnt_total-1);
+	mContactForces_norm.at(1) += forceR;
+	mContactForces_norm.at(1) /= mStepCnt_total;
 }
 
 void
 Character::
 SetCoT()
 {
-	int joint_num = mSkeleton->getNumJoints();
 	Eigen::VectorXd vel = mSkeleton->getVelocities();
 	Eigen::VectorXd tor = mDesiredTorque;
 	// double vel_tor = vel.dot(tor);
 	double vel_tor = 0.0;
 
 	int idx = 6;
-	for(int i=1; i<joint_num; i++)
+	for(int i=1; i<mNumJoints; i++)
 	{
 		auto* joint = mSkeleton->getJoint(i);
 		if(joint->getType()=="RevoluteJoint"){
@@ -575,46 +636,6 @@ SetCurVelocity()
 	mRootPos_prev = mRootPos;
 }
 
-void
-Character::
-Step_Muscles(int simCount, int randomSampleIndex)
-{
-	int count = 0;
-	for(auto muscle : mMuscles)
-	{
-		muscle->SetActivation(mActivationLevels[count++]);
-		muscle->Update();
-		muscle->ApplyForceToBody();
-	}
-
-	if(simCount == randomSampleIndex)
-	{
-		int n = mSkeleton->getNumDofs();
-		int m = mMuscles.size();
-		Eigen::MatrixXd JtA = Eigen::MatrixXd::Zero(n,m);
-		Eigen::VectorXd Jtp = Eigen::VectorXd::Zero(n);
-
-		for(int i=0; i<mMuscles.size(); i++)
-		{
-			auto muscle = mMuscles[i];
-			// muscle->Update();
-			Eigen::MatrixXd Jt = muscle->GetJacobianTranspose();
-			auto Ap = muscle->GetForceJacobianAndPassive();
-
-			JtA.block(0,i,n,1) = Jt*Ap.first;
-			Jtp += Jt*Ap.second;
-		}
-
-		mCurrentMuscleTuple.JtA = GetMuscleTorques();
-		mCurrentMuscleTuple.L = JtA.block(mRootJointDof,0,n-mRootJointDof,m);
-		mCurrentMuscleTuple.b = Jtp.segment(mRootJointDof,n-mRootJointDof);
-		mCurrentMuscleTuple.tau_des = mDesiredTorque.tail(mDesiredTorque.rows()-mRootJointDof);
-		mMuscleTuples.push_back(mCurrentMuscleTuple);
-	}
-
-	this->SetTorques();
-}
-
 Eigen::VectorXd
 Character::
 GetState()
@@ -626,13 +647,11 @@ GetState()
 
 	Eigen::VectorXd state(state_dim);
 	state << state_character;
-
 	if(mUseDevice)
 	{
 		Eigen::VectorXd state_device;
 		state_device = this->GetState_Device();
 		state_dim += state_device.rows();
-
 		state.resize(state_dim);
 		state << state_character, state_device;
 	}
@@ -842,8 +861,6 @@ GetReward_Character_Imitation()
 	comSim = mSkeleton->getCOM();
 	comSimVel = mSkeleton->getCOMLinearVelocity();
 
-	int num_joints = mSkeleton->getNumJoints();
-
 	double root_rot_w = mJointWeights[0];
 
 	dart::dynamics::BodyNode* rootSim = mSkeleton->getBodyNode(0);
@@ -869,7 +886,7 @@ GetReward_Character_Imitation()
 		ee_ori_diff[i] = cur_ee_ori;
 	}
 
-	for(int i=1; i<num_joints; i++)
+	for(int i=1; i<mNumJoints; i++)
 	{
 		double curr_pose_err = 0;
 		double curr_vel_err = 0;
@@ -1009,7 +1026,7 @@ GetReward_ContactForce()
 	double contact_scale = 0.02;
 	double contact_err = 0;
 
-	contact_err = (mContactForceL_cur_norm + mContactForceR_cur_norm)/20.0;
+	contact_err = (mContactForces_cur_norm.at(0) + mContactForces_cur_norm.at(1))/20.0;
 	contact_err /= 74.2;
 
 	if(contact_err < 5.0)
@@ -1082,7 +1099,6 @@ void
 Character::
 SetDesiredTorques()
 {
-
 	Eigen::VectorXd p_des = mTargetPositions;
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction;
 	mDesiredTorque = this->GetSPDForces(p_des);
@@ -1230,7 +1246,6 @@ SetDevice(Device* device)
 {
 	mDevice = device;
 	mDevice_On = true;
-	mUseDevice = true;
 
 	mNumState += mDevice->GetState().rows();
 }
@@ -1306,13 +1321,14 @@ void
 Character::
 SetMassRatio(double r)
 {
-	mass_ratio = r;
+	mMassRatio = r;
+
 	for(int i=0; i<mNumBodyNodes; i++)
 	{
 		dart::dynamics::BodyNode* body = mSkeleton->getBodyNode(i);
 		dart::dynamics::Inertia inertia;
 		auto shape = body->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get();
-		double mass = mass_ratio * mDefaultMass[i];
+		double mass = mMassRatio * mDefaultMass[i];
 		inertia.setMass(mass);
 		inertia.setMoment(shape->computeInertia(mass));
 		body->setInertia(inertia);
@@ -1325,7 +1341,7 @@ SetMassRatio(double r)
 	}
 	else
 	{
-		double ratio = (mass_ratio-mMin_v[0])/(mMax_v[0]-mMin_v[0]);
+		double ratio = (mMassRatio-mMin_v[0])/(mMax_v[0]-mMin_v[0]);
 		param = ratio*2.0 - 1.0;
 		mParamState[0] = param;
 	}
@@ -1335,15 +1351,17 @@ void
 Character::
 SetForceRatio(double r)
 {
-	force_ratio = r;
+	mForceRatio = r;
 
 	if(mUseMuscle)
 	{
 		for(int i=0; i<mMuscles_Femur.size(); i++)
-			mMuscles_Femur.at(i)->SetF0Ratio(force_ratio);
+			mMuscles_Femur.at(i)->SetF0Ratio(mForceRatio);
 	}
 	else
-		mMaxForces = force_ratio * mDefaultForces;
+	{
+		mMaxForces = mForceRatio * mDefaultForces;
+	}
 
 	double param = 0.0;
 	if(mMax_v[1] == mMin_v[1])
@@ -1352,7 +1370,7 @@ SetForceRatio(double r)
 	}
 	else
 	{
-		double ratio = (force_ratio-mMin_v[1])/(mMax_v[1]-mMin_v[1]);
+		double ratio = (mForceRatio-mMin_v[1])/(mMax_v[1]-mMin_v[1]);
 		param = ratio*2.0 - 1.0;
 		mParamState[1] = param;
 	}
@@ -1362,7 +1380,7 @@ void
 Character::
 SetSpeedRatio(double r)
 {
-	speed_ratio = r;
+	mSpeedRatio = r;
 
 	double param = 0.0;
 	if(mMax_v[2] == mMin_v[2])
@@ -1379,48 +1397,34 @@ SetSpeedRatio(double r)
 
 void
 Character::
-SetBVHset(double lower, double upper)
+LoadBVHset(double lower, double upper)
 {
 	if(lower == upper)
 	{
-		mBVH->SetSpeedRatio(lower);
-		mBVH->SetParsed(false);
+		if(!mBVH->IsParsed()){
+			mBVH->SetSpeedRatio(lower);
+			mBVH->Parse(mBVHpath, mBVHcyclic);
+		}
 		mBVHset.push_back(mBVH);
 		return;
 	}
 
-	int idx_lower = lower * 10.0;
-	int idx_upper = upper * 10.0;
-	int idx_exist = mBVH->GetSpeedRatio()*10.0;
-	BVH* exist_bvh = mBVH;
-	for(int i=idx_lower; i < (idx_upper+1); i++)
+	for(double d=lower; d<=upper; )
 	{
-		if(i == idx_exist){
-			mBVHset.push_back(exist_bvh);
+		if(d == mSpeedRatio){
+			mBVHset.push_back(mBVH);
 			continue;
 		}
 
-		BVH* newBVH = new BVH(mSkeleton, bvh_map);
-		newBVH->SetSpeedRatio(0.1*i);
+		BVH* newBVH = new BVH(mSkeleton, mBVHmap);
+		newBVH->SetSpeedRatio(d);
+		newBVH->Parse(mBVHpath, mBVHcyclic);
 		mBVHset.push_back(newBVH);
-		if(i==idx_lower)
-			mBVH = newBVH;
-	}
-}
 
-void
-Character::
-LoadBVHset(double lower, double upper)
-{
-	int idx_lower = lower * 10.0;
-	int idx_upper = upper * 10.0;
-	int num = idx_upper - idx_lower + 1;
-	for(int i=0; i<num; i++)
-	{
-		if(!(mBVHset.at(i)->IsParsed())){
-			mBVHset.at(i)->Parse(bvh_path, bvh_cyclic);
-		}
+		d += 0.1;
 	}
+
+	mBVH = mBVHset.at(0);
 }
 
 void
@@ -1476,11 +1480,34 @@ void
 Character::
 SetMinMaxV(int idx, double lower, double upper)
 {
-	// 0 : mass
-	// 1 : force
-	// 2 : speed
+	// 0 : mass // 1 : force // 2 : speed
 	mMin_v[idx] = lower;
 	mMax_v[idx] = upper;
+}
+
+void
+Character::
+SetAdaptiveParams(std::map<std::string, std::pair<double, double>>& p)
+{
+	for(auto p_ : p){
+		std::string name = p_.first;
+		double lower = (p_.second).first;
+		double upper = (p_.second).second;
+
+		if(name == "mass"){
+			this->SetMinMaxV(0, lower, upper);
+			this->SetMassRatio(lower);
+		}
+		else if(name == "force"){
+			this->SetMinMaxV(1, lower, upper);
+			this->SetForceRatio(lower);
+		}
+		else if(name == "speed"){
+			this->SetMinMaxV(2, lower, upper);
+			this->LoadBVHset(lower, upper);
+			this->SetSpeedRatio(lower);
+		}
+	}
 }
 
 void
@@ -1493,12 +1520,10 @@ SetAdaptiveParams(std::string name, double lower, double upper)
 	}
 	else if(name == "force"){
 		this->SetMinMaxV(1, lower, upper);
-		this->Initialize_MaxForces();
 		this->SetForceRatio(lower);
 	}
 	else if(name == "speed"){
 		this->SetMinMaxV(2, lower, upper);
-		this->SetBVHset(lower, upper);
 		this->LoadBVHset(lower, upper);
 		this->SetSpeedRatio(lower);
 	}
@@ -1549,17 +1574,17 @@ void
 Torques::
 Initialize(dart::dynamics::SkeletonPtr skel)
 {
-	num_dofs = skel->getNumDofs();
-	for(int i=0; i<num_dofs; i++)
-		mTorques_dofs.push_back(std::deque<double>(1200));
+	mDof = skel->getNumDofs();
+	for(int i=0; i<mDof; i++)
+		mTorquesDofs.push_back(std::deque<double>(1200));
 }
 
 void
 Torques::
 Reset()
 {
-	for(int i=0; i<num_dofs; i++)
-		std::fill(mTorques_dofs[i].begin(), mTorques_dofs[i].end(), 0) ;
+	for(int i=0; i<mDof; i++)
+		std::fill(mTorquesDofs[i].begin(), mTorquesDofs[i].end(), 0) ;
 }
 
 void
@@ -1568,8 +1593,8 @@ SetTorques(const Eigen::VectorXd& desTorques)
 {
 	for(int i=6; i<desTorques.size(); i++)
 	{
-		mTorques_dofs[i].pop_back();
-		mTorques_dofs[i].push_front(desTorques[i]);
+		mTorquesDofs[i].pop_back();
+		mTorquesDofs[i].push_front(desTorques[i]);
 	}
 
 	double sum = 0;
@@ -1580,14 +1605,7 @@ SetTorques(const Eigen::VectorXd& desTorques)
 	sum += fabs(desTorques[18]);
 	sum += desTorques.segment(19,3).norm();
 
-	// sum += fabs(desTorques[6]);
-	// sum += fabs(desTorques[9]);
-	// sum += fabs(desTorques[10]);
-	// sum += fabs(desTorques[15]);
-	// sum += fabs(desTorques[18]);
-	// sum += fabs(desTorques[19]);
-
-	mTorques_dofs[0].pop_back();
-	mTorques_dofs[0].push_front(sum);
+	mTorquesDofs[0].pop_back();
+	mTorquesDofs[0].push_front(sum);
 }
 

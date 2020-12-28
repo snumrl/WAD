@@ -18,7 +18,7 @@ int main(int argc,char** argv)
 		std::cout<<"Provide Metadata.txt"<<std::endl;
 		return 0;
 	}
-	env->Initialize(std::string(argv[1]),true);
+	env->Initialize(std::string(argv[1]), true);
 
 	Py_Initialize();
 	np::initialize();

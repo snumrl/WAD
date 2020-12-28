@@ -79,7 +79,6 @@ Window(Environment* env)
 	Eigen::Quaterniond origin_r = mTrackBall.getCurrQuat();
 	Eigen::Quaterniond r = Eigen::Quaterniond(Eigen::AngleAxisd(1 * 0.05 * M_PI, Eigen::Vector3d::UnitX())) * origin_r;
 	mTrackBall.setQuaternion(r);
-
 	mNNLoaded = false;
 	mDevice_On = env->GetCharacter()->GetDevice_OnOff();
 	mFootinterval.resize(20);
@@ -87,7 +86,6 @@ Window(Environment* env)
 	mm = p::import("__main__");
 	mns = mm.attr("__dict__");
 	sys_module = p::import("sys");
-
 	p::str module_dir = (std::string(MASS_ROOT_DIR)+"/python").c_str();
 	sys_module.attr("path").attr("insert")(1, module_dir);
 	p::exec("import torch",mns);
@@ -119,6 +117,7 @@ Window(Environment* env, const std::string& nn_path)
 	rms_module = p::eval("RunningMeanStd()", mns);
 	p::object load_rms = rms_module.attr("load2");
 	load_rms(nn_path);
+
 }
 
 Window::
@@ -501,8 +500,8 @@ DrawContactForce()
 {
 	DrawGLBegin();
 
-	double fL = mEnv->GetCharacter()->GetContactForceL_norm();
-	double fR = mEnv->GetCharacter()->GetContactForceR_norm();
+	double fL = (mEnv->GetCharacter()->GetContactForcesNormAvg()).at(0);
+	double fR = (mEnv->GetCharacter()->GetContactForcesNormAvg()).at(1);
 	bool big = true;
 
 	DrawString(0.70, 0.44, big, "Contact L : " + std::to_string(fL));
@@ -591,8 +590,8 @@ DrawParameter()
 		DrawQuads(x+0.13, y+0.01+(k_/30.0)*h_offset, 0.02, (max_v_dev[0]-k_/30.0)*h_offset, blue_trans);
 
 		double t_ = mEnv->GetDevice()->GetDelta_t();
-		DrawQuads(x+0.17, y+0.01, 0.02, 3.0*t_*h_offset, purple);
-		DrawQuads(x+0.17, y+0.01+t_*h_offset, 0.02, (max_v_dev[1]-t_)*h_offset, purple_trans);
+		DrawQuads(x+0.17, y+0.01, 0.02, 3.333*t_*h_offset, purple);
+		DrawQuads(x+0.17, y+0.01+3.333*t_*h_offset, 0.02, 3.333*(max_v_dev[1]-t_)*h_offset, purple_trans);
 
 		DrawString(x+0.13, y+(k_/30.0)*h_offset+0.02, std::to_string(k_));
 		DrawString(x+0.12, y-0.02, "Device");
