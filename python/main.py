@@ -107,8 +107,8 @@ class PPO(object):
 		if use_cuda:
 			self.model.cuda()
 
-		self.buffer_size = 2048*4
-		self.batch_size = 128*2
+		self.buffer_size = 2048*1
+		self.batch_size = 128*1
 		self.replay_buffer = ReplayBuffer(30000)
 
 		self.gamma = 0.99
@@ -296,6 +296,7 @@ class PPO(object):
 			logprobs = a_dist.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
 			values = v.cpu().detach().numpy().reshape(-1)
 			self.env.SetActions(actions)
+
 			if self.use_muscle:
 				for i in range(self.num_simulation_per_control):
 					mt = Tensor(self.env.GetMuscleTorques())
@@ -310,7 +311,6 @@ class PPO(object):
 			for j in range(self.num_slaves):
 				nan_occur = False
 				terminated_state = True
-
 				if np.any(np.isnan(states[j])) or np.any(np.isnan(actions[j])) or np.any(np.isnan(values[j])) or np.any(np.isnan(logprobs[j])):
 					nan_occur = True
 				elif self.env.IsEndOfEpisode(j) is False:

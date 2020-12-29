@@ -431,7 +431,7 @@ SetMotionFramesNonCyclic(int frames, bool blend)
 	T01.translation()[1] = 0;
 
 	int totalLength = mMotionFrames.size();
-	int smooth_time = 10;
+	int smooth_time = 15;
 	for(int i = 0; i < frames; i++) {
 		int phase = i % totalLength;
 		Eigen::VectorXd newMotion;
@@ -457,7 +457,7 @@ SetMotionFramesNonCyclic(int frames, bool blend)
 				constraints.push_back(std::tuple<std::string, Eigen::Vector3d, Eigen::Vector3d>("TalusR", p_footr, Eigen::Vector3d(0, 0, 0)));
 
 				Eigen::VectorXd p = mMotionFrames[phase];
-				p.segment<3>(3) = mMotionFramesNonCyclic.at(i-1).segment<3>(3);
+				p.segment<3>(3) = mMotionFramesNonCyclic.at(i-3).segment<3>(3);
 
 				mSkeleton->setPositions(p);
 				mSkeleton->computeForwardKinematics(true,false,false);
@@ -506,13 +506,48 @@ SetMotionFramesNonCyclic(int frames, bool blend)
 		}
 	}
 
+	// for(int i=0; i<mMotionFramesNonCyclic.size(); i++)
+	// 	mMotionFramesNonCyclicTmp.push_back(mMotionFramesNonCyclic[i]);
+
 	int idx = 0;
 	for(int i=0; i<1000; i++)
 	{
 		double rem = i%34;
-		if(rem == 32 || rem == 33)
+		if(rem == 32 || rem == 33){
 			continue;
+		}
 		else{
+			if(rem == 17)
+				mMotionFramesNonCyclic[i][5] += 0.0;
+			if(rem == 18)
+				mMotionFramesNonCyclic[i][5] += 0.0;
+			if(rem == 19)
+				mMotionFramesNonCyclic[i][5] += 0.010;
+			if(rem == 20)
+				mMotionFramesNonCyclic[i][5] += 0.013;
+			if(rem == 21)
+				mMotionFramesNonCyclic[i][5] += 0.015;
+			if(rem == 22)
+				mMotionFramesNonCyclic[i][5] += 0.017;
+			if(rem == 23)
+				mMotionFramesNonCyclic[i][5] += 0.020;
+			if(rem == 24)
+				mMotionFramesNonCyclic[i][5] += 0.020;
+			if(rem == 25)
+				mMotionFramesNonCyclic[i][5] += 0.018;
+			if(rem == 26)
+				mMotionFramesNonCyclic[i][5] += 0.017;
+			if(rem == 27)
+				mMotionFramesNonCyclic[i][5] += 0.017;
+			if(rem == 28)
+				mMotionFramesNonCyclic[i][5] += 0.017;
+			if(rem == 29)
+				mMotionFramesNonCyclic[i][5] += 0.015;
+			if(rem == 30)
+				mMotionFramesNonCyclic[i][5] += 0.010;
+			if(rem == 31)
+				mMotionFramesNonCyclic[i][5] += 0.005;
+
 			mMotionFramesNonCyclic[i][4] += idx*0.0001;
 			mMotionFramesNonCyclicTmp.push_back(mMotionFramesNonCyclic[i]);
 			idx++;

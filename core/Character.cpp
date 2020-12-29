@@ -1185,7 +1185,7 @@ GetTargetPosAndVel(double t,double dt)
 			frame = 941;
 		}
 	}
-
+	std::cout << "frame : " << frame << std::endl;
 	double frameFraction = (frameTime - frame*dt)/dt;
 
 	Eigen::VectorXd p = this->GetTargetPositions(t,dt,frame,frameNext,frameFraction);
