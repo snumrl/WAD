@@ -72,6 +72,11 @@ namespace Utils
     double QuatTheta(const Eigen::Quaterniond& dq);
     void QuatNormalize(Eigen::Quaterniond& in);
     void ButterworthFilter(double dt, double cutoff, Eigen::VectorXd& out_x);
+
+    Eigen::Vector3d projectToXZ(Eigen::Vector3d v);
+    Eigen::Vector3d NearestOnGeodesicCurve3d(Eigen::Vector3d targetAxis, Eigen::Vector3d targetPosition, Eigen::Vector3d position);
+    Eigen::VectorXd BlendPosition(Eigen::VectorXd target_a, Eigen::VectorXd target_b, double weight, bool blend_rootpos);
+    Eigen::VectorXd solveMCIKRoot(dart::dynamics::SkeletonPtr skel, const std::vector<std::tuple<std::string, Eigen::Vector3d, Eigen::Vector3d>>& constraints);
 }
 }
 #endif

@@ -12,24 +12,23 @@ public:
     ~Device();
 
     void LoadSkeleton(const std::string& path, bool load_obj);
+    const dart::dynamics::SkeletonPtr& GetSkeleton(){ return mSkeleton; }
+
     void Initialize();
 
     void SetWorld(dart::simulation::WorldPtr& wPtr){ mWorld = wPtr; }
     void SetCharacter(Character* character){mCharacter = character;}
-    const dart::dynamics::SkeletonPtr& GetSkeleton(){ return mSkeleton; }
 
     void Reset();
     void Step(const Eigen::VectorXd& a_);
     void Step(double t);
 
     Eigen::VectorXd GetState();
-
     void SetAction(const Eigen::VectorXd& a);
     Eigen::VectorXd GetAction(){ return mAction; }
 
     void SetDesiredTorques(double t);
     Eigen::VectorXd GetDesiredTorques();
-
     void SetDesiredTorques2();
     Eigen::VectorXd GetDesiredTorques2();
 
@@ -66,7 +65,7 @@ public:
     void SetNumParamState(int n);
     int GetNumParamState(){return mNumParamState;}
 
-    void SetParamState(Eigen::VectorXd paramState);
+    void SetParamState(const Eigen::VectorXd& paramState);
     Eigen::VectorXd GetParamState(){return mParamState;}
 
     Eigen::VectorXd GetMinV(){return mMin_v;}

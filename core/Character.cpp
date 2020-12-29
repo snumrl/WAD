@@ -13,7 +13,7 @@ using namespace MASS;
 
 Character::
 Character(dart::simulation::WorldPtr& wPtr)
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mDevice_On(false),mNumParamState(0)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mDevice_On(false),mNumParamState(0),mMass(0)
 {
 	this->SetWorld(wPtr);
 
@@ -49,7 +49,7 @@ LoadSkeleton(const std::string& path, bool load_obj)
 	{
 		if(node->Attribute("endeffector") != nullptr)
 		{
-			std::string ee =node->Attribute("endeffector");
+			std::string ee = node->Attribute("endeffector");
 			if(ee == "True")
 				mEndEffectors.push_back(mSkeleton->getBodyNode(std::string(node->Attribute("name"))));
 		}
@@ -99,6 +99,7 @@ LoadMuscles(const std::string& path)
 		int num_waypoints = 0;
 		for(TiXmlElement* waypoint = unit->FirstChildElement("Waypoint");waypoint!=nullptr;waypoint = waypoint->NextSiblingElement("Waypoint"))
 			num_waypoints++;
+
 		int i = 0;
 		for(TiXmlElement* waypoint = unit->FirstChildElement("Waypoint");waypoint!=nullptr;waypoint = waypoint->NextSiblingElement("Waypoint"))
 		{
@@ -176,9 +177,8 @@ Initialize()
 	mPos = Eigen::VectorXd::Zero(mNumBodyNodes*3);
 	mPos_prev = Eigen::VectorXd::Zero(mNumBodyNodes*3);
 
-	mFemurSignals_L = std::deque<double>(1200);
-	mFemurSignals_R = std::deque<double>(1200);
-
+	mFemurSignals.push_back(std::deque<double>(1200));
+	mFemurSignals.push_back(std::deque<double>(1200));
 	mContactForces.push_back(Eigen::Vector3d::Zero());
 	mContactForces.push_back(Eigen::Vector3d::Zero());
 	mContactForces_norm.push_back(0.0);
@@ -221,8 +221,10 @@ Character::
 Initialize_Mass()
 {
 	mDefaultMass = Eigen::VectorXd::Zero(mNumBodyNodes);
-	for(int i=0; i<mNumBodyNodes; i++)
+	for(int i=0; i<mNumBodyNodes; i++){
 		mDefaultMass[i] = mSkeleton->getBodyNode(i)->getMass();
+		mMass += mDefaultMass[i];
+	}
 }
 
 void
@@ -431,10 +433,10 @@ Reset()
 	mRootPos = mSkeleton->getCOM();
 	mRootPos_prev = mSkeleton->getCOM();
 
-	for (int i=0; i<mFemurSignals_L.size(); i++){
-		mFemurSignals_L.at(i) = 0.0;
-		mFemurSignals_R.at(i) = 0.0;
-	}
+	for(int i=0; i<mFemurSignals.at(0).size(); i++){
+		mFemurSignals.at(0).at(i) = 0.0;
+		mFemurSignals.at(1).at(i) = 0.0;
+	}//Initialze L,R at the same time
 
 	mContactForces.at(0).setZero();
 	mContactForces.at(1).setZero();
@@ -1011,7 +1013,11 @@ GetReward_Character_Efficiency()
 {
 	// double r_TorqueMin = this->GetReward_TorqueMin();
 	double r_TorqueMin = 1.0;
-	double r_ContactForce = this->GetReward_ContactForce();
+	// double r_ContactForce = this->GetReward_ContactForce();
+	double r_ContactForce = 1.0;
+
+	min_reward = r_TorqueMin;
+	contact_reward = r_ContactForce;
 
 	double r = r_TorqueMin * r_ContactForce;
 
@@ -1027,7 +1033,7 @@ GetReward_ContactForce()
 	double contact_err = 0;
 
 	contact_err = (mContactForces_cur_norm.at(0) + mContactForces_cur_norm.at(1))/20.0;
-	contact_err /= 74.2;
+	contact_err /= mMass;
 
 	if(contact_err < 5.0)
 		contact_err = 0.0;
@@ -1107,11 +1113,11 @@ SetDesiredTorques()
 		mDesiredTorque[i] = Utils::Clamp(mDesiredTorque[i], -mMaxForces[i], mMaxForces[i]);
 	}
 
-	mFemurSignals_L.pop_back();
-	mFemurSignals_L.push_front(mDesiredTorque[6]);
+	mFemurSignals.at(0).pop_back();
+	mFemurSignals.at(0).push_front(mDesiredTorque[6]);
 
-	mFemurSignals_R.pop_back();
-	mFemurSignals_R.push_front(mDesiredTorque[15]);
+	mFemurSignals.at(1).pop_back();
+	mFemurSignals.at(1).push_front(mDesiredTorque[15]);
 }
 
 Eigen::VectorXd
@@ -1156,18 +1162,29 @@ std::pair<Eigen::VectorXd,Eigen::VectorXd>
 Character::
 GetTargetPosAndVel(double t,double dt)
 {
-	double cycleTime = mBVH->GetMaxTime();
-	int cycleCount = (int)(t/cycleTime);
 	double frameTime = t;
-	if(mBVH->IsCyclic())
+	if(mBVH->IsCyclic()){
+		double cycleTime = mBVH->GetMaxTime();
+		int cycleCount = (int)(t/cycleTime);
+
 		frameTime = t - cycleCount*cycleTime;
-	if(frameTime < 0)
-		frameTime += cycleTime;
+		if(frameTime < 0)
+			frameTime += cycleTime;
+	}
 
 	int frame = (int)(frameTime/dt);
 	int frameNext = frame + 1;
-	if(frameNext >= mBVH->GetNumTotalFrames())
-		frameNext = frame;
+
+	if(mBVH->IsCyclic()){
+		if(frameNext >= mBVH->GetNumTotalFrames())
+			frameNext = frame;
+	}
+	else{
+		if(frameNext > 941){
+			frameNext = 941;
+			frame = 941;
+		}
+	}
 
 	double frameFraction = (frameTime - frame*dt)/dt;
 
@@ -1181,17 +1198,27 @@ Eigen::VectorXd
 Character::
 GetTargetPositions(double t,double dt,int frame,int frameNext, double frameFraction)
 {
-	double cycleTime = mBVH->GetMaxTime();
-	int cycleCount = (int)(t/cycleTime);
+	Eigen::VectorXd frameData, frameDataNext;
+	if(mBVH->IsCyclic()){
+		frameData = mBVH->GetMotion(frame);
+		frameDataNext = mBVH->GetMotion(frameNext);
+	}
+	else{
+		frameData = mBVH->GetMotionNonCyclic(frame);
+		frameDataNext = mBVH->GetMotionNonCyclic(frameNext);
+	}
 
-	Eigen::VectorXd frameData = mBVH->GetMotion(frame);
-	Eigen::VectorXd frameDataNext = mBVH->GetMotion(frameNext);
+	// Eigen::VectorXd p = Utils::GetPoseSlerp(mSkeleton, frameFraction, frameData, frameDataNext);
+	Eigen::VectorXd p = frameFraction * frameData + (1-frameFraction)* frameDataNext;
 
-	Eigen::VectorXd p = Utils::GetPoseSlerp(mSkeleton, frameFraction, frameData, frameDataNext);
+	if(mBVH->IsCyclic())	{
+		double cycleTime = mBVH->GetMaxTime();
+		int cycleCount = (int)(t/cycleTime);
 
-	Eigen::Vector3d cycleOffset = mBVH->GetCycleOffset();
-	cycleOffset[1] = 0.0;
-	p.segment(3,3) += cycleCount*cycleOffset;
+		Eigen::Vector3d cycleOffset = mBVH->GetCycleOffset();
+		cycleOffset[1] = 0.0;
+		p.segment(3,3) += cycleCount*cycleOffset;
+	}
 
 	Eigen::Isometry3d T_current = dart::dynamics::FreeJoint::convertToTransform(p.head<6>());
 	T_current = mBVH->GetT0().inverse()*T_current;
@@ -1206,8 +1233,16 @@ Eigen::VectorXd
 Character::
 GetTargetVelocities(double t,double dt,int frame,int frameNext, double frameFraction)
 {
-	Eigen::VectorXd frameVel = mBVH->GetMotionVel(frame);
-	Eigen::VectorXd frameNextVel = mBVH->GetMotionVel(frameNext);
+	Eigen::VectorXd frameVel, frameNextVel;
+	if(mBVH->IsCyclic()){
+		frameVel = mBVH->GetMotionVel(frame);
+		frameNextVel = mBVH->GetMotionVel(frameNext);
+	}
+	else{
+		frameVel = mBVH->GetMotionVelNonCyclic(frame);
+		frameNextVel = mBVH->GetMotionVelNonCyclic(frameNext);
+	}
+
 	Eigen::VectorXd v = frameVel + frameFraction*(frameNextVel - frameVel);
 
 	return v;
@@ -1234,10 +1269,7 @@ std::deque<double>
 Character::
 GetSignals(int idx)
 {
-	if(idx==0)
-		return mFemurSignals_L;
-	else if(idx==1)
-		return mFemurSignals_R;
+	return mFemurSignals.at(idx);
 }
 
 void

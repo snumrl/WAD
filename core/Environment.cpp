@@ -209,7 +209,7 @@ Initialize(const std::string& meta_file, bool load_obj)
 
 	MASS::Character* character = new MASS::Character(mWorld);
 	character->LoadSkeleton(mSkelFile, load_obj);
-	character->LoadBVH(mBVHFile);
+	character->LoadBVH(mBVHFile, mCyclic);
 	character->SetHz(mSimulationHz, mControlHz);
 	if(mUseMuscle){
 		character->SetUseMuscle(true);
@@ -232,6 +232,7 @@ Initialize(const std::string& meta_file, bool load_obj)
 		this->SetAdaptiveParamNums();
 
 	mCharacter->Initialize();
+
 	if(mUseDevice){
 		mDevice->Initialize();
 		mCharacter->SetUseDevice(true);
@@ -242,6 +243,7 @@ Initialize(const std::string& meta_file, bool load_obj)
 	if(mUseAdaptiveSampling)
 		this->SetAdaptiveParams();
 
+	this->Reset();
 	// auto weld_pelvis = std::make_shared<dart::constraint::WeldJointConstraint>(mCharacter->GetSkeleton()->getBodyNode("Pelvis"));
 	// mWorld->getConstraintSolver()->addConstraint(weld_pelvis);
 }
@@ -276,7 +278,7 @@ void
 Environment::
 Reset(bool RSI)
 {
-	double t = 0.0;
+	double t = 0.04;
 	if(RSI)
 		t = dart::math::random(0.0,mCharacter->GetBVH()->GetMaxTime()*0.9);
 

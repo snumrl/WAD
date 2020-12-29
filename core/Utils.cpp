@@ -744,5 +744,156 @@ void ButterworthFilter(double dt, double cutoff, Eigen::VectorXd& out_x)
     }
 }
 
+Eigen::Vector3d projectToXZ(Eigen::Vector3d v) {
+
+    Eigen::Vector3d nearest = NearestOnGeodesicCurve3d(Eigen::Vector3d(0, 1, 0), Eigen::Vector3d(0, 0, 0), v);
+    return nearest;
+
+}
+
+Eigen::Vector3d NearestOnGeodesicCurve3d(Eigen::Vector3d targetAxis, Eigen::Vector3d targetPosition, Eigen::Vector3d position) {
+    Eigen::Quaterniond v1_q = Utils::AxisAngleToQuaternion(position);
+    Eigen::Quaterniond q = Utils::AxisAngleToQuaternion(targetPosition);
+    Eigen::Vector3d axis = targetAxis.normalized();
+    double ws = v1_q.w();
+    Eigen::Vector3d vs = v1_q.vec();
+    double w0 = q.w();
+    Eigen::Vector3d v0 = q.vec();
+
+    double a = ws*w0 + vs.dot(v0);
+    double b = w0*(axis.dot(vs)) - ws*(axis.dot(v0)) + vs.dot(axis.cross(v0));
+
+    double alpha = atan2( a,b );
+
+    double t1 = -2*alpha + M_PI;
+    Eigen::Quaterniond t1_q(Eigen::AngleAxisd(t1, axis));
+    double t2 = -2*alpha - M_PI;
+    Eigen::Quaterniond t2_q(Eigen::AngleAxisd(t2, axis));
+
+    if (v1_q.dot(t1_q) > v1_q.dot(t2_q))
+    {
+        return Utils::QuaternionToAxisAngle(t1_q);
+    }
+    else
+    {
+        return Utils::QuaternionToAxisAngle(t2_q);
+    }
+}
+
+Eigen::VectorXd BlendPosition(Eigen::VectorXd target_a, Eigen::VectorXd target_b, double weight, bool blend_rootpos) {
+
+    Eigen::VectorXd result(target_a.rows());
+    result = target_a;
+
+    for(int i = 0; i < result.size(); i += 3) {
+        if (i == 3) {
+            if(blend_rootpos)   result.segment<3>(i) = (1 - weight) * target_a.segment<3>(i) + weight * target_b.segment<3>(i);
+            else result[4] = (1-weight) * target_a[4] + weight * target_b[4];
+        } else if (i == 0 && !blend_rootpos) {
+            Eigen::Vector3d v_a = target_a.segment<3>(i);
+            Eigen::Vector3d v_b = target_b.segment<3>(i);
+
+            result(i) = v_a(0) * (1-weight) + v_b(0) * weight;
+            result(i+1) = target_a(i+1);
+            result(i+2) = v_a(2) * (1-weight) + v_b(2) * weight;
+        } else {
+            Eigen::AngleAxisd v1_aa(target_a.segment<3>(i).norm(), target_a.segment<3>(i).normalized());
+            Eigen::AngleAxisd v2_aa(target_b.segment<3>(i).norm(), target_b.segment<3>(i).normalized());
+
+            Eigen::Quaterniond v1_q(v1_aa);
+            Eigen::Quaterniond v2_q(v2_aa);
+
+            result.segment<3>(i) = Utils::QuaternionToAxisAngle(v1_q.slerp(weight, v2_q));
+        }
+    }
+    return result;
+}
+
+Eigen::VectorXd solveMCIKRoot(dart::dynamics::SkeletonPtr skel, const std::vector<std::tuple<std::string, Eigen::Vector3d, Eigen::Vector3d>>& constraints)
+{
+    Eigen::VectorXd newPose = skel->getPositions();
+    int num_constraints = constraints.size();
+
+    std::vector<dart::dynamics::BodyNode*> bodynodes(num_constraints);
+    std::vector<Eigen::Vector3d> targetposes(num_constraints);
+    std::vector<Eigen::Vector3d> offsets(num_constraints);
+
+    for(int i = 0; i < num_constraints; i++){
+        bodynodes[i] = skel->getBodyNode(std::get<0>(constraints[i]));
+        targetposes[i] = std::get<1>(constraints[i]);
+        offsets[i] = std::get<2>(constraints[i]);
+    }
+
+    int not_improved = 0;
+    for(std::size_t i = 0; i < 100; i++)
+    {
+        // make deviation vector and jacobian matrix
+        Eigen::VectorXd deviation(num_constraints*3);
+        for(int j = 0; j < num_constraints; j++){
+            deviation.segment<3>(j*3) = targetposes[j] - bodynodes[j]->getTransform()*offsets[j];
+        }
+
+        if(deviation.norm() < 0.001)
+            break;
+
+        int nDofs = skel->getNumDofs();
+        Eigen::MatrixXd jacobian_concatenated(3*num_constraints, nDofs);
+        for(int j = 0; j < num_constraints; j++){
+            dart::math::LinearJacobian jacobian = skel->getLinearJacobian(bodynodes[j], offsets[j]);
+            jacobian.block(0, 0, 3, 1).setZero();
+            jacobian.block(0, 2, 3, 1).setZero();
+            jacobian.block(0, 6, 3, nDofs - 6).setZero();
+            jacobian_concatenated.block(3*j, 0, 3, nDofs) = jacobian;
+        }
+        // std::cout << jacobian_concatenated << std::endl;
+
+        Eigen::JacobiSVD<Eigen::MatrixXd> svd(jacobian_concatenated, Eigen::ComputeThinU | Eigen::ComputeThinV);
+        Eigen::MatrixXd inv_singular_value(3*num_constraints, 3*num_constraints);
+
+        inv_singular_value.setZero();
+        for(int k=0; k<3*num_constraints; k++)
+        {
+            if(svd.singularValues()[k]<1e-8)
+                inv_singular_value(k,k) = 0.0;
+            else
+                inv_singular_value(k,k) = 1.0/svd.singularValues()[k];
+        }
+
+        Eigen::MatrixXd jacobian_inv = svd.matrixV()*inv_singular_value*svd.matrixU().transpose();
+        // std::cout << svd.singularValues().transpose() << std::endl;
+        // std::cout << svd.matrixV().size() << std::endl;
+
+        // std::cout << jacobian_inv << std::endl;
+        // exit(0);
+        // Eigen::VectorXd gradient = jacobian.colPivHouseholderQr().solve(deviation);
+        Eigen::VectorXd gradient = jacobian_inv * deviation;
+        double prev_norm = deviation.norm();
+        double gamma = 0.5;
+        not_improved++;
+        for(int j = 0; j < 24; j++){
+            Eigen::VectorXd newDirection = gamma * gradient;
+            Eigen::VectorXd np = newPose + newDirection;
+            skel->setPositions(np);
+            skel->computeForwardKinematics(true, false, false);
+
+            Eigen::VectorXd new_deviation(num_constraints*3);
+            for(int j = 0; j < num_constraints; j++){
+                new_deviation.segment<3>(j*3) = targetposes[j] - bodynodes[j]->getTransform()*offsets[j];
+            }
+            double new_norm = new_deviation.norm();
+            if(new_norm < prev_norm){
+                newPose = np;
+                not_improved = 0;
+                break;
+            }
+            gamma *= 0.5;
+        }
+        if(not_improved > 1){
+            break;
+        }
+    }
+    return newPose;
+}
+
 }
 }

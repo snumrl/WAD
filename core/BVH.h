@@ -61,11 +61,13 @@ public:
 	BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map);
 
 	BVHNode* ReadHierarchy(BVHNode* parent,const std::string& name,int& channel_offset,std::ifstream& is);
-	void Parse(const std::string& file,bool cyclic=true);
+	void Parse(const std::string& file, bool cyclic=true);
 
 	Eigen::Matrix3d Get(const std::string& bvh_node);
 	Eigen::VectorXd GetMotion(int k);
 	Eigen::VectorXd GetMotionVel(int k);
+	Eigen::VectorXd GetMotionNonCyclic(int k);
+	Eigen::VectorXd GetMotionVelNonCyclic(int k);
 	double GetSpeedRatio(){return mSpeedRatio;}
 
 	void SetSkeleton(const dart::dynamics::SkeletonPtr& skel){mSkeleton = skel;}
@@ -75,6 +77,9 @@ public:
 	void SetMotionTransform();
 	void SetMotionFrames();
 	void SetMotionVelFrames();
+
+	void SetMotionFramesNonCyclic(int frames, bool blend);
+	void SetMotionVelFramesNonCyclic(int frames, bool blend);
 
 	void Draw();
 	void DrawRecursive(BVHNode* node);
@@ -91,6 +96,11 @@ public:
 	Eigen::VectorXd GetCycleOffset(){return mCycleOffset;}
 	bool IsParsed(){return mParse;}
 	void SetParsed(bool p){mParse = p;}
+
+	Eigen::Vector3d projectToXZ(Eigen::Vector3d v);
+	Eigen::Vector3d NearestOnGeodesicCurve3d(Eigen::Vector3d targetAxis, Eigen::Vector3d targetPosition, Eigen::Vector3d position);
+	Eigen::VectorXd BlendPosition(Eigen::VectorXd target_a, Eigen::VectorXd target_b, double weight, bool blend_rootpos);
+	Eigen::VectorXd solveMCIKRoot(dart::dynamics::SkeletonPtr skel, const std::vector<std::tuple<std::string, Eigen::Vector3d, Eigen::Vector3d>>& constraints);
 
 private:
 	bool mParse;
@@ -109,7 +119,10 @@ private:
 	Eigen::Isometry3d T0,T1;
 	std::vector<Eigen::VectorXd> mMotions;
 	std::vector<Eigen::VectorXd> mMotionFrames;
+	std::vector<Eigen::VectorXd> mMotionFramesNonCyclic;
+	std::vector<Eigen::VectorXd> mMotionFramesNonCyclicTmp;
 	Eigen::MatrixXd mMotionVelFrames;
+	Eigen::MatrixXd mMotionVelFramesNonCyclic;
 	Eigen::Vector3d mCycleOffset;
 };
 

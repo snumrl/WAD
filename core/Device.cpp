@@ -343,7 +343,7 @@ SetNumParamState(int n)
 
 void
 Device::
-SetParamState(Eigen::VectorXd paramState)
+SetParamState(const Eigen::VectorXd& paramState)
 {
     mParamState = paramState;
     double param = 0.0;

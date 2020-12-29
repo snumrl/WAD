@@ -76,9 +76,7 @@ Window(Environment* env)
 	mBackground[3] = 0.7;
 	SetFocus();
 	mZoom = 0.30;
-	Eigen::Quaterniond origin_r = mTrackBall.getCurrQuat();
-	Eigen::Quaterniond r = Eigen::Quaterniond(Eigen::AngleAxisd(1 * 0.05 * M_PI, Eigen::Vector3d::UnitX())) * origin_r;
-	mTrackBall.setQuaternion(r);
+
 	mNNLoaded = false;
 	mDevice_On = env->GetCharacter()->GetDevice_OnOff();
 	mFootinterval.resize(20);
@@ -301,7 +299,7 @@ keyboard(unsigned char _key, int _x, int _y)
 		if(mEnv->GetUseDevice())
 			mDevice_On = !mDevice_On;
 		break;
-	case 'v' : mViewMode = (mViewMode+1)%3;break;
+	case 'v' : mViewMode = (mViewMode+1)%4;break;
 	case '\t': mGraphMode = (mGraphMode+1)%6;break;
 	case '`' : mCharacterMode = (mCharacterMode+1)%2; break;
 	case '1' : mParamMode = 1; break;
@@ -430,11 +428,15 @@ SetFocus()
 	if(mFocus)
 	{
 		mTrans = -mEnv->GetWorld()->getSkeleton("Human")->getRootBodyNode()->getCOM();
-		// mTrans[1] -= 0.2;
 		mTrans *= 1000.0;
-
 		Eigen::Quaterniond origin_r = mTrackBall.getCurrQuat();
-		if (mViewMode == 1 && Eigen::AngleAxisd(origin_r).angle() < 0.5 * M_PI)
+		if (mViewMode == 0)
+		{
+			mTrackBall.setQuaternion(Eigen::Quaterniond::Identity());
+			Eigen::Quaterniond r = Eigen::Quaterniond(Eigen::AngleAxisd(1 * 0.05 * M_PI, Eigen::Vector3d::UnitX()));
+			mTrackBall.setQuaternion(r);
+		}
+		else if (mViewMode == 1 && Eigen::AngleAxisd(origin_r).angle() < 0.5 * M_PI)
 		{
 			Eigen::Vector3d axis(0.0, cos(0.05*M_PI), sin(0.05*M_PI));
 			Eigen::Quaterniond r = Eigen::Quaterniond(Eigen::AngleAxisd(1 * 0.01 * M_PI, axis)) * origin_r;
@@ -485,9 +487,6 @@ draw()
 		DrawParameter();
 	}
 
-	this->DrawVelocity();
-	this->DrawCoT();
-	this->DrawContactForce();
 	// DrawTrajectory();
 	// DrawStride();
 
@@ -661,6 +660,11 @@ DrawCharacter()
 			DrawFemurSignals();
 		DrawTorques();
 		DrawReward();
+	}
+	else{
+		this->DrawVelocity();
+		this->DrawCoT();
+		this->DrawContactForce();
 	}
 }
 
@@ -1172,6 +1176,11 @@ DrawReward()
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, min);
 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, min, green);
 
+	y = 0.13;
+	std::deque<double> contact = map.at("contact");
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "contact");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, contact);
+
 	y = 0.01;
 	std::deque<double> smooth = map.at("smooth");
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "smooth");
@@ -1184,12 +1193,9 @@ DrawReward()
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, pose);
 
 	y = 0.37;
-	std::deque<double> contact = map.at("contact");
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "contact");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, contact);
-	// std::deque<double> vel = map.at("vel");
-	// DrawBaseGraph(x, y, w, h, ratio_y, offset, "vel");
-	// DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, vel);
+	std::deque<double> vel = map.at("vel");
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "vel");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, vel);
 
 	y = 0.25;
 	std::deque<double> ee = map.at("ee");
