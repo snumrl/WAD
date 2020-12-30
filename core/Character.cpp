@@ -856,7 +856,7 @@ GetReward_Character_Imitation()
 	double end_eff_scale = 20.0;
 	double root_scale = 2.0;
 	double com_scale = 10.0;
-	double smooth_vel_scale = 0.0;
+	double smooth_vel_scale = 0.02;
 	double smooth_pos_scale = 1.0;
 
 	double pose_err = 0;
@@ -1009,7 +1009,7 @@ GetReward_Character_Imitation()
 	smooth_reward *= exp(-err_scale * smooth_vel_scale * smooth_vel_err);
 
 	// imit_reward = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward * smooth_reward;
-	imit_reward = pose_reward * end_eff_reward * root_reward * com_reward;
+	imit_reward = pose_reward * end_eff_reward * root_reward * com_reward * smooth_reward;
 
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);

@@ -44,7 +44,7 @@ MakeFreeJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 	props->mIsPositionLimitEnforced = false;
 	props->mVelocityLowerLimits = Eigen::Vector6d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector6d::Constant(100.0);
-	props->mDampingCoefficients = Eigen::Vector6d::Constant(0.4);
+	props->mDampingCoefficients = Eigen::Vector6d::Constant(0.1);
 	props->mSpringStiffnesses = Eigen::Vector6d::Constant(0.0);
 
 	return props;
@@ -61,7 +61,7 @@ MakePlanarJointProperties(const std::string& name,const Eigen::Isometry3d& paren
 	props->mIsPositionLimitEnforced = false;
 	props->mVelocityLowerLimits = Eigen::Vector3d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector3d::Constant(100.0);
-	props->mDampingCoefficients = Eigen::Vector3d::Constant(0.4);
+	props->mDampingCoefficients = Eigen::Vector3d::Constant(0.1);
 	props->mSpringStiffnesses = Eigen::Vector3d::Constant(0.0);
 
 	return props;
@@ -84,7 +84,7 @@ MakeBallJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 	props->mPositionUpperLimits = upper;
 	props->mVelocityLowerLimits = Eigen::Vector3d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector3d::Constant(100.0);
-	props->mDampingCoefficients = Eigen::Vector3d::Constant(0.4);
+	props->mDampingCoefficients = Eigen::Vector3d::Constant(0.1);
 	props->mSpringStiffnesses = Eigen::Vector3d::Constant(0.0);
 
 	return props;
@@ -108,7 +108,7 @@ MakeRevoluteJointProperties(const std::string& name,const Eigen::Vector3d& axis,
 	props->mAxis = axis;
 	props->mVelocityLowerLimits = Eigen::Vector1d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector1d::Constant(100.0);
-	props->mDampingCoefficients = Eigen::Vector1d::Constant(0.4);
+	props->mDampingCoefficients = Eigen::Vector1d::Constant(0.1);
 	props->mSpringStiffnesses = Eigen::Vector1d::Constant(0.0);
 
 	return props;
