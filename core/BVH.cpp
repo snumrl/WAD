@@ -458,12 +458,12 @@ SetMotionFramesNonCyclic(int frames, bool blend)
 
 				Eigen::VectorXd p = mMotionFrames[phase];
 				p.segment<3>(3) = mMotionFramesNonCyclic.at(i-3).segment<3>(3);
-
 				mSkeleton->setPositions(p);
 				mSkeleton->computeForwardKinematics(true,false,false);
 
 				//// rotate "root" to seamlessly stitch foot
 				pos = Utils::solveMCIKRoot(mSkeleton, constraints);
+				pos[4] -= 0.006;
 				T0_nc = dart::dynamics::FreeJoint::convertToTransform(pos.head<6>());
 			}
 			else
@@ -489,6 +489,23 @@ SetMotionFramesNonCyclic(int frames, bool blend)
 				}
 
 				pos.head<6>() = dart::dynamics::FreeJoint::convertToPositions(T_current);
+				pos[28] -= phase * 0.002;
+				pos[4] += 0.002;
+				if(phase == 31 || phase == 1)
+					pos[4] += 0.005;
+				if(phase == 30 || phase == 2)
+					pos[4] += 0.004;
+				if(phase == 29 || phase == 3)
+					pos[4] += 0.003;
+				if(phase == 28 || phase == 4)
+					pos[4] += 0.002;
+
+				if(phase == 16 || phase == 20)
+					pos[4] += 0.002;
+				if(phase == 17 || phase == 19)
+					pos[4] += 0.004;
+				if(phase == 18)
+					pos[4] += 0.005;
 			}
 
 			mMotionFramesNonCyclic.at(i) = pos;
@@ -506,9 +523,6 @@ SetMotionFramesNonCyclic(int frames, bool blend)
 		}
 	}
 
-	// for(int i=0; i<mMotionFramesNonCyclic.size(); i++)
-	// 	mMotionFramesNonCyclicTmp.push_back(mMotionFramesNonCyclic[i]);
-
 	int idx = 0;
 	for(int i=0; i<1000; i++)
 	{
@@ -517,38 +531,48 @@ SetMotionFramesNonCyclic(int frames, bool blend)
 			continue;
 		}
 		else{
-			if(rem == 17)
-				mMotionFramesNonCyclic[i][5] += 0.0;
-			if(rem == 18)
-				mMotionFramesNonCyclic[i][5] += 0.0;
-			if(rem == 19)
+			if(rem == 12)
+				mMotionFramesNonCyclic[i][5] += 0.007;
+			if(rem == 13)
+				mMotionFramesNonCyclic[i][5] += 0.009;
+			if(rem == 14)
 				mMotionFramesNonCyclic[i][5] += 0.010;
-			if(rem == 20)
+			if(rem == 15)
+				mMotionFramesNonCyclic[i][5] += 0.011;
+			if(rem == 16)
+				mMotionFramesNonCyclic[i][5] += 0.012;
+			if(rem == 17)
 				mMotionFramesNonCyclic[i][5] += 0.013;
-			if(rem == 21)
+			if(rem == 18)
+				mMotionFramesNonCyclic[i][5] += 0.013;
+			if(rem == 19)
+				mMotionFramesNonCyclic[i][5] += 0.014;
+			if(rem == 20)
 				mMotionFramesNonCyclic[i][5] += 0.015;
+			if(rem == 21)
+				mMotionFramesNonCyclic[i][5] += 0.016;
 			if(rem == 22)
 				mMotionFramesNonCyclic[i][5] += 0.017;
 			if(rem == 23)
 				mMotionFramesNonCyclic[i][5] += 0.020;
 			if(rem == 24)
-				mMotionFramesNonCyclic[i][5] += 0.020;
-			if(rem == 25)
 				mMotionFramesNonCyclic[i][5] += 0.018;
-			if(rem == 26)
-				mMotionFramesNonCyclic[i][5] += 0.017;
-			if(rem == 27)
-				mMotionFramesNonCyclic[i][5] += 0.017;
-			if(rem == 28)
-				mMotionFramesNonCyclic[i][5] += 0.017;
-			if(rem == 29)
+			if(rem == 25)
 				mMotionFramesNonCyclic[i][5] += 0.015;
-			if(rem == 30)
+			if(rem == 26)
+				mMotionFramesNonCyclic[i][5] += 0.011;
+			if(rem == 27)
 				mMotionFramesNonCyclic[i][5] += 0.010;
-			if(rem == 31)
+			if(rem == 28)
+				mMotionFramesNonCyclic[i][5] += 0.009;
+			if(rem == 29)
+				mMotionFramesNonCyclic[i][5] += 0.006;
+			if(rem == 30)
 				mMotionFramesNonCyclic[i][5] += 0.005;
+			if(rem == 31)
+				mMotionFramesNonCyclic[i][5] += 0.003;
 
-			mMotionFramesNonCyclic[i][4] += idx*0.0001;
+			mMotionFramesNonCyclic[i][4] += idx*0.0002;
 			mMotionFramesNonCyclicTmp.push_back(mMotionFramesNonCyclic[i]);
 			idx++;
 		}

@@ -680,6 +680,17 @@ GetState_Character()
 	Utils::QuatNormalize(origin_quat);
 
 	Eigen::VectorXd pos,ori,lin_v,ang_v;
+	Eigen::Vector4d talus_l, talus_r;
+
+	Eigen::Vector4d talus_1 = {-0.0425, -0.03, -0.075, 1.0};
+	Eigen::Vector4d talus_2 = {-0.0425, -0.03,  0.075, 1.0};
+	Eigen::Vector4d talus_3 = { 0.0425, -0.03,  0.075, 1.0};
+	Eigen::Vector4d talus_4 = { 0.0425, -0.03, -0.075, 1.0};
+
+	Eigen::Isometry3d tr_l = mSkeleton->getBodyNode("TalusL")->getTransform();
+	Eigen::Isometry3d tr_r = mSkeleton->getBodyNode("TalusR")->getTransform();
+	talus_l << (tr_l*talus_1)[1],(tr_l*talus_2)[1],(tr_l*talus_3)[1],(tr_l*talus_4)[1];
+	talus_r << (tr_r*talus_1)[1],(tr_r*talus_2)[1],(tr_r*talus_3)[1],(tr_r*talus_4)[1];
 
 	pos.resize(mNumBodyNodes*3+1); //3dof + root world y
 	ori.resize(mNumBodyNodes*4);   //4dof (quaternion)
@@ -780,16 +791,16 @@ GetState_Character()
 		idx_angv_diff += 3;
 	}
 
-	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+mNumParamState);
+	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+talus_l.rows()+talus_r.rows()+mNumParamState);
 
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
 	if(mNumParamState > 0)
-		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,mParamState;
+		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,talus_l, talus_r,mParamState;
 	else
-		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff;
+		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,talus_l,talus_r;
 
 	return state;
 }
@@ -998,7 +1009,7 @@ GetReward_Character_Imitation()
 	smooth_reward *= exp(-err_scale * smooth_vel_scale * smooth_vel_err);
 
 	// imit_reward = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward * smooth_reward;
-	imit_reward = pose_reward * end_eff_reward * root_reward * com_reward * smooth_reward;
+	imit_reward = pose_reward * end_eff_reward * root_reward * com_reward;
 
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
@@ -1013,8 +1024,8 @@ GetReward_Character_Efficiency()
 {
 	// double r_TorqueMin = this->GetReward_TorqueMin();
 	double r_TorqueMin = 1.0;
-	// double r_ContactForce = this->GetReward_ContactForce();
-	double r_ContactForce = 1.0;
+	double r_ContactForce = this->GetReward_ContactForce();
+	// double r_ContactForce = 1.0;
 
 	min_reward = r_TorqueMin;
 	contact_reward = r_ContactForce;
@@ -1134,11 +1145,11 @@ GetSPDForces(const Eigen::VectorXd& p_desired)
 	Eigen::VectorXd q = mSkeleton->getPositions();
 	Eigen::VectorXd dq = mSkeleton->getVelocities();
 	double dt = mSkeleton->getTimeStep();
+
 	Eigen::MatrixXf M = (mSkeleton->getMassMatrix() + Eigen::MatrixXd(dt * mKv.asDiagonal())).cast<float>();
 	Eigen::MatrixXd M_inv = M.inverse().cast<double>();
-	// Eigen::MatrixXd M_inv = (mSkeleton->getMassMatrix() + Eigen::MatrixXd(dt*mKv.asDiagonal())).inverse();
-	Eigen::VectorXd qdqdt = q + dq*dt;
 
+	Eigen::VectorXd qdqdt = q + dq*dt;
 	Eigen::VectorXd p_diff = -mKp.cwiseProduct(mSkeleton->getPositionDifferences(qdqdt,p_desired));
 	Eigen::VectorXd v_diff = -mKv.cwiseProduct(dq);
 	Eigen::VectorXd ddq = M_inv*(-mSkeleton->getCoriolisAndGravityForces() + p_diff + v_diff + mSkeleton->getConstraintForces());
@@ -1185,7 +1196,7 @@ GetTargetPosAndVel(double t,double dt)
 			frame = 941;
 		}
 	}
-	std::cout << "frame : " << frame << std::endl;
+
 	double frameFraction = (frameTime - frame*dt)/dt;
 
 	Eigen::VectorXd p = this->GetTargetPositions(t,dt,frame,frameNext,frameFraction);

@@ -45,6 +45,7 @@ MakeFreeJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 	props->mVelocityLowerLimits = Eigen::Vector6d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector6d::Constant(100.0);
 	props->mDampingCoefficients = Eigen::Vector6d::Constant(0.4);
+	props->mSpringStiffnesses = Eigen::Vector6d::Constant(0.0);
 
 	return props;
 }
@@ -61,6 +62,7 @@ MakePlanarJointProperties(const std::string& name,const Eigen::Isometry3d& paren
 	props->mVelocityLowerLimits = Eigen::Vector3d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector3d::Constant(100.0);
 	props->mDampingCoefficients = Eigen::Vector3d::Constant(0.4);
+	props->mSpringStiffnesses = Eigen::Vector3d::Constant(0.0);
 
 	return props;
 }
@@ -77,14 +79,13 @@ MakeBallJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 	props->mName = name;
 	props->mT_ParentBodyToJoint = parent_to_joint;
 	props->mT_ChildBodyToJoint = child_to_joint;
-	props->mIsPositionLimitEnforced = true;
+	props->mIsPositionLimitEnforced = false;
 	props->mPositionLowerLimits = lower;
 	props->mPositionUpperLimits = upper;
 	props->mVelocityLowerLimits = Eigen::Vector3d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector3d::Constant(100.0);
-	props->mForceLowerLimits = force_lower;
-	props->mForceUpperLimits = force_upper;
 	props->mDampingCoefficients = Eigen::Vector3d::Constant(0.4);
+	props->mSpringStiffnesses = Eigen::Vector3d::Constant(0.0);
 
 	return props;
 }
@@ -101,15 +102,14 @@ MakeRevoluteJointProperties(const std::string& name,const Eigen::Vector3d& axis,
 	props->mName = name;
 	props->mT_ParentBodyToJoint = parent_to_joint;
 	props->mT_ChildBodyToJoint = child_to_joint;
-	props->mIsPositionLimitEnforced = true;
+	props->mIsPositionLimitEnforced = false;
 	props->mPositionLowerLimits = lower;
 	props->mPositionUpperLimits = upper;
 	props->mAxis = axis;
 	props->mVelocityLowerLimits = Eigen::Vector1d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector1d::Constant(100.0);
-	props->mForceLowerLimits = force_lower;
-	props->mForceUpperLimits = force_upper;
 	props->mDampingCoefficients = Eigen::Vector1d::Constant(0.4);
+	props->mSpringStiffnesses = Eigen::Vector1d::Constant(0.0);
 
 	return props;
 }

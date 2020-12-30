@@ -343,9 +343,8 @@ Step()
 	Eigen::VectorXd action;
 	Eigen::VectorXd action_device;
 
-	if(mNNLoaded){
+	if(mNNLoaded)
 		action = GetActionFromNN();
-	}
 	else
 		action = Eigen::VectorXd::Zero(mEnv->GetCharacter()->GetNumAction());
 
@@ -483,13 +482,10 @@ draw()
 		DrawDevice();
 
 	if(mEnv->GetNumParamState() > 0 && mDrawParameter)
-	{
 		DrawParameter();
-	}
 
 	// DrawTrajectory();
 	// DrawStride();
-
 	SetFocus();
 }
 
