@@ -415,6 +415,8 @@ void
 BVH::
 SetMotionFramesNonCyclic(int frames, bool blend)
 {
+	Eigen::VectorXd save_pos = mSkeleton->getPositions();
+
 	mSkeleton->setPositions(mMotionFrames[0]);
 	mSkeleton->computeForwardKinematics(true,false,false);
 
@@ -577,6 +579,9 @@ SetMotionFramesNonCyclic(int frames, bool blend)
 			idx++;
 		}
 	}
+
+	mSkeleton->setPositions(save_pos);
+	mSkeleton->computeForwardKinematics(true,false,false);
 }
 
 Eigen::VectorXd
