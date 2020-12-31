@@ -1155,56 +1155,56 @@ DrawReward()
 	std::map<std::string, std::deque<double>> map = mEnv->GetRewards();
 
 	y = 0.49;
-	std::deque<double> reward = map.at("reward");
+	std::deque<double> reward = map["reward"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "reward");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, reward);
 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, reward, green);
 
 	y = 0.37;
-	std::deque<double> imit = map.at("imit");
+	std::deque<double> imit = map["imit"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "imit");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, imit);
 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, imit, green);
 
 	y = 0.25;
-	std::deque<double> min = map.at("min");
+	std::deque<double> min = map["min"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "min");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, min);
 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, min, green);
 
 	y = 0.13;
-	std::deque<double> contact = map.at("contact");
+	std::deque<double> contact = map["contact"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "contact");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, contact);
 
 	y = 0.01;
-	std::deque<double> smooth = map.at("smooth");
+	std::deque<double> smooth = map["smooth"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "smooth");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, smooth);
 
 	x = 0.85;
 	y = 0.49;
-	std::deque<double> pose = map.at("pose");
+	std::deque<double> pose = map["pose"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "pose");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, pose);
 
 	y = 0.37;
-	std::deque<double> vel = map.at("vel");
+	std::deque<double> vel = map["vel"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "vel");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, vel);
 
 	y = 0.25;
-	std::deque<double> ee = map.at("ee");
+	std::deque<double> ee = map["ee"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "ee");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, ee);
 
 	y = 0.13;
-	std::deque<double> root = map.at("root");
+	std::deque<double> root = map["root"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "root");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, root);
 
 	y = 0.01;
-	std::deque<double> com = map.at("com");
+	std::deque<double> com = map["com"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "com");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, com);
 

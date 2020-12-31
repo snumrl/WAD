@@ -304,43 +304,32 @@ void
 Character::
 Initialize_Rewards()
 {
-	mReward = 0;
-	pose_reward = 0;
-	vel_reward = 0;
-	end_eff_reward = 0;
-	root_reward = 0;
-	com_reward = 0;
-	smooth_reward = 0;
-	contact_reward = 0;
-	imit_reward = 0;
-	effi_reward = 0;
-	min_reward = 0;
+	mReward_tag.push_back("reward");
+	mReward_tag.push_back("pose");
+	mReward_tag.push_back("vel");
+	mReward_tag.push_back("root");
+	mReward_tag.push_back("ee");
+	mReward_tag.push_back("com");
+	mReward_tag.push_back("smooth");
+	mReward_tag.push_back("min");
+	mReward_tag.push_back("contact");
+	mReward_tag.push_back("effi");
 
 	int reward_window = 70;
+	for(auto tag : mReward_tag){
+		mReward.insert(std::make_pair(tag, 0.0));
+		mRewards.insert(std::make_pair(tag, std::deque<double>(reward_window)));
+	}
+}
 
-	reward_ = std::deque<double>(reward_window);
-	pose_ = std::deque<double>(reward_window);
-	vel_ = std::deque<double>(reward_window);
-	root_ = std::deque<double>(reward_window);
-	ee_ = std::deque<double>(reward_window);
-	com_ = std::deque<double>(reward_window);
-	smooth_ = std::deque<double>(reward_window);
-	imit_ = std::deque<double>(reward_window);
-	min_ = std::deque<double>(reward_window);
-	contact_ = std::deque<double>(reward_window);
-	effi_ = std::deque<double>(reward_window);
-
-	mRewards.insert(std::make_pair("reward", reward_));
-	mRewards.insert(std::make_pair("pose", pose_));
-	mRewards.insert(std::make_pair("vel", vel_));
-	mRewards.insert(std::make_pair("root", root_));
-	mRewards.insert(std::make_pair("ee", ee_));
-	mRewards.insert(std::make_pair("com", com_));
-	mRewards.insert(std::make_pair("smooth", smooth_));
-	mRewards.insert(std::make_pair("imit", imit_));
-	mRewards.insert(std::make_pair("min", min_));
-	mRewards.insert(std::make_pair("contact", contact_));
-	mRewards.insert(std::make_pair("effi", effi_));
+void
+Character::
+SetRewards()
+{
+	for(auto tag : mReward_tag){
+		mRewards[tag].pop_back();
+		mRewards[tag].push_front(mReward[tag]);
+	}
 }
 
 void
@@ -691,6 +680,7 @@ GetState_Character()
 	Eigen::Isometry3d tr_r = mSkeleton->getBodyNode("TalusR")->getTransform();
 	talus_l << (tr_l*talus_1)[1],(tr_l*talus_2)[1],(tr_l*talus_3)[1],(tr_l*talus_4)[1];
 	talus_r << (tr_r*talus_1)[1],(tr_r*talus_2)[1],(tr_r*talus_3)[1],(tr_r*talus_4)[1];
+	talus_l *= 10.0; talus_r *= 10.0;
 
 	pos.resize(mNumBodyNodes*3+1); //3dof + root world y
 	ori.resize(mNumBodyNodes*4);   //4dof (quaternion)
@@ -704,10 +694,8 @@ GetState_Character()
 
 	root_pos_rel = Utils::AffineTransPoint(origin_trans, root_pos_rel);
 	pos(0) = root_pos_rel[1];
-	int idx_pos = 1;
-	int idx_ori = 0;
-	int idx_linv = 0;
-	int idx_angv = 0;
+
+	int idx_pos=1; int idx_ori=0; int idx_linv=0; int idx_angv=0;
 	for(int i=0; i<mNumBodyNodes; i++)
 	{
 		dart::dynamics::BodyNode* body = mSkeleton->getBodyNode(i);
@@ -753,12 +741,9 @@ GetState_Character()
 	Eigen::Vector3d root_pos_rel_kin = root_pos_kin;
 
 	root_pos_rel_kin = Utils::AffineTransPoint(origin_trans, root_pos_rel_kin);
-
 	pos_diff(0) = root_pos_rel_kin[1] - pos(0);
-	int idx_pos_diff = 1;
-	int idx_ori_diff = 0;
-	int idx_linv_diff = 0;
-	int idx_angv_diff = 0;
+
+	int idx_pos_diff=1;	int idx_ori_diff=0; int idx_linv_diff=0; int idx_angv_diff=0;
 	for(int i=0; i<mNumBodyNodes; i++)
 	{
 		dart::dynamics::BodyNode* body_kin = mSkeleton->getBodyNode(i);
@@ -826,21 +811,25 @@ Character::
 GetReward()
 {
 	double reward_character = this->GetReward_Character();
-	mReward = reward_character;
+	double reward = reward_character + 0;
+	mReward["reward"] = reward;
 
 	this->SetRewards();
 
-	return mReward;
+	return reward;
 }
 
 double
 Character::
 GetReward_Character()
 {
-	imit_reward = GetReward_Character_Imitation();
-	effi_reward = GetReward_Character_Efficiency();
+	double reward_imit = GetReward_Character_Imitation();
+	double reward_effi = GetReward_Character_Efficiency();
 
-	double r = imit_reward * effi_reward;
+ 	mReward["imit"] = reward_imit;
+ 	mReward["effi"] = reward_effi;
+
+	double r = reward_imit * reward_effi;
 
 	return r;
 }
@@ -1000,22 +989,31 @@ GetReward_Character_Imitation()
 
 	com_err = 0.1 * (comKinVel - comSimVel).squaredNorm();
 
-	pose_reward = exp(-err_scale * pose_scale * pose_err);
-	vel_reward = exp(-err_scale * vel_scale * vel_err);
-	end_eff_reward = exp(-err_scale * end_eff_scale * end_eff_err);
-	root_reward = exp(-err_scale * root_scale * root_err);
-	com_reward = exp(-err_scale * com_scale * com_err);
-	smooth_reward  = exp(-err_scale * smooth_pos_scale * smooth_pos_err);
-	smooth_reward *= exp(-err_scale * smooth_vel_scale * smooth_vel_err);
+	double r_pose = exp(-err_scale * pose_scale * pose_err);
+	double r_vel = exp(-err_scale * vel_scale * vel_err);
+	double r_ee = exp(-err_scale * end_eff_scale * end_eff_err);
+	double r_root = exp(-err_scale * root_scale * root_err);
+	double r_com = exp(-err_scale * com_scale * com_err);
+	double r_smooth_pos = exp(-err_scale * smooth_pos_scale * smooth_pos_err);
+	double r_smooth_vel = exp(-err_scale * smooth_vel_scale * smooth_vel_err);
+	double r_smooth = r_smooth_pos * r_smooth_vel;
 
-	// imit_reward = pose_reward * vel_reward * end_eff_reward * root_reward * com_reward * smooth_reward;
-	imit_reward = pose_reward * end_eff_reward * root_reward * com_reward * smooth_reward;
+	double r_imit = r_pose * r_vel * r_ee * r_root * r_com * r_smooth;
+	// double r_imit = r_pose * r_ee * r_root * r_com * r_smooth;
+
+	mReward["pose"] = r_pose;
+	mReward["vel"] = r_vel;
+	mReward["ee"] = r_ee;
+	mReward["root"] = r_root;
+	mReward["com"] = r_com;
+	mReward["smooth"] = r_smooth;
+	mReward["imit"] = r_imit;
 
 	mSkeleton->setPositions(cur_pos);
 	mSkeleton->setVelocities(cur_vel);
 	mSkeleton->computeForwardKinematics(true, false, false);
 
-	return imit_reward;
+	return r_imit;
 }
 
 double
@@ -1027,11 +1025,10 @@ GetReward_Character_Efficiency()
 	double r_ContactForce = this->GetReward_ContactForce();
 	// double r_ContactForce = 1.0;
 
-	min_reward = r_TorqueMin;
-	contact_reward = r_ContactForce;
+	mReward["min"] = r_TorqueMin;
+	mReward["contact"] = r_ContactForce;
 
 	double r = r_TorqueMin * r_ContactForce;
-
 	return r;
 }
 
@@ -1040,19 +1037,18 @@ Character::
 GetReward_ContactForce()
 {
 	double err_scale = 2.0;
-	double contact_scale = 0.02;
+	double contact_scale = 0.01;
 	double contact_err = 0;
 
 	contact_err = (mContactForces_cur_norm.at(0) + mContactForces_cur_norm.at(1))/20.0;
 	contact_err /= mMass;
+	// if(contact_err < 5.0)
+	// 	contact_err = 0.0;
+	// else
+	// 	contact_err -= 5.0;
 
-	if(contact_err < 5.0)
-		contact_err = 0.0;
-	else
-		contact_err -= 5.0;
-
-	contact_reward = exp(-err_scale * contact_scale * contact_err);
-	return contact_reward;
+	double r_contact = exp(-err_scale * contact_scale * contact_err);
+	return r_contact;
 }
 
 double
@@ -1570,36 +1566,6 @@ SetAdaptiveParams(std::string name, double lower, double upper)
 		this->LoadBVHset(lower, upper);
 		this->SetSpeedRatio(lower);
 	}
-}
-
-void
-Character::
-SetRewards()
-{
-	(mRewards.find("reward")->second).pop_back();
-	(mRewards.find("reward")->second).push_front(mReward);
-
-	(mRewards.find("pose")->second).pop_back();
-	(mRewards.find("pose")->second).push_front(pose_reward);
-	(mRewards.find("vel")->second).pop_back();
-	(mRewards.find("vel")->second).push_front(vel_reward);
-	(mRewards.find("root")->second).pop_back();
-	(mRewards.find("root")->second).push_front(root_reward);
-	(mRewards.find("ee")->second).pop_back();
-	(mRewards.find("ee")->second).push_front(end_eff_reward);
-	(mRewards.find("com")->second).pop_back();
-	(mRewards.find("com")->second).push_front(com_reward);
-	(mRewards.find("smooth")->second).pop_back();
-	(mRewards.find("smooth")->second).push_front(smooth_reward);
-	(mRewards.find("imit")->second).pop_back();
-	(mRewards.find("imit")->second).push_front(imit_reward);
-
-	(mRewards.find("min")->second).pop_back();
-	(mRewards.find("min")->second).push_front(min_reward);
-	(mRewards.find("contact")->second).pop_back();
-	(mRewards.find("contact")->second).push_front(contact_reward);
-	(mRewards.find("effi")->second).pop_back();
-	(mRewards.find("effi")->second).push_front(effi_reward);
 }
 
 void

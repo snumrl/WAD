@@ -235,30 +235,9 @@ private:
 
 	std::vector<std::deque<double>> mFemurSignals;
 
+	std::vector<std::string> mReward_tag;
+	std::map<std::string, double> mReward;
 	std::map<std::string, std::deque<double>> mRewards;
-    std::deque<double> reward_;
-    std::deque<double> pose_;
-    std::deque<double> vel_;
-    std::deque<double> root_;
-    std::deque<double> com_;
-    std::deque<double> ee_;
-    std::deque<double> smooth_;
-    std::deque<double> imit_;
-    std::deque<double> min_;
-	std::deque<double> contact_;
-	std::deque<double> effi_;
-
-    double mReward;
-    double com_reward;
-    double vel_reward;
-    double pose_reward;
-    double root_reward;
-    double end_eff_reward;
-    double smooth_reward;
-    double imit_reward;
-    double min_reward;
-	double contact_reward;
-	double effi_reward;
 
 	MuscleTuple mCurrentMuscleTuple;
 	std::vector<MuscleTuple> mMuscleTuples;
