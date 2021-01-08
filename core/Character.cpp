@@ -789,7 +789,7 @@ GetState_Character()
 	double cur_t = mWorld->getTime();
 
 	if(mNumParamState > 0)
-		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,talus_l, talus_r,mParamState;
+		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,talus_l, talus_r,mParamState,cur_t;
 	else
 		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,talus_l,talus_r,cur_t;
 
