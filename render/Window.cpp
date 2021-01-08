@@ -357,7 +357,7 @@ Step()
 
 	if(mEnv->GetUseMuscle())
 	{
-		int inference_per_sim = 1;
+		int inference_per_sim = 2;
 		for(int i=0; i<num; i+=inference_per_sim){
 			Eigen::VectorXd mt = mEnv->GetCharacter()->GetMuscleTorques();
 			mEnv->GetCharacter()->SetActivationLevels(GetActivationFromNN(mt));
@@ -435,13 +435,13 @@ SetFocus()
 			Eigen::Quaterniond r = Eigen::Quaterniond(Eigen::AngleAxisd(1 * 0.05 * M_PI, Eigen::Vector3d::UnitX()));
 			mTrackBall.setQuaternion(r);
 		}
-		else if (mViewMode == 1 && Eigen::AngleAxisd(origin_r).angle() < 0.5 * M_PI)
+		else if (mViewMode == 2 && Eigen::AngleAxisd(origin_r).angle() < 0.5 * M_PI)
 		{
 			Eigen::Vector3d axis(0.0, cos(0.05*M_PI), sin(0.05*M_PI));
 			Eigen::Quaterniond r = Eigen::Quaterniond(Eigen::AngleAxisd(1 * 0.01 * M_PI, axis)) * origin_r;
 			mTrackBall.setQuaternion(r);
 			}
-		else if (mViewMode == 2 && Eigen::AngleAxisd(origin_r).axis()[1] > 0)
+		else if (mViewMode == 3 && Eigen::AngleAxisd(origin_r).axis()[1] > 0)
 		{
 			Eigen::Vector3d axis(0.0, cos(0.05*M_PI), sin(0.05*M_PI));
 			Eigen::Quaterniond r = Eigen::Quaterniond(Eigen::AngleAxisd(-1 * 0.01 * M_PI, axis)) * origin_r;
@@ -536,6 +536,19 @@ DrawVelocity()
 
 void
 Window::
+DrawTime()
+{
+	DrawGLBegin();
+
+	double t = mEnv->GetWorld()->getTime();
+	bool big = true;
+	DrawString(0.47, 0.93, big, "Time : " + std::to_string(t) + " s");
+
+	DrawGLEnd();
+}
+
+void
+Window::
 DrawParameter()
 {
 	DrawGLBegin();
@@ -572,7 +585,7 @@ DrawParameter()
 		DrawString(x+0.04, y-0.02, "Force");
 
 		DrawString(x+0.09, y+(s_ratio)*h_offset+0.02, std::to_string(s_ratio));
-		DrawString(x+0.075, y-0.02, "Speed");
+		DrawString(x+0.078, y-0.02, "Speed");
 	}
 
 	if(mEnv->GetUseDevice() && mEnv->GetDevice()->GetNumParamState() > 0)
@@ -591,7 +604,7 @@ DrawParameter()
 		DrawString(x+0.13, y+(k_/30.0)*h_offset+0.02, std::to_string(k_));
 		DrawString(x+0.12, y-0.02, "Device");
 
-		DrawString(x+0.17, y+3.0*t_*h_offset+0.02, std::to_string(t_));
+		DrawString(x+0.17, y+3.333*t_*h_offset+0.02, std::to_string(t_));
 		DrawString(x+0.165, y-0.02, "Delta t");
 	}
 
@@ -658,10 +671,11 @@ DrawCharacter()
 		DrawReward();
 	}
 	else{
-		this->DrawVelocity();
-		this->DrawCoT();
-		this->DrawContactForce();
+		// this->DrawVelocity();
+		// this->DrawCoT();
+		// this->DrawContactForce();
 	}
+	this->DrawTime();
 }
 
 void

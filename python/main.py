@@ -107,7 +107,7 @@ class PPO(object):
 		if use_cuda:
 			self.model.cuda()
 
-		self.buffer_size = 2048*4
+		self.buffer_size = 2048*8
 		self.batch_size = 128*2
 		self.replay_buffer = ReplayBuffer(30000)
 
@@ -115,7 +115,7 @@ class PPO(object):
 		self.lb = 0.99
 
 		self.default_clip_ratio = 0.2
-		self.default_learning_rate = 5.0*1E-5
+		self.default_learning_rate = 1.0*1E-4
 		self.clip_ratio = self.default_clip_ratio
 		self.learning_rate = self.default_learning_rate
 
@@ -298,8 +298,8 @@ class PPO(object):
 			self.env.SetActions(actions)
 
 			if self.use_muscle:
+				mt = Tensor(self.env.GetMuscleTorques())
 				for i in range(self.num_simulation_per_control):
-					mt = Tensor(self.env.GetMuscleTorques())
 					self.env.SetDesiredTorques()
 					dt = Tensor(self.env.GetDesiredTorques())
 					activations = self.muscle_model(mt,dt).cpu().detach().numpy()

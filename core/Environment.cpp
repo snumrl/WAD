@@ -305,6 +305,11 @@ Step(bool device_onoff)
 			mDevice->Step((double)mSimCount/(double)mNumSteps);
 	}
 
+	// if(mStepCnt == 20)
+	// 	mStepCnt = 0;
+	// mStepCnt++;
+	// mStepCnt_total++;
+
 	mWorld->step();
 	mSimCount++;
 }

@@ -224,14 +224,14 @@ Eigen::Isometry3d GetOriginTrans(const dart::dynamics::SkeletonPtr& skeleton)
     return mat;
 }
 
-Eigen::Isometry3d GetJointTransform(dart::dynamics::BodyNode* body)
+Eigen::Isometry3d GetJointTransform(const dart::dynamics::BodyNode* body)
 {
     Eigen::Isometry3d transform = body->getTransform()*body->getParentJoint()->getJointProperties().mT_ChildBodyToJoint;
 
     return transform;
 }
 
-Eigen::Isometry3d GetBodyTransform(dart::dynamics::BodyNode* body)
+Eigen::Isometry3d GetBodyTransform(const dart::dynamics::BodyNode* body)
 {
     Eigen::Isometry3d transform = body->getTransform();
 
@@ -744,14 +744,14 @@ void ButterworthFilter(double dt, double cutoff, Eigen::VectorXd& out_x)
     }
 }
 
-Eigen::Vector3d projectToXZ(Eigen::Vector3d v) {
+Eigen::Vector3d projectToXZ(const Eigen::Vector3d& v) {
 
     Eigen::Vector3d nearest = NearestOnGeodesicCurve3d(Eigen::Vector3d(0, 1, 0), Eigen::Vector3d(0, 0, 0), v);
     return nearest;
 
 }
 
-Eigen::Vector3d NearestOnGeodesicCurve3d(Eigen::Vector3d targetAxis, Eigen::Vector3d targetPosition, Eigen::Vector3d position) {
+Eigen::Vector3d NearestOnGeodesicCurve3d(const Eigen::Vector3d& targetAxis, const Eigen::Vector3d& targetPosition, const Eigen::Vector3d& position) {
     Eigen::Quaterniond v1_q = Utils::AxisAngleToQuaternion(position);
     Eigen::Quaterniond q = Utils::AxisAngleToQuaternion(targetPosition);
     Eigen::Vector3d axis = targetAxis.normalized();
@@ -780,7 +780,7 @@ Eigen::Vector3d NearestOnGeodesicCurve3d(Eigen::Vector3d targetAxis, Eigen::Vect
     }
 }
 
-Eigen::VectorXd BlendPosition(Eigen::VectorXd target_a, Eigen::VectorXd target_b, double weight, bool blend_rootpos) {
+Eigen::VectorXd BlendPosition(const Eigen::VectorXd& target_a, const Eigen::VectorXd& target_b, double weight, bool blend_rootpos) {
 
     Eigen::VectorXd result(target_a.rows());
     result = target_a;
@@ -809,7 +809,7 @@ Eigen::VectorXd BlendPosition(Eigen::VectorXd target_a, Eigen::VectorXd target_b
     return result;
 }
 
-Eigen::VectorXd solveMCIKRoot(dart::dynamics::SkeletonPtr skel, const std::vector<std::tuple<std::string, Eigen::Vector3d, Eigen::Vector3d>>& constraints)
+Eigen::VectorXd solveMCIKRoot(const dart::dynamics::SkeletonPtr& skel, const std::vector<std::tuple<std::string, Eigen::Vector3d, Eigen::Vector3d>>& constraints)
 {
     Eigen::VectorXd newPose = skel->getPositions();
     int num_constraints = constraints.size();
