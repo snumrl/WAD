@@ -107,15 +107,15 @@ class PPO(object):
 		if use_cuda:
 			self.model.cuda()
 
-		self.buffer_size = 2048*1
-		self.batch_size = 128*1
+		self.buffer_size = 2048*3
+		self.batch_size = 128*2
 		self.replay_buffer = ReplayBuffer(30000)
 
 		self.gamma = 0.99
 		self.lb = 0.99
 
 		self.default_clip_ratio = 0.2
-		self.default_learning_rate = 1.0*1E-4
+		self.default_learning_rate = 5.0*1E-5
 		self.clip_ratio = self.default_clip_ratio
 		self.learning_rate = self.default_learning_rate
 

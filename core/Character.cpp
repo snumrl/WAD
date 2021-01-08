@@ -1487,8 +1487,10 @@ SetForceRatio(double r)
 
 	if(mUseMuscle)
 	{
-		for(int i=0; i<mMuscles_Femur.size(); i++)
-			mMuscles_Femur.at(i)->SetF0Ratio(mForceRatio);
+		for(int i=0; i<mMuscles.size(); i++)
+			mMuscles.at(i)->SetF0Ratio(mForceRatio);
+		// for(int i=0; i<mMuscles_Femur.size(); i++)
+		// 	mMuscles_Femur.at(i)->SetF0Ratio(mForceRatio);
 	}
 	else
 	{
