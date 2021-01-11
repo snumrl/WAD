@@ -173,6 +173,7 @@ private:
 	std::vector<Muscle*> mMuscles_Femur;
 
 	BVH* mBVH;
+	BVH* mBVH_;
 	std::string mBVHpath;
 	std::vector<BVH*> mBVHset;
 	std::map<std::string,std::string> mBVHmap;

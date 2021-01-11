@@ -277,6 +277,7 @@ class PPO(object):
 		states_next = [None]*self.num_slaves
 		terminated = [False]*self.num_slaves
 
+
 		states = self.env.GetStates()
 
 		if self.use_adaptive_sampling:
@@ -304,7 +305,7 @@ class PPO(object):
 					dt = Tensor(self.env.GetDesiredTorques())
 					activations = self.muscle_model(mt,dt).cpu().detach().numpy()
 					self.env.SetActivationLevels(activations)
-					self.env.Steps(1, self.use_device)
+					self.env.Steps(2, self.use_device)
 			else:
 				self.env.StepsAtOnce(self.use_device)
 
@@ -370,8 +371,6 @@ class PPO(object):
 
 			if self.use_adaptive_sampling:
 				for i in range(size):
-					# print("state char : ",self.num_state_char)
-					# print("state char : ",self.num_paramstate_char)
 					cur_state = states[i][self.num_state_char-self.num_paramstate_char:self.num_state_char]
 					if self.use_device:
 						cur_state = np.append(cur_state, states[i][self.num_state-self.num_paramstate_device:self.num_state])
@@ -510,9 +509,9 @@ class PPO(object):
 		s = int((time.time() - self.tic))
 		s = s - h*3600 - m*60
 
-		if self.num_episode is 0:
+		if self.num_episode == 0:
 			self.num_episode = 1
-		if self.num_tuple is 0:
+		if self.num_tuple == 0:
 			self.num_tuple = 1
 		if self.max_return < self.sum_return/self.num_episode:
 			self.max_return = self.sum_return/self.num_episode
@@ -621,7 +620,7 @@ if __name__=="__main__":
 	for i in range(ppo.max_iteration-5):
 		ppo.Train()
 		rewards = ppo.Evaluate()
-		if (i%1000 is 0) or (i == ppo.max_iteration-7):
+		if (i%1000 == 0) or (i == ppo.max_iteration-7):
 			Plot(rewards,'reward',0,False,True)
 		else:
 			Plot(rewards,'reward',0,False,False)

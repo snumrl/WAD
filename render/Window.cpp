@@ -671,9 +671,9 @@ DrawCharacter()
 		DrawReward();
 	}
 	else{
-		// this->DrawVelocity();
-		// this->DrawCoT();
-		// this->DrawContactForce();
+		this->DrawVelocity();
+		this->DrawCoT();
+		this->DrawContactForce();
 	}
 	this->DrawTime();
 }

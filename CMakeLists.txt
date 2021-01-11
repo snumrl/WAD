@@ -7,10 +7,11 @@ RelWithDebInfo MinSizeRel."
       FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 
+find_package(Boost 1.66.0 EXACT COMPONENTS filesystem python3 numpy3)
+
 add_compile_options(-fPIC)
 add_compile_options(-std=gnu++11)
 add_compile_options(-Wdeprecated-declarations)
-
 add_compile_options(-DHAVE_CSTDDEF)
 add_definitions(-DMASS_ROOT_DIR="${CMAKE_HOME_DIRECTORY}")
 set(CMAKE_MODULE_PATH "${CMAKE_HOME_DIRECTORY}/cmake")

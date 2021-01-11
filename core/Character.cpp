@@ -19,7 +19,7 @@ Character(dart::simulation::WorldPtr& wPtr)
 
 	mMassRatio = 1.0;
 	mForceRatio = 1.0;
-	mSpeedRatio = 1.0;
+	mSpeedRatio = 0.6;
 }
 
 Character::
@@ -72,7 +72,9 @@ LoadBVH(const std::string& path, bool cyclic)
 	mBVHpath = path;
 	mBVHcyclic = cyclic;
 	mBVH = new BVH(mSkeleton, mBVHmap);
+	mBVH->SetSpeedRatio(mSpeedRatio);
 	mBVH->Parse(mBVHpath, mBVHcyclic);
+	mBVH_ = mBVH;
 }
 
 void
@@ -1543,19 +1545,19 @@ LoadBVHset(double lower, double upper)
 		return;
 	}
 
-	for(double d=lower; d<=upper; )
+	double sr = lower;
+	while(sr <= upper)
 	{
-		if(d == mSpeedRatio){
-			mBVHset.push_back(mBVH);
-			continue;
+		if(sr == mSpeedRatio){
+			mBVHset.push_back(mBVH_);
 		}
-
-		BVH* newBVH = new BVH(mSkeleton, mBVHmap);
-		newBVH->SetSpeedRatio(d);
-		newBVH->Parse(mBVHpath, mBVHcyclic);
-		mBVHset.push_back(newBVH);
-
-		d += 0.1;
+		else{
+			BVH* newBVH = new BVH(mSkeleton, mBVHmap);
+			newBVH->SetSpeedRatio(sr);
+			newBVH->Parse(mBVHpath, mBVHcyclic);
+			mBVHset.push_back(newBVH);
+		}
+		sr += 0.1;
 	}
 
 	mBVH = mBVHset.at(0);
