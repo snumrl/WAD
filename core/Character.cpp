@@ -19,7 +19,7 @@ Character(dart::simulation::WorldPtr& wPtr)
 
 	mMassRatio = 1.0;
 	mForceRatio = 1.0;
-	mSpeedRatio = 0.6;
+	mSpeedRatio = 1.0;
 }
 
 Character::
