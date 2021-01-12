@@ -87,6 +87,7 @@ LoadMuscles(const std::string& path)
 		return;
 	}
 
+	double time_step = mSkeleton->getTimeStep();
 	TiXmlElement *muscledoc = doc.FirstChildElement("Muscle");
 	for(TiXmlElement* unit = muscledoc->FirstChildElement("Unit");unit!=nullptr;unit = unit->NextSiblingElement("Unit"))
 	{
@@ -126,6 +127,8 @@ LoadMuscles(const std::string& path)
 			muscle_elem->SetMt0Default();
 			i++;
 		}
+
+		muscle_elem->SetTimeStep(time_step);
 
 		std::string muscle_name = muscle_elem->GetName();
 
@@ -445,6 +448,11 @@ void
 Character::
 Reset_Muscles()
 {
+	for(auto m : mMuscles)
+	{
+		m->Reset();
+	}
+
 	(mCurrentMuscleTuple.JtA).setZero();
 	(mCurrentMuscleTuple.L).setZero();
 	(mCurrentMuscleTuple.b).setZero();
@@ -519,6 +527,22 @@ SetMeasure()
 	this->SetCoT();
 	this->SetCurVelocity();
 	this->SetTorques();
+	this->SetMetabolicEnergyRate();
+}
+
+void
+Character::
+SetMetabolicEnergyRate()
+{
+	double dE = 0.0;
+	for(auto m : mMuscles){
+		dE += m->GetMetabolicEnergyRate();
+	}
+
+	double dB = 1.51 * mMass;
+
+	mMetabolicEnergyRate = dE + dB;
+	mMetabolicEnergyRate = mMetabolicEnergyRate / (mMass*mCurVel);
 }
 
 void
@@ -1456,7 +1480,7 @@ Character::
 SetMassRatio(double r)
 {
 	mMassRatio = r;
-
+	mMass = 0;
 	for(int i=0; i<mNumBodyNodes; i++)
 	{
 		dart::dynamics::BodyNode* body = mSkeleton->getBodyNode(i);
@@ -1466,6 +1490,7 @@ SetMassRatio(double r)
 		inertia.setMass(mass);
 		inertia.setMoment(shape->computeInertia(mass));
 		body->setInertia(inertia);
+		mMass += mass;
 	}
 
 	double param = 0.0;

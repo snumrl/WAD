@@ -69,7 +69,9 @@ public:
 	void DrawCoT();
 	void DrawContactForce();
 	void DrawVelocity();
+	void DrawMetabolicEnergy();
 	void DrawTime();
+
 
 	void DrawGLBegin();
     void DrawGLEnd();

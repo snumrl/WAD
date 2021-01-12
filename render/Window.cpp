@@ -357,7 +357,7 @@ Step()
 
 	if(mEnv->GetUseMuscle())
 	{
-		int inference_per_sim = 2;
+		int inference_per_sim = 1;
 		for(int i=0; i<num; i+=inference_per_sim){
 			Eigen::VectorXd mt = mEnv->GetCharacter()->GetMuscleTorques();
 			mEnv->GetCharacter()->SetActivationLevels(GetActivationFromNN(mt));
@@ -487,6 +487,20 @@ draw()
 	// DrawTrajectory();
 	// DrawStride();
 	SetFocus();
+}
+
+void
+Window::
+DrawMetabolicEnergy()
+{
+	DrawGLBegin();
+
+	//Metabolic Energy Rate
+	double mer = (mEnv->GetCharacter()->GetMetabolicEnergyRate());
+	bool big = true;
+
+	DrawString(0.70, 0.38, big, "Metabolic E : " + std::to_string(mer));
+	DrawGLEnd();
 }
 
 void
@@ -674,6 +688,7 @@ DrawCharacter()
 		this->DrawVelocity();
 		this->DrawCoT();
 		this->DrawContactForce();
+		this->DrawMetabolicEnergy();
 	}
 	this->DrawTime();
 }

@@ -40,9 +40,9 @@ import os
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
-		self.res = 21
+		self.res = 3
 		self.res_tot = self.res*self.res
-		self.step = 2000
+		self.step = 10
 		self.num_slaves = self.res_tot
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
@@ -74,6 +74,13 @@ class PPO(object):
 			self.muscle_model = MuscleNN(self.env.GetNumTotalMuscleRelatedDofs(), self.num_action_muscle,self.num_muscles)
 			if use_cuda:
 				self.muscle_model.cuda()
+
+		# =====================================#
+		self.num_paramstate = self.env.GetNumParamState()
+		self.num_paramstate_char = self.env.GetNumParamState_Char()
+		if self.use_device:
+			self.num_paramstate_device = self.env.GetNumParamState_Device()
+		self.marginal_model = MarginalNN(self.num_paramstate)
 
 		# ========== Common setting ========== #
 		self.num_simulation_Hz = self.env.GetSimulationHz()
@@ -116,13 +123,14 @@ class PPO(object):
 	def LoadModel_Muscle(self,path):
 		self.muscle_model.load('../nn/'+path+'_muscle.pt')
 
-	def LoadModel_Muscle(self,path):
+	def LoadModel_Marginal(self,path):
 		self.marginal_model.load('../nn/'+path+'_marginal.pt')
 
 	def Measure(self):
 		self.counter = np.array([0 for i in range(self.res_tot)])
 		self.rewards = np.array([0.0 for i in range(self.res_tot)])
 		self.velocities = np.array([0.0 for i in range(self.res_tot)])
+		self.metabolicE = np.array([0.0 for i in range(self.res_tot)])
 
 		self.min_v = self.env.GetMinV()
 		self.max_v = self.env.GetMaxV()
@@ -134,7 +142,7 @@ class PPO(object):
 		for i in range(self.res_tot):
 			idx_0 = int(i%self.res)
 			idx_1 = int(i/self.res)
-			param_state = [self.min_v[0], self.min_v[1], self.min_v[2], self.min_v[3]]
+			param_state = [self.min_v[0], self.min_v[1], self.min_v[2], self.min_v[3], self.min_v[4]]
 			param_state[self.dt_idx[0]] += self.dt[self.dt_idx[0]]*idx_0
 			param_state[self.dt_idx[1]] += self.dt[self.dt_idx[1]]*idx_1
 			param_state = np.float32(np.array(param_state))
@@ -170,13 +178,14 @@ class PPO(object):
 					vel = self.env.GetVelocity(j)*3.6
 					self.rewards[j] += self.env.GetReward(j)
 					self.velocities[j] += vel
+					self.metabolicE[j] += self.env.GetMetabolicEnergy(j)
 					self.counter[j] += 1
 
 				if terminated_state:
 					self.env.Reset(True,j)
 					idx_0 = int(j%self.res)
 					idx_1 = int(j/self.res)
-					param_state = [self.min_v[0], self.min_v[1], self.min_v[2], self.min_v[3]]
+					param_state = [self.min_v[0], self.min_v[1], self.min_v[2], self.min_v[3], self.min_v[4]]
 					param_state[self.dt_idx[0]] += self.dt[self.dt_idx[0]]*idx_0
 					param_state[self.dt_idx[1]] += self.dt[self.dt_idx[1]]*idx_1
 					param_state = np.float32(np.array(param_state))
@@ -191,6 +200,7 @@ class PPO(object):
 			else:
 				self.velocities[i] /= float(self.counter[i])
 				self.rewards[i] /= float(self.counter[i])
+				self.metabolicE[i] /= float(self.counter[i])
 
 	def Plot(self):
 		X = []
@@ -225,6 +235,19 @@ class PPO(object):
 		surf = ax.plot_surface(X[0], X[1], V, linewidth = 0, antialiased = True)
 		plt.savefig('../nn/rew.png')
 
+		fig = plt.figure()
+		ax = fig.gca(projection='3d')
+		ax.set_zlim(0.0, 20.0)
+		ax.zaxis.set_major_locator(LinearLocator(5))
+		ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+
+		V = np.zeros((self.res, self.res))
+		for i in range(self.res):
+			for j in range(self.res):
+				V[i][j] = self.metabolicE[i*self.res + j]
+		surf = ax.plot_surface(X[0], X[1], V, linewidth = 0, antialiased = True)
+		plt.savefig('../nn/meta.png')
+
 		# fig.colorbar(surf, shrink=0.5, aspect=5)
 		plt.show()
 
@@ -258,6 +281,8 @@ if __name__=="__main__":
 	else:
 		if ppo.use_muscle:
 			ppo.SaveModel_Muscle()
+
+	ppo.LoadModel_Marginal(args.model)
 
 	print('num states: {}, num actions: {}'.format(ppo.env.GetNumState(),ppo.env.GetNumAction()))
 

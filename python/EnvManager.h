@@ -41,6 +41,7 @@ public:
 	int GetControlHz();
 	int GetSimulationHz();
 	double GetVelocity(int idx);
+	double GetMetabolicEnergy(int idx);
 
 	bool UseMuscle();
 	bool UseDevice();

@@ -149,6 +149,9 @@ public:
 	void SetCurVelocity();
 	void SetContactForce();
 
+	void SetMetabolicEnergyRate();
+	double GetMetabolicEnergyRate(){return mMetabolicEnergyRate;}
+
 	double GetCoT(){return mCurCoT;}
 	double GetCurVelocity(){return mCurVel;}
 	const std::vector<Eigen::Vector3d>& GetContactForces(){return mContactForces;}
@@ -210,6 +213,7 @@ private:
 
 	double mCurCoT;
 	double mCurVel;
+	double mMetabolicEnergyRate;
 
 	Eigen::Isometry3d mTc;
 	Eigen::VectorXd mKp, mKv;
