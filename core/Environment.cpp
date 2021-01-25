@@ -193,6 +193,7 @@ SetWorld()
 {
 	mWorld->setGravity(Eigen::Vector3d(0,-9.8,0.0));
 	mWorld->setTimeStep(1.0/mSimulationHz);
+	// std::cout << "time step in setWorld" << mWorld->getTimeStep() << std::endl;
 	mWorld->getConstraintSolver()->setCollisionDetector(dart::collision::BulletCollisionDetector::create());
 
 	mGround = MASS::BuildFromFile(std::string(MASS_ROOT_DIR)+std::string("/data/ground.xml"));
@@ -305,6 +306,9 @@ Step(bool device_onoff)
 			mDevice->Step((double)mSimCount/(double)mNumSteps);
 	}
 
+	// double root_y = mCharacter->GetSkeleton()->getBodyNode(0)->getTransform().translation()[1] - mGround->getRootBodyNode()->getCOM()[1];
+	// std::cout << "root y : " << root_y << std::endl;
+
 	// if(mStepCnt == 20)
 	// 	mStepCnt = 0;
 	// mStepCnt++;
@@ -328,11 +332,13 @@ IsEndOfEpisode()
 	double root_y = char_skel->getBodyNode(0)->getTransform().translation()[1] - mGround->getRootBodyNode()->getCOM()[1];
 
 	if(root_y < 1.4)
-		isTerminal =true;
+		isTerminal = true;
+	else if(mWorld->getTime() > 2.5 && mCharacter->GetCurReward() < 0.5)
+		isTerminal = true;
 	else if (dart::math::isNan(p) || dart::math::isNan(v))
-		isTerminal =true;
+		isTerminal = true;
 	else if(mWorld->getTime() > 5.0)
-		isTerminal =true;
+		isTerminal = true;
 
 	return isTerminal;
 }

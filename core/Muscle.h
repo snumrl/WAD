@@ -69,7 +69,7 @@ public:
 	double GetActivationPrev(){ return activation_prev;}
 
 	void SetTimeStep(double t){mTimeStep = t;}
-	double GetStimulation();
+	double GetExcitation();
 
 	void SetF0(double f){ f0 = f;}
 	double GetF0(){ return f0;}
@@ -91,9 +91,18 @@ public:
 	double Getdl_m(){return dl_m;}
 
 	double GetMetabolicEnergyRate();
+	double GetMetabolicEnergyRate_BHAR04();
+	double GetMetabolicEnergyRate_HOUD06();
+	void SetMass();
+
+	double Geth_A(){return h_A;}
+	double Geth_M(){return h_M;}
+	double Geth_SL(){return h_SL;}
+	double GetW(){return w;}
 
 private:
 	double mTimeStep;
+	double h_A, h_M, h_SL, w;
 
 	double l_mt,l_mt_max;
 	double l_m;
@@ -114,6 +123,11 @@ private:
 	double gamma; //For g_al
 
 	double mMetabolicEnergyRate;
+	double mMetabolicEnergyRate_BHAR04;
+	double mMetabolicEnergyRate_HOUD06;
+
+	double vcemax = 0.0;
+	double vcemin = 0.0;
 };
 
 }

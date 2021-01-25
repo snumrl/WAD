@@ -107,15 +107,15 @@ class PPO(object):
 		if use_cuda:
 			self.model.cuda()
 
-		self.buffer_size = 2048*3
-		self.batch_size = 128*2
+		self.buffer_size = 1024*4
+		self.batch_size = 128*1
 		self.replay_buffer = ReplayBuffer(30000)
 
 		self.gamma = 0.99
 		self.lb = 0.99
 
 		self.default_clip_ratio = 0.2
-		self.default_learning_rate = 5.0*1E-5
+		self.default_learning_rate = 1.0*1E-4
 		self.clip_ratio = self.default_clip_ratio
 		self.learning_rate = self.default_learning_rate
 
@@ -455,7 +455,7 @@ class PPO(object):
 
 				loss_reg = (activation).pow(2).mean()
 				loss_target = (((tau-stack_tau_des)/100.0).pow(2)).mean()
-				loss = 0.01*loss_reg + loss_target
+				loss = 0.05*loss_reg + loss_target
 
 				self.optimizer_muscle.zero_grad()
 				loss.backward(retain_graph=True)

@@ -50,8 +50,9 @@ LoadSkeleton(const std::string& path, bool load_obj)
 		if(node->Attribute("endeffector") != nullptr)
 		{
 			std::string ee = node->Attribute("endeffector");
-			if(ee == "True")
+			if(ee == "True"){
 				mEndEffectors.push_back(mSkeleton->getBodyNode(std::string(node->Attribute("name"))));
+			}
 		}
 
 		TiXmlElement* joint_elem = node->FirstChildElement("Joint");
@@ -87,7 +88,7 @@ LoadMuscles(const std::string& path)
 		return;
 	}
 
-	double time_step = mSkeleton->getTimeStep();
+	double time_step = 1.0/mSimulationHz;
 	TiXmlElement *muscledoc = doc.FirstChildElement("Muscle");
 	for(TiXmlElement* unit = muscledoc->FirstChildElement("Unit");unit!=nullptr;unit = unit->NextSiblingElement("Unit"))
 	{
@@ -124,13 +125,31 @@ LoadMuscles(const std::string& path)
 			else
 				muscle_elem->AddAnchor(mSkeleton,mSkeleton->getBodyNode(body),glob_pos,2);
 
-			muscle_elem->SetMt0Default();
 			i++;
 		}
-
+		muscle_elem->SetMt0Default();
 		muscle_elem->SetTimeStep(time_step);
+		muscle_elem->SetMass();
 
 		std::string muscle_name = muscle_elem->GetName();
+		if(f0 == 700.0){
+			int name_size = muscle_name.size();
+			// std::string sub_name;
+			// if(muscle_name[name_size-1] >= 48 && muscle_name[name_size-1] <= 57){
+			// 	std::string sub_name = muscle_name.substr(2,name_size-3);
+			// 	mMuscles_Map[sub_name].push_back(muscle_elem);
+			// }
+			// else{
+				std::string sub_name = muscle_name.substr(2,name_size-2);
+				if(mMuscles_Map.count(sub_name) == 0){
+					mMuscles_Map.insert(std::make_pair(sub_name, std::vector<Muscle*>()));
+					mMuscles_Map[sub_name].push_back(muscle_elem);
+				}
+				else{
+					mMuscles_Map[sub_name].push_back(muscle_elem);
+				}
+			// }
+		}
 
 		if(muscle_elem->GetFemur())
 		{
@@ -142,6 +161,7 @@ LoadMuscles(const std::string& path)
 		mMuscles.push_back(muscle_elem);
 	}
 	mNumMuscle = mMuscles.size();
+	mNumMuscleMap = mMuscles_Map.size();
 }
 
 void
@@ -209,14 +229,21 @@ Character::
 Initialize_JointWeights()
 {
 	mJointWeights.resize(mNumJoints);
-
 	mJointWeights <<
 		1.0,                    //Pelvis
-		0.5, 0.3, 0.2, 0.1, 0.1,//Left Leg
-		0.5, 0.3, 0.2, 0.1, 0.1,//Right Leg
-		0.5, 0.5, 0.2, 0.2,     //Torso & Neck
-		0.3, 0.2, 0.2, 0.1,     //Left Arm
-		0.3, 0.2, 0.2, 0.1;     //Right Arm
+		1.0, 1.0, 1.0, 1.0, 1.0,//Left Leg
+		1.0, 1.0, 1.0, 1.0, 1.0,//Right Leg
+		1.0, 1.0, 1.0, 1.0,     //Torso & Neck
+		1.0, 1.0, 1.0, 1.0,     //Left Arm
+		1.0, 1.0, 1.0, 1.0;     //Right Arm
+
+	// mJointWeights <<
+	// 	1.0,                    //Pelvis
+	// 	0.5, 0.3, 0.2, 0.1, 0.1,//Left Leg
+	// 	0.5, 0.3, 0.2, 0.1, 0.1,//Right Leg
+	// 	0.5, 0.5, 0.2, 0.2,     //Torso & Neck
+	// 	0.3, 0.2, 0.2, 0.1,     //Left Arm
+	// 	0.3, 0.2, 0.2, 0.1;     //Right Arm
 
 	mJointWeights /= mJointWeights.sum();
 }
@@ -442,6 +469,7 @@ Reset()
 	mTorques->Reset();
 	if(mUseMuscle)
 		Reset_Muscles();
+
 }
 
 void
@@ -523,10 +551,10 @@ void
 Character::
 SetMeasure()
 {
-	this->SetContactForce();
-	this->SetCoT();
+	// this->SetContactForce();
+	// this->SetCoT();
 	this->SetCurVelocity();
-	this->SetTorques();
+	// this->SetTorques();
 	this->SetMetabolicEnergyRate();
 }
 
@@ -534,15 +562,40 @@ void
 Character::
 SetMetabolicEnergyRate()
 {
+	double dE_BHAR04 = 0.0;
+	double dE_HOUD06 = 0.0;
 	double dE = 0.0;
+	double h_A = 0.0;
+	double h_M = 0.0;
+	double h_SL = 0.0;
+	double W = 0.0;
 	for(auto m : mMuscles){
-		dE += m->GetMetabolicEnergyRate();
+		dE_BHAR04 += m->GetMetabolicEnergyRate_BHAR04();
+		dE_HOUD06 += m->GetMetabolicEnergyRate_HOUD06();
+		// dE += m->GetMetabolicEnergyRate();
+		// h_A += m->Geth_A();
+		// h_M += m->Geth_M();
+		// h_SL += m->Geth_SL();
+		// W += m->GetW();
 	}
 
-	double dB = 1.51 * mMass;
+	// std::cout << "h_A : " << h_A << std::endl;
+	// std::cout << "h_M : " << h_M << std::endl;
+	// std::cout << "h_SL : " << h_SL << std::endl;
+	// std::cout << "W : " << W << std::endl;
+	// std::cout << "dE : " << dE << std::endl;
 
-	mMetabolicEnergyRate = dE + dB;
-	mMetabolicEnergyRate = mMetabolicEnergyRate / (mMass*mCurVel);
+	double dB = 1.51 * mMass;
+	// std::cout << "dB : " << dB << std::endl;
+
+	mMetabolicEnergyRate_BHAR04 = dE_BHAR04 + dB;
+	mMetabolicEnergyRate_BHAR04 = mMetabolicEnergyRate_BHAR04 / (mMass*mCurVel);
+
+	mMetabolicEnergyRate_HOUD06 = dE_HOUD06 + dB;
+	mMetabolicEnergyRate_HOUD06 = mMetabolicEnergyRate_HOUD06 / (mMass*mCurVel);
+
+	// mMetabolicEnergyRate = dE + dB;
+	// mMetabolicEnergyRate = mMetabolicEnergyRate / (mMass*mCurVel);
 }
 
 void
@@ -682,144 +735,190 @@ GetState()
 
 Eigen::VectorXd
 Character::
+GetState_Character()
+{
+	dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
+	Eigen::VectorXd p,v;
+
+	p.resize((mNumBodyNodes-1)*3);
+	v.resize((mNumBodyNodes)*3);
+
+	for(int i=1; i<mNumBodyNodes; i++)
+	{
+		p.segment<3>(3*(i-1)) = mSkeleton->getBodyNode(i)->getCOM(root);
+		v.segment<3>(3*(i-1)) = mSkeleton->getBodyNode(i)->getCOMLinearVelocity();
+	}
+
+	v.tail<3>() = root->getCOMLinearVelocity();
+
+	std::pair<double, double> phase = this->GetPhases();
+
+	p *= 0.8;
+	v *= 0.2;
+
+    Eigen::VectorXd state(p.rows() + v.rows() + 2);
+    state << p, v, phase.first, phase.second;
+
+    return state;
+}
+
+// Eigen::VectorXd
+// Character::
+// GetState_Character()
+// {
+// 	Eigen::VectorXd cur_pos = mSkeleton->getPositions();
+// 	Eigen::VectorXd cur_vel = mSkeleton->getVelocities();
+
+// 	Eigen::Isometry3d origin_trans = Utils::GetOriginTrans(mSkeleton);
+// 	Eigen::Quaterniond origin_quat(origin_trans.rotation());
+// 	Utils::QuatNormalize(origin_quat);
+
+// 	Eigen::VectorXd pos,ori,lin_v,ang_v;
+// 	// Eigen::Vector4d talus_l, talus_r;
+
+// 	// Eigen::Vector4d talus_1 = {-0.0425, -0.03, -0.075, 1.0};
+// 	// Eigen::Vector4d talus_2 = {-0.0425, -0.03,  0.075, 1.0};
+// 	// Eigen::Vector4d talus_3 = { 0.0425, -0.03,  0.075, 1.0};
+// 	// Eigen::Vector4d talus_4 = { 0.0425, -0.03, -0.075, 1.0};
+
+// 	// Eigen::Isometry3d tr_l = mSkeleton->getBodyNode("TalusL")->getTransform();
+// 	// Eigen::Isometry3d tr_r = mSkeleton->getBodyNode("TalusR")->getTransform();
+// 	// talus_l << (tr_l*talus_1)[1],(tr_l*talus_2)[1],(tr_l*talus_3)[1],(tr_l*talus_4)[1];
+// 	// talus_r << (tr_r*talus_1)[1],(tr_r*talus_2)[1],(tr_r*talus_3)[1],(tr_r*talus_4)[1];
+// 	// talus_l *= 10.0; talus_r *= 10.0;
+
+// 	pos.resize(mNumBodyNodes*3+1); //3dof + root world y
+// 	ori.resize(mNumBodyNodes*4);   //4dof (quaternion)
+// 	lin_v.resize(mNumBodyNodes*3);
+// 	ang_v.resize(mNumBodyNodes*3); //dof - root_dof
+
+// 	const dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
+// 	Eigen::Isometry3d trans = Utils::GetBodyTransform(root);
+// 	Eigen::Vector3d root_pos = trans.translation();
+// 	Eigen::Vector3d root_pos_rel = root_pos;
+
+// 	root_pos_rel = Utils::AffineTransPoint(origin_trans, root_pos_rel);
+// 	pos(0) = root_pos_rel[1];
+
+// 	int idx_pos=1; int idx_ori=0; int idx_linv=0; int idx_angv=0;
+// 	for(int i=0; i<mNumBodyNodes; i++)
+// 	{
+// 		const dart::dynamics::BodyNode* body = mSkeleton->getBodyNode(i);
+// 		trans = Utils::GetBodyTransform(body);
+
+// 		Eigen::Vector3d body_pos = trans.translation();
+// 		body_pos = Utils::AffineTransPoint(origin_trans, body_pos);
+// 		body_pos -= root_pos_rel;
+// 		pos.segment(idx_pos, 3) = body_pos.segment(0, 3);
+// 		idx_pos += 3;
+
+// 		Eigen::Quaterniond body_ori(trans.rotation());
+// 		body_ori = origin_quat * body_ori;
+// 		Utils::QuatNormalize(body_ori);
+// 		ori.segment(idx_ori, 4) = Utils::QuatToVec(body_ori).segment(0, 4);
+// 		idx_ori += 4;
+
+// 		Eigen::Vector3d lin_vel = body->getLinearVelocity();
+// 		lin_vel = Utils::AffineTransVector(origin_trans, lin_vel);
+// 		lin_v.segment(idx_linv, 3) = lin_vel;
+// 		idx_linv += 3;
+
+// 		Eigen::Vector3d ang_vel = body->getAngularVelocity();
+// 		ang_vel = Utils::AffineTransVector(origin_trans, ang_vel);
+// 		ang_v.segment(idx_angv, 3) = ang_vel;
+// 		idx_angv += 3;
+// 	}
+
+// 	mSkeleton->setPositions(mTargetPositions);
+// 	mSkeleton->setVelocities(mTargetVelocities);
+// 	mSkeleton->computeForwardKinematics(true, false, false);
+
+// 	Eigen::VectorXd pos_diff,ori_diff,lin_v_diff,ang_v_diff;
+
+// 	pos_diff.resize(mNumBodyNodes*3+1); //3dof + root world y
+// 	ori_diff.resize(mNumBodyNodes*4); //4dof (quaternion)
+// 	lin_v_diff.resize(mNumBodyNodes*3);
+// 	ang_v_diff.resize(mNumBodyNodes*3); //dof - root_dof
+
+// 	const dart::dynamics::BodyNode* root_kin = mSkeleton->getBodyNode(0);
+// 	Eigen::Isometry3d trans_kin = Utils::GetBodyTransform(root_kin);
+// 	Eigen::Vector3d root_pos_kin = trans_kin.translation();
+// 	Eigen::Vector3d root_pos_rel_kin = root_pos_kin;
+
+// 	root_pos_rel_kin = Utils::AffineTransPoint(origin_trans, root_pos_rel_kin);
+// 	pos_diff(0) = root_pos_rel_kin[1] - pos(0);
+
+// 	int idx_pos_diff=1;	int idx_ori_diff=0; int idx_linv_diff=0; int idx_angv_diff=0;
+// 	for(int i=0; i<mNumBodyNodes; i++)
+// 	{
+// 		const dart::dynamics::BodyNode* body_kin = mSkeleton->getBodyNode(i);
+// 		trans_kin = Utils::GetBodyTransform(body_kin);
+
+// 		Eigen::Vector3d body_pos_kin = trans_kin.translation();
+// 		body_pos_kin = Utils::AffineTransPoint(origin_trans, body_pos_kin);
+// 		body_pos_kin -= root_pos_rel_kin;
+// 		pos_diff.segment(idx_pos_diff,3) = body_pos_kin.segment(0,3) - pos.segment(idx_pos_diff,3);
+// 		idx_pos_diff += 3;
+
+// 		Eigen::Quaterniond body_ori_kin(trans_kin.rotation());
+// 		body_ori_kin = origin_quat * body_ori_kin;
+// 		Utils::QuatNormalize(body_ori_kin);
+
+// 		Eigen::Quaterniond qDiff = Utils::QuatDiff(body_ori_kin, Utils::VecToQuat(ori.segment(idx_ori_diff, 4)));
+// 		Utils::QuatNormalize(qDiff);
+
+// 		ori_diff.segment(idx_ori_diff, 4) = Utils::QuatToVec(qDiff).segment(0, 4);
+// 		idx_ori_diff += 4;
+
+// 		Eigen::Vector3d lin_vel_kin = body_kin->getLinearVelocity();
+// 		lin_vel_kin = Utils::AffineTransVector(origin_trans, lin_vel_kin);
+// 		lin_v_diff.segment(idx_linv_diff, 3) = lin_vel_kin - lin_v.segment(idx_linv_diff, 3);
+// 		idx_linv_diff += 3;
+
+// 		Eigen::Vector3d ang_vel_kin = body_kin->getAngularVelocity();
+// 		ang_vel_kin = Utils::AffineTransVector(origin_trans, ang_vel_kin);
+// 		ang_v_diff.segment(idx_angv_diff, 3) = ang_vel_kin - ang_v.segment(idx_angv_diff, 3);
+// 		idx_angv_diff += 3;
+// 	}
+
+// 	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+2+mNumParamState);
+// 	// Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+mNumParamState);
+// 	// Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+1);
+
+// 	// double cur_t = mWorld->getTime();
+// 	// double phase = this->GetPhase();
+// 	std::pair<double, double> phase = this->GetPhases();
+// 	if(mNumParamState > 0)
+// 		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,mParamState;
+// 	else
+// 		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,phase.first, phase.second;
+
+// 	// state << pos,ori,lin_v,ang_v,phase;
+
+// 	mSkeleton->setPositions(cur_pos);
+// 	mSkeleton->setVelocities(cur_vel);
+// 	mSkeleton->computeForwardKinematics(true, false, false);
+
+// 	return state;
+// }
+
+Eigen::VectorXd
+Character::
 GetState_Device()
 {
 	return mDevice->GetState();
 }
 
-Eigen::VectorXd
+std::pair<double, double>
 Character::
-GetState_Character()
+GetPhases()
 {
-	Eigen::VectorXd cur_pos = mSkeleton->getPositions();
-	Eigen::VectorXd cur_vel = mSkeleton->getVelocities();
+	double phase = this->GetPhase();
+	double rad = 2*M_PI*phase;
+	double cos = std::cos(rad);
+	double sin = std::sin(rad);
 
-	Eigen::Isometry3d origin_trans = Utils::GetOriginTrans(mSkeleton);
-	Eigen::Quaterniond origin_quat(origin_trans.rotation());
-	Utils::QuatNormalize(origin_quat);
-
-	Eigen::VectorXd pos,ori,lin_v,ang_v;
-	Eigen::Vector4d talus_l, talus_r;
-
-	Eigen::Vector4d talus_1 = {-0.0425, -0.03, -0.075, 1.0};
-	Eigen::Vector4d talus_2 = {-0.0425, -0.03,  0.075, 1.0};
-	Eigen::Vector4d talus_3 = { 0.0425, -0.03,  0.075, 1.0};
-	Eigen::Vector4d talus_4 = { 0.0425, -0.03, -0.075, 1.0};
-
-	Eigen::Isometry3d tr_l = mSkeleton->getBodyNode("TalusL")->getTransform();
-	Eigen::Isometry3d tr_r = mSkeleton->getBodyNode("TalusR")->getTransform();
-	talus_l << (tr_l*talus_1)[1],(tr_l*talus_2)[1],(tr_l*talus_3)[1],(tr_l*talus_4)[1];
-	talus_r << (tr_r*talus_1)[1],(tr_r*talus_2)[1],(tr_r*talus_3)[1],(tr_r*talus_4)[1];
-	talus_l *= 10.0; talus_r *= 10.0;
-
-	pos.resize(mNumBodyNodes*3+1); //3dof + root world y
-	ori.resize(mNumBodyNodes*4);   //4dof (quaternion)
-	lin_v.resize(mNumBodyNodes*3);
-	ang_v.resize(mNumBodyNodes*3); //dof - root_dof
-
-	const dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
-	Eigen::Isometry3d trans = Utils::GetBodyTransform(root);
-	Eigen::Vector3d root_pos = trans.translation();
-	Eigen::Vector3d root_pos_rel = root_pos;
-
-	root_pos_rel = Utils::AffineTransPoint(origin_trans, root_pos_rel);
-	pos(0) = root_pos_rel[1];
-
-	int idx_pos=1; int idx_ori=0; int idx_linv=0; int idx_angv=0;
-	for(int i=0; i<mNumBodyNodes; i++)
-	{
-		const dart::dynamics::BodyNode* body = mSkeleton->getBodyNode(i);
-		trans = Utils::GetBodyTransform(body);
-
-		Eigen::Vector3d body_pos = trans.translation();
-		body_pos = Utils::AffineTransPoint(origin_trans, body_pos);
-		body_pos -= root_pos_rel;
-		pos.segment(idx_pos, 3) = body_pos.segment(0, 3);
-		idx_pos += 3;
-
-		Eigen::Quaterniond body_ori(trans.rotation());
-		body_ori = origin_quat * body_ori;
-		Utils::QuatNormalize(body_ori);
-		ori.segment(idx_ori, 4) = Utils::QuatToVec(body_ori).segment(0, 4);
-		idx_ori += 4;
-
-		Eigen::Vector3d lin_vel = body->getLinearVelocity();
-		lin_vel = Utils::AffineTransVector(origin_trans, lin_vel);
-		lin_v.segment(idx_linv, 3) = lin_vel;
-		idx_linv += 3;
-
-		Eigen::Vector3d ang_vel = body->getAngularVelocity();
-		ang_vel = Utils::AffineTransVector(origin_trans, ang_vel);
-		ang_v.segment(idx_angv, 3) = ang_vel;
-		idx_angv += 3;
-	}
-
-	mSkeleton->setPositions(mTargetPositions);
-	mSkeleton->setVelocities(mTargetVelocities);
-	mSkeleton->computeForwardKinematics(true, false, false);
-
-	Eigen::VectorXd pos_diff,ori_diff,lin_v_diff,ang_v_diff;
-
-	pos_diff.resize(mNumBodyNodes*3+1); //3dof + root world y
-	ori_diff.resize(mNumBodyNodes*4); //4dof (quaternion)
-	lin_v_diff.resize(mNumBodyNodes*3);
-	ang_v_diff.resize(mNumBodyNodes*3); //dof - root_dof
-
-	const dart::dynamics::BodyNode* root_kin = mSkeleton->getBodyNode(0);
-	Eigen::Isometry3d trans_kin = Utils::GetBodyTransform(root_kin);
-	Eigen::Vector3d root_pos_kin = trans_kin.translation();
-	Eigen::Vector3d root_pos_rel_kin = root_pos_kin;
-
-	root_pos_rel_kin = Utils::AffineTransPoint(origin_trans, root_pos_rel_kin);
-	pos_diff(0) = root_pos_rel_kin[1] - pos(0);
-
-	int idx_pos_diff=1;	int idx_ori_diff=0; int idx_linv_diff=0; int idx_angv_diff=0;
-	for(int i=0; i<mNumBodyNodes; i++)
-	{
-		const dart::dynamics::BodyNode* body_kin = mSkeleton->getBodyNode(i);
-		trans_kin = Utils::GetBodyTransform(body_kin);
-
-		Eigen::Vector3d body_pos_kin = trans_kin.translation();
-		body_pos_kin = Utils::AffineTransPoint(origin_trans, body_pos_kin);
-		body_pos_kin -= root_pos_rel_kin;
-		pos_diff.segment(idx_pos_diff,3) = body_pos_kin.segment(0,3) - pos.segment(idx_pos_diff,3);
-		idx_pos_diff += 3;
-
-		Eigen::Quaterniond body_ori_kin(trans_kin.rotation());
-		body_ori_kin = origin_quat * body_ori_kin;
-		Utils::QuatNormalize(body_ori_kin);
-
-		Eigen::Quaterniond qDiff = Utils::QuatDiff(body_ori_kin, Utils::VecToQuat(ori.segment(idx_ori_diff, 4)));
-		Utils::QuatNormalize(qDiff);
-
-		ori_diff.segment(idx_ori_diff, 4) = Utils::QuatToVec(qDiff).segment(0, 4);
-		idx_ori_diff += 4;
-
-		Eigen::Vector3d lin_vel_kin = body_kin->getLinearVelocity();
-		lin_vel_kin = Utils::AffineTransVector(origin_trans, lin_vel_kin);
-		lin_v_diff.segment(idx_linv_diff, 3) = lin_vel_kin - lin_v.segment(idx_linv_diff, 3);
-		idx_linv_diff += 3;
-
-		Eigen::Vector3d ang_vel_kin = body_kin->getAngularVelocity();
-		ang_vel_kin = Utils::AffineTransVector(origin_trans, ang_vel_kin);
-		ang_v_diff.segment(idx_angv_diff, 3) = ang_vel_kin - ang_v.segment(idx_angv_diff, 3);
-		idx_angv_diff += 3;
-	}
-
-	Eigen::VectorXd state(pos.rows()+ori.rows()+lin_v.rows()+ang_v.rows()+pos_diff.rows()+ori_diff.rows()+lin_v_diff.rows()+ang_v_diff.rows()+talus_l.rows()+talus_r.rows()+mNumParamState+1);
-
-	mSkeleton->setPositions(cur_pos);
-	mSkeleton->setVelocities(cur_vel);
-	mSkeleton->computeForwardKinematics(true, false, false);
-
-	double cur_t = mWorld->getTime();
-
-	if(mNumParamState > 0)
-		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,talus_l, talus_r,mParamState,cur_t;
-	else
-		state << pos,ori,lin_v,ang_v,pos_diff,ori_diff,lin_v_diff,ang_v_diff,talus_l,talus_r,cur_t;
-
-	return state;
+	return std::pair<double, double>(cos, sin);
 }
 
 double
@@ -845,6 +944,7 @@ GetReward()
 	double reward_character = this->GetReward_Character();
 	double reward = reward_character + 0;
 	mReward["reward"] = reward;
+	mCurReward =reward;
 
 	this->SetRewards();
 
@@ -870,142 +970,53 @@ double::
 Character::
 GetReward_Character_Imitation()
 {
-	double err_scale = 2.0;  // error scale
-
-	double pose_scale = 10.0;
-	double vel_scale = 0.1;
-	double end_eff_scale = 20.0;
-	double root_scale = 2.0;
-	double com_scale = 10.0;
-	double smooth_vel_scale = 0.02;
-	double smooth_pos_scale = 1.0;
-
-	double pose_err = 0;
-	double vel_err = 0;
-	double end_eff_err = 0;
-	double root_err = 0;
-	double com_err = 0;
-	double smooth_vel_err = 0;
-	double smooth_pos_err = 0;
-
 	Eigen::VectorXd cur_pos = mSkeleton->getPositions();
 	Eigen::VectorXd cur_vel = mSkeleton->getVelocities();
+	Eigen::VectorXd p_diff_all = mSkeleton->getPositionDifferences(mTargetPositions,cur_pos);
+	Eigen::VectorXd v_diff_all = mSkeleton->getPositionDifferences(mTargetVelocities,cur_vel);
 
-	Eigen::Vector3d comSim, comSimVel;
-	comSim = mSkeleton->getCOM();
-	comSimVel = mSkeleton->getCOMLinearVelocity();
-
-	double root_rot_w = mJointWeights[0];
-
-	const dart::dynamics::BodyNode* rootSim = mSkeleton->getBodyNode(0);
-	Eigen::Isometry3d rootTransSim = Utils::GetJointTransform(rootSim);
-	Eigen::Vector3d rootPosSim = rootTransSim.translation();
-	Eigen::Quaterniond rootOrnSim(rootTransSim.rotation());
-	Utils::QuatNormalize(rootOrnSim);
-
-	Eigen::Vector3d linVelSim = mSkeleton->getRootBodyNode()->getLinearVelocity();
-	Eigen::Vector3d angVelSim = mSkeleton->getRootBodyNode()->getAngularVelocity();
+	Eigen::VectorXd p_diff = Eigen::VectorXd::Zero(mSkeleton->getNumDofs());
+	Eigen::VectorXd v_diff = Eigen::VectorXd::Zero(mSkeleton->getNumDofs());
 
 	Eigen::Isometry3d origin_trans_sim = Utils::GetOriginTrans(mSkeleton);
+
+	const auto& bvh_map = mBVH->GetBVHMap();
+	for(auto ss : bvh_map)
+	{
+		auto joint = mSkeleton->getBodyNode(ss.first)->getParentJoint();
+		int idx = joint->getIndexInSkeleton(0);
+		if(joint->getType()=="FreeJoint")
+			continue;
+		else if(joint->getType()=="RevoluteJoint")
+			p_diff[idx] = p_diff_all[idx];
+		else if(joint->getType()=="BallJoint")
+			p_diff.segment<3>(idx) = p_diff_all.segment<3>(idx);
+	}
 
 	auto ees = this->GetEndEffectors();
 	Eigen::VectorXd ee_diff(ees.size()*3);
 	std::vector<Eigen::Quaterniond> ee_ori_diff(ees.size());
-	for(int i=0; i<ees.size(); i++){
-		Eigen::Vector4d cur_ee = Utils::GetPoint4d(ees[i]->getCOM());
-		ee_diff.segment<3>(i*3) = (origin_trans_sim * cur_ee).segment(0,3);
+	Eigen::VectorXd com_diff;
+
+	for(int i =0;i<ees.size();i++){
+		ee_diff.segment<3>(i*3) = ees[i]->getCOM();
+
 		Eigen::Isometry3d cur_ee_trans = Utils::GetBodyTransform(ees[i]);
 		cur_ee_trans = origin_trans_sim * cur_ee_trans;
 		Eigen::Quaterniond cur_ee_ori(cur_ee_trans.rotation());
 		ee_ori_diff[i] = cur_ee_ori;
 	}
-
-	for(int i=1; i<mNumJoints; i++)
-	{
-		double curr_pose_err = 0;
-		double curr_vel_err = 0;
-		double w = mJointWeights[i]; // mJointWeights
-
-		auto joint = mSkeleton->getJoint(i);
-		int idx = joint->getIndexInSkeleton(0);
-		double angle = 0;
-		if(joint->getType()=="RevoluteJoint"){
-			double angle = cur_pos[idx] - mTargetPositions[idx];
-			double velDiff = cur_vel[idx] - mTargetVelocities[idx];
-			curr_pose_err = angle * angle;
-			curr_vel_err = velDiff * velDiff;
-		}
-		else if(joint->getType()=="BallJoint"){
-			Eigen::Vector3d cur = cur_pos.segment<3>(idx);
-			Eigen::Vector3d tar = mTargetPositions.segment<3>(idx);
-
-			Eigen::Quaterniond cur_q = Utils::AxisAngleToQuaternion(cur);
-			Eigen::Quaterniond tar_q = Utils::AxisAngleToQuaternion(tar);
-
-			double angle = Utils::QuatDiffTheta(cur_q, tar_q);
-			curr_pose_err = angle * angle;
-
-			Eigen::Vector3d cur_v = cur_vel.segment<3>(idx);
-			Eigen::Vector3d tar_v = mTargetVelocities.segment<3>(idx);
-
-			curr_vel_err = (cur_v-tar_v).squaredNorm();
-		}
-		else if(joint->getType()=="WeldJoint"){
-		}
-
-		pose_err += w * curr_pose_err;
-		vel_err += w * curr_vel_err;
-	}
-
-	for(int i=0; i<mNumBodyNodes; i++)
-	{
-		mAngVel.segment<3>(i*3) = mSkeleton->getBodyNode(i)->getAngularVelocity();
-		mPos.segment<3>(i*3) = mSkeleton->getBodyNode(i)->getCOM();
-
-		smooth_vel_err += (mAngVel.segment<3>(i*3) - mAngVel_prev.segment<3>(i*3)).squaredNorm()*M_PI/180.0;
-		smooth_pos_err += (mPos.segment<3>(i*3) - mPos_prev.segment<3>(i*3)).squaredNorm();
-	}
-	mAngVel_prev = mAngVel;
-	mPos_prev = mPos;
+	com_diff = mSkeleton->getCOM();
 
 	mSkeleton->setPositions(mTargetPositions);
-	mSkeleton->setVelocities(mTargetVelocities);
-	mSkeleton->computeForwardKinematics(true, false, false);
-
-	Eigen::Vector3d comKin, comKinVel;
-	comKin = mSkeleton->getCOM();
-	comKinVel = mSkeleton->getCOMLinearVelocity();
-
-	const dart::dynamics::BodyNode* rootKin = mSkeleton->getBodyNode(0);
-	Eigen::Isometry3d rootTransKin = Utils::GetJointTransform(rootKin);
-	Eigen::Vector3d rootPosKin = rootTransKin.translation();
-	Eigen::Quaterniond rootOrnKin(rootTransKin.rotation());
-	Utils::QuatNormalize(rootOrnKin);
-
-	Eigen::Vector3d linVelKin = mSkeleton->getRootBodyNode()->getLinearVelocity();
-	Eigen::Vector3d angVelKin = mSkeleton->getRootBodyNode()->getAngularVelocity();
-
-	double root_pos_err = (rootPosSim - rootPosKin).squaredNorm();
-
-	double root_rot_diff = Utils::QuatDiffTheta(rootOrnSim, rootOrnKin);
-	double root_rot_err = root_rot_diff * root_rot_diff;
-	pose_err += root_rot_w * root_rot_err;
-
-	double root_vel_err = (linVelSim - linVelKin).squaredNorm();
-	double root_ang_vel_err = (angVelSim - angVelKin).squaredNorm();
-	vel_err += root_rot_w * root_ang_vel_err;
-
-	root_err = root_pos_err + 0.1 * root_rot_err + 0.01 * root_vel_err + 0.001 * root_ang_vel_err;
-	//root_err = root_rot_err;
+	mSkeleton->computeForwardKinematics(true,false,false);
 
 	Eigen::Isometry3d origin_trans_kin = Utils::GetOriginTrans(mSkeleton);
 
-	double end_ori_err = 0;
-	ees = this->GetEndEffectors();
-	for(int i=0; i<ees.size(); i++)
-	{
-		Eigen::Vector4d cur_ee = Utils::GetPoint4d(ees[i]->getCOM());
-		ee_diff.segment<3>(i*3) -= (origin_trans_kin*cur_ee).segment(0,3);
+	com_diff -= mSkeleton->getCOM();
+	double end_ori_err = 0.0;
+	for(int i=0;i<ees.size();i++){
+		ee_diff.segment<3>(i*3) -= ees[i]->getCOM()+com_diff;
 
 		Eigen::Isometry3d cur_ee_trans = Utils::GetBodyTransform(ees[i]);
 		cur_ee_trans = origin_trans_kin * cur_ee_trans;
@@ -1015,38 +1026,255 @@ GetReward_Character_Imitation()
 		end_ori_err += theta_ * theta_;
 	}
 
-	end_eff_err = ee_diff.squaredNorm();
+	double end_eff_err = ee_diff.squaredNorm();
 	end_eff_err += end_ori_err;
 	end_eff_err /= ees.size();
 
-	com_err = 0.1 * (comKinVel - comSimVel).squaredNorm();
-
-	double r_pose = exp(-err_scale * pose_scale * pose_err);
-	double r_vel = exp(-err_scale * vel_scale * vel_err);
-	double r_ee = exp(-err_scale * end_eff_scale * end_eff_err);
-	double r_root = exp(-err_scale * root_scale * root_err);
-	double r_com = exp(-err_scale * com_scale * com_err);
-	double r_smooth_pos = exp(-err_scale * smooth_pos_scale * smooth_pos_err);
-	double r_smooth_vel = exp(-err_scale * smooth_vel_scale * smooth_vel_err);
-	double r_smooth = r_smooth_pos * r_smooth_vel;
-
-	// double r_imit = r_pose * r_vel * r_ee * r_root * r_com * r_smooth;
-	double r_imit = r_pose * r_ee * r_root * r_com * r_smooth;
-
-	mReward["pose"] = r_pose;
-	mReward["vel"] = r_vel;
-	mReward["ee"] = r_ee;
-	mReward["root"] = r_root;
-	mReward["com"] = r_com;
-	mReward["smooth"] = r_smooth;
-	mReward["imit"] = r_imit;
-
 	mSkeleton->setPositions(cur_pos);
-	mSkeleton->setVelocities(cur_vel);
-	mSkeleton->computeForwardKinematics(true, false, false);
+	mSkeleton->computeForwardKinematics(true,false,false);
+
+	double r_q = Utils::exp_of_squared(p_diff,1.0);
+	double r_v = Utils::exp_of_squared(v_diff,0.1);
+	// double r_ee = Utils::exp_of_squared(ee_diff,80.0);
+	double r_ee = exp(-40.0 * end_eff_err);
+	double r_com = Utils::exp_of_squared(com_diff,20.0);
+
+	double w_q = 0.65;
+	double w_v = 0.1;
+	double w_ee = 0.15;
+	double w_com = 0.1;
+
+	// double r_imit = r_ee*(w_q*r_q + w_v*r_v);
+	double r_imit = r_q*r_ee*r_com;
+
+	mReward["pose"] = w_q*r_q;
+	mReward["vel"] = w_v*r_v;
+	mReward["ee"] = r_ee;
+	mReward["com"] = r_com;
+	// mReward["root"] = r_root;
+	// mReward["smooth"] = r_smooth;
+	// mReward["imit"] = r_imit;
 
 	return r_imit;
 }
+
+// double::
+// Character::
+// GetReward_Character_Imitation()
+// {
+// 	double err_scale = 2.0;  // error scale
+
+// 	double pose_scale = 10.0;
+// 	double vel_scale = 0.1;
+// 	double end_eff_scale = 10.0;
+// 	double root_scale = 2.0;
+// 	double com_scale = 5.0;
+// 	double smooth_vel_scale = 0.02;
+// 	double smooth_pos_scale = 1.0;
+
+// 	double pose_err = 0;
+// 	double vel_err = 0;
+// 	double end_eff_err = 0;
+// 	double root_err = 0;
+// 	double com_err = 0;
+// 	double smooth_vel_err = 0;
+// 	double smooth_pos_err = 0;
+
+// 	Eigen::VectorXd cur_pos = mSkeleton->getPositions();
+// 	Eigen::VectorXd cur_vel = mSkeleton->getVelocities();
+
+// 	Eigen::Vector3d comSim, comSimVel;
+// 	comSim = mSkeleton->getCOM();
+// 	comSimVel = mSkeleton->getCOMLinearVelocity();
+
+// 	double root_rot_w = mJointWeights[0];
+
+// 	const dart::dynamics::BodyNode* rootSim = mSkeleton->getBodyNode(0);
+// 	Eigen::Isometry3d rootTransSim = Utils::GetJointTransform(rootSim);
+// 	Eigen::Vector3d rootPosSim = rootTransSim.translation();
+// 	Eigen::Quaterniond rootOrnSim(rootTransSim.rotation());
+// 	Utils::QuatNormalize(rootOrnSim);
+
+// 	Eigen::Vector3d linVelSim = mSkeleton->getRootBodyNode()->getLinearVelocity();
+// 	Eigen::Vector3d angVelSim = mSkeleton->getRootBodyNode()->getAngularVelocity();
+
+// 	Eigen::Isometry3d origin_trans_sim = Utils::GetOriginTrans(mSkeleton);
+
+// 	auto ees = this->GetEndEffectors();
+// 	Eigen::VectorXd ee_diff(ees.size()*3);
+// 	std::vector<Eigen::Quaterniond> ee_ori_diff(ees.size());
+// 	for(int i=0; i<ees.size(); i++){
+// 		Eigen::Vector4d cur_ee = Utils::GetPoint4d(ees[i]->getCOM());
+// 		ee_diff.segment<3>(i*3) = (origin_trans_sim * cur_ee).segment(0,3);
+// 		Eigen::Isometry3d cur_ee_trans = Utils::GetBodyTransform(ees[i]);
+// 		cur_ee_trans = origin_trans_sim * cur_ee_trans;
+// 		Eigen::Quaterniond cur_ee_ori(cur_ee_trans.rotation());
+// 		ee_ori_diff[i] = cur_ee_ori;
+// 	}
+
+// 	Eigen::VectorXd body_diff((mNumBodyNodes-1)*3);
+// 	Eigen::VectorXd body_vel_diff((mNumBodyNodes-1)*3);
+// 	for(int i=1; i<mNumBodyNodes; i++)
+// 	{
+// 		auto body = mSkeleton->getBodyNode(i);
+// 		Eigen::Vector4d cur_body = 	Utils::GetPoint4d(body->getCOM());
+// 		Eigen::Vector4d cur_body_vel = 	Utils::GetPoint4d(body->getLinearVelocity());
+// 		body_diff.segment<3>((i-1)*3) = (origin_trans_sim * cur_body).segment(0,3);
+// 		body_vel_diff.segment<3>((i-1)*3) = (origin_trans_sim * cur_body_vel).segment(0,3);
+// 	}
+
+// 	for(int i=1; i<mNumJoints; i++)
+// 	{
+// 		double curr_pose_err = 0;
+// 		double curr_vel_err = 0;
+// 		double w = mJointWeights[i]; // mJointWeights
+
+// 		auto joint = mSkeleton->getJoint(i);
+// 		int idx = joint->getIndexInSkeleton(0);
+// 		double angle = 0;
+// 		if(joint->getType()=="RevoluteJoint"){
+// 			double angle = cur_pos[idx] - mTargetPositions[idx];
+// 			double velDiff = cur_vel[idx] - mTargetVelocities[idx];
+// 			curr_pose_err = angle * angle;
+// 			curr_vel_err = velDiff * velDiff;
+// 		}
+// 		else if(joint->getType()=="BallJoint"){
+// 			Eigen::Vector3d cur = cur_pos.segment<3>(idx);
+// 			Eigen::Vector3d tar = mTargetPositions.segment<3>(idx);
+
+// 			Eigen::Quaterniond cur_q = Utils::AxisAngleToQuaternion(cur);
+// 			Eigen::Quaterniond tar_q = Utils::AxisAngleToQuaternion(tar);
+
+// 			double angle = Utils::QuatDiffTheta(cur_q, tar_q);
+// 			curr_pose_err = angle * angle;
+
+// 			Eigen::Vector3d cur_v = cur_vel.segment<3>(idx);
+// 			Eigen::Vector3d tar_v = mTargetVelocities.segment<3>(idx);
+
+// 			curr_vel_err = (cur_v-tar_v).squaredNorm();
+// 		}
+// 		else if(joint->getType()=="WeldJoint"){
+// 		}
+
+// 		pose_err += w * curr_pose_err;
+// 		vel_err += w * curr_vel_err;
+// 	}
+
+// 	for(int i=0; i<mNumBodyNodes; i++)
+// 	{
+// 		mAngVel.segment<3>(i*3) = mSkeleton->getBodyNode(i)->getAngularVelocity();
+// 		mPos.segment<3>(i*3) = mSkeleton->getBodyNode(i)->getCOM();
+
+// 		smooth_vel_err += (mAngVel.segment<3>(i*3) - mAngVel_prev.segment<3>(i*3)).squaredNorm()*M_PI/180.0;
+// 		smooth_pos_err += (mPos.segment<3>(i*3) - mPos_prev.segment<3>(i*3)).squaredNorm();
+// 	}
+// 	mAngVel_prev = mAngVel;
+// 	mPos_prev = mPos;
+
+// 	mSkeleton->setPositions(mTargetPositions);
+// 	mSkeleton->setVelocities(mTargetVelocities);
+// 	mSkeleton->computeForwardKinematics(true, false, false);
+
+// 	Eigen::Vector3d comKin, comKinVel;
+// 	comKin = mSkeleton->getCOM();
+// 	comKinVel = mSkeleton->getCOMLinearVelocity();
+
+// 	const dart::dynamics::BodyNode* rootKin = mSkeleton->getBodyNode(0);
+// 	Eigen::Isometry3d rootTransKin = Utils::GetJointTransform(rootKin);
+// 	Eigen::Vector3d rootPosKin = rootTransKin.translation();
+// 	Eigen::Quaterniond rootOrnKin(rootTransKin.rotation());
+// 	Utils::QuatNormalize(rootOrnKin);
+
+// 	Eigen::Vector3d linVelKin = mSkeleton->getRootBodyNode()->getLinearVelocity();
+// 	Eigen::Vector3d angVelKin = mSkeleton->getRootBodyNode()->getAngularVelocity();
+
+// 	double root_pos_err = (rootPosSim - rootPosKin).squaredNorm();
+
+// 	double root_rot_diff = Utils::QuatDiffTheta(rootOrnSim, rootOrnKin);
+// 	double root_rot_err = root_rot_diff * root_rot_diff;
+// 	pose_err += root_rot_w * root_rot_err;
+
+// 	double root_vel_err = (linVelSim - linVelKin).squaredNorm();
+// 	double root_ang_vel_err = (angVelSim - angVelKin).squaredNorm();
+// 	vel_err += root_rot_w * root_ang_vel_err;
+
+// 	root_err = root_pos_err + 0.1 * root_rot_err + 0.01 * root_vel_err + 0.001 * root_ang_vel_err;
+// 	// root_err = root_rot_err;
+
+// 	Eigen::Isometry3d origin_trans_kin = Utils::GetOriginTrans(mSkeleton);
+
+// 	double end_ori_err = 0;
+// 	ees = this->GetEndEffectors();
+// 	for(int i=0; i<ees.size(); i++)
+// 	{
+// 		Eigen::Vector4d cur_ee = Utils::GetPoint4d(ees[i]->getCOM());
+// 		ee_diff.segment<3>(i*3) -= (origin_trans_kin*cur_ee).segment(0,3);
+
+// 		Eigen::Isometry3d cur_ee_trans = Utils::GetBodyTransform(ees[i]);
+// 		cur_ee_trans = origin_trans_kin * cur_ee_trans;
+// 		Eigen::Quaterniond cur_ee_ori(cur_ee_trans.rotation());
+
+// 		double theta_ = Utils::QuatDiffTheta(ee_ori_diff[i], cur_ee_ori);
+// 		end_ori_err += theta_ * theta_;
+// 	}
+
+// 	for(int i=1; i<mNumBodyNodes; i++)
+// 	{
+// 		auto body = mSkeleton->getBodyNode(i);
+// 		Eigen::Vector4d cur_body = 	Utils::GetPoint4d(body->getCOM());
+// 		Eigen::Vector4d cur_body_vel = 	Utils::GetPoint4d(body->getLinearVelocity());
+// 		body_diff.segment<3>((i-1)*3) -= (origin_trans_kin * cur_body).segment(0,3);
+// 		body_vel_diff.segment<3>((i-1)*3) -= (origin_trans_kin * cur_body_vel).segment(0,3);
+// 	}
+
+// 	double body_err = 0.0;
+// 	body_err = body_diff.squaredNorm();
+// 	body_err /= mNumBodyNodes-1;
+
+// 	double body_vel_err = 0.0;
+// 	body_vel_err = body_vel_diff.squaredNorm();
+// 	body_vel_err /= mNumBodyNodes-1;
+
+// 	end_eff_err = ee_diff.squaredNorm();
+// 	end_eff_err += end_ori_err;
+// 	end_eff_err /= ees.size();
+
+// 	com_err = 0.1 * (comKinVel - comSimVel).squaredNorm();
+
+// 	double r_pose = exp(-err_scale * pose_scale * pose_err);
+// 	double r_vel = exp(-err_scale * vel_scale * vel_err);
+// 	double r_ee = exp(-err_scale * end_eff_scale * end_eff_err);
+// 	double r_root = exp(-err_scale * root_scale * root_err);
+// 	double r_com = exp(-err_scale * com_scale * com_err);
+// 	double r_smooth_pos = exp(-err_scale * smooth_pos_scale * smooth_pos_err);
+// 	double r_smooth_vel = exp(-err_scale * smooth_vel_scale * smooth_vel_err);
+// 	double r_smooth = r_smooth_pos * r_smooth_vel;
+
+// 	double r_body = exp(-err_scale * 90.0 * body_err);
+// 	double r_body_vel = exp(-err_scale * 0.3 * body_vel_err);
+// 	// std::cout << "body err : " << body_err << std::endl;
+// 	// std::cout << "body vel err : " << body_vel_err << std::endl;
+// 	// double r_imit = r_body * r_com * r_ee * r_root;
+
+// 	// double r_imit = r_pose * r_vel * r_ee * r_root * r_com * r_smooth;
+// 	double r_imit = r_pose * r_ee * r_root * r_com * r_smooth;
+
+// 	mReward["pose"] = r_pose;
+// 	// mReward["pose"] = r_body;
+// 	mReward["vel"] = r_vel;
+// 	// mReward["vel"] = r_body_vel;
+// 	mReward["ee"] = r_ee;
+// 	mReward["root"] = r_root;
+// 	mReward["com"] = r_com;
+// 	mReward["smooth"] = r_smooth;
+// 	mReward["imit"] = r_imit;
+
+// 	mSkeleton->setPositions(cur_pos);
+// 	mSkeleton->setVelocities(cur_vel);
+// 	mSkeleton->computeForwardKinematics(true, false, false);
+
+// 	return r_imit;
+// }
 
 double
 Character::
@@ -1054,14 +1282,29 @@ GetReward_Character_Efficiency()
 {
 	// double r_TorqueMin = this->GetReward_TorqueMin();
 	double r_TorqueMin = 1.0;
-	double r_ContactForce = this->GetReward_ContactForce();
-	// double r_ContactForce = 1.0;
+	// double r_ContactForce = this->GetReward_ContactForce();
+	double r_ContactForce = 1.0;
 
 	mReward["min"] = r_TorqueMin;
 	mReward["contact"] = r_ContactForce;
 
 	double r = r_TorqueMin * r_ContactForce;
 	return r;
+}
+
+double
+Character::
+GetReward_MetabolicEnergy()
+{
+	double err_scale = 2.0;
+	double metabolic_scale = 0.1;
+	double metabolic_err = 0.0;
+
+	metabolic_err = this->GetMetabolicEnergyRate_HOUD06();
+	metabolic_err /= mMass;
+
+	double r_metabolic = exp(-err_scale * metabolic_scale * metabolic_err);
+	return r_metabolic;
 }
 
 double

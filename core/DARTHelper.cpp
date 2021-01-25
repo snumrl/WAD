@@ -41,7 +41,7 @@ MakeFreeJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 	props->mName = name;
 	props->mT_ParentBodyToJoint = parent_to_joint;
 	props->mT_ChildBodyToJoint = child_to_joint;
-	props->mIsPositionLimitEnforced = false;
+	props->mIsPositionLimitEnforced = true;
 	props->mVelocityLowerLimits = Eigen::Vector6d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector6d::Constant(100.0);
 	props->mDampingCoefficients = Eigen::Vector6d::Constant(0.1);
@@ -58,7 +58,7 @@ MakePlanarJointProperties(const std::string& name,const Eigen::Isometry3d& paren
 	props->mName = name;
 	props->mT_ParentBodyToJoint = parent_to_joint;
 	props->mT_ChildBodyToJoint = child_to_joint;
-	props->mIsPositionLimitEnforced = false;
+	props->mIsPositionLimitEnforced = true;
 	props->mVelocityLowerLimits = Eigen::Vector3d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector3d::Constant(100.0);
 	props->mDampingCoefficients = Eigen::Vector3d::Constant(0.1);
@@ -79,7 +79,7 @@ MakeBallJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 	props->mName = name;
 	props->mT_ParentBodyToJoint = parent_to_joint;
 	props->mT_ChildBodyToJoint = child_to_joint;
-	props->mIsPositionLimitEnforced = false;
+	props->mIsPositionLimitEnforced = true;
 	props->mPositionLowerLimits = lower;
 	props->mPositionUpperLimits = upper;
 	props->mVelocityLowerLimits = Eigen::Vector3d::Constant(-100.0);
@@ -102,7 +102,7 @@ MakeRevoluteJointProperties(const std::string& name,const Eigen::Vector3d& axis,
 	props->mName = name;
 	props->mT_ParentBodyToJoint = parent_to_joint;
 	props->mT_ChildBodyToJoint = child_to_joint;
-	props->mIsPositionLimitEnforced = false;
+	props->mIsPositionLimitEnforced = true;
 	props->mPositionLowerLimits = lower;
 	props->mPositionUpperLimits = upper;
 	props->mAxis = axis;

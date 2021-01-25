@@ -36,6 +36,8 @@ public:
 	const std::vector<dart::dynamics::BodyNode*>& GetEndEffectors(){return mEndEffectors;}
 	Device* GetDevice(){return mDevice;}
 	BVH* GetBVH(){return mBVH;}
+	const std::map<std::string, std::vector<Muscle*>> GetMusclesMap(){return mMuscles_Map;}
+
 
 	void Initialize();
 	void Initialize_Muscles();
@@ -56,6 +58,7 @@ public:
 	int GetControlHz(){ return mControlHz; }
 	int GetNumSteps(){ return mNumSteps; }
 	double GetPhase();
+	std::pair<double,double> GetPhases();
 
 	void SetConstraints();
 	void RemoveConstraints();
@@ -80,7 +83,9 @@ public:
 	double GetReward_Character_Efficiency();
 	double GetReward_TorqueMin();
 	double GetReward_ContactForce();
+	double GetReward_MetabolicEnergy();
 	double GetReward_Device();
+	double GetCurReward(){return mCurReward;}
 
 	void SetAction(const Eigen::VectorXd& a);
 	void SetActivationLevels(const Eigen::VectorXd& a){mActivationLevels = a;}
@@ -108,6 +113,7 @@ public:
 	void SetDevice_Off();
 
 	int GetNumMuscles(){return mNumMuscle;}
+	int GetNumMusclesMap(){return mNumMuscleMap;}
 	int GetNumState(){return mNumState;}
 	int GetNumState_Char(){return mNumState_Char;}
 	int GetNumDof(){return mDof;}
@@ -151,6 +157,9 @@ public:
 
 	void SetMetabolicEnergyRate();
 	double GetMetabolicEnergyRate(){return mMetabolicEnergyRate;}
+	double GetMetabolicEnergyRate_BHAR04(){return mMetabolicEnergyRate_BHAR04;}
+	double GetMetabolicEnergyRate_HOUD06(){return mMetabolicEnergyRate_HOUD06;}
+	std::map<std::string, std::deque<double>> GetMetabolicEnergyMap(){return mMetabolicEnergyMap;}
 
 	double GetCoT(){return mCurCoT;}
 	double GetCurVelocity(){return mCurVel;}
@@ -174,6 +183,7 @@ private:
 	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
 	std::vector<Muscle*> mMuscles;
 	std::vector<Muscle*> mMuscles_Femur;
+	std::map<std::string, std::vector<Muscle*>> mMuscles_Map;
 
 	BVH* mBVH;
 	BVH* mBVH_;
@@ -192,6 +202,7 @@ private:
 	int mNumState_Char;
 	int mNumTotalRelatedDof;
 	int mNumMuscle;
+	int mNumMuscleMap;
 	int mNumBodyNodes;
 	int mNumJoints;
 
@@ -214,6 +225,9 @@ private:
 	double mCurCoT;
 	double mCurVel;
 	double mMetabolicEnergyRate;
+	double mMetabolicEnergyRate_BHAR04;
+	double mMetabolicEnergyRate_HOUD06;
+	std::map<std::string, std::deque<double>> mMetabolicEnergyMap;
 
 	Eigen::Isometry3d mTc;
 	Eigen::VectorXd mKp, mKv;
@@ -243,6 +257,7 @@ private:
 	std::vector<std::string> mRewardTags;
 	std::map<std::string, double> mReward;
 	std::map<std::string, std::deque<double>> mRewards;
+	double mCurReward = 0.0;
 
 	MuscleTuple mCurrentMuscleTuple;
 	std::vector<MuscleTuple> mMuscleTuples;

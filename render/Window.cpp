@@ -76,7 +76,7 @@ Window(Environment* env)
 	mBackground[3] = 0.7;
 	SetFocus();
 	mZoom = 0.30;
-
+	// mDisplayTimeout = 15;
 	mNNLoaded = false;
 	mDevice_On = env->GetCharacter()->GetDevice_OnOff();
 	mFootinterval.resize(20);
@@ -153,6 +153,9 @@ LoadMuscleNN(const std::string& muscle_nn_path)
 	p::exec(str,mns);
 	str = ("num_muscles = "+std::to_string(mEnv->GetCharacter()->GetNumMuscles())).c_str();
 	p::exec(str,mns);
+
+	mMuscleNum = mEnv->GetCharacter()->GetNumMuscles();
+	mMuscleMapNum = mEnv->GetCharacter()->GetNumMusclesMap();
 
 	muscle_nn_module = p::eval("MuscleNN(num_total_muscle_related_dofs,num_actions,num_muscles)",mns);
 
@@ -280,6 +283,38 @@ ParamChange(bool b)
 
 void
 Window::
+m(bool b)
+{
+	if(b){
+		mMuscleMode = (mMuscleMode+1)%mMuscleMapNum;
+	}
+	else
+		mMuscleMode = (mMuscleMode-1)%mMuscleMapNum;
+
+	std::map<std::string, std::vector<Muscle*>> map = mEnv->GetCharacter()->GetMusclesMap();
+
+	int idx = 0;
+	std::vector<Muscle*> muscle_vec;
+	for(auto iter = map.begin(); iter != map.end() ; iter++)
+	{
+		if(idx == mMuscleMode)
+			break;
+
+		cur_muscle = iter->first;
+		muscle_vec = iter->second;
+		idx++;
+	}
+
+	// std::cout << "cur muscle : " << cur_muscle << std::endl;
+	// for(int i=0; i<muscle_vec.size(); i++){
+	// 	std::cout << "name : " << muscle_vec[i]->GetName() << std::endl;
+	// 	std::cout << "F0 : " << muscle_vec[i]->GetF0() << std::endl;
+	// }
+	// std::cout << std::endl;
+}
+
+void
+Window::
 keyboard(unsigned char _key, int _x, int _y)
 {
 	double f_ = 0.0;
@@ -301,6 +336,8 @@ keyboard(unsigned char _key, int _x, int _y)
 		break;
 	case 'v' : mViewMode = (mViewMode+1)%4;break;
 	case '\t': mGraphMode = (mGraphMode+1)%6;break;
+	case 'm' : this->m(true); break;
+	case 'n' : this->m(false); break;
 	case '`' : mCharacterMode = (mCharacterMode+1)%2; break;
 	case '1' : mParamMode = 1; break;
 	case '2' : mParamMode = 2; break;
@@ -357,7 +394,7 @@ Step()
 
 	if(mEnv->GetUseMuscle())
 	{
-		int inference_per_sim = 1;
+		int inference_per_sim = 2;
 		for(int i=0; i<num; i+=inference_per_sim){
 			Eigen::VectorXd mt = mEnv->GetCharacter()->GetMuscleTorques();
 			mEnv->GetCharacter()->SetActivationLevels(GetActivationFromNN(mt));
@@ -496,10 +533,12 @@ DrawMetabolicEnergy()
 	DrawGLBegin();
 
 	//Metabolic Energy Rate
-	double mer = (mEnv->GetCharacter()->GetMetabolicEnergyRate());
+	double BHAR04 = (mEnv->GetCharacter()->GetMetabolicEnergyRate_BHAR04());
+	double HOUD06 = (mEnv->GetCharacter()->GetMetabolicEnergyRate_HOUD06());
 	bool big = true;
 
-	DrawString(0.70, 0.38, big, "Metabolic E : " + std::to_string(mer));
+	DrawString(0.70, 0.38, big, "BHAR04 : " + std::to_string(BHAR04));
+	DrawString(0.70, 0.35, big, "HOUD06 : " + std::to_string(HOUD06));
 	DrawGLEnd();
 }
 
@@ -910,12 +949,35 @@ DrawMuscles(const std::vector<Muscle*>& muscles)
 	for (auto muscle : muscles)
 	{
         double a = muscle->GetActivation();
-        Eigen::Vector4d color(1.0+(3.0*a), 1.0, 1.0, 1.0);
-        glColor4dv(color.data());
+       	Eigen::Vector4d color(1.0+(3.0*a), 1.0, 1.0, 1.0);
+       	glColor4dv(color.data());
+
+        mShapeRenderer.renderMuscle(muscle);
+	}
+	std::map<std::string, std::vector<Muscle*>> map = mEnv->GetCharacter()->GetMusclesMap();
+
+	double l_mt0;
+	double f0;
+	for (auto muscle : map[cur_muscle])
+	{
+	   	Eigen::Vector4d color(1.0, 4.0, 1.0, 1.0);
+	   	double a = muscle->GetActivation();
+	   	l_mt0 = muscle->GetMt0();
+	   	f0 = muscle->GetF0();
+       	// Eigen::Vector4d color(1.0+(3.0*a), 1.0, 1.0, 1.0);
+       	glColor4dv(color.data());
 	    mShapeRenderer.renderMuscle(muscle);
 	}
+
 	glEnable(GL_LIGHTING);
 	glDisable(GL_DEPTH_TEST);
+
+	DrawGLBegin();
+	bool big = true;
+	DrawString(0.70, 0.32, big, "Muscle : " + cur_muscle);
+	DrawString(0.70, 0.29, big, "l_mt0 : " + std::to_string(l_mt0));
+	DrawString(0.70, 0.26, big, "f0 : " + std::to_string(f0));
+	DrawGLEnd();
 }
 
 void
@@ -1187,55 +1249,65 @@ DrawReward()
 	std::deque<double> reward = map["reward"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "reward");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, reward);
+	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, reward, green);
 
 	y = 0.37;
 	std::deque<double> imit = map["imit"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "imit");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, imit);
+	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, imit, green);
 
 	y = 0.25;
 	std::deque<double> min = map["min"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "min");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, min);
+	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, min, green);
 
 	y = 0.13;
 	std::deque<double> contact = map["contact"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "contact");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, contact);
+	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	y = 0.01;
 	std::deque<double> smooth = map["smooth"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "smooth");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, smooth);
+	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	x = 0.85;
 	y = 0.49;
 	std::deque<double> pose = map["pose"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "pose");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, pose);
+	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	y = 0.37;
 	std::deque<double> vel = map["vel"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "vel");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, vel);
+	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	y = 0.25;
 	std::deque<double> ee = map["ee"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "ee");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, ee);
+	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	y = 0.13;
 	std::deque<double> root = map["root"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "root");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, root);
+	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	y = 0.01;
 	std::deque<double> com = map["com"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "com");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, com);
+	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	DrawGLEnd();
 }
@@ -1856,14 +1928,14 @@ GetActivationFromNN(const Eigen::VectorXd& mt)
 	Eigen::VectorXd dt = mEnv->GetCharacter()->GetDesiredTorques();
 	np::ndarray mt_np = toNumPyArray(mt);
 	np::ndarray dt_np = toNumPyArray(dt);
-
 	p::object temp = get_activation(mt_np,dt_np);
 	np::ndarray activation_np = np::from_object(temp);
 
 	Eigen::VectorXd activation(mEnv->GetCharacter()->GetMuscles().size());
 	float* srcs = reinterpret_cast<float*>(activation_np.get_data());
-	for(int i=0; i<activation.rows(); i++)
+	for(int i=0; i<activation.rows(); i++){
 		activation[i] = srcs[i];
+	}
 
 	return activation;
 }

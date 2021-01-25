@@ -96,6 +96,8 @@ public:
     void DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::deque<double>& data, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1);
     void DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::deque<double>& data, int idx, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1, int idx1);
 
+
+    void m(bool b);
 private:
 
 	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module,rms_module;
@@ -135,6 +137,11 @@ private:
 
 	std::vector<Eigen::Vector3d> mFootprint;
 	std::deque<double> mFootinterval;
+
+	int mMuscleNum;
+	int mMuscleMapNum;
+	int mMuscleMode = 0;
+	std::string cur_muscle = "";
 };
 };
 

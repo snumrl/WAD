@@ -293,6 +293,9 @@ GetSignals(int idx)
 	else if(idx==2){
 		return mDeviceSignals_y;
 	}
+	else{
+
+	}
 }
 
 void

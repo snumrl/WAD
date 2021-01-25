@@ -96,7 +96,7 @@
         <Body type="Box" mass="12.0" size="0.1370 0.0976 0.1084" contact="Off" color="0.6 0.6 1.5 1.0" obj="Spine.obj">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 " translation="0.0 1.1204 -0.0 "/>
         </Body>
-        <Joint type="Ball" bvh="Character1_Spine" lower="-0.4 -0.4 -0.4 " upper="0.4 0.4 0.4 " force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
+        <Joint type="Ball" bvh="Character1_Spine" lower="-1.0 -1.0 -1.0 " upper="1.0 1.0 1.0 " force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0. 1.0675 -0.0 "/>
         </Joint>
     </Node>
@@ -104,7 +104,7 @@
         <Body type="Box" mass="12.0" size="0.1998 0.2181 0.1337" contact="Off" color="0.6 0.6 1.5 1.0" obj="Torso.obj">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 -0.0092 0.0 0.0092 1.0 " translation="0.0 1.3032 -0.0 "/>
         </Body>
-        <Joint type="Ball" bvh="Character1_Spine1" lower="-0.4 -0.4 -0.4 " upper="0.4 0.4 0.4 " force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
+        <Joint type="Ball" bvh="Character1_Spine1" lower="-1.0 -1.0 -1.0 " upper="1.0 1.0 1.0 " force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0. 1.1761 -0.0 "/>
         </Joint>
     </Node>
@@ -112,7 +112,7 @@
         <Body type="Box" mass="2.0" size="0.0793 0.0728 0.0652" contact="Off" color="0.6 0.6 1.5 1.0" obj="Neck.obj">
             <Transformation linear="1.0 0.0 0.0 0.0 0.9732 -0.2301 0.0 0.2301 0.9732 " translation="0.0 1.5297 0.003 "/>
         </Body>
-        <Joint type="Ball" bvh="Character1_Neck" lower="-0.4 -0.4 -0.4" upper="0.4 0.4 0.4" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
+        <Joint type="Ball" bvh="Character1_Neck" lower="-1.0 -1.0 -1.0" upper="1.0 1.0 1.0" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0. 1.4844 0.0 "/>
         </Joint>
     </Node>
