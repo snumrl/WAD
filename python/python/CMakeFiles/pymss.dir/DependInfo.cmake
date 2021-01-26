@@ -12,13 +12,13 @@ set(CMAKE_CXX_COMPILER_ID "GNU")
 # Preprocessor definitions for this target.
 set(CMAKE_TARGET_DEFINITIONS_CXX
   "MASS_ROOT_DIR=\"/home/jaedong/Lab/WAD\""
+  "pymss_EXPORTS"
   )
 
 # The include file search paths:
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
   "../core"
   "/usr/include/python3.6m"
-  "/usr/local/include"
   "/usr/include/bullet"
   "/usr/include/eigen3"
   )

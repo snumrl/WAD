@@ -1,8 +1,8 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/pymss.dir/EnvManager.cpp.o"
-  "CMakeFiles/pymss.dir/NumPyHelper.cpp.o"
   "../pymss.pdb"
   "../pymss.so"
+  "CMakeFiles/pymss.dir/EnvManager.cpp.o"
+  "CMakeFiles/pymss.dir/NumPyHelper.cpp.o"
 )
 
 # Per-language clean rules from dependency scanning.

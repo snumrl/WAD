@@ -76,10 +76,10 @@ Window(Environment* env)
 	mBackground[3] = 0.7;
 	SetFocus();
 	mZoom = 0.30;
-	// mDisplayTimeout = 15;
 	mNNLoaded = false;
 	mDevice_On = env->GetCharacter()->GetDevice_OnOff();
 	mFootinterval.resize(20);
+	mDisplayTimeout = 20;
 
 	mm = p::import("__main__");
 	mns = mm.attr("__dict__");
@@ -335,7 +335,12 @@ keyboard(unsigned char _key, int _x, int _y)
 			mDevice_On = !mDevice_On;
 		break;
 	case 'v' : mViewMode = (mViewMode+1)%4;break;
-	case '\t': mGraphMode = (mGraphMode+1)%6;break;
+	case '\t':
+		if(mEnv->GetUseMuscle())
+			mGraphMode = (mGraphMode+1)%50;
+		else
+			mGraphMode = (mGraphMode+1)%6;
+			break;
 	case 'm' : this->m(true); break;
 	case 'n' : this->m(false); break;
 	case '`' : mCharacterMode = (mCharacterMode+1)%2; break;
@@ -533,8 +538,9 @@ DrawMetabolicEnergy()
 	DrawGLBegin();
 
 	//Metabolic Energy Rate
-	double BHAR04 = (mEnv->GetCharacter()->GetMetabolicEnergyRate_BHAR04());
-	double HOUD06 = (mEnv->GetCharacter()->GetMetabolicEnergyRate_HOUD06());
+	mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
+	double BHAR04 = mMetabolicEnergy->GetBHAR04();
+	double HOUD06 = mMetabolicEnergy->GetHOUD06();
 	bool big = true;
 
 	DrawString(0.70, 0.38, big, "BHAR04 : " + std::to_string(BHAR04));
@@ -718,10 +724,19 @@ DrawCharacter()
 		DrawTarget();
 
 	if(mDrawGraph){
-		if(!mEnv->GetUseDevice())
-			DrawFemurSignals();
-		DrawTorques();
-		DrawReward();
+		if(!mEnv->GetUseDevice()){
+			if(mEnv->GetUseMuscle())
+				this->DrawMetabolicEnergy_();
+			else
+				this->DrawFemurSignals();
+		}
+
+		if(mEnv->GetUseMuscle())
+			this->DrawMetabolicEnergys();
+		else
+			this->DrawJointTorques();
+
+		this->DrawReward();
 	}
 	else{
 		this->DrawVelocity();
@@ -1036,12 +1051,9 @@ DrawFemurSignals()
 {
 	DrawGLBegin();
 
-	double p_w = 0.30;
-	double p_h = 0.14;
-	double pl_x = 0.69;
-	double pl_y = 0.84;
-	double pr_x = 0.69;
-	double pr_y = 0.68;
+	double p_w  = 0.30, p_h  = 0.14;
+	double pl_x = 0.69,	pl_y = 0.84;
+	double pr_x = 0.69,	pr_y = 0.68;
 
 	double offset_x = 0.00024;
 	double offset_y = 0.0006;
@@ -1065,141 +1077,130 @@ DrawFemurSignals()
 
 void
 Window::
-DrawTorques()
+DrawMetabolicEnergy_()
 {
 	DrawGLBegin();
 
-	double p_w = 0.30;
-	double p_h = 0.14;
-	double p_x = 0.01;
-	double p_y = 0.84;
-	double offset_y = 0.16;
+	double p_w  = 0.30, p_h = 0.17;
+	double pl_x = 0.69, pl_y = 0.81;
+	double pr_x = 0.69, pr_y = 0.62;
 
-	mTorques = mEnv->GetCharacter()->GetTorques();
-	if(mGraphMode == 0){
-		DrawTorqueGraph("Lower", 0, p_w, p_h, p_x, p_y-0*offset_y);
-		DrawTorqueGraph("FemurL_x", 6, p_w, p_h, p_x, p_y-1*offset_y);
-		DrawTorqueGraph("FemurL_y", 7, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("FemurL_z", 8, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("FemurR_x", 15, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("FemurR_y", 16, p_w, p_h, p_x, p_y-5*offset_y);
-		// DrawTorqueGraph("FemurL_x", 6, p_w, p_h, p_x, p_y-0*offset_y);
-		// DrawTorqueGraph("FemurL_y", 7, p_w, p_h, p_x, p_y-1*offset_y);
-		// DrawTorqueGraph("FemurL_z", 8, p_w, p_h, p_x, p_y-2*offset_y);
-		// DrawTorqueGraph("FemurR_x", 15, p_w, p_h, p_x, p_y-3*offset_y);
-		// DrawTorqueGraph("FemurR_y", 16, p_w, p_h, p_x, p_y-4*offset_y);
-		// DrawTorqueGraph("FemurR_z", 17, p_w, p_h, p_x, p_y-5*offset_y);
-	}
-	else if(mGraphMode == 1){
-		DrawTorqueGraph("Tibia_L", 9, p_w, p_h, p_x, p_y-0*offset_y);
-		DrawTorqueGraph("Tibia_R", 18, p_w, p_h, p_x, p_y-1*offset_y);
-		DrawTorqueGraph("Elbow_L", 42, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("Elbow_R", 52, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("Thumb_L", 13, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("Thumb_R", 22, p_w, p_h, p_x, p_y-5*offset_y);
-	}
-	else if(mGraphMode == 2){
-		DrawTorqueGraph("TalusL_x", 10, p_w, p_h, p_x, p_y-0*offset_y);
-		DrawTorqueGraph("TalusL_y", 11, p_w, p_h, p_x, p_y-1*offset_y);
-		DrawTorqueGraph("TalusL_z", 12, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("TalusR_x", 19, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("TalusR_y", 20, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("TalusR_z", 21, p_w, p_h, p_x, p_y-5*offset_y);
-	}
-	else if(mGraphMode == 3){
-		DrawTorqueGraph("Spine_x", 24, p_w, p_h, p_x, p_y-0*offset_y);
-		DrawTorqueGraph("Spine_y", 25, p_w, p_h, p_x, p_y-1*offset_y);
-		DrawTorqueGraph("Spine_z", 26, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("Torso_x", 27, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("Torso_y", 28, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("Torso_z", 29, p_w, p_h, p_x, p_y-5*offset_y);
-	}
-	else if(mGraphMode == 4){
-		DrawTorqueGraph("ShoulderL_x", 36, p_w, p_h, p_x, p_y-0*offset_y);
-		DrawTorqueGraph("ShoulderL_y", 37, p_w, p_h, p_x, p_y-1*offset_y);
-		DrawTorqueGraph("ShoulderL_z", 38, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("ShoulderR_x", 46, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("ShoulderR_Y", 47, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("ShoulderR_z", 48, p_w, p_h, p_x, p_y-5*offset_y);
-	}
-	else if(mGraphMode == 5){
-		DrawTorqueGraph("ArmL_x", 39, p_w, p_h, p_x, p_y-0*offset_y);
-		DrawTorqueGraph("ArmL_y", 40, p_w, p_h, p_x, p_y-1*offset_y);
-		DrawTorqueGraph("ArmL_z", 41, p_w, p_h, p_x, p_y-2*offset_y);
-		DrawTorqueGraph("ArmR_x", 49, p_w, p_h, p_x, p_y-3*offset_y);
-		DrawTorqueGraph("ArmR_y", 50, p_w, p_h, p_x, p_y-4*offset_y);
-		DrawTorqueGraph("ArmR_z", 51, p_w, p_h, p_x, p_y-5*offset_y);
-	}
-	// if(mGraphMode == 0){
-	// 	DrawTorqueGraph("FemurL_x", 6, p_w, p_h, p_x, p_y-0*offset_y);
-	// 	DrawTorqueGraph("FemurL_y", 7, p_w, p_h, p_x, p_y-1*offset_y);
-	// 	DrawTorqueGraph("FemurL_z", 8, p_w, p_h, p_x, p_y-2*offset_y);
-	// 	DrawTorqueGraph("FemurR_x", 13, p_w, p_h, p_x, p_y-3*offset_y);
-	// 	DrawTorqueGraph("FemurR_y", 14, p_w, p_h, p_x, p_y-4*offset_y);
-	// 	DrawTorqueGraph("FemurR_z", 15, p_w, p_h, p_x, p_y-5*offset_y);
-	// }
-	// else if(mGraphMode == 1){
-	// 	DrawTorqueGraph("Tibia_L", 9, p_w, p_h, p_x, p_y-0*offset_y);
-	// 	DrawTorqueGraph("Tibia_R", 16, p_w, p_h, p_x, p_y-1*offset_y);
-	// 	DrawTorqueGraph("Elbow_L", 29, p_w, p_h, p_x, p_y-2*offset_y);
-	// 	DrawTorqueGraph("Elbow_R", 36, p_w, p_h, p_x, p_y-3*offset_y);
-	// }
-	// else if(mGraphMode == 2){
-	// 	DrawTorqueGraph("TalusL_x", 10, p_w, p_h, p_x, p_y-0*offset_y);
-	// 	DrawTorqueGraph("TalusL_y", 11, p_w, p_h, p_x, p_y-1*offset_y);
-	// 	DrawTorqueGraph("TalusL_z", 12, p_w, p_h, p_x, p_y-2*offset_y);
-	// 	DrawTorqueGraph("TalusR_x", 17, p_w, p_h, p_x, p_y-3*offset_y);
-	// 	DrawTorqueGraph("TalusR_y", 18, p_w, p_h, p_x, p_y-4*offset_y);
-	// 	DrawTorqueGraph("TalusR_z", 19, p_w, p_h, p_x, p_y-5*offset_y);
-	// }
-	// else if(mGraphMode == 3){
-	// 	DrawTorqueGraph("Torso_x", 20, p_w, p_h, p_x, p_y-0*offset_y);
-	// 	DrawTorqueGraph("Torso_y", 21, p_w, p_h, p_x, p_y-1*offset_y);
-	// 	DrawTorqueGraph("Torso_z", 22, p_w, p_h, p_x, p_y-2*offset_y);
-	// 	DrawTorqueGraph("Neck_x", 23, p_w, p_h, p_x, p_y-3*offset_y);
-	// 	DrawTorqueGraph("Neck_y", 24, p_w, p_h, p_x, p_y-4*offset_y);
-	// 	DrawTorqueGraph("Neck_z", 25, p_w, p_h, p_x, p_y-5*offset_y);
-	// }
-	// else if(mGraphMode == 4){
-	// 	DrawTorqueGraph("ShoulderL_x", 26, p_w, p_h, p_x, p_y-0*offset_y);
-	// 	DrawTorqueGraph("ShoulderL_y", 27, p_w, p_h, p_x, p_y-1*offset_y);
-	// 	DrawTorqueGraph("ShoulderL_z", 28, p_w, p_h, p_x, p_y-2*offset_y);
-	// 	DrawTorqueGraph("ShoulderR_x", 33, p_w, p_h, p_x, p_y-3*offset_y);
-	// 	DrawTorqueGraph("ShoulderR_Y", 34, p_w, p_h, p_x, p_y-4*offset_y);
-	// 	DrawTorqueGraph("ShoulderR_z", 35, p_w, p_h, p_x, p_y-5*offset_y);
-	// }
-	// else if(mGraphMode == 5){
-	// 	DrawTorqueGraph("HandL_x", 30, p_w, p_h, p_x, p_y-0*offset_y);
-	// 	DrawTorqueGraph("HandL_y", 31, p_w, p_h, p_x, p_y-1*offset_y);
-	// 	DrawTorqueGraph("HandL_z", 32, p_w, p_h, p_x, p_y-2*offset_y);
-	// 	DrawTorqueGraph("HandR_x", 37, p_w, p_h, p_x, p_y-3*offset_y);
-	// 	DrawTorqueGraph("HandR_y", 38, p_w, p_h, p_x, p_y-4*offset_y);
-	// 	DrawTorqueGraph("HandR_z", 39, p_w, p_h, p_x, p_y-5*offset_y);
-	// }
+	double offset_x = 0.00144;
+	double offset_y = 0.0001;
+	double offset = 0.005;
+	double ratio_y = 0.2;
+
+	mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
+	std::deque<double> BHAR04 = mMetabolicEnergy->GetBHAR04_deque();
+	std::deque<double> HOUD06 = mMetabolicEnergy->GetHOUD06_deque();
+
+	DrawBaseGraph(pl_x, pl_y, p_w, p_h, ratio_y, offset, "BHAR04");
+	DrawLineStrip(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, red, 2.0, BHAR04);
+	DrawStringMax(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, BHAR04, red);
+
+	DrawBaseGraph(pr_x, pr_y, p_w, p_h, ratio_y, offset, "HOUD06");
+	DrawLineStrip(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, red, 2.0, HOUD06);
+	DrawStringMax(pr_x, pr_y, p_h, ratio_y, offset_x, offset_y, offset, HOUD06, red);
 
 	DrawGLEnd();
 }
 
 void
 Window::
-DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double y)
+DrawMetabolicEnergys()
 {
-	double offset_x = 0.00024;
+	DrawGLBegin();
+
+	double p_w = 0.30, p_h = 0.14, p_x = 0.01, p_y = 0.84;
+	double offset_y = 0.16;
+
+	mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
+	int modeNum = mMetabolicEnergy->GetBHAR04_deque_map().size() / 6;
+	auto iter_BHAR04 = mMetabolicEnergy->GetBHAR04_deque_map().begin();
+	auto iter_HOUD06 = mMetabolicEnergy->GetHOUD06_deque_map().begin();
+	for(int i=0; i<modeNum; i++)
+	{
+		for(int j=0; j<6; j++)
+		{
+			if(mGraphMode == i){
+				// DrawMetabolicEnergyGraph(iter->first, iter->second, p_w, p_h, p_x, p_y-j*offset_y);
+				DrawMetabolicEnergyGraph(iter_BHAR04->first, iter_BHAR04->second, iter_HOUD06->second, p_w, p_h, p_x, p_y-j*offset_y);
+			}
+			iter_BHAR04++;
+			iter_HOUD06++;
+		}
+	}
+
+	DrawGLEnd();
+}
+
+void
+Window::
+DrawJointTorques()
+{
+	DrawGLBegin();
+
+	double p_w = 0.30, p_h = 0.14, p_x = 0.01, p_y = 0.84;
+	double offset_y = 0.16;
+
+	mJointTorques = mEnv->GetCharacter()->GetJointTorques();
+	int modeNum = mJointTorques->Get().size() / 6;
+	auto iter = mJointTorques->Get().begin();
+	for(int i=0; i<modeNum; i++)
+	{
+		for(int j=0; j<6; j++)
+		{
+			if(mGraphMode == i)
+				DrawTorqueGraph(iter->first, iter->second, p_w, p_h, p_x, p_y-j*offset_y);
+			iter++;
+		}
+	}
+
+	DrawGLEnd();
+}
+
+void
+Window::
+DrawMetabolicEnergyGraph(std::string name, std::deque<double> data, double w, double h, double x, double y)
+{
+	double offset_x = 0.00048;
+	double offset_y = 0.0006;
+	double offset = 0.005;
+	double ratio_y = 0.2;
+
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, name);
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, data);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data, red);
+}
+
+void
+Window::
+DrawMetabolicEnergyGraph(std::string name, std::deque<double> data1, std::deque<double> data2, double w, double h, double x, double y)
+{
+	double offset_x = 0.00144;
+	double offset_y = 0.0006;
+	double offset = 0.005;
+	double ratio_y = 0.2;
+
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, name);
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, data1);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data1, red);
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data2);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data2, blue);
+}
+
+void
+Window::
+DrawTorqueGraph(std::string name, std::deque<double> data, double w, double h, double x, double y)
+{
+	double offset_x = 0.00144;
 	double offset_y = 0.0005;
 	double offset = 0.005;
 	double ratio_y = 0.3;
 
-	std::deque<double> data_ = (mTorques->GetTorques())[idx];
-
-	if(idx == 0)
-		offset_y *= 0.25;
-
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, name);
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, data_);
-	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data_, red);
-	if(idx == 0){
-		DrawStringMean(x, y, w, h, ratio_y, offset_x, offset_y, offset, data_, green);
-	}
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, data);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data, red);
 }
 
 void
@@ -1208,10 +1209,7 @@ DrawStride()
 {
 	DrawGLBegin();
 
-	double w = 0.15;
-	double h = 0.11;
-	double x = 0.69;
-	double y = 0.47;
+	double w = 0.15, h = 0.11, x = 0.69, y = 0.47;
 
 	double offset_x = 0.003;
 	double offset_y = 1.0;
@@ -1233,10 +1231,7 @@ DrawReward()
 {
 	DrawGLBegin();
 
-	double w = 0.15;
-	double h = 0.11;
-	double x = 0.69;
-	double y = 0.49;
+	double w = 0.15, h = 0.11, x = 0.69, y = 0.49;
 
 	double offset_x = 0.002;
 	double offset_y = 0.1;
@@ -1335,15 +1330,13 @@ DrawDeviceSignals()
 {
 	DrawGLBegin();
 
-	double p_w = 0.30;
-	double p_h = 0.14;
-	double p_x = 0.01;
-	double p_y = 0.84;
+	double p_w = 0.30, p_h = 0.14, p_x = 0.01, p_y = 0.84;
 
 	double offset_x = 0.00024;
 	double offset_y = 0.0006;
 	double offset = 0.005;
 	double ratio_y = 0.3;
+
 	Device* device = mEnv->GetDevice();
 	std::deque<double> data_L = device->GetSignals(0);
 	std::deque<double> data_R = device->GetSignals(1);
@@ -1442,7 +1435,7 @@ DrawBaseGraph(double x, double y, double w, double h, double ratio, double offse
 	DrawQuads(x-offset, y-offset, w+2*offset, h+2*offset, white);
 	DrawLine(x, y+ratio*h, x+w, y+ratio*h, black, 1.5);
 	DrawLine(x, y, x, y+h, black, 1.5);
-	DrawString(x+0.45*w, y+offset, name);
+	DrawString(x+0.35*w, y+offset, name);
 }
 
 void
@@ -1649,10 +1642,8 @@ void
 Window::
 DrawStringMinMax(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, std::deque<double> data, Eigen::Vector4d color)
 {
-	double max = 0;
-	double min = 0;
-	int idx_max = 0;
-	int idx_min = 0;
+	double max = 0, min = 0;
+	int idx_max = 0, idx_min = 0;
 	for(int i=0; i<data.size(); i++)
 	{
 		if(data[i] > max)

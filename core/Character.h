@@ -1,6 +1,8 @@
 #ifndef __MASS_CHARACTER_H__
 #define __MASS_CHARACTER_H__
 #include "dart/dart.hpp"
+#include "JointTorque.h"
+#include "MetabolicEnergy.h"
 #include <deque>
 #include <map>
 
@@ -10,7 +12,9 @@ namespace MASS
 class BVH;
 class Muscle;
 class Device;
-class Torques;
+class JointTorque;
+class MetabolicEnergy;
+// class Torques;
 
 struct MuscleTuple
 {
@@ -101,7 +105,6 @@ public:
 	Eigen::VectorXd GetDesiredTorques();
 	Eigen::VectorXd GetSPDForces(const Eigen::VectorXd& p_desired);
 
-
 	Eigen::VectorXd GetMuscleTorques();
 	MuscleTuple& GetCurrentMuscleTuple(){ return mCurrentMuscleTuple; }
 	std::vector<MuscleTuple>& GetMuscleTuples(){ return mMuscleTuples; }
@@ -128,9 +131,11 @@ public:
 	void SetUseDevice(bool b){mUseDevice = b;}
 	bool GetUseDevice(){return mUseDevice;}
 
-	void SetTorques();
-	Torques* GetTorques(){return mTorques;}
+	void SetJointTorques();
+	JointTorque* GetJointTorques(){return mJointTorques;}
 	std::deque<double> GetSignals(int idx);
+
+	MetabolicEnergy* GetMetabolicEnergy(){return mMetabolicEnergy;}
 
 	void SetRewards();
 	std::map<std::string, std::deque<double>> GetRewards(){return mRewards;}
@@ -143,6 +148,8 @@ public:
 
 	double GetMassRatio(){return mMassRatio;}
 	void SetMassRatio(double r);
+
+	double GetMass(){return mMass;}
 
 	double GetSpeedRatio(){return mSpeedRatio;}
 	void SetSpeedRatio(double r);
@@ -193,7 +200,9 @@ private:
 	bool mBVHcyclic;
 
 	Device* mDevice;
-	Torques* mTorques;
+	// Torques* mTorques;
+	JointTorque* mJointTorques;
+	MetabolicEnergy* mMetabolicEnergy;
 
 	int mDof;
 	int mNumActiveDof;
@@ -271,22 +280,6 @@ private:
     Eigen::VectorXd mParamMin;
     Eigen::VectorXd mParamMax;
 };
-
-class Torques
-{
-public:
-	Torques();
-
-	void Initialize(dart::dynamics::SkeletonPtr skel);
-	void Reset();
-	void SetTorques(const Eigen::VectorXd& desTorques);
-	std::vector<std::deque<double>>& GetTorques(){return mTorquesDofs;}
-
-private:
-	int mDof;
-	std::vector<std::deque<double>> mTorquesDofs;
-};
-
 };
 
 #endif

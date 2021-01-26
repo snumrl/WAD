@@ -239,12 +239,12 @@ SetActivation(double a)
 
 	double ratio = 0.0;
 	ratio = 0.01 * f0 / this->GetMt0();
-	if(f0 == 700){
-		std::cout << "name : " << mName << std::endl;
-		std::cout << "ratio : " << ratio << " , mt0 : " << this->GetMt0() << std::endl;
-		std::cout << std::endl;
-		// std::cout << ratio << " : " << mName << std::endl;
-	}
+	// if(f0 == 700){
+	// 	std::cout << "name : " << mName << std::endl;
+	// 	std::cout << "ratio : " << ratio << " , mt0 : " << this->GetMt0() << std::endl;
+	// 	std::cout << std::endl;
+	// 	// std::cout << ratio << " : " << mName << std::endl;
+	// }
 
 }
 

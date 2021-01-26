@@ -1,23 +1,24 @@
 #ifndef __MASS_WINDOW_H__
 #define __MASS_WINDOW_H__
 
-#include "ShapeRenderer.h"
-
 #include "dart/dart.hpp"
 #include "dart/gui/gui.hpp"
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
 
+#include "ShapeRenderer.h"
+
 namespace p = boost::python;
 namespace np = boost::python::numpy;
-
 namespace MASS
 {
 
 class Environment;
 class Muscle;
 class BVH;
-class Torques;
+class JointTorque;
+class MetabolicEnergy;
+// class Torques;
 class Window : public dart::gui::Win3D
 {
 public:
@@ -57,8 +58,12 @@ public:
 	void DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine3d& M,double y);
 
 	void DrawReward();
-	void DrawTorques();
-	void DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double y);
+	// void DrawTorques();
+	void DrawJointTorques();
+	// void DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double y);
+	void DrawTorqueGraph(std::string name, std::deque<double> data, double w, double h, double x, double y);
+	void DrawMetabolicEnergyGraph(std::string name, std::deque<double> data, double w, double h, double x, double y);
+	void DrawMetabolicEnergyGraph(std::string name, std::deque<double> data1, std::deque<double> data2, double w, double h, double x, double y);
 	void DrawFemurSignals();
 	void DrawDevice();
 	void DrawDeviceSignals();
@@ -70,8 +75,9 @@ public:
 	void DrawContactForce();
 	void DrawVelocity();
 	void DrawMetabolicEnergy();
+	void DrawMetabolicEnergys();
+	void DrawMetabolicEnergy_();
 	void DrawTime();
-
 
 	void DrawGLBegin();
     void DrawGLEnd();
@@ -103,7 +109,9 @@ private:
 	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module,rms_module;
 
 	Environment* mEnv;
-	Torques* mTorques;
+	// Torques* mTorques;
+	JointTorque* mJointTorques;
+	MetabolicEnergy* mMetabolicEnergy;
 	ShapeRenderer mShapeRenderer;
 
 	bool mFocus;
