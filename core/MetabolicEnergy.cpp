@@ -80,6 +80,12 @@ Set(const std::vector<Muscle*>& muscles, double mass, double vel)
 		HOUD06_cur_map[name] = curHOUD06;
 		HOUD06_deque_map[name].pop_back();
 		HOUD06_deque_map[name].push_front(curHOUD06);
+
+		// dE += m->GetMetabolicEnergyRate();
+		// h_A += m->Geth_A();
+		// h_M += m->Geth_M();
+		// h_SL += m->Geth_SL();
+		// W += m->GetW();
 	}
 
 	double dB = 1.51 * mass;

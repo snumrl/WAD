@@ -87,7 +87,7 @@ public:
 	double GetReward_Character_Efficiency();
 	double GetReward_TorqueMin();
 	double GetReward_ContactForce();
-	double GetReward_MetabolicEnergy();
+	double GetReward_MetabolicEnergyMin();
 	double GetReward_Device();
 	double GetCurReward(){return mCurReward;}
 
@@ -148,25 +148,17 @@ public:
 
 	double GetMassRatio(){return mMassRatio;}
 	void SetMassRatio(double r);
-
 	double GetMass(){return mMass;}
+	void SetMass();
 
 	double GetSpeedRatio(){return mSpeedRatio;}
 	void SetSpeedRatio(double r);
 	void SetBVHidx(double r);
 
-	bool isEdgeTime();
-
 	void SetMeasure();
 	void SetCoT();
 	void SetCurVelocity();
 	void SetContactForce();
-
-	void SetMetabolicEnergyRate();
-	double GetMetabolicEnergyRate(){return mMetabolicEnergyRate;}
-	double GetMetabolicEnergyRate_BHAR04(){return mMetabolicEnergyRate_BHAR04;}
-	double GetMetabolicEnergyRate_HOUD06(){return mMetabolicEnergyRate_HOUD06;}
-	std::map<std::string, std::deque<double>> GetMetabolicEnergyMap(){return mMetabolicEnergyMap;}
 
 	double GetCoT(){return mCurCoT;}
 	double GetCurVelocity(){return mCurVel;}

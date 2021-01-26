@@ -356,10 +356,10 @@ SetMotionFrames()
 				// 	p[idx] -= 0.3;
 
 				if(jointName == "ArmL")
-					p[idx+2] -= 0.1;
+					p[idx+2] -= 0.05;
 
 				if(jointName == "ArmR")
-					p[idx+2] += 0.1;
+					p[idx+2] += 0.05;
 
 				if(jointName == "FemurL" || jointName == "FemurR"){
 					p[idx]   *= mSpeedRatio;

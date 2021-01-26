@@ -150,6 +150,8 @@ private:
 	int mMuscleMapNum;
 	int mMuscleMode = 0;
 	std::string cur_muscle = "";
+
+	int mDisplayIter;
 };
 };
 

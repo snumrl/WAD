@@ -68,7 +68,7 @@ Eigen::Vector4d purple_trans(0.8, 0.2, 0.8, 0.2);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mDevice_On(false),isDrawCharacter(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0),mParamMode(0),mViewMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mDevice_On(false),isDrawCharacter(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0),mParamMode(0),mViewMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false), mDisplayIter(0)
 {
 	mBackground[0] = 0.96;
 	mBackground[1] = 0.96;
@@ -79,7 +79,7 @@ Window(Environment* env)
 	mNNLoaded = false;
 	mDevice_On = env->GetCharacter()->GetDevice_OnOff();
 	mFootinterval.resize(20);
-	mDisplayTimeout = 20;
+	mDisplayTimeout = 1000 / 60.0;
 
 	mm = p::import("__main__");
 	mns = mm.attr("__dict__");
@@ -375,28 +375,34 @@ Reset()
 	mFootinterval.clear();
 	mFootinterval.resize(20);
 	mEnv->Reset();
+	mDisplayIter = 0;
 }
 
 void
 Window::
 Step()
 {
-	int num = mEnv->GetNumSteps();
+	int num = mEnv->GetNumSteps() / 2 ;
 	Eigen::VectorXd action;
 	Eigen::VectorXd action_device;
 
-	if(mNNLoaded)
-		action = GetActionFromNN();
-	else
-		action = Eigen::VectorXd::Zero(mEnv->GetCharacter()->GetNumAction());
+	if(mDisplayIter % 2 == 0)
+	{
 
-	if(mDeviceNNLoaded)
-		action_device = GetActionFromNN_Device();
+		if(mNNLoaded)
+			action = GetActionFromNN();
+		else
+			action = Eigen::VectorXd::Zero(mEnv->GetCharacter()->GetNumAction());
 
-	mEnv->SetAction(action);
-	if(mDeviceNNLoaded)
-		mEnv->GetDevice()->SetAction(action_device);
+		if(mDeviceNNLoaded)
+			action_device = GetActionFromNN_Device();
 
+		mEnv->SetAction(action);
+		if(mDeviceNNLoaded)
+			mEnv->GetDevice()->SetAction(action_device);
+
+		mDisplayIter = 0;
+	}
 	if(mEnv->GetUseMuscle())
 	{
 		int inference_per_sim = 2;
@@ -415,7 +421,7 @@ Step()
 
 	mEnv->GetReward();
 	// this->SetTrajectory();
-
+	mDisplayIter++;
 	glutPostRedisplay();
 }
 
