@@ -191,13 +191,6 @@ GetVelocity(int idx)
 	return mEnvs[idx]->GetCharacter()->GetCurVelocity();
 }
 
-double
-EnvManager::
-GetMetabolicEnergy(int idx)
-{
-	return mEnvs[idx]->GetCharacter()->GetMetabolicEnergyRate();
-}
-
 int
 EnvManager::
 GetNumState()
@@ -434,7 +427,6 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("GetControlHz",&EnvManager::GetControlHz)
 		.def("GetSimulationHz",&EnvManager::GetSimulationHz)
 		.def("GetVelocity",&EnvManager::GetVelocity)
-		.def("GetMetabolicEnergy",&EnvManager::GetMetabolicEnergy)
 		.def("UseMuscle",&EnvManager::UseMuscle)
 		.def("UseDevice",&EnvManager::UseDevice)
 		.def("UseDeviceNN",&EnvManager::UseDeviceNN)

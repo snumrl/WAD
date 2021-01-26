@@ -1432,7 +1432,7 @@ GetReward_MetabolicEnergyMin()
 	double metabolic_scale = 0.1;
 	double metabolic_err = 0.0;
 
-	metabolic_err = this->GetMetabolicEnergyRate_HOUD06();
+	metabolic_err = mMetabolicEnergy->GetHOUD06();
 	metabolic_err /= mMass;
 
 	double r_metabolic = exp(-err_scale * metabolic_scale * metabolic_err);
