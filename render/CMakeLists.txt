@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 2.8.6)
+cmake_minimum_required(VERSION 3.5.1)
 project(render)
-
+cmake_policy(SET CMP0072 NEW)
 link_directories(../core/)
 include_directories(../core/)
 
@@ -10,7 +10,7 @@ find_package(GLUT REQUIRED)
 find_package(GLEW REQUIRED)
 
 find_package(PythonLibs REQUIRED)
-find_package(Boost 1.66.0 COMPONENTS filesystem python3 numpy3)
+find_package(Boost 1.66.0 EXACT COMPONENTS regex filesystem python3 numpy3)
 
 include_directories(${DART_INCLUDE_DIRS})
 include_directories(${OPENGL_INCLUDE_DIR})
