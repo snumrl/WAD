@@ -630,8 +630,11 @@ DrawTime()
 	DrawGLBegin();
 
 	double t = mEnv->GetWorld()->getTime();
+	double f = mEnv->GetCharacter()->GetCurFrame();
+	double p = mEnv->GetCharacter()->GetPhase();
 	bool big = true;
 	DrawString(0.47, 0.93, big, "Time : " + std::to_string(t) + " s");
+	DrawString(0.47, 0.90, big, "Frame : " + std::to_string(f) + ", " + std::to_string(p));
 
 	DrawGLEnd();
 }

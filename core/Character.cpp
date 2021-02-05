@@ -21,7 +21,7 @@ Character(dart::simulation::WorldPtr& wPtr)
 	mForceRatio = 1.0;
 	mSpeedRatio = 1.0;
 
-	mLowerBody = false;
+	mLowerBody = true;
 }
 
 Character::
@@ -234,8 +234,11 @@ Initialize()
 	mFemurSignals.push_back(std::deque<double>(1200));
 
 	int frames = mBVH->GetNumTotalFrames();
+	double ratio = 1.0;
+	if(mLowerBody)
+		ratio = 52.8/74.2;
 	mMetabolicEnergy = new MetabolicEnergy(mWorld);
-	mMetabolicEnergy->Initialize(this->GetMuscles(), mMass, mNumSteps, frames);
+	mMetabolicEnergy->Initialize(this->GetMuscles(), mMass, mNumSteps, frames, ratio);
 
 	mJointTorques = new JointTorque();
 	mJointTorques->Initialize(mSkeleton);
@@ -449,6 +452,7 @@ Reset()
 	mSkeleton->clearExternalForces();
 
 	double worldTime = mWorld->getTime();
+	this->SetPhase();
 	this->SetTargetPosAndVel(worldTime);
 
 	mSkeleton->setPositions(mTargetPositions);
@@ -528,9 +532,6 @@ Step_Muscles(int simCount, int randomSampleIndex, bool isRender)
 		muscle->ApplyForceToBody();
 	}
 
-	if(mLowerBody)
-		mDesiredTorque.head<30>().setZero();
-
 	if(simCount == randomSampleIndex)
 	{
 		int m = mMuscles.size();
@@ -571,6 +572,8 @@ Step_Muscles(int simCount, int randomSampleIndex, bool isRender)
 	mStepCnt++;
 	mStepCnt_total++;
 
+	this->SetCurVelocity();
+	mMetabolicEnergy->Set(this->GetMuscles(), mCurVel3d, this->GetPhase());
 	if(isRender)
 		this->SetMeasure();
 }
@@ -579,8 +582,6 @@ void
 Character::
 SetMeasure()
 {
-	this->SetCurVelocity();
-	mMetabolicEnergy->Set(this->GetMuscles(), mCurVel3d, this->GetPhase());
 	mJointTorques->Set(mSkeleton, mDesiredTorque);
 	mContacts->Set();
 	// this->SetCoT();
@@ -725,7 +726,7 @@ GetReward_Character()
  	mReward["imit"] = reward_imit;
  	mReward["effi"] = reward_effi;
 
-	double r = reward_imit * reward_effi;
+	double r = 0.8 * reward_imit + 0.2 * reward_effi;
 
 	return r;
 }
@@ -849,8 +850,8 @@ Character::
 GetReward_Character_Efficiency()
 {
 	double r_EnergyMin = 1.0;
-	// if(mUseMuscle)
-	//	r_EnergyMin = mMetabolicEnergy->GetReward();
+	if(mUseMuscle)
+		r_EnergyMin = mMetabolicEnergy->GetReward();
 	// else
 	// 	r_EnergyMin = this->GetReward_TorqueMin();
 
@@ -890,32 +891,33 @@ GetReward_TorqueMin()
 	return 0;
 }
 
-std::pair<double, double>
+void
 Character::
-GetPhases()
+SetPhases()
 {
-	double phase = this->GetPhase();
-	double rad = 2*M_PI*phase;
+	double rad = 2*M_PI*mPhase;
 	double cos = std::cos(rad);
 	double sin = std::sin(rad);
 
-	return std::pair<double, double>(cos, sin);
+	mPhases = std::pair<double, double>(cos, sin);
 }
 
-double
+void
 Character::
-GetPhase()
+SetPhase()
 {
 	double t = mWorld->getTime();
 	double cycleTime = mBVH->GetMaxTime();
 	int cycleCount = (int)(t/cycleTime);
 	double phase = t;
 	if(mBVH->IsCyclic())
-		phase = t - cycleCount*cycleTime;
+		phase = (t - cycleCount*cycleTime)/cycleTime;
 	if(phase < 0)
-		phase += cycleTime;
+		phase += (cycleTime)/cycleTime;
 
-	return phase;
+	mPhase = phase;
+
+	this->SetPhases();
 }
 
 void
@@ -1013,6 +1015,7 @@ SetTargetPosAndVel(double t)
 	}
 
 	double frameFraction = (frameTime - frame*dt)/dt;
+	mCurFrame = frame + frameFraction;
 
 	this->SetTargetPositions(t,dt,frame,frameNext,frameFraction);
 	this->SetTargetVelocities(t,dt,frame,frameNext,frameFraction);

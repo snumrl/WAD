@@ -228,7 +228,7 @@ Parse(const std::string& file, bool cyclic)
 			is>>buffer; //Time:
 			is>>buffer; //time step
 			mTimeStep = atof(buffer);
-			mTimeStep = 0.0333;
+			mTimeStep = 1.0/30.0;
 			mMotions.resize(mNumTotalFrames/4+1);
 			for(auto& m_t : mMotions)
 				m_t = Eigen::VectorXd::Zero(mNumTotalChannels);

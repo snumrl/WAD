@@ -62,8 +62,10 @@ public:
 	int GetSimulationHz(){ return mSimulationHz; }
 	int GetControlHz(){ return mControlHz; }
 	int GetNumSteps(){ return mNumSteps; }
-	double GetPhase();
-	std::pair<double,double> GetPhases();
+	void SetPhase();
+	void SetPhases();
+	double GetPhase(){ return mPhase; }
+	std::pair<double,double> GetPhases(){ return mPhases; }
 
 	void SetConstraints();
 	void RemoveConstraints();
@@ -130,8 +132,9 @@ public:
 
 	void SetRewards();
 	std::map<std::string, std::deque<double>> GetRewards(){return mRewards;}
-	std::deque<double> GetSignals(int idx);
 
+	double GetCurFrame(){ return mCurFrame; }
+	std::deque<double> GetSignals(int idx);
 	JointTorque* GetJointTorques(){return mJointTorques;}
 	MetabolicEnergy* GetMetabolicEnergy(){return mMetabolicEnergy;}
 	Contact* GetContacts(){return mContacts;}
@@ -140,7 +143,6 @@ public:
 	void SetMassRatio(double r);
 	double GetMass(){return mMass;}
 	double GetMassRatio(){return mMassRatio;}
-
 
 	double SetSpeedIdx(double s);
 	void SetBVHidx(double r);
@@ -151,8 +153,6 @@ public:
 	double GetSpeedRatio(){return mSpeedRatio;}
 	double GetForceRatio(){return mForceRatio;}
 	Eigen::VectorXd GetMaxForces(){return mMaxForces;}
-
-
 
 	void SetMeasure();
 	void SetCoT();
@@ -205,6 +205,9 @@ private:
 	int mControlHz;
 	int mSimulationHz;
 	int mNumSteps;
+	double mCurFrame;
+	double mPhase;
+	std::pair<double,double> mPhases;
 
 	bool mUseDevice;
 	bool mUseMuscle;

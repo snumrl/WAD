@@ -279,12 +279,12 @@ void
 Environment::
 Reset(bool RSI)
 {
-	double t = 0.1;
+	double t = 0.0;
 
-	if (RSI)
-	{
-		t = 1.0/(double)mControlHz * (rand()%30);
-	}
+	// if (RSI)
+	// {
+	// 	t = 1.0/(double)mControlHz * (rand()%30);
+	// }
 
 	mWorld->reset();
 	mWorld->setTime(t);
@@ -318,8 +318,8 @@ Step(bool device_onoff, bool isRender)
 	// 	mStepCnt = 0;
 	// mStepCnt++;
 	// mStepCnt_total++;
-
 	mWorld->step();
+	mCharacter->SetPhase();
 	mSimCount++;
 }
 
