@@ -278,6 +278,7 @@ class PPO(object):
 		states_next = [None]*self.num_slaves
 		terminated = [False]*self.num_slaves
 
+
 		states = self.env.GetStates()
 
 		if self.use_adaptive_sampling:

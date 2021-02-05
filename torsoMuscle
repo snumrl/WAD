@@ -1,0 +1,66 @@
+앞 4개 
+L_Rectus_Abdominis1 red
+R_Rectus_Abdominis1 
+L_Transversus_Abdominis4 green
+R_Transversus_Abdominis4 
+
+뒤 6개
+L_Multifidus red
+R_Multifidus 
+L_Quadratus_Lumborum1 purple
+R_Quadratus_Lumborum1
+L_Transversus_Abdominis cyan
+R_Transversus_Abdominis
+
+L_Transversus_Abdominis2 purple
+R_Transversus_Abdominis2
+L_Serratus_Posterior_Inferior blue
+R_Serratus_Posterior_Inferior
+L_Psoas_Minor green
+R_Psoas_Minor
+
+
+길이/f
+L_Rectus_Abdominis1      0.391967 / 1000
+R_Rectus_Abdominis1      0.391967 / 1000
+L_Transversus_Abdominis4 0.375546 / 1000
+R_Transversus_Abdominis4 0.375546 / 1000
+
+뒤 8개
+L_Multifidus              0.374922 / 1000
+R_Multifidus              0.374922 / 1000
+L_Quadratus_Lumborum1     0.120627 / 1000
+R_Quadratus_Lumborum1     0.120627 / 1000
+L_Transversus_Abdominis   0.13042  / 1000 
+R_Transversus_Abdominis   0.13042  / 1000
+L_Longissimus_Thoracis    0.644567 / 1000
+R_Longissimus_Thoracis    0.644567 / 1000
+
+front 0.4 back 1.0
+front는 거의 passive force만 자극
+back은 거의 active force만 자극
+
+현재 front/back muscle의 기본 힘 f0가 1000으로 설정. (임의 설정)
+그런데 값을 찍어보면 500~1000의 scale이 나오는 것으로 보아 그 정도 힘이 쓰이긴 하는듯. 정확하지 않음
+
+그래서, front/back의 muscle 길이 변화로 인한 모션의 변화는 위와 같고
+f0를 줄여가면서 실험을 해보면 어떤 모션이 나올까?
+
+
+
+back 추가
+L_Longissimus_Capitis3
+L_Longissimus_Thoracis
+L_Semispinalis_Capitis1
+
+
+몸이 앞으로 기우는 것
+-> 결국은 front/back 의 힘 차이에 의해서 나타난다
+-> front의 contracture가 심해서?
+-> front는 0.8배만 줄었고, back이 1.2배 늘었으면?
+-> 길이는 그대로인데, back의 힘이 0.5배가 된다면?
+
+-> front와 back이 모두 약해졌는데, pelvis femur사이의 근육같은 걸로만 버틴다고 하면 기울겠지.
+
+
+
