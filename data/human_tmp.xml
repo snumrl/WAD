@@ -48,7 +48,7 @@
         </Joint>
     </Node>
 
-    <Node name="FemurR" parent="Pelvis" endeffector="True" >
+    <Node name="FemurR" parent="Pelvis" >
         <Body type="Box" mass="8.0" size="0.1271 0.4043 0.1398" contact="Off" color="0.3 0.3 1.5 1.0" obj="R_Femur.obj">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.0903 0.7241 -0.0"/>
         </Body>
