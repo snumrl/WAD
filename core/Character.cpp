@@ -635,8 +635,16 @@ void
 Character::
 SetCurVelocity()
 {
+	mRootPos = mSkeleton->getCOM();
+	double time_step = mSkeleton->getTimeStep();
+	double x_diff = (mRootPos[0]-mRootPos_prev[0])/time_step;
+	double z_diff = (mRootPos[2]-mRootPos_prev[2])/time_step;
+	mRootPos_prev = mRootPos;
+	mCurVel = std::sqrt(x_diff*x_diff + z_diff*z_diff);
+
 	mCurVel3d = mSkeleton->getCOMLinearVelocity();
-	mCurVel = mCurVel3d.norm();
+	// mCurVel = mCurVel3d.norm();
+
 }
 
 Eigen::VectorXd
@@ -811,7 +819,7 @@ GetReward_Character_Imitation()
 	//=====================================
 
 	double sig_p = 4.0;
-	double sig_q = 0.2;
+	double sig_q = 0.4;
 	double sig_ee_rot = 20.0;
 	double sig_ee_pos = 40.0;
 
