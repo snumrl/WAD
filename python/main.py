@@ -178,7 +178,7 @@ class PPO(object):
 		self.inference_per_sim = 2
 
 		self.rewards = []
-		self.max_iteration = 15000
+		self.max_iteration = 10000
 		self.num_evaluation = 0
 		self.save_interval = 100
 
