@@ -3,9 +3,4 @@ nn/
 *.a
 *.so
 *.pyc
-python/CMakeFiles
-python/core
-python/python
-python/render
-CMakeCache.txt
-
+python/__pycache__

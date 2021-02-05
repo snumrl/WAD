@@ -450,14 +450,11 @@ Environment::
 SetParamState(Eigen::VectorXd paramState)
 {
 	int paramState_Char = mCharacter->GetNumParamState();
-	std::cout << "param size : " << paramState.size() << std::endl;
-	std::cout << "param char : " << paramState_Char << std::endl;
 	mCharacter->SetParamState(paramState.segment(0,paramState_Char));
 
 	if(mUseDevice)
 	{
 		int paramState_Device = mDevice->GetNumParamState();
-		std::cout << "param device : " << paramState_Device << std::endl;
 		mDevice->SetParamState(paramState.segment(paramState_Char,paramState_Device));
 	}
 }

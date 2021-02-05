@@ -284,7 +284,6 @@ class PPO(object):
 		if self.use_adaptive_sampling:
 			for j in range(self.num_slaves):
 				initial_state = np.float32(random.choice(self.InitialParamStates))
-				print("is : ", initial_state)
 				self.env.SetParamState(j, initial_state)
 
 		counter = 0
