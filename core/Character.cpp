@@ -850,8 +850,8 @@ Character::
 GetReward_Character_Efficiency()
 {
 	double r_EnergyMin = 1.0;
-	// if(mUseMuscle)
-	// 	r_EnergyMin = mMetabolicEnergy->GetReward();
+	if(mUseMuscle)
+		r_EnergyMin = mMetabolicEnergy->GetReward();
 	// else
 	// 	r_EnergyMin = this->GetReward_TorqueMin();
 
