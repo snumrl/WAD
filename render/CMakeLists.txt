@@ -4,13 +4,17 @@ project(render)
 link_directories(../core/)
 include_directories(../core/)
 
+if (POLICY CMP0072)
+    cmake_policy (SET CMP0072 OLD)
+endif(POLICY CMP0072)
+
+find_package(Boost 1.66.0 EXACT COMPONENTS filesystem python3 numpy3)
 find_package(DART REQUIRED COMPONENTS gui collision-bullet CONFIG)
 find_package(OpenGL REQUIRED)
 find_package(GLUT REQUIRED)
 find_package(GLEW REQUIRED)
 
 find_package(PythonLibs REQUIRED)
-find_package(Boost 1.66.0 COMPONENTS filesystem python3 numpy3)
 
 include_directories(${DART_INCLUDE_DIRS})
 include_directories(${OPENGL_INCLUDE_DIR})

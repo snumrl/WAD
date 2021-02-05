@@ -13,8 +13,8 @@ EnvManager(std::string meta_file,int num_envs)
 		mEnvs.push_back(new MASS::Environment());
 		MASS::Environment* env = mEnvs.back();
 
-		env->Initialize(meta_file,false);
 		env->SetId(i);
+		env->Initialize(meta_file, false);
 	}
 }
 
@@ -22,7 +22,7 @@ void
 EnvManager::
 Step(int id)
 {
-	mEnvs[id]->Step(false);
+	mEnvs[id]->Step(false, false);
 }
 
 void
@@ -33,7 +33,7 @@ Steps(int num, bool onDevice)
 	for (int id=0; id<mNumEnvs; ++id)
 	{
 		for(int j=0; j<num; j++)
-			mEnvs[id]->Step(onDevice);
+			mEnvs[id]->Step(onDevice, false);
 	}
 }
 
@@ -46,7 +46,7 @@ StepsAtOnce(bool onDevice)
 	for (int id = 0;id<mNumEnvs;++id)
 	{
 		for(int j=0;j<num;j++)
-			mEnvs[id]->Step(onDevice);
+			mEnvs[id]->Step(onDevice, false);
 	}
 }
 

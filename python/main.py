@@ -107,15 +107,15 @@ class PPO(object):
 		if use_cuda:
 			self.model.cuda()
 
-		self.buffer_size = 2048*2
-		self.batch_size = 128*1
+		self.buffer_size = 1024*8
+		self.batch_size = 128*8
 		self.replay_buffer = ReplayBuffer(30000)
 
 		self.gamma = 0.99
 		self.lb = 0.99
 
 		self.default_clip_ratio = 0.2
-		self.default_learning_rate = 1.0*1E-5
+		self.default_learning_rate = 1.0*1E-4
 		self.clip_ratio = self.default_clip_ratio
 		self.learning_rate = self.default_learning_rate
 
@@ -175,11 +175,12 @@ class PPO(object):
 		self.num_simulation_Hz = self.env.GetSimulationHz()
 		self.num_control_Hz = self.env.GetControlHz()
 		self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
+		self.inference_per_sim = 2
 
 		self.rewards = []
 		self.max_iteration = 15000
 		self.num_evaluation = 0
-		self.save_interval = 50
+		self.save_interval = 100
 
 		self.tic = time.time()
 		self.env.Resets(True)
@@ -282,6 +283,7 @@ class PPO(object):
 		if self.use_adaptive_sampling:
 			for j in range(self.num_slaves):
 				initial_state = np.float32(random.choice(self.InitialParamStates))
+				print("is : ", initial_state)
 				self.env.SetParamState(j, initial_state)
 
 		counter = 0
@@ -296,21 +298,21 @@ class PPO(object):
 			logprobs = a_dist.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
 			values = v.cpu().detach().numpy().reshape(-1)
 			self.env.SetActions(actions)
+
 			if self.use_muscle:
+				mt = Tensor(self.env.GetMuscleTorques())
 				for i in range(self.num_simulation_per_control):
-					mt = Tensor(self.env.GetMuscleTorques())
 					self.env.SetDesiredTorques()
 					dt = Tensor(self.env.GetDesiredTorques())
 					activations = self.muscle_model(mt,dt).cpu().detach().numpy()
 					self.env.SetActivationLevels(activations)
-					self.env.Steps(1, self.use_device)
+					self.env.Steps(self.inference_per_sim, self.use_device)
 			else:
 				self.env.StepsAtOnce(self.use_device)
 
 			for j in range(self.num_slaves):
 				nan_occur = False
 				terminated_state = True
-
 				if np.any(np.isnan(states[j])) or np.any(np.isnan(actions[j])) or np.any(np.isnan(values[j])) or np.any(np.isnan(logprobs[j])):
 					nan_occur = True
 				elif self.env.IsEndOfEpisode(j) is False:
@@ -454,7 +456,7 @@ class PPO(object):
 
 				loss_reg = (activation).pow(2).mean()
 				loss_target = (((tau-stack_tau_des)/100.0).pow(2)).mean()
-				loss = 0.01*loss_reg + loss_target
+				loss = 0.05*loss_reg + loss_target
 
 				self.optimizer_muscle.zero_grad()
 				loss.backward(retain_graph=True)
@@ -478,6 +480,7 @@ class PPO(object):
 				stack_sb = np.vstack(batch.sb).astype(np.float32)
 				stack_v = np.vstack(batch.v).astype(np.float32)
 
+				# embed()
 				v = self.marginal_model(Tensor(stack_sb))
 
 				# Marginal Loss
@@ -507,9 +510,9 @@ class PPO(object):
 		s = int((time.time() - self.tic))
 		s = s - h*3600 - m*60
 
-		if self.num_episode is 0:
+		if self.num_episode == 0:
 			self.num_episode = 1
-		if self.num_tuple is 0:
+		if self.num_tuple == 0:
 			self.num_tuple = 1
 		if self.max_return < self.sum_return/self.num_episode:
 			self.max_return = self.sum_return/self.num_episode
@@ -618,7 +621,7 @@ if __name__=="__main__":
 	for i in range(ppo.max_iteration-5):
 		ppo.Train()
 		rewards = ppo.Evaluate()
-		if (i%1000 is 0) or (i == ppo.max_iteration-7):
+		if (i%1000 == 0) or (i == ppo.max_iteration-7):
 			Plot(rewards,'reward',0,False,True)
 		else:
 			Plot(rewards,'reward',0,False,False)

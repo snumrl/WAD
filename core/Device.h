@@ -8,46 +8,43 @@ namespace MASS
 class Device
 {
 public:
-    Device();
-    Device(dart::dynamics::SkeletonPtr dPtr);
+    Device(dart::simulation::WorldPtr& wPtr);
     ~Device();
 
-    void LoadSkeleton(const std::string& path);
-    void Initialize(dart::simulation::WorldPtr& wPtr, bool nn);
+    void LoadSkeleton(const std::string& path, bool load_obj);
+    const dart::dynamics::SkeletonPtr& GetSkeleton(){ return mSkeleton; }
+
+    void Initialize();
 
     void SetWorld(dart::simulation::WorldPtr& wPtr){ mWorld = wPtr; }
-    void SetCharacter(Character* character);
-    const dart::dynamics::SkeletonPtr& GetSkeleton(){ return mSkeleton; }
+    void SetCharacter(Character* character){mCharacter = character;}
 
     void Reset();
     void Step(const Eigen::VectorXd& a_);
     void Step(double t);
 
-    Eigen::VectorXd GetState();
-
+    Eigen::VectorXd GetState() const;
     void SetAction(const Eigen::VectorXd& a);
-    Eigen::VectorXd GetAction(){ return mAction; }
+    const Eigen::VectorXd& GetAction(){ return mAction; }
 
     void SetDesiredTorques(double t);
-    Eigen::VectorXd GetDesiredTorques();
-
     void SetDesiredTorques2();
-    Eigen::VectorXd GetDesiredTorques2();
+    const Eigen::VectorXd& GetDesiredTorques();
 
     // Learning
-    int GetNumState(){ return mNumState;}
-    int GetNumAction(){ return mNumAction;}
-    int GetNumDofs(){ return mNumDof;}
-    int GetNumActiveDof(){ return mNumActiveDof;}
-    int GetRootJointDof(){ return mRootJointDof;}
+    int GetNumState() const { return mNumState;}
+    int GetNumAction() const { return mNumAction;}
+    int GetNumDofs() const { return mNumDof;}
+    int GetNumActiveDof() const { return mNumActiveDof;}
+    int GetRootJointDof() const { return mRootJointDof;}
+    void SetUseDeviceNN(bool b) { mUseDeviceNN = b; }
 
     // Common
-    void SetTorqueMax(double m){ mTorqueMax = m;}
-    double GetTorqueMax(){ return mTorqueMax;}
-
     double GetAngleQ(const std::string& name);
-    // void SetSignals();
-    std::deque<double> GetSignals(int idx);
+    const std::deque<double>& GetSignals(int idx);
+
+    void SetTorqueMax(double m){ mTorqueMax = m;}
+    double GetTorqueMax() const { return mTorqueMax;}
 
     void SetDelta_t(double t);
     double GetDelta_t(){return mDelta_t;}
@@ -55,14 +52,24 @@ public:
     void SetK_(double k);
     double GetK_(){return mK_;}
 
+    void SetHz(int cHz, int sHz);
+    void SetControlHz(int hz){mControlHz = hz;}
+    void SetSimulationHz(int hz){mSimulationHz = hz;}
+    void SetNumSteps(int step){ mNumSteps=step; }
+    int GetControlHz() const {return mControlHz;}
+    int GetSimulationHz() const {return mSimulationHz;}
+    int GetNumSteps() const { return mNumSteps; }
+
     void SetNumParamState(int n);
-    int GetNumParamState(){return mNumParamState;}
-    void SetParamState(Eigen::VectorXd paramState);
-    Eigen::VectorXd GetParamState(){return mParamState;}
-    Eigen::VectorXd GetMinV(){return mMin_v;}
-    Eigen::VectorXd GetMaxV(){return mMax_v;}
+    void SetParamState(const Eigen::VectorXd& paramState);
     void SetMinMaxV(int idx, double lower, double upper);
+    void SetAdaptiveParams(std::map<std::string, std::pair<double,double>>& p);
     void SetAdaptiveParams(std::string name, double lower, double upper);
+
+    int GetNumParamState() const {return mNumParamState;}
+    const Eigen::VectorXd& GetParamState(){return mParamState;}
+    const Eigen::VectorXd& GetMinV(){return mMin_v;}
+    const Eigen::VectorXd& GetMaxV(){return mMax_v;}
 
 private:
     dart::dynamics::SkeletonPtr mSkeleton;
@@ -76,8 +83,9 @@ private:
     int mRootJointDof;
     int mSimulationHz;
     int mControlHz;
+    int mNumSteps;
 
-    bool mUseNN;
+    bool mUseDeviceNN;
 
     double mTorqueMax;
     Eigen::VectorXd mAction;
@@ -93,9 +101,9 @@ private:
     double qr_prev;
     double ql_prev;
 
-    int signal_size;
     double mDelta_t;
     double mDelta_t_scaler;
+    int mDelta_t_idx;
     double mK_;
     double mK_scaler;
 

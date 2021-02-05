@@ -41,10 +41,11 @@ MakeFreeJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 	props->mName = name;
 	props->mT_ParentBodyToJoint = parent_to_joint;
 	props->mT_ChildBodyToJoint = child_to_joint;
-	props->mIsPositionLimitEnforced = false;
+	props->mIsPositionLimitEnforced = true;
 	props->mVelocityLowerLimits = Eigen::Vector6d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector6d::Constant(100.0);
-	props->mDampingCoefficients = Eigen::Vector6d::Constant(0.4);
+	props->mDampingCoefficients = Eigen::Vector6d::Constant(0.1);
+	props->mSpringStiffnesses = Eigen::Vector6d::Constant(0.0);
 
 	return props;
 }
@@ -57,10 +58,11 @@ MakePlanarJointProperties(const std::string& name,const Eigen::Isometry3d& paren
 	props->mName = name;
 	props->mT_ParentBodyToJoint = parent_to_joint;
 	props->mT_ChildBodyToJoint = child_to_joint;
-	props->mIsPositionLimitEnforced = false;
+	props->mIsPositionLimitEnforced = true;
 	props->mVelocityLowerLimits = Eigen::Vector3d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector3d::Constant(100.0);
-	props->mDampingCoefficients = Eigen::Vector3d::Constant(0.4);
+	props->mDampingCoefficients = Eigen::Vector3d::Constant(0.1);
+	props->mSpringStiffnesses = Eigen::Vector3d::Constant(0.0);
 
 	return props;
 }
@@ -82,9 +84,8 @@ MakeBallJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 	props->mPositionUpperLimits = upper;
 	props->mVelocityLowerLimits = Eigen::Vector3d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector3d::Constant(100.0);
-	props->mForceLowerLimits = force_lower;
-	props->mForceUpperLimits = force_upper;
-	props->mDampingCoefficients = Eigen::Vector3d::Constant(0.4);
+	props->mDampingCoefficients = Eigen::Vector3d::Constant(0.1);
+	props->mSpringStiffnesses = Eigen::Vector3d::Constant(0.0);
 
 	return props;
 }
@@ -107,9 +108,8 @@ MakeRevoluteJointProperties(const std::string& name,const Eigen::Vector3d& axis,
 	props->mAxis = axis;
 	props->mVelocityLowerLimits = Eigen::Vector1d::Constant(-100.0);
 	props->mVelocityUpperLimits = Eigen::Vector1d::Constant(100.0);
-	props->mForceLowerLimits = force_lower;
-	props->mForceUpperLimits = force_upper;
-	props->mDampingCoefficients = Eigen::Vector1d::Constant(0.4);
+	props->mDampingCoefficients = Eigen::Vector1d::Constant(0.1);
+	props->mSpringStiffnesses = Eigen::Vector1d::Constant(0.0);
 
 	return props;
 }
@@ -249,7 +249,7 @@ Eigen::Matrix3d string_to_matrix3d(const std::string& input){
 
 dart::dynamics::SkeletonPtr
 MASS::
-BuildFromFile(const std::string& path,bool create_obj,double mass_ratio)
+BuildFromFile(const std::string& path, bool load_obj, double mass_ratio)
 {
 	TiXmlDocument doc;
 	if(!doc.LoadFile(path)){
@@ -379,7 +379,7 @@ BuildFromFile(const std::string& path,bool create_obj,double mass_ratio)
 		bn->getShapeNodesWith<VisualAspect>().back()->getVisualAspect()->setColor(color_joint);
 		bn->getShapeNodesWith<VisualAspect>().back()->setRelativeTransform(child_to_joint);
 
-		if(obj_file!="None" && create_obj)
+		if(obj_file!="None" && load_obj)
 		{
 			std::string obj_path = std::string(MASS_ROOT_DIR)+"/data/OBJ/"+obj_file;
 			const aiScene* scene = MeshShape::loadMesh(std::string(obj_path));

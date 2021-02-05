@@ -32,8 +32,8 @@ namespace Utils
     Eigen::Vector3d AffineTransVector(Eigen::Isometry3d t,Eigen::Vector3d v);
 
     Eigen::Isometry3d GetOriginTrans(const dart::dynamics::SkeletonPtr& skeleton);
-    Eigen::Isometry3d GetJointTransform(dart::dynamics::BodyNode* body);
-    Eigen::Isometry3d GetBodyTransform(dart::dynamics::BodyNode* body);
+    Eigen::Isometry3d GetJointTransform(const dart::dynamics::BodyNode* body);
+    Eigen::Isometry3d GetBodyTransform(const dart::dynamics::BodyNode* body);
 
     int Clamp(int val, int min, int max);
     void Clamp(Eigen::VectorXd min, Eigen::VectorXd max, Eigen::VectorXd& out_vec);
@@ -72,6 +72,11 @@ namespace Utils
     double QuatTheta(const Eigen::Quaterniond& dq);
     void QuatNormalize(Eigen::Quaterniond& in);
     void ButterworthFilter(double dt, double cutoff, Eigen::VectorXd& out_x);
+
+    Eigen::Vector3d projectToXZ(const Eigen::Vector3d& v);
+    Eigen::Vector3d NearestOnGeodesicCurve3d(const Eigen::Vector3d& targetAxis, const Eigen::Vector3d& targetPosition, const Eigen::Vector3d& position);
+    Eigen::VectorXd BlendPosition(const Eigen::VectorXd& target_a, const Eigen::VectorXd& target_b, double weight, bool blend_rootpos);
+    Eigen::VectorXd solveMCIKRoot(const dart::dynamics::SkeletonPtr& skel, const std::vector<std::tuple<std::string, Eigen::Vector3d, Eigen::Vector3d>>& constraints);
 }
 }
 #endif

@@ -37,11 +37,18 @@ GetPoint()
 }
 
 Muscle::
-Muscle(std::string _name,double _f0,double _lm0,double _lt0,double _pen_angle,double lmax)
-	:name(_name),f0(_f0),l_m0(_lm0),l_mt(1.0),l_t0(_lt0),l_mt0(0.0),activation(0.0),f_toe(0.33),k_toe(3.0),k_lin(51.878788),e_toe(0.02),e_t0(0.033),k_pe(4.0),e_mo(0.6),gamma(0.5),l_mt_max(lmax)
+Muscle(std::string name,double _f0,double _lm0,double _lt0,double _pen_angle,double lmax)
+	:mName(name),f0(_f0),l_m0(_lm0),l_mt(1.0),l_t0(_lt0),l_mt0(0.0),activation(0.0),activation_prev(0.0),f_toe(0.33),k_toe(3.0),k_pe(4.0),e_mo(0.6),gamma(0.5),l_mt_max(lmax),dl_m(0.0),mMass(0.0),mass_scaler(0.1)
 {
+	// e_t0 = 0.033;
+	e_t0 = 0.04;
+	k_lin = 1.712/e_t0;
+	e_toe = 0.609*e_t0;
+
 	l_m = l_mt - l_t0;
+	l_m_prev = l_m;
 	f0_default = f0;
+
 }
 
 Muscle::
@@ -49,6 +56,22 @@ Muscle::
 {
 	for(int i=0; i<mAnchors.size(); i++)
 		delete mAnchors[i];
+}
+
+void
+Muscle::
+Reset()
+{
+	activation = 0;
+	activation_prev = 0;
+
+	l_mt = this->Getl_mt();
+	l_m = l_mt - l_t0;
+	l_m_prev = l_m;
+
+	dl_m = 0.0;
+	vcemax = 0.0;
+	vcemin = 0.0;
 }
 
 void
@@ -111,6 +134,7 @@ AddAnchor(const dart::dynamics::SkeletonPtr& skel,dart::dynamics::BodyNode* bn,c
 	int n = mAnchors.size();
 	if(n>1){
 		l_mt0 += (mAnchors[n-1]->GetPoint()-mAnchors[n-2]->GetPoint()).norm();
+		// mMass += l_mt0 * mass_scaler;
 	}
 	mCachedAnchorPositions.resize(n);
 
@@ -118,13 +142,13 @@ AddAnchor(const dart::dynamics::SkeletonPtr& skel,dart::dynamics::BodyNode* bn,c
 	Eigen::MatrixXd Jt = GetJacobianTranspose();
 	auto Ap = GetForceJacobianAndPassive();
 	Eigen::VectorXd JtA = Jt*Ap.first;
-	num_related_dofs = 0;
-	related_dof_indices.clear();
+	mNumRelatedDofs = 0;
+	mRelatedDofIndices.clear();
 	for(int i=0; i<JtA.rows(); i++)
 	{
 		if(std::abs(JtA[i]) > 1E-3){
-			num_related_dofs++;
-			related_dof_indices.push_back(i);
+			mNumRelatedDofs++;
+			mRelatedDofIndices.push_back(i);
 		}
 	}
 }
@@ -146,6 +170,7 @@ AddAnchor(dart::dynamics::BodyNode* bn,const Eigen::Vector3d& glob_pos)
 	int n = mAnchors.size();
 	if(n>1){
 		l_mt0 += (mAnchors[n-1]->GetPoint()-mAnchors[n-2]->GetPoint()).norm();
+		// mMass += l_mt0 * mass_scaler;
 	}
 
 	mCachedAnchorPositions.resize(n);
@@ -153,16 +178,33 @@ AddAnchor(dart::dynamics::BodyNode* bn,const Eigen::Vector3d& glob_pos)
 	Eigen::MatrixXd Jt = GetJacobianTranspose();
 	auto Ap = GetForceJacobianAndPassive();
 	Eigen::VectorXd JtA = Jt*Ap.first;
-	num_related_dofs = 0;
-	related_dof_indices.clear();
+	mNumRelatedDofs = 0;
+	mRelatedDofIndices.clear();
 	for(int i=0; i<JtA.rows(); i++)
 	{
 		if(std::abs(JtA[i])>1E-3)
 		{
-			num_related_dofs++;
-			related_dof_indices.push_back(i);
+			mNumRelatedDofs++;
+			mRelatedDofIndices.push_back(i);
 		}
 	}
+}
+
+void
+Muscle::
+SetMass()
+{
+	double rho = 1059.7; // kg/m^3
+	double sigma = 250000.0; // Pa = N/m^2
+	double F_max = f0;
+	double l_opt1 = this->GetMt0();
+	double l_opt2 = this->Getl_m0();
+	// std::cout << "name : " << mName << std::endl;
+	// std::cout << "l_mt0 : " << l_opt1 << std::endl;
+
+	mMass = (rho * F_max * l_opt1) / sigma ;
+	// std::cout << "mass : " << mMass << std::endl;
+	// std::cout << std::endl;
 }
 
 void
@@ -190,65 +232,68 @@ ApplyForceToBody()
 
 void
 Muscle::
+SetActivation(double a)
+{
+	activation_prev = activation;
+	activation = a;
+
+	double ratio = 0.0;
+	ratio = 0.01 * f0 / this->GetMt0();
+	// if(f0 == 700){
+	// 	std::cout << "name : " << mName << std::endl;
+	// 	std::cout << "ratio : " << ratio << " , mt0 : " << this->GetMt0() << std::endl;
+	// 	std::cout << std::endl;
+	// 	// std::cout << ratio << " : " << mName << std::endl;
+	// }
+
+}
+
+double
+Muscle::
+GetExcitation()
+{
+	double da_dt = (activation - activation_prev) / mTimeStep;
+	double excitation = 0.0;
+	double tau_act = 0.015;
+	double tau_deact = 0.050;
+
+	if(da_dt > 0){
+		excitation = da_dt*(tau_act*(0.5 + 1.5*activation)) + activation;
+	}
+	else{
+		excitation = da_dt*(tau_deact*(0.5 + 1.5*activation)) + activation;
+	}
+
+	return excitation;
+}
+
+void
+Muscle::
 Update()
 {
 	for(int i=0; i<mAnchors.size(); i++)
 		mCachedAnchorPositions[i] = mAnchors[i]->GetPoint();
 
-	l_mt = Getl_mt();
+	l_m_prev = l_m;
+
+	l_mt = this->Getl_mt();
 	l_m = l_mt - l_t0;
+
+	dl_m = (l_m - l_m_prev) / mTimeStep;
+	// std::cout << "update!" << std::endl;
+	// std::cout << "cur : " << l_m << " prev : " << l_m_prev << std::endl;
+	// std::cout << "dl_m : " << dl_m << std::endl;
+	// std::cout << std::endl;
 }
 
 double
 Muscle::
 GetForce()
 {
-	// if(!name.compare("L_Rectus_Abdominis1")||
-	// 	!name.compare("R_Rectus_Abdominis1")||
-	// 	!name.compare("L_Transversus_Abdominis4")||
-	// 	!name.compare("R_Transversus_Abdominis4"))
+	// for(int i=0; i<20; i++)
 	// {
-	// 	double f_A = Getf_A();
-	// 	double f_p = Getf_p();
-	// 	if(activation > 0)
-	// 	{
-	// 		std::cout << "name : " << name << std::endl;
-	// 		std::cout << "f_A : " << f_A << std::endl;
-	// 		std::cout << "activation : " << activation << std::endl;
-	// 		std::cout << "f_p : " << f_p << std::endl;
-	// 		std::cout << std::endl;
-	// 	}
-	// 	else
-	// 	{
-	// 		std::cout << "name : " << name << std::endl;
-	// 		std::cout << "f_p : " << f_p << std::endl;
-	// 		std::cout << std::endl;
-	// 	}
-	// }
-
-	// if(!name.compare("L_Multifidus")||
-	// 	!name.compare("R_Multifidus")||
-	// 	!name.compare("L_Quadratus_Lumborum1")||
-	// 	!name.compare("R_Quadratus_Lumborum1")||
-	// 	!name.compare("L_Transversus_Abdominis")||
-	// 	!name.compare("R_Transversus_Abdominis"))
-	// {
-	// 	double f_A = Getf_A();
-	// 	double f_p = Getf_p();
-	// 	if(activation > 0)
-	// 	{
-	// 		std::cout << "name : " << name << std::endl;
-	// 		std::cout << "f_A : " << f_A << std::endl;
-	// 		std::cout << "activation : " << activation << std::endl;
-	// 		std::cout << "f_p : " << f_p << std::endl;
-	// 		std::cout << std::endl;
-	// 	}
-	// 	else
-	// 	{
-	// 		std::cout << "name : " << name << std::endl;
-	// 		std::cout << "f_p : " << f_p << std::endl;
-	// 		std::cout << std::endl;
-	// 	}
+	// 	double force = 0.0;
+	// 	force = f0* (g_al(0.1*i) + g_pl(0.1*i));
 	// }
 
 	return Getf_A()*activation + Getf_p();
@@ -273,11 +318,93 @@ Muscle::
 Getl_mt()
 {
 	l_mt = 0.0;
-	for(int i=1; i<mAnchors.size(); i++)
+	for(int i=1; i<mAnchors.size(); i++){
 		l_mt += (mCachedAnchorPositions[i]-mCachedAnchorPositions[i-1]).norm();
+	}
 
 	return l_mt*(l_m0 + l_t0) / (l_mt0 * l_m0) - (l_t0 / l_m0) + l_t0;
 }
+
+
+double
+Muscle::
+g(double _l_m)
+{
+	double e_t = (l_mt-_l_m-l_t0)/l_t0;
+	_l_m = _l_m/l_m0;
+	double f = g_t(e_t) - (g_pl(_l_m) + activation*g_al(_l_m));
+	return f;
+}
+
+double
+Muscle::
+g_t(double e_t)
+{
+	// force-strain relationship of tendon
+	// f_t : tendon force normalized to maximum isometric force
+	// e_t : tendon strain
+	// f_toe : 0.33
+	// k_toe : exponential shape factor -> 3.0
+	// e_t0 : normalized tendon force -> 0.04 or 0.033
+	// e_toe : tendon strain above which the tendon exhibits linear behavior 0.02 or 0.0244
+	// k_lin : linear scale factor -> 42.8 or 51.878788
+
+	double f_t;
+	if(e_t <= e_t0)
+		f_t = f_toe/(exp(k_toe)-1)*(exp(k_toe*e_t/e_toe)-1);
+	else
+		f_t = k_lin*(e_t-e_toe)+f_toe;
+
+	return f_t;
+}
+
+double
+Muscle::
+g_al(double _l_m)
+{
+	// active force-length relationship of muscle
+	// f_l : active force-length scale factor
+	// l_m : normalized muscle fiber length
+	// gamma : shape factor -> 0.45 , but 0.5 by sh
+
+	double f_l = exp(-(_l_m-1.0)*(_l_m-1.0)/gamma);
+	return f_l;
+}
+
+double
+Muscle::
+g_pl(double _l_m)
+{
+	// normalized passive muscle force
+	// passive force-length relationship of muscle
+	// f_pl : normalized passive muscle force
+	// k_pe : exponential shape factor -> 5.0
+	// e_mo : passive muscle strain due to maximum isometric force -> 0.6
+	// young : 0.6 old : 0.5
+	//
+	double f_pl = (exp(k_pe*(_l_m-1.0)/e_mo)-1.0)/(exp(k_pe)-1.0);
+	if(_l_m < 1.0)
+		return 0.0;
+	else
+		return f_pl;
+}
+
+void
+Muscle::
+SetMt0Ratio(double ratio)
+{
+	l_mt0_ratio = ratio;
+	l_mt0 = l_mt0_default * l_mt0_ratio;
+}
+
+void
+Muscle::
+SetF0Ratio(double ratio)
+{
+	f0_ratio = ratio;
+	f0 = f0_default * f0_ratio;
+}
+
 
 Eigen::VectorXd
 Muscle::
@@ -294,22 +421,22 @@ Muscle::
 GetReducedJacobianTranspose()
 {
 	const auto& skel = mAnchors[0]->bodynodes[0]->getSkeleton();
-	Eigen::MatrixXd Jt(num_related_dofs, 3*mAnchors.size());
+	Eigen::MatrixXd Jt(mNumRelatedDofs, 3*mAnchors.size());
 
 	Jt.setZero();
 	for(int i=0; i<mAnchors.size(); i++){
 		auto bn = mAnchors[i]->bodynodes[0];
-		dart::math::Jacobian J = dart::math::Jacobian::Zero(6, num_related_dofs);
-		for(int j=0; j<num_related_dofs; j++){
+		dart::math::Jacobian J = dart::math::Jacobian::Zero(6, mNumRelatedDofs);
+		for(int j=0; j<mNumRelatedDofs; j++){
 			auto& indices = bn->getDependentGenCoordIndices();
-			int idx = std::find(indices.begin(), indices.end(), related_dof_indices[j]) - indices.begin();
+			int idx = std::find(indices.begin(), indices.end(), mRelatedDofIndices[j]) - indices.begin();
 			if(idx != indices.size())
 				J.col(j) = bn->getJacobian().col(idx);
 		}
 		// from https://github.com/dartsim/dart/blob/master/dart/dynamics/detail/TemplatedJacobianNode.hpp#L121
 		Eigen::Vector3d offset = mAnchors[i]->bodynodes[0]->getTransform().inverse()*mCachedAnchorPositions[i];
 		dart::math::LinearJacobian JLinear = J.bottomRows<3>() + J.topRows<3>().colwise().cross(offset);
-		Jt.block(0,i*3,num_related_dofs,3) = (bn->getTransform().linear() * JLinear).transpose();
+		Jt.block(0,i*3,mNumRelatedDofs,3) = (bn->getTransform().linear() * JLinear).transpose();
 	}
 	return Jt;
 }
@@ -388,57 +515,211 @@ ComputeJacobians()
 
 double
 Muscle::
-g(double _l_m)
+GetMetabolicEnergyRate()
 {
-	double e_t = (l_mt-_l_m-l_t0)/l_t0;
-	_l_m = _l_m/l_m0;
-	double f = g_t(e_t) - (g_pl(_l_m) + activation*g_al(_l_m));
-	return f;
+	// h_A : activation_heat_rate
+	// h_M : maintenance_heat_rate
+	// h_SL : shortening,lengthening heat rate
+	// w : work
+
+	return GetMetabolicEnergyRate();
+
+	// return GetMetabolicEnergyRate_BHAR04();
+	// return GetMetabolicEnergyRate_HOUD06();
 }
 
 double
 Muscle::
-g_t(double e_t)
+GetMetabolicEnergyRate_BHAR04()
 {
-	double f_t;
-	if(e_t <= e_t0)
-		f_t = f_toe/(exp(k_toe)-1)*(exp(k_toe*e_t/e_toe)-1);
+	if(f0 == 700){
+		mMetabolicEnergyRate_BHAR04 = 0;
+		return mMetabolicEnergyRate_BHAR04;
+	}
+
+	double u = 0.0; // excitation == stimulation
+	u = this->GetExcitation();
+	double A_f = 133; // activation heat rate. fast twitch muscle
+	double A_s = 40; // activation heat rate. slow twitch muscle
+	double u_f = 1-cos(M_PI/2.0 * u); // 1 - cos(PI/2 * u_t)
+	double u_s = sin(M_PI/2.0 * u); // sin(PI/2 * u_t)
+	double f_FT = 0.5; // percentages of fast twitch muscles
+	double f_ST = 0.5; // percentages of fast twitch muscles
+
+	h_A = mMass * (A_s*u_s*f_ST + A_f*u_f*f_FT);
+
+	double l_M = 0.0;
+	double l_m = this->Getl_m();
+	double l_m_opt = this->Getl_m0();
+	double l_ce = l_m/l_m_opt;
+	if(l_ce <= 0.5)
+		l_M = 0.5;
+	else if(l_ce <= 1.0)
+		l_M = l_ce;
+	else if(l_ce <= 1.5)
+		l_M = -2.0 * l_ce + 3.0;
 	else
-		f_t = k_lin*(e_t-e_toe)+f_toe;
+		l_M = 0.0;
 
-	return f_t;
-}
+	double M_f = 111;
+	double M_s = 74;
 
-double
-Muscle::
-g_pl(double _l_m)
-{
-	double f_pl = (exp(k_pe*(_l_m-1.0)/e_mo)-1.0)/(exp(k_pe)-1.0);
-	if(_l_m < 1.0)
-		return 0.0;
+	h_M = mMass * l_M * (M_s*u_s*f_ST + M_f*u_f*f_FT);
+
+	double alpha = 0.0;
+	double v_CE = this->Getdl_m();
+	double force = this->GetForce();
+	if(v_CE <= 0)
+		alpha = 0.16*activation*f0*g_al(l_m) + 0.18*force;
 	else
-		return f_pl;
+		alpha = 0.157*force;
+
+	h_SL = -1*alpha*v_CE;
+
+	w = -1*v_CE*force;
+
+	mMetabolicEnergyRate_BHAR04 = h_A + h_M + h_SL + w;
+
+	return mMetabolicEnergyRate_BHAR04;
 }
 
 double
 Muscle::
-g_al(double _l_m)
+GetMetabolicEnergyRate_HOUD06()
 {
-	return exp(-(_l_m-1.0)*(_l_m-1.0)/gamma);
+	if(f0 == 700){
+		mMetabolicEnergyRate_HOUD06 = 0;
+		return mMetabolicEnergyRate_HOUD06;
+	}
+
+	double h_A_fast = 52.5; // W/kg
+	double h_A_short = 10.98; // W/kg
+	double h_M_fast = 97.5; // W/kg
+	double h_M_short = 13.42; // W/kg
+	double k1_fast = 12;
+	double k1_short = 6;
+	double k2_fast = 14;
+	double k2_short = 8;
+
+	double v = activation * activation;
+	double v_max_fast = k1_fast + k2_fast*activation;
+	double v_max_short = k1_short + k2_short*activation;
+
+	double h_SL_fast = 0.28 * this->GetF0();
+	double h_SL_short = 0.16 * this->GetF0();
+
+	h_A = mMass*h_A_fast*v*(1-exp(-0.25-18.2/(v*v_max_fast)) / (1-exp(-0.25-18.2/(v_max_fast))));
+	h_A += mMass*h_A_short*v*(1-exp(-0.25-18.2/(v*v_max_short)) / (1-exp(-0.25-18.2/(v_max_short))));
+	h_A /= 2.0;
+
+	h_M = mMass*(h_A_fast + h_M_fast)*activation*(g_al(l_m) - h_A_fast/(h_A_fast + h_M_fast));
+	h_M += mMass*(h_A_short + h_M_short)*activation*(g_al(l_m) - h_A_short/(h_A_short + h_M_short));
+	h_M /= 2.0;
+
+	double v_CE = this->Getdl_m();
+	double force = this->GetForce();
+	if(v_CE < 0){
+		h_SL = h_SL_fast * activation * g_al(l_m) - v_CE;
+		h_SL += h_SL_short * activation * g_al(l_m) - v_CE;
+		h_SL /= 2.0;
+	}
+	else
+		h_SL = 0.0;
+
+	w = -1*v_CE*force;
+
+	mMetabolicEnergyRate_HOUD06 = h_A + h_M + h_SL + w;
+
+	return mMetabolicEnergyRate_HOUD06;
 }
 
-void
-Muscle::
-SetMt0Ratio(double ratio)
-{
-	l_mt0_ratio = ratio;
-	l_mt0 = l_mt0_default * l_mt0_ratio;
-}
+// double
+// Muscle::
+// GetMetabolicEnergyRate_UMBE03()
+// {
+// 	double h_AM;
+// 	double A_AM;
+// 	double S = 1.5; //scaling factor
 
-void
-Muscle::
-SetF0Ratio(double ratio)
-{
-	f0_ratio = ratio;
-	f0 = f0_default * f0_ratio;
-}
+// 	double A;
+// 	double u = this->GetExcitation();
+// 	if(u > activation){
+// 		A = u;
+// 	}
+// 	else{
+// 		A = (u + activation) / 2.0;
+// 	}
+
+// 	A_AM = pow(A, 0.6);
+// 	h_AM = 128*0.5 + 25; // f_FT = 0.5
+
+// 	double E;
+// 	double l_CE_opt = this->GetMt0();
+// 	double l_CE = this->Getl_mt();
+// 	double v_CE = this->Getdl_m();
+// 	double v_CE_tilda = v_CE/l_CE_opt;
+// 	double v_CE_max_FT = 0.0;
+// 	double v_CE_max_ST = 0.0;
+// 	double alpha_ST = 0.0;
+// 	double alpha_FT = 0.0;
+// 	double alpha_L = 0.0;
+
+// 	alpha_FT = 153.0 / v_CE_max_FT;
+// 	alpha_ST =  100.0 / (v_CE_max_ST * l_CE_opt);
+// 	alpha_L = 4.0 * alpha_ST;
+
+// 	double A_s = 0.0;
+// 	if(v_CE_tilda <= 0){
+// 		A_s = A*A;
+// 	}
+// 	else{
+// 		A_s = A;
+// 	}
+
+// 	double first_term = 0.0;
+// 	if(v_CE_tilda <= 0){
+// 		first_term = alpha_ST*v_CE_tilda*0.5;
+// 		if(first_term > 100.0)
+// 			first_term = 100.0;
+
+// 		h_SL = (-1*first_term - alpha_FT*v_CE_tilda*0.5);
+// 	}
+// 	else{
+// 		h_SL = alpha_L*v_CE_tilda*A;
+// 	}
+
+// 	double force = this->GetForce();
+// 	w = -1*v_CE*force;
+// 	if(l_CE <= l_CE_opt){
+// 		E = mMass*(h_AM*A_AM*S + h_SL*S)-w;
+// 	}
+// 	else{
+// 		E = mMass*( (0.4*h_AM + 0.6*h_AM*g_al(l_m))*A_AM*S + h_SL*S*g_al(l_m))-w;
+// 	}
+
+// 	mMetabolicEnergyRate_UMBE03 = E;
+// 	return mMetabolicEnergyRate_UMBE03;
+// }
+
+// double
+// Muscle::
+// GetMetabolicEnergyRate_LICH05()
+// {
+// 	double E;
+// 	double l_CE_opt = this->GetMt0();
+// 	double v_CE = this->Getdl_m();
+// 	double force = this->GetForce();
+// 	w = -1*v_CE*force;
+
+// 	double h_;
+// 	double G = 4.0;
+// 	if(v_CE > 0){
+// 		h_ = gamma * v_CE_max / (G*G);
+// 	}
+// 	else{
+// 		0.3*gamma*v_CE_max/(G*G) + 0.7*gamma*v_CE_max/(G*G)*exp(-7.0*v_CE_max*( -1))
+// 	}
+
+// 	E = h_ * l_CE_opt * f0 + w;
+
+// }

@@ -23,6 +23,8 @@ public:
 	Muscle(std::string _name,double f0,double lm0,double lt0,double pen_angle,double lmax);
 	~Muscle();
 
+	void Reset();
+
 	void AddAnchor(const dart::dynamics::SkeletonPtr& skel,dart::dynamics::BodyNode* bn,const Eigen::Vector3d& glob_pos,int num_related_bodies);
 	void AddAnchor(dart::dynamics::BodyNode* bn,const Eigen::Vector3d& glob_pos);
 	const std::vector<Anchor*>& GetAnchors(){return mAnchors;}
@@ -32,7 +34,7 @@ public:
 	double Getf_A();
 	double Getf_p();
 	double Getl_mt();
-	std::string GetName(){return name;}
+	std::string GetName(){return mName;}
 	void SetFemur(bool b){isFemur = b;}
 	bool GetFemur(){return isFemur;}
 
@@ -40,15 +42,15 @@ public:
 	Eigen::MatrixXd GetReducedJacobianTranspose();
 	std::pair<Eigen::VectorXd,Eigen::VectorXd> GetForceJacobianAndPassive();
 
-	int GetNumRelatedDofs(){return num_related_dofs;};
+	int GetNumRelatedDofs(){return mNumRelatedDofs;};
 	Eigen::VectorXd GetRelatedJtA();
 
 	void ComputeJacobians();
 private:
-	std::string name;
+	std::string mName;
 	std::vector<Anchor*> mAnchors;
-	int num_related_dofs;
-	std::vector<int> related_dof_indices;
+	int mNumRelatedDofs;
+	std::vector<int> mRelatedDofIndices;
 
 	std::vector<Eigen::Vector3d> mCachedAnchorPositions;
 	std::vector<Eigen::MatrixXd> mCachedJs;
@@ -62,8 +64,12 @@ public:
 	double g_pl(double _l_m);
 	double g_al(double _l_m);
 
-	void SetActivation(double a){ activation = a;}
+	void SetActivation(double a);
 	double GetActivation(){ return activation;}
+	double GetActivationPrev(){ return activation_prev;}
+
+	void SetTimeStep(double t){mTimeStep = t;}
+	double GetExcitation();
 
 	void SetF0(double f){ f0 = f;}
 	double GetF0(){ return f0;}
@@ -80,11 +86,32 @@ public:
 	double GetMt0Ratio(){return l_mt0_ratio;}
 	double GetMt0Default(){return l_mt0_default;}
 
+	double Getl_m(){return l_m;}
+	double Getl_m0(){return l_m0;}
+	double Getdl_m(){return dl_m;}
+
+	double GetMetabolicEnergyRate();
+	double GetMetabolicEnergyRate_BHAR04();
+	double GetMetabolicEnergyRate_HOUD06();
+	void SetMass();
+
+	double Geth_A(){return h_A;}
+	double Geth_M(){return h_M;}
+	double Geth_SL(){return h_SL;}
+	double GetW(){return w;}
+
 private:
+	double mTimeStep;
+	double h_A, h_M, h_SL, w;
 
 	double l_mt,l_mt_max;
 	double l_m;
+	double l_m_prev;
 	double activation;
+	double activation_prev;
+	double dl_m;
+	double mMass;
+	double mass_scaler;
 
 	double f0;
 	double l_mt0,l_m0,l_t0;
@@ -94,6 +121,13 @@ private:
 	double f_toe,e_toe,k_toe,k_lin,e_t0; //For g_t
 	double k_pe,e_mo; //For g_pl
 	double gamma; //For g_al
+
+	double mMetabolicEnergyRate;
+	double mMetabolicEnergyRate_BHAR04;
+	double mMetabolicEnergyRate_HOUD06;
+
+	double vcemax = 0.0;
+	double vcemin = 0.0;
 };
 
 }
