@@ -95,7 +95,7 @@ SetOffset(double x, double y, double z)
 	mOffset[2] = z;
 }
 
-Eigen::Matrix3d
+const Eigen::Matrix3d&
 BVHNode::
 Get()
 {
@@ -159,7 +159,6 @@ ReadHierarchy(BVHNode* parent,const std::string& name,int& channel_offset,std::i
 			is>>y;
 			is>>z;
 			new_node->SetOffset(6.0*x,6.0*y,6.0*z);
-			// new_node->SetOffset(100*x,100*y,100*z);
 		}
 		else if(!strcmp(buffer,"CHANNELS"))
 		{
@@ -335,7 +334,7 @@ SetMotionFrames()
 					if(p[idx+2] > 0)
 						p[idx+2]   *= 0.8;
 					else
-						p[idx+2]   *= 0.4;
+						p[idx+2]   *= 0.5;
 				}
 			}
 			else if(jn->getType()=="BallJoint"){
@@ -393,21 +392,11 @@ SetMotionFrames()
 					val += 2*M_PI;
 
 				p[idx] = val;
-
-				if(jointName == "ForeArmL" || jointName == "ForeArmR")
-					p[idx] *= mSpeedRatio;
-
-				if(jointName == "TibiaL" || jointName == "TibiaR")
-					p[idx] *= mSpeedRatio;
-
-				if(jointName == "FootThumbL" || jointName == "FootThumbR")
-					p[idx] *= mSpeedRatio;
-
-				if(jointName == "FootPinkyL" || jointName == "FootPinkyR")
-					p[idx] *= mSpeedRatio;
+				p[idx] *= mSpeedRatio;
 			}
 		}
 		mMotionFrames[i] = p;
+		mMotionFrames[i][4] -= 0.02;
 	}
 }
 
@@ -584,14 +573,14 @@ SetMotionFramesNonCyclic(int frames, bool blend)
 	mSkeleton->computeForwardKinematics(true,false,false);
 }
 
-Eigen::VectorXd
+const Eigen::VectorXd&
 BVH::
 GetMotion(int k)
 {
 	return mMotionFrames[k];
 }
 
-Eigen::VectorXd
+const Eigen::VectorXd&
 BVH::
 GetMotionNonCyclic(int k)
 {
@@ -616,13 +605,13 @@ SetMotionVelFrames()
 		{
 			Joint* jn = mSkeleton->getJoint(j);
 			if(jn->getType() == "FreeJoint"){
-				v.segment<3>(offset) = Utils::CalcQuaternionVel(p0,p1,mTimeStep);
+				v.segment<3>(offset) = Utils::CalcQuaternionVel(p0.segment<3>(offset+3),p1.segment<3>(offset+3),mTimeStep);
 				v.segment<3>(offset+3) = (p1.segment<3>(offset+3)-p0.segment<3>(offset+3))/mTimeStep;
 				offset += 6;
 			}
 			else if(jn->getType() == "BallJoint")
 			{
-				v.segment<3>(offset) = Utils::CalcQuaternionVelRel(p0,p1,mTimeStep);
+				v.segment<3>(offset) = Utils::CalcQuaternionVelRel(p0.segment<3>(offset+3),p1.segment<3>(offset+3),mTimeStep);
 				offset += 3;
 			}
 			else if(jn->getType() == "RevoluteJoint")
@@ -670,13 +659,13 @@ SetMotionVelFramesNonCyclic(int frames, bool blend)
 		{
 			Joint* jn = mSkeleton->getJoint(j);
 			if(jn->getType() == "FreeJoint"){
-				vel.segment<3>(offset) = Utils::CalcQuaternionVel(p0,p1,mTimeStep);
+				vel.segment<3>(offset) = Utils::CalcQuaternionVel(p0.segment<3>(offset+3),p1.segment<3>(offset+3),mTimeStep);
 				vel.segment<3>(offset+3) = (p1.segment<3>(offset+3)-p0.segment<3>(offset+3))/mTimeStep;
 				offset += 6;
 			}
 			else if(jn->getType() == "BallJoint")
 			{
-				vel.segment<3>(offset) = Utils::CalcQuaternionVelRel(p0,p1,mTimeStep);
+				vel.segment<3>(offset) = Utils::CalcQuaternionVelRel(p0.segment<3>(offset+3),p1.segment<3>(offset+3),mTimeStep);
 				offset += 3;
 			}
 			else if(jn->getType() == "RevoluteJoint")

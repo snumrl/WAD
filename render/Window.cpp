@@ -161,7 +161,6 @@ LoadMuscleNN(const std::string& muscle_nn_path)
 
 	p::object load = muscle_nn_module.attr("load");
 	load(muscle_nn_path);
-	std::cout << "load muscle" << std::endl;
 }
 
 void
@@ -382,13 +381,12 @@ void
 Window::
 Step()
 {
-	int num = mEnv->GetNumSteps() / 2 ;
+	int num = mEnv->GetNumSteps()/2.0;
 	Eigen::VectorXd action;
 	Eigen::VectorXd action_device;
 
 	if(mDisplayIter % 2 == 0)
 	{
-
 		if(mNNLoaded)
 			action = GetActionFromNN();
 		else
@@ -403,6 +401,7 @@ Step()
 
 		mDisplayIter = 0;
 	}
+
 	if(mEnv->GetUseMuscle())
 	{
 		int inference_per_sim = 2;
@@ -410,13 +409,13 @@ Step()
 			Eigen::VectorXd mt = mEnv->GetCharacter()->GetMuscleTorques();
 			mEnv->GetCharacter()->SetActivationLevels(GetActivationFromNN(mt));
 			for(int j=0; j<inference_per_sim; j++)
-				mEnv->Step(mDevice_On);
+				mEnv->Step(mDevice_On, true);
 		}
 	}
 	else
 	{
 		for(int i=0; i<num; i++)
-			mEnv->Step(mDevice_On);
+			mEnv->Step(mDevice_On, true);
 	}
 
 	mEnv->GetReward();
@@ -558,12 +557,37 @@ void
 Window::
 DrawContactForce()
 {
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+	glEnable(GL_DEPTH_TEST);
+
+	Eigen::Vector4d color(0.8, 1.2, 0.8, 0.6);
+	mRI->setPenColor(color);
+
+	Contact* contact = mEnv->GetCharacter()->GetContacts();
+	auto& objects = contact->GetContactObjects();
+	double force_scaler = -0.0005;
+	for(auto iter = objects.begin(); iter != objects.end(); iter++)
+	{
+		for(int i=0; i<(iter->second).size(); i++)
+		{
+			Eigen::Vector3d f = force_scaler*((iter->second).at(i)).first;
+			Eigen::Vector3d p = ((iter->second).at(i)).second;
+			double norm = f.norm();
+			if(norm != 0)
+				drawArrow3D(p, f/norm, norm, 0.005, 0.015);
+		}
+	}
+
+	glDisable(GL_COLOR_MATERIAL);
+	glDisable(GL_DEPTH_TEST);
+
 	DrawGLBegin();
 
-	double fL = (mEnv->GetCharacter()->GetContactForcesNormAvg()).at(0);
-	double fR = (mEnv->GetCharacter()->GetContactForcesNormAvg()).at(1);
-	bool big = true;
+	double fL = contact->GetContactForce("TalusL");
+	double fR = contact->GetContactForce("TalusR");
 
+	bool big = true;
 	DrawString(0.70, 0.44, big, "Contact L : " + std::to_string(fL));
 	DrawString(0.70, 0.41, big, "Contact R : " + std::to_string(fR));
 
@@ -1091,7 +1115,7 @@ DrawMetabolicEnergy_()
 	double pl_x = 0.69, pl_y = 0.81;
 	double pr_x = 0.69, pr_y = 0.62;
 
-	double offset_x = 0.00144;
+	double offset_x = 0.0090;
 	double offset_y = 0.0001;
 	double offset = 0.005;
 	double ratio_y = 0.2;
@@ -1183,8 +1207,8 @@ void
 Window::
 DrawMetabolicEnergyGraph(std::string name, std::deque<double> data1, std::deque<double> data2, double w, double h, double x, double y)
 {
-	double offset_x = 0.00144;
-	double offset_y = 0.0006;
+	double offset_x = 0.0090;
+	double offset_y = 0.0010;
 	double offset = 0.005;
 	double ratio_y = 0.2;
 

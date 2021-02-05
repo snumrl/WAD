@@ -17,11 +17,14 @@ public:
     // MetabolicEnergy(const dart::simulation::WorldPtr& wPtr);
     ~MetabolicEnergy();
 
-    void Initialize(const std::vector<Muscle*>& muscles);
+    void Initialize(const std::vector<Muscle*>& muscles, double m, int steps, int frames);
     void Reset();
-    void Set(const std::vector<Muscle*>& muscles, double mass, double vel);
+    void Set(const std::vector<Muscle*>& muscles, double vel, double phase);
+    void Set(const std::vector<Muscle*>& muscles, Eigen::Vector3d vel, double phase);
 
-    double GetWindowSize(){return windowSize;}
+    double GetmWindowSize(){return mWindowSize;}
+    double GetReward();
+    void SetMass(double m){mMass = m;}
 
     const double& GetBHAR04(){return BHAR04;}
     const double& GetHOUD06(){return HOUD06;}
@@ -39,11 +42,21 @@ private:
     dart::simulation::WorldPtr mWorld;
     // Character* mCharacter;
 
-    double windowSize;
+    bool isFirst;
+    int curStep = 0;
+    int mNumSteps;
+    int mNumFrames;
+    int mWindowSize;
+    double mMass;
+    double mReward;
+
     double BHAR04, HOUD06;
     std::deque<double> BHAR04_deque, HOUD06_deque;
     std::map<std::string, std::deque<double>> BHAR04_deque_map, HOUD06_deque_map;
     std::map<std::string, double> BHAR04_cur_map, HOUD06_cur_map;
+    std::map<std::string, double> BHAR04_tmp_map, HOUD06_tmp_map;
+    Eigen::Vector3d avgVel;
+
 };
 
 };

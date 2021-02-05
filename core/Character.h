@@ -3,6 +3,7 @@
 #include "dart/dart.hpp"
 #include "JointTorque.h"
 #include "MetabolicEnergy.h"
+#include "Contact.h"
 #include <deque>
 #include <map>
 
@@ -14,6 +15,7 @@ class Muscle;
 class Device;
 class JointTorque;
 class MetabolicEnergy;
+class Contact;
 // class Torques;
 
 struct MuscleTuple
@@ -41,7 +43,6 @@ public:
 	Device* GetDevice(){return mDevice;}
 	BVH* GetBVH(){return mBVH;}
 	const std::map<std::string, std::vector<Muscle*>> GetMusclesMap(){return mMuscles_Map;}
-
 
 	void Initialize();
 	void Initialize_Muscles();
@@ -73,21 +74,18 @@ public:
 
 	Eigen::VectorXd GetState();
 	Eigen::VectorXd GetState_Character();
-	Eigen::VectorXd GetState_Device();
 
 	void Reset();
 	void Reset_Muscles();
 
-	void Step();
-	void Step_Muscles(int simCount, int randomSampleIndex);
+	void Step(bool isRender);
+	void Step_Muscles(int simCount, int randomSampleIndex, bool isRender);
 
 	double GetReward();
 	double GetReward_Character();
 	double GetReward_Character_Imitation();
 	double GetReward_Character_Efficiency();
 	double GetReward_TorqueMin();
-	double GetReward_ContactForce();
-	double GetReward_MetabolicEnergyMin();
 	double GetReward_Device();
 	double GetCurReward(){return mCurReward;}
 
@@ -136,6 +134,7 @@ public:
 	std::deque<double> GetSignals(int idx);
 
 	MetabolicEnergy* GetMetabolicEnergy(){return mMetabolicEnergy;}
+	Contact* GetContacts(){return mContacts;}
 
 	void SetRewards();
 	std::map<std::string, std::deque<double>> GetRewards(){return mRewards;}
@@ -158,13 +157,9 @@ public:
 	void SetMeasure();
 	void SetCoT();
 	void SetCurVelocity();
-	void SetContactForce();
 
 	double GetCoT(){return mCurCoT;}
 	double GetCurVelocity(){return mCurVel;}
-	const std::vector<Eigen::Vector3d>& GetContactForces(){return mContactForces;}
-	const std::vector<double>& GetContactForcesNormAvg(){return mContactForces_norm;}
-	const std::vector<double>& GetContactForcesNorm(){return mContactForces_cur_norm;}
 
 	void SetMinMaxV(int idx, double lower, double upper);
 	const Eigen::VectorXd& GetMinV(){return mParamMin;}
@@ -192,9 +187,9 @@ private:
 	bool mBVHcyclic;
 
 	Device* mDevice;
-	// Torques* mTorques;
 	JointTorque* mJointTorques;
 	MetabolicEnergy* mMetabolicEnergy;
+	Contact* mContacts;
 
 	int mDof;
 	int mNumActiveDof;
@@ -215,6 +210,8 @@ private:
 	bool mUseMuscle;
 	bool mOnDevice;
 
+	bool mLowerBody;
+
 	double mMass;
 	double mMassRatio;
 	double mForceRatio;
@@ -223,12 +220,13 @@ private:
 	int mStepCnt;
 	int mStepCnt_total;
 
-	double mCurCoT;
 	double mCurVel;
+	Eigen::Vector3d mCurVel3d;
+
+	double mCurCoT;
 	double mMetabolicEnergyRate;
 	double mMetabolicEnergyRate_BHAR04;
 	double mMetabolicEnergyRate_HOUD06;
-	std::map<std::string, std::deque<double>> mMetabolicEnergyMap;
 
 	Eigen::Isometry3d mTc;
 	Eigen::VectorXd mKp, mKv;
@@ -249,10 +247,6 @@ private:
 	Eigen::VectorXd mMaxForces;
 	Eigen::VectorXd mDefaultForces;
 
-	std::vector<Eigen::Vector3d> mContactForces;
-	std::vector<double> mContactForces_cur_norm;
-	std::vector<double> mContactForces_norm;
-
 	std::vector<std::deque<double>> mFemurSignals;
 
 	std::vector<std::string> mRewardTags;
@@ -272,6 +266,9 @@ private:
     Eigen::VectorXd mParamMin;
     Eigen::VectorXd mParamMax;
 };
+
+
+
 };
 
 #endif

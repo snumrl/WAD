@@ -18,6 +18,7 @@ class Muscle;
 class BVH;
 class JointTorque;
 class MetabolicEnergy;
+class Contact;
 // class Torques;
 class Window : public dart::gui::Win3D
 {

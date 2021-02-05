@@ -34,7 +34,7 @@ public:
 	void Set(const Eigen::VectorXd& m_t);
 	void Set(const Eigen::Matrix3d& R_t);
 	void SetOffset(double x, double y, double z);
-	Eigen::Matrix3d Get();
+	const Eigen::Matrix3d& Get();
 
 	void AddChild(BVHNode* child);
 	std::vector<BVHNode*>& GetChildren(){return mChildren;}
@@ -64,9 +64,9 @@ public:
 	void Parse(const std::string& file, bool cyclic=true);
 
 	Eigen::Matrix3d Get(const std::string& bvh_node);
-	Eigen::VectorXd GetMotion(int k);
+	const Eigen::VectorXd& GetMotion(int k);
+	const Eigen::VectorXd& GetMotionNonCyclic(int k);
 	Eigen::VectorXd GetMotionVel(int k);
-	Eigen::VectorXd GetMotionNonCyclic(int k);
 	Eigen::VectorXd GetMotionVelNonCyclic(int k);
 	double GetSpeedRatio(){return mSpeedRatio;}
 

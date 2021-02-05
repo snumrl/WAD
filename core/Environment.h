@@ -20,7 +20,7 @@ public:
 	void ParseAdaptiveFile(const std::string& adaptive_file);
 
 	void Reset(bool RSI = true);
-	void Step(bool device_onoff);
+	void Step(bool device_onoff, bool isRender);
 	bool IsEndOfEpisode();
 
 	void SetAction(const Eigen::VectorXd& a);

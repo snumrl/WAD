@@ -193,7 +193,6 @@ SetWorld()
 {
 	mWorld->setGravity(Eigen::Vector3d(0,-9.8,0.0));
 	mWorld->setTimeStep(1.0/mSimulationHz);
-	// std::cout << "time step in setWorld" << mWorld->getTimeStep() << std::endl;
 	mWorld->getConstraintSolver()->setCollisionDetector(dart::collision::BulletCollisionDetector::create());
 
 	mGround = MASS::BuildFromFile(std::string(MASS_ROOT_DIR)+std::string("/data/ground.xml"));
@@ -212,6 +211,7 @@ Initialize(const std::string& meta_file, bool load_obj)
 	character->LoadSkeleton(mSkelFile, load_obj);
 	character->LoadBVH(mBVHFile, mCyclic);
 	character->SetHz(mSimulationHz, mControlHz);
+
 	if(mUseMuscle){
 		character->SetUseMuscle(true);
 		character->LoadMuscles(mMuscleFile);
@@ -279,9 +279,12 @@ void
 Environment::
 Reset(bool RSI)
 {
-	double t = 0.04;
-	if(RSI)
-		t = dart::math::random(0.0,mCharacter->GetBVH()->GetMaxTime()*0.9);
+	double t = 0.1;
+
+	if (RSI)
+	{
+		t = 1.0/(double)mControlHz * (rand()%30);
+	}
 
 	mWorld->reset();
 	mWorld->setTime(t);
@@ -292,12 +295,12 @@ Reset(bool RSI)
 
 void
 Environment::
-Step(bool device_onoff)
+Step(bool device_onoff, bool isRender)
 {
 	if(mUseMuscle)
-		mCharacter->Step_Muscles(mSimCount, mRandomSampleIndex);
+		mCharacter->Step_Muscles(mSimCount, mRandomSampleIndex, isRender);
 	else
-		mCharacter->Step();
+		mCharacter->Step(isRender);
 
 	if(mUseDevice)
 	{
@@ -305,6 +308,8 @@ Step(bool device_onoff)
 		if(device_onoff)
 			mDevice->Step((double)mSimCount/(double)mNumSteps);
 	}
+
+	auto char_skel = mCharacter->GetSkeleton();
 
 	// double root_y = mCharacter->GetSkeleton()->getBodyNode(0)->getTransform().translation()[1] - mGround->getRootBodyNode()->getCOM()[1];
 	// std::cout << "root y : " << root_y << std::endl;
@@ -331,13 +336,16 @@ IsEndOfEpisode()
 
 	double root_y = char_skel->getBodyNode(0)->getTransform().translation()[1] - mGround->getRootBodyNode()->getCOM()[1];
 
+	Eigen::VectorXd p_tar = mCharacter->GetTargetPositions();
+	double dist = (p.segment<3>(3) - p_tar.segment<3>(3)).norm();
+
 	if(root_y < 1.4)
 		isTerminal = true;
-	else if(mWorld->getTime() > 2.5 && mCharacter->GetCurReward() < 0.5)
+	else if(dist > 0.5)
 		isTerminal = true;
 	else if (dart::math::isNan(p) || dart::math::isNan(v))
 		isTerminal = true;
-	else if(mWorld->getTime() > 5.0)
+	else if(mWorld->getTime() > 10.0)
 		isTerminal = true;
 
 	return isTerminal;

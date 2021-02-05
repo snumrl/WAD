@@ -107,8 +107,8 @@ class PPO(object):
 		if use_cuda:
 			self.model.cuda()
 
-		self.buffer_size = 1024*3
-		self.batch_size = 128*1
+		self.buffer_size = 1024*8
+		self.batch_size = 128*8
 		self.replay_buffer = ReplayBuffer(30000)
 
 		self.gamma = 0.99
@@ -175,6 +175,7 @@ class PPO(object):
 		self.num_simulation_Hz = self.env.GetSimulationHz()
 		self.num_control_Hz = self.env.GetControlHz()
 		self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
+		self.inference_per_sim = 2
 
 		self.rewards = []
 		self.max_iteration = 15000
@@ -305,7 +306,7 @@ class PPO(object):
 					dt = Tensor(self.env.GetDesiredTorques())
 					activations = self.muscle_model(mt,dt).cpu().detach().numpy()
 					self.env.SetActivationLevels(activations)
-					self.env.Steps(2, self.use_device)
+					self.env.Steps(self.inference_per_sim, self.use_device)
 			else:
 				self.env.StepsAtOnce(self.use_device)
 
