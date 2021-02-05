@@ -23,30 +23,28 @@ public:
     void Step(const Eigen::VectorXd& a_);
     void Step(double t);
 
-    Eigen::VectorXd GetState();
+    Eigen::VectorXd GetState() const;
     void SetAction(const Eigen::VectorXd& a);
-    Eigen::VectorXd GetAction(){ return mAction; }
+    const Eigen::VectorXd& GetAction(){ return mAction; }
 
     void SetDesiredTorques(double t);
-    Eigen::VectorXd GetDesiredTorques();
     void SetDesiredTorques2();
-    Eigen::VectorXd GetDesiredTorques2();
+    const Eigen::VectorXd& GetDesiredTorques();
 
     // Learning
-    int GetNumState(){ return mNumState;}
-    int GetNumAction(){ return mNumAction;}
-    int GetNumDofs(){ return mNumDof;}
-    int GetNumActiveDof(){ return mNumActiveDof;}
-    int GetRootJointDof(){ return mRootJointDof;}
-    void SetUseDeviceNN(bool b){ mUseDeviceNN = b; }
+    int GetNumState() const { return mNumState;}
+    int GetNumAction() const { return mNumAction;}
+    int GetNumDofs() const { return mNumDof;}
+    int GetNumActiveDof() const { return mNumActiveDof;}
+    int GetRootJointDof() const { return mRootJointDof;}
+    void SetUseDeviceNN(bool b) { mUseDeviceNN = b; }
 
     // Common
-    void SetTorqueMax(double m){ mTorqueMax = m;}
-    double GetTorqueMax(){ return mTorqueMax;}
-
     double GetAngleQ(const std::string& name);
-    // void SetSignals();
-    std::deque<double> GetSignals(int idx);
+    const std::deque<double>& GetSignals(int idx);
+
+    void SetTorqueMax(double m){ mTorqueMax = m;}
+    double GetTorqueMax() const { return mTorqueMax;}
 
     void SetDelta_t(double t);
     double GetDelta_t(){return mDelta_t;}
@@ -56,23 +54,22 @@ public:
 
     void SetHz(int cHz, int sHz);
     void SetControlHz(int hz){mControlHz = hz;}
-    int GetControlHz(){return mControlHz;}
     void SetSimulationHz(int hz){mSimulationHz = hz;}
-    int GetSimulationHz(){return mSimulationHz;}
-    int GetNumSteps(){ return mNumSteps; }
     void SetNumSteps(int step){ mNumSteps=step; }
+    int GetControlHz() const {return mControlHz;}
+    int GetSimulationHz() const {return mSimulationHz;}
+    int GetNumSteps() const { return mNumSteps; }
 
     void SetNumParamState(int n);
-    int GetNumParamState(){return mNumParamState;}
-
     void SetParamState(const Eigen::VectorXd& paramState);
-    Eigen::VectorXd GetParamState(){return mParamState;}
-
-    Eigen::VectorXd GetMinV(){return mMin_v;}
-    Eigen::VectorXd GetMaxV(){return mMax_v;}
     void SetMinMaxV(int idx, double lower, double upper);
-    void SetAdaptiveParams(std::map<std::string, std::pair<double, double>>& p);
+    void SetAdaptiveParams(std::map<std::string, std::pair<double,double>>& p);
     void SetAdaptiveParams(std::string name, double lower, double upper);
+
+    int GetNumParamState() const {return mNumParamState;}
+    const Eigen::VectorXd& GetParamState(){return mParamState;}
+    const Eigen::VectorXd& GetMinV(){return mMin_v;}
+    const Eigen::VectorXd& GetMaxV(){return mMax_v;}
 
 private:
     dart::dynamics::SkeletonPtr mSkeleton;

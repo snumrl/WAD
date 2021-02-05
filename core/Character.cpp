@@ -150,23 +150,21 @@ LoadMuscles(const std::string& path)
 			muscle_elem->SetMass();
 
 			std::string muscle_name = muscle_elem->GetName();
-			if(f0 == 1000.0){
-				int name_size = muscle_name.size();
-				// std::string sub_name;
-				// if(muscle_name[name_size-1] >= 48 && muscle_name[name_size-1] <= 57){
-				// 	std::string sub_name = muscle_name.substr(2,name_size-3);
-				// 	mMuscles_Map[sub_name].push_back(muscle_elem);
-				// }
-				// else{
-					std::string sub_name = muscle_name.substr(2,name_size-2);
-					if(mMuscles_Map.count(sub_name) == 0){
-						mMuscles_Map.insert(std::make_pair(sub_name, std::vector<Muscle*>()));
-						mMuscles_Map[sub_name].push_back(muscle_elem);
-					}
-					else{
-						mMuscles_Map[sub_name].push_back(muscle_elem);
-					}
-				// }
+			int name_size = muscle_name.size();
+			std::string sub_name;
+			if(muscle_name[name_size-1] >= 48 && muscle_name[name_size-1] <= 57){
+				std::string sub_name = muscle_name.substr(2,name_size-3);
+				mMuscles_Map[sub_name].push_back(muscle_elem);
+			}
+			else{
+				std::string sub_name = muscle_name.substr(2,name_size-2);
+				if(mMuscles_Map.count(sub_name) == 0){
+					mMuscles_Map.insert(std::make_pair(sub_name, std::vector<Muscle*>()));
+					mMuscles_Map[sub_name].push_back(muscle_elem);
+				}
+				else{
+					mMuscles_Map[sub_name].push_back(muscle_elem);
+				}
 			}
 
 			if(muscle_elem->GetFemur())
@@ -178,7 +176,6 @@ LoadMuscles(const std::string& path)
 
 			mMuscles.push_back(muscle_elem);
 		}
-
 	}
 	mNumMuscle = mMuscles.size();
 	mNumMuscleMap = mMuscles_Map.size();
@@ -982,7 +979,7 @@ Character::
 SetTargetPosAndVel(double t)
 {
 	double frameTime = t;
-	double dt = 1.0/mControlHz;
+	double dt = 1.0/(double)mControlHz;
 
 	if(mBVH->IsCyclic()){
 		double cycleTime = mBVH->GetMaxTime();
@@ -1028,7 +1025,7 @@ SetTargetPositions(double t,double dt,int frame,int frameNext, double frameFract
 	}
 
 	// Eigen::VectorXd p = Utils::GetPoseSlerp(mSkeleton, frameFraction, frameData, frameDataNext);
-	mTargetPositions = frameFraction * frameData + (1-frameFraction)* frameDataNext;
+	mTargetPositions = (1-frameFraction)*frameData + (frameFraction)* frameDataNext;
 
 	if(mBVH->IsCyclic()) {
 		double cycleTime = mBVH->GetMaxTime();
@@ -1060,7 +1057,7 @@ SetTargetVelocities(double t,double dt,int frame,int frameNext, double frameFrac
 		frameNextVel = mBVH->GetMotionVelNonCyclic(frameNext);
 	}
 
-	mTargetVelocities = frameVel + frameFraction*(frameNextVel - frameVel);
+	mTargetVelocities = (1-frameFraction)*frameVel + (frameFraction)*frameNextVel;
 }
 
 Eigen::VectorXd
@@ -1253,6 +1250,9 @@ SetSpeedRatio(double r)
 		param = ratio*2.0 - 1.0;
 		mParamState[2] = param;
 	}
+
+	// std::cout << "speedratio : " << mSpeedRatio << std::endl;
+	// std::cout << "param : " << mParamState[2] << std::endl;
 }
 
 void
@@ -1291,13 +1291,9 @@ void
 Character::
 SetBVHidx(double r)
 {
-	double speed_max = mParamMax[2];
 	double speed_min = mParamMin[2];
-
-	double idx_max = speed_max * 10.0;
-	double idx_min = speed_min * 10.0;
-	double range = r*(idx_max - idx_min + 0.99);
-	int idx = (int)(range/1.0);
+	double tmp = r-speed_min;
+	int idx = (int)(tmp/0.1);
 	mBVH = mBVHset.at(idx);
 
 	this->Reset();
@@ -1330,10 +1326,21 @@ SetParamState(Eigen::VectorXd paramState)
 		else if(i==1) // Force
 			this->SetForceRatio(param);
 		else if(i==2){ // Speed
-			this->SetSpeedRatio(param);
-			this->SetBVHidx(param);
+			this->SetSpeedRatio(this->SetSpeedIdx(param));
+			this->SetBVHidx(this->SetSpeedIdx(param));
 		}
 	}
+}
+
+double
+Character::
+SetSpeedIdx(double s)
+{
+	double speed_min = mParamMin[2];
+	double diff = s-speed_min;
+	int idx = (int)(diff/0.1);
+
+	return idx * 0.1;
 }
 
 void
@@ -1360,12 +1367,15 @@ SetAdaptiveParams(std::map<std::string, std::pair<double, double>>& p)
 		}
 		else if(name == "force"){
 			this->SetMinMaxV(1, lower, upper);
-			this->SetForceRatio(lower);
+			this->SetForceRatio(upper);
 		}
 		else if(name == "speed"){
-			this->SetMinMaxV(2, lower, upper);
+			if(lower!=upper)
+				this->SetMinMaxV(2, lower, upper+0.0999);
+			else
+				this->SetMinMaxV(2, lower, upper);
 			this->LoadBVHset(lower, upper);
-			this->SetSpeedRatio(lower);
+			this->SetSpeedRatio(upper);
 		}
 	}
 }

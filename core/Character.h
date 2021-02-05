@@ -40,7 +40,7 @@ public:
 	const dart::dynamics::SkeletonPtr& GetSkeleton(){return mSkeleton;}
 	const std::vector<Muscle*>& GetMuscles() {return mMuscles;}
 	const std::vector<dart::dynamics::BodyNode*>& GetEndEffectors(){return mEndEffectors;}
-	Device* GetDevice(){return mDevice;}
+	const Device* GetDevice(){return mDevice;}
 	BVH* GetBVH(){return mBVH;}
 	const std::map<std::string, std::vector<Muscle*>> GetMusclesMap(){return mMuscles_Map;}
 
@@ -86,7 +86,6 @@ public:
 	double GetReward_Character_Imitation();
 	double GetReward_Character_Efficiency();
 	double GetReward_TorqueMin();
-	double GetReward_Device();
 	double GetCurReward(){return mCurReward;}
 
 	void SetAction(const Eigen::VectorXd& a);
@@ -129,30 +128,31 @@ public:
 	void SetUseDevice(bool b){mUseDevice = b;}
 	bool GetUseDevice(){return mUseDevice;}
 
-	void SetJointTorques();
-	JointTorque* GetJointTorques(){return mJointTorques;}
+	void SetRewards();
+	std::map<std::string, std::deque<double>> GetRewards(){return mRewards;}
 	std::deque<double> GetSignals(int idx);
 
+	JointTorque* GetJointTorques(){return mJointTorques;}
 	MetabolicEnergy* GetMetabolicEnergy(){return mMetabolicEnergy;}
 	Contact* GetContacts(){return mContacts;}
 
-	void SetRewards();
-	std::map<std::string, std::deque<double>> GetRewards(){return mRewards;}
-
-	void SetMaxForces();
-	Eigen::VectorXd GetMaxForces(){return mMaxForces;}
-
-	double GetForceRatio(){return mForceRatio;}
-	void SetForceRatio(double r);
-
-	double GetMassRatio(){return mMassRatio;}
+	void SetMass();
 	void SetMassRatio(double r);
 	double GetMass(){return mMass;}
-	void SetMass();
+	double GetMassRatio(){return mMassRatio;}
+
+
+	double SetSpeedIdx(double s);
+	void SetBVHidx(double r);
+	void SetSpeedRatio(double r);
+	void SetForceRatio(double r);
+	void SetMaxForces();
 
 	double GetSpeedRatio(){return mSpeedRatio;}
-	void SetSpeedRatio(double r);
-	void SetBVHidx(double r);
+	double GetForceRatio(){return mForceRatio;}
+	Eigen::VectorXd GetMaxForces(){return mMaxForces;}
+
+
 
 	void SetMeasure();
 	void SetCoT();
@@ -209,7 +209,6 @@ private:
 	bool mUseDevice;
 	bool mUseMuscle;
 	bool mOnDevice;
-
 	bool mLowerBody;
 
 	double mMass;
@@ -220,13 +219,9 @@ private:
 	int mStepCnt;
 	int mStepCnt_total;
 
+	double mCurCoT;
 	double mCurVel;
 	Eigen::Vector3d mCurVel3d;
-
-	double mCurCoT;
-	double mMetabolicEnergyRate;
-	double mMetabolicEnergyRate_BHAR04;
-	double mMetabolicEnergyRate_HOUD06;
 
 	Eigen::Isometry3d mTc;
 	Eigen::VectorXd mKp, mKv;

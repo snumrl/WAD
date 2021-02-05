@@ -133,7 +133,7 @@ Step(double t)
 
 Eigen::VectorXd
 Device::
-GetState()
+GetState() const
 {
 	// root Pos & Vel
 	// Eigen::VectorXd positions = mSkeleton->getPositions();
@@ -266,36 +266,25 @@ GetAngleQ(const std::string& name)
 	return asin(sin);
 }
 
-Eigen::VectorXd
+const Eigen::VectorXd&
 Device::
 GetDesiredTorques()
 {
 	return mDesiredTorque;
 }
 
-Eigen::VectorXd
-Device::
-GetDesiredTorques2()
-{
-	return mDesiredTorque;
-}
-
-std::deque<double>
+const std::deque<double>&
 Device::
 GetSignals(int idx)
 {
-	if(idx==0){
+	if(idx==0)
 		return mDeviceSignals_L;
-	}
-	else if(idx==1){
-		return mDeviceSignals_R;
-	}
-	else if(idx==2){
-		return mDeviceSignals_y;
-	}
-	else{
 
-	}
+	if(idx==1)
+		return mDeviceSignals_R;
+
+	if(idx==2)
+		return mDeviceSignals_y;
 }
 
 void

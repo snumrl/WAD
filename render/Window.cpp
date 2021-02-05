@@ -228,7 +228,7 @@ ParamChange(bool b)
 		else if(mParamMode == 5)
 		{
 			double t_ = mEnv->GetDevice()->GetDelta_t();
-			t_ += 0.01;
+			t_ += 0.02;
 			if(t_ > max_v[4])
 				t_ = max_v[4];
 			mEnv->GetDevice()->SetDelta_t(t_);
@@ -272,7 +272,7 @@ ParamChange(bool b)
 		else if(mParamMode == 5)
 		{
 			double t_ = mEnv->GetDevice()->GetDelta_t();
-			t_ -= 0.01;
+			t_ -= 0.02;
 			if(t_ < min_v[4])
 				t_ = min_v[4];
 			mEnv->GetDevice()->SetDelta_t(t_);
@@ -665,6 +665,8 @@ DrawParameter()
 
 		double s_ratio = mEnv->GetCharacter()->GetSpeedRatio();
 		DrawQuads(x+0.09, y+0.01, 0.02, (s_ratio)*h_offset, green);
+		if(max_v[2] != min_v[2])
+			max_v[2] -= 0.0999;
 		DrawQuads(x+0.09, y+0.01+(s_ratio)*h_offset, 0.02, (max_v[2]-s_ratio)*h_offset, green_trans);
 
 		DrawString(x+0.00, y+(m_ratio)*h_offset+0.02, std::to_string(m_ratio));
@@ -673,6 +675,8 @@ DrawParameter()
 		DrawString(x+0.05, y+(f_ratio)*h_offset+0.02, std::to_string(f_ratio));
 		DrawString(x+0.04, y-0.02, "Force");
 
+		if(s_ratio > max_v[2])
+			s_ratio = max_v[2];
 		DrawString(x+0.09, y+(s_ratio)*h_offset+0.02, std::to_string(s_ratio));
 		DrawString(x+0.078, y-0.02, "Speed");
 	}
@@ -1019,10 +1023,10 @@ DrawMuscles(const std::vector<Muscle*>& muscles)
 
 	DrawGLBegin();
 	bool big = true;
-	DrawString(0.70, 0.32, big, "Muscle : " + cur_muscle);
-	DrawString(0.70, 0.29, big, "l_mt0 : " + std::to_string(l_mt0));
+	DrawString(0.70, 0.29, big, "Muscle : " + cur_muscle);
 	DrawString(0.70, 0.26, big, "f0 : " + std::to_string(f0));
 	DrawGLEnd();
+	// DrawString(0.70, 0.29, big, "l_mt0 : " + std::to_string(l_mt0));
 }
 
 void
@@ -1391,7 +1395,7 @@ DrawArrow()
 	Eigen::Vector4d color(0.6, 1.2, 0.6, 0.8);
 	mRI->setPenColor(color);
 
-	Eigen::VectorXd f = mEnv->GetDevice()->GetDesiredTorques2();
+	Eigen::VectorXd f = mEnv->GetDevice()->GetDesiredTorques();
 
 	Eigen::Isometry3d trans_L = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurL")->getTransform();
 	Eigen::Vector3d p_L = trans_L.translation();
