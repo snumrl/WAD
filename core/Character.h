@@ -1,7 +1,7 @@
 #ifndef __MASS_CHARACTER_H__
 #define __MASS_CHARACTER_H__
 #include "dart/dart.hpp"
-#include "JointTorque.h"
+#include "JointData.h"
 #include "MetabolicEnergy.h"
 #include "Contact.h"
 #include <deque>
@@ -13,7 +13,7 @@ namespace MASS
 class BVH;
 class Muscle;
 class Device;
-class JointTorque;
+class JointData;
 class MetabolicEnergy;
 class Contact;
 // class Torques;
@@ -135,7 +135,7 @@ public:
 
 	double GetCurFrame(){ return mCurFrame; }
 	std::deque<double> GetSignals(int idx);
-	JointTorque* GetJointTorques(){return mJointTorques;}
+	JointData* GetJointDatas(){return mJointDatas;}
 	MetabolicEnergy* GetMetabolicEnergy(){return mMetabolicEnergy;}
 	Contact* GetContacts(){return mContacts;}
 
@@ -187,7 +187,7 @@ private:
 	bool mBVHcyclic;
 
 	Device* mDevice;
-	JointTorque* mJointTorques;
+	JointData* mJointDatas;
 	MetabolicEnergy* mMetabolicEnergy;
 	Contact* mContacts;
 

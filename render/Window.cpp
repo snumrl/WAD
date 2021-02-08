@@ -1175,9 +1175,9 @@ DrawJointTorques()
 	double p_w = 0.30, p_h = 0.14, p_x = 0.01, p_y = 0.84;
 	double offset_y = 0.16;
 
-	mJointTorques = mEnv->GetCharacter()->GetJointTorques();
-	int modeNum = mJointTorques->Get().size() / 6;
-	auto iter = mJointTorques->Get().begin();
+	mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+	int modeNum = mJointDatas->GetTorques().size() / 6;
+	auto iter = mJointDatas->GetTorques().begin();
 	for(int i=0; i<modeNum; i++)
 	{
 		for(int j=0; j<6; j++)

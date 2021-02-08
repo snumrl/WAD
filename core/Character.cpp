@@ -240,8 +240,8 @@ Initialize()
 	mMetabolicEnergy = new MetabolicEnergy(mWorld);
 	mMetabolicEnergy->Initialize(this->GetMuscles(), mMass, mNumSteps, frames, ratio);
 
-	mJointTorques = new JointTorque();
-	mJointTorques->Initialize(mSkeleton);
+	mJointDatas = new JointData();
+	mJointDatas->Initialize(mSkeleton);
 
 	mContacts = new Contact(mWorld);
 	mContacts->Initialize(mSkeleton, mMass, mNumSteps);
@@ -483,7 +483,7 @@ Reset()
 	mCurVel3d.setZero();
 
 	mMetabolicEnergy->Reset();
-	mJointTorques->Reset();
+	mJointDatas->Reset();
 	if(mUseMuscle)
 		Reset_Muscles();
 
@@ -582,7 +582,7 @@ void
 Character::
 SetMeasure()
 {
-	mJointTorques->Set(mSkeleton, mDesiredTorque);
+	mJointDatas->SetTorques(mDesiredTorque);
 	mContacts->Set();
 	// this->SetCoT();
 }

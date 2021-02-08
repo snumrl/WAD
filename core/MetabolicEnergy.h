@@ -19,6 +19,7 @@ public:
 
     void Initialize(const std::vector<Muscle*>& muscles, double m, int steps, int frames, double ratio);
     void Reset();
+    void ResetCycle();
     void Set(const std::vector<Muscle*>& muscles, double vel, double phase);
     void Set(const std::vector<Muscle*>& muscles, Eigen::Vector3d vel, double phase);
 
@@ -39,6 +40,7 @@ private:
     dart::simulation::WorldPtr mWorld;
 
     bool isFirst;
+    bool isTotalFirst;
     bool mLowerBody;
 
     int curStep = 0;

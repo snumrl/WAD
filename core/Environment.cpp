@@ -281,10 +281,10 @@ Reset(bool RSI)
 {
 	double t = 0.0;
 
-	// if (RSI)
-	// {
-	// 	t = 1.0/(double)mControlHz * (rand()%30);
-	// }
+	if (RSI)
+	{
+		t = 1.0/(double)mControlHz * (rand()%33);
+	}
 
 	mWorld->reset();
 	mWorld->setTime(t);

@@ -17,7 +17,7 @@ namespace MASS
 class Environment;
 class Muscle;
 class BVH;
-class JointTorque;
+class JointData;
 class MetabolicEnergy;
 class Contact;
 // class Torques;
@@ -111,8 +111,7 @@ private:
 	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module,rms_module;
 
 	Environment* mEnv;
-	// Torques* mTorques;
-	JointTorque* mJointTorques;
+	JointData* mJointDatas;
 	MetabolicEnergy* mMetabolicEnergy;
 	ShapeRenderer mShapeRenderer;
 

@@ -27,6 +27,7 @@ Initialize(const std::vector<Muscle*>& muscles, double m, int steps, int frames,
 	if(mMassRatio != 1.0)
 		mLowerBody = true;
 	isFirst = true;
+	isTotalFirst = true;
 
 	mMass = m * mMassRatio;
 
@@ -58,6 +59,14 @@ void
 MetabolicEnergy::
 Reset()
 {
+	isTotalFirst = true;
+	this->ResetCycle();
+}
+
+void
+MetabolicEnergy::
+ResetCycle()
+{
 	BHAR04 = 0.0;
 	HOUD06 = 0.0;
 	curStep = 0;
@@ -77,7 +86,7 @@ MetabolicEnergy::
 Set(const std::vector<Muscle*>& muscles, Eigen::Vector3d vel, double phase)
 {
 	if(isFirst == true){
-		this->Reset();
+		this->ResetCycle();
 		isFirst = false;
 	}
 	curStep++;
@@ -141,6 +150,8 @@ Set(const std::vector<Muscle*>& muscles, Eigen::Vector3d vel, double phase)
 			for(int i=0; i<HOUD06_deque.size(); i++)
 				cumHOUD06 += HOUD06_deque[i];
 
+			if(isTotalFirst)
+				isTotalFirst = false;
 			isFirst = true;
 		}
 
@@ -161,7 +172,7 @@ GetReward()
 	metabolic_err = cumHOUD06/(double)mCycleFrames;
 	double reward = exp(-err_scale * metabolic_scale * metabolic_err);
 
-	if(reward == 1)
+	if(isTotalFirst)
 		reward = 0;
 	return reward;
 }
