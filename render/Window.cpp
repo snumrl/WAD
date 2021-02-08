@@ -6,6 +6,7 @@
 #include "Utils.h"
 #include "Muscle.h"
 #include <iostream>
+#include <fstream>
 #include <deque>
 #include <ctime>
 using namespace MASS;
@@ -314,6 +315,50 @@ m(bool b)
 
 void
 Window::
+write()
+{
+	if(mWriteFile)
+	{
+		if(!isOpenFile)
+		{
+			time_t now = std::time(0);
+			mFileName = std::ctime(&now);
+			mFile.open(mFileName);
+			isOpenFile = true;
+
+			mFile << "Time Frame MetaE";
+			auto HOUD06 = mMetabolicEnergy->GetHOUD06_deque_map();
+			for(auto iter = HOUD06.begin(); iter != HOUD06.end(); iter++)
+				mFile << " " + iter->first;
+		}
+
+		if(isOpenFile)
+		{
+			double t = mEnv->GetWorld()->getTime();
+			double f = mEnv->GetCharacter()->GetCurFrame();
+			mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
+			std::deque<double> HOUD06 = mMetabolicEnergy->GetHOUD06_deque();
+
+			mFile << "\n";
+			mFile << std::to_string(t) + " " + std::to_string(f) + " " + std::to_string(HOUD06.at(0));
+
+			auto HOUD06_ = mMetabolicEnergy->GetHOUD06_deque_map();
+			for(auto iter = HOUD06_.begin(); iter != HOUD06_.end(); iter++)
+				mFile << " " + std::to_string((iter->second).at(0));
+		}
+	}
+	else
+	{
+		if(isOpenFile)
+		{
+			mFile.close();
+			isOpenFile = false;
+		}
+	}
+}
+
+void
+Window::
 keyboard(unsigned char _key, int _x, int _y)
 {
 	double f_ = 0.0;
@@ -342,6 +387,8 @@ keyboard(unsigned char _key, int _x, int _y)
 			break;
 	case 'm' : this->m(true); break;
 	case 'n' : this->m(false); break;
+	case 'x' : mWriteFile = true; break;
+	case 'z' : mWriteFile = false; break;
 	case '`' : mCharacterMode = (mCharacterMode+1)%2; break;
 	case '1' : mParamMode = 1; break;
 	case '2' : mParamMode = 2; break;
@@ -360,8 +407,10 @@ void
 Window::
 displayTimer(int _val)
 {
-	if(mSimulating)
+	if(mSimulating){
 		Step();
+	}
+
 	glutPostRedisplay();
 	glutTimerFunc(mDisplayTimeout, refreshTimer, _val);
 }
@@ -399,6 +448,7 @@ Step()
 		if(mDeviceNNLoaded)
 			mEnv->GetDevice()->SetAction(action_device);
 
+		this->write();
 		mDisplayIter = 0;
 	}
 
@@ -534,23 +584,6 @@ draw()
 	// DrawTrajectory();
 	// DrawStride();
 	SetFocus();
-}
-
-void
-Window::
-DrawMetabolicEnergy()
-{
-	DrawGLBegin();
-
-	//Metabolic Energy Rate
-	mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
-	double BHAR04 = mMetabolicEnergy->GetBHAR04();
-	double HOUD06 = mMetabolicEnergy->GetHOUD06();
-	bool big = true;
-
-	DrawString(0.70, 0.38, big, "BHAR04 : " + std::to_string(BHAR04));
-	DrawString(0.70, 0.35, big, "HOUD06 : " + std::to_string(HOUD06));
-	DrawGLEnd();
 }
 
 void
@@ -1114,6 +1147,48 @@ DrawFemurSignals()
 
 void
 Window::
+DrawJointTorques()
+{
+	DrawGLBegin();
+
+	double p_w = 0.30, p_h = 0.14, p_x = 0.01, p_y = 0.84;
+	double offset_y = 0.16;
+
+	mJointTorques = mEnv->GetCharacter()->GetJointTorques();
+	int modeNum = mJointTorques->Get().size() / 6;
+	auto iter = mJointTorques->Get().begin();
+	for(int i=0; i<modeNum; i++)
+	{
+		for(int j=0; j<6; j++)
+		{
+			if(mGraphMode == i)
+				DrawTorqueGraph(iter->first, iter->second, p_w, p_h, p_x, p_y-j*offset_y);
+			iter++;
+		}
+	}
+
+	DrawGLEnd();
+}
+
+void
+Window::
+DrawMetabolicEnergy()
+{
+	DrawGLBegin();
+
+	//Metabolic Energy Rate
+	mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
+	double BHAR04 = mMetabolicEnergy->GetBHAR04();
+	double HOUD06 = mMetabolicEnergy->GetHOUD06();
+	bool big = true;
+
+	DrawString(0.70, 0.38, big, "BHAR04 : " + std::to_string(BHAR04));
+	DrawString(0.70, 0.35, big, "HOUD06 : " + std::to_string(HOUD06));
+	DrawGLEnd();
+}
+
+void
+Window::
 DrawMetabolicEnergy_()
 {
 	DrawGLBegin();
@@ -1123,7 +1198,7 @@ DrawMetabolicEnergy_()
 	double pr_x = 0.69, pr_y = 0.62;
 
 	double offset_x = 0.0090;
-	double offset_y = 0.0001;
+	double offset_y = 0.0006;
 	double offset = 0.005;
 	double ratio_y = 0.2;
 
@@ -1173,35 +1248,10 @@ DrawMetabolicEnergys()
 
 void
 Window::
-DrawJointTorques()
-{
-	DrawGLBegin();
-
-	double p_w = 0.30, p_h = 0.14, p_x = 0.01, p_y = 0.84;
-	double offset_y = 0.16;
-
-	mJointTorques = mEnv->GetCharacter()->GetJointTorques();
-	int modeNum = mJointTorques->Get().size() / 6;
-	auto iter = mJointTorques->Get().begin();
-	for(int i=0; i<modeNum; i++)
-	{
-		for(int j=0; j<6; j++)
-		{
-			if(mGraphMode == i)
-				DrawTorqueGraph(iter->first, iter->second, p_w, p_h, p_x, p_y-j*offset_y);
-			iter++;
-		}
-	}
-
-	DrawGLEnd();
-}
-
-void
-Window::
 DrawMetabolicEnergyGraph(std::string name, std::deque<double> data, double w, double h, double x, double y)
 {
 	double offset_x = 0.00048;
-	double offset_y = 0.0006;
+	double offset_y = 0.0004;
 	double offset = 0.005;
 	double ratio_y = 0.2;
 

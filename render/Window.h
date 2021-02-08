@@ -5,7 +5,8 @@
 #include "dart/gui/gui.hpp"
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
-
+#include <iostream>
+#include <fstream>
 #include "ShapeRenderer.h"
 
 namespace p = boost::python;
@@ -103,8 +104,8 @@ public:
     void DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::deque<double>& data, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1);
     void DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::deque<double>& data, int idx, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1, int idx1);
 
-
     void m(bool b);
+    void write();
 private:
 
 	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module,rms_module;
@@ -153,6 +154,11 @@ private:
 	std::string cur_muscle = "";
 
 	int mDisplayIter;
+	bool isOpenFile = false;
+	bool mWriteFile = false;
+	std::string mFileName = "";
+	std::ofstream mFile;
+
 };
 };
 
