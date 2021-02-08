@@ -283,7 +283,7 @@ Reset(bool RSI)
 
 	if (RSI)
 	{
-		t = 1.0/(double)mControlHz * (rand()%33);
+		t = 1.0/(double)mControlHz * (rand()%16 + 8);
 	}
 
 	mWorld->reset();
