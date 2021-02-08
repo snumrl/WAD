@@ -322,8 +322,28 @@ write()
 		if(!isOpenFile)
 		{
 			time_t now = std::time(0);
-			mFileName = std::ctime(&now);
+			tm* ltm = std::localtime(&now);
+
+			std::string month = std::to_string(ltm->tm_mon);
+			if(ltm->tm_mon < 10)
+				month = "0"+month;
+
+			std::string day = std::to_string(ltm->tm_mday);
+			if(ltm->tm_mday < 10)
+				day = "0"+day;
+
+			std::string hour = std::to_string(ltm->tm_hour);
+			if(ltm->tm_hour < 10)
+				hour = "0" + hour;
+
+			std::string min = std::to_string(ltm->tm_min);
+			if(ltm->tm_min < 10)
+				min = "0" + min;
+
+			mFileName = month + day + hour + min;
 			mFile.open(mFileName);
+			if(mFile.is_open())
+				std::cout << mFileName << " open" << std::endl;
 			isOpenFile = true;
 
 			mFile << "Time Frame MetaE";
@@ -352,6 +372,7 @@ write()
 		if(isOpenFile)
 		{
 			mFile.close();
+			std::cout << mFileName << " close" << std::endl;
 			isOpenFile = false;
 		}
 	}

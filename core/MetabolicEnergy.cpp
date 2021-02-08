@@ -15,7 +15,6 @@ MetabolicEnergy(const dart::simulation::WorldPtr& wPtr)
 MetabolicEnergy::
 ~MetabolicEnergy()
 {
-
 }
 
 void
@@ -39,12 +38,19 @@ Initialize(const std::vector<Muscle*>& muscles, double m, int steps, int frames,
 
 	for(const auto& m : muscles){
 		std::string name = m->GetName();
-		BHAR04_deque_map[name] = std::deque<double>(mCycleFrames);
-		HOUD06_deque_map[name] = std::deque<double>(mCycleFrames);
-		BHAR04_cur_map[name] = 0.0;
-		HOUD06_cur_map[name] = 0.0;
-		BHAR04_tmp_map[name] = 0.0;
-		HOUD06_tmp_map[name] = 0.0;
+		std::string sub_name;
+		int nSize = name.size();
+		if(name[nSize-1]>=48 && name[nSize-1]<=57)
+			sub_name = name.substr(0,nSize-1);
+		else{
+			sub_name = name.substr(0,nSize);
+		}
+		mSubNameSet.insert(sub_name);
+
+		BHAR04_deque_map[sub_name] = std::deque<double>(mCycleFrames);
+		HOUD06_deque_map[sub_name] = std::deque<double>(mCycleFrames);
+		BHAR04_tmp_map[sub_name] = 0.0;
+		HOUD06_tmp_map[sub_name] = 0.0;
 	}
 }
 
@@ -54,9 +60,8 @@ Reset()
 {
 	BHAR04 = 0.0;
 	HOUD06 = 0.0;
-	avgVel.setZero();
-
 	curStep = 0;
+	avgVel.setZero();
 
 	std::fill(BHAR04_deque.begin(), BHAR04_deque.end(), 0.0);
 	std::fill(HOUD06_deque.begin(), HOUD06_deque.end(), 0.0);
@@ -65,10 +70,6 @@ Reset()
 		std::fill(iter->second.begin(), iter->second.end(), 0.0);
 	for(auto iter = HOUD06_deque_map.begin(); iter != HOUD06_deque_map.end(); iter++)
 		std::fill(iter->second.begin(), iter->second.end(), 0.0);
-	for(auto iter = BHAR04_cur_map.begin(); iter != BHAR04_cur_map.end(); iter++)
-		iter->second = 0.0;
-	for(auto iter = HOUD06_cur_map.begin(); iter != HOUD06_cur_map.end(); iter++)
-		iter->second = 0.0;
 }
 
 void
@@ -83,17 +84,19 @@ Set(const std::vector<Muscle*>& muscles, Eigen::Vector3d vel, double phase)
 
 	for(const auto& m : muscles){
 		std::string name = m->GetName();
+		std::string sub_name;
+		int nSize = name.size();
+		if(name[nSize-1]>=48 && name[nSize-1]<=57)
+			sub_name = name.substr(0,nSize-1);
+		else{
+			sub_name = name.substr(0,nSize);
+		}
+
 		double curBHAR04 = m->GetMetabolicEnergyRate_BHAR04();
 		double curHOUD06 = m->GetMetabolicEnergyRate_HOUD06();
 
-		BHAR04_tmp_map[name] += curBHAR04;
-		HOUD06_tmp_map[name] += curHOUD06;
-
-		// dE += m->GetMetabolicEnergyRate();
-		// h_A += m->Geth_A();
-		// h_M += m->Geth_M();
-		// h_SL += m->Geth_SL();
-		// W += m->GetW();
+		BHAR04_tmp_map[sub_name] += curBHAR04;
+		HOUD06_tmp_map[sub_name] += curHOUD06;
 	}
 
 	avgVel += vel;
@@ -102,44 +105,34 @@ Set(const std::vector<Muscle*>& muscles, Eigen::Vector3d vel, double phase)
 	{
 		BHAR04 = 0.0;
 		HOUD06 = 0.0;
-		for(const auto& m : muscles){
-			std::string name = m->GetName();
-			double cBHAR04 = BHAR04_tmp_map[name] / mNumSteps;
+		for(const auto& sub_name : mSubNameSet){
+			double cBHAR04 = BHAR04_tmp_map[sub_name] / mNumSteps;
 			BHAR04 += cBHAR04;
-			BHAR04_deque_map[name].pop_back();
-			BHAR04_deque_map[name].push_front(cBHAR04);
+			BHAR04_deque_map[sub_name].pop_back();
+			BHAR04_deque_map[sub_name].push_front(cBHAR04);
 
-			double cHOUD06 = HOUD06_tmp_map[name] / mNumSteps;
+			double cHOUD06 = HOUD06_tmp_map[sub_name] / mNumSteps;
 			HOUD06 += cHOUD06;
-			HOUD06_deque_map[name].pop_back();
-			HOUD06_deque_map[name].push_front(cHOUD06);
+			HOUD06_deque_map[sub_name].pop_back();
+			HOUD06_deque_map[sub_name].push_front(cHOUD06);
 
-			BHAR04_tmp_map[name] = 0.0;
-			HOUD06_tmp_map[name] = 0.0;
+			BHAR04_tmp_map[sub_name] = 0.0;
+			HOUD06_tmp_map[sub_name] = 0.0;
 		}
 
 		double vel_norm = (avgVel.norm())/(double)mNumSteps;
-
 		double dB = 1.51 * mMass;
 		// double dB = 0.0;
 
 		BHAR04 += dB;
 		BHAR04 = BHAR04 / (mMass*vel_norm);
-
 		BHAR04_deque.pop_back();
 		BHAR04_deque.push_front(BHAR04);
 
 		HOUD06 += dB;
 		HOUD06 = HOUD06 / (mMass*vel_norm);
-
 		HOUD06_deque.pop_back();
 		HOUD06_deque.push_front(HOUD06);
-
-		avgVel.setZero();
-		BHAR04 = 0;
-		HOUD06 = 0;
-
-		curStep = 0;
 
 		if(phase*mCycleFrames >= mCycleFrames-1){
 			cumBHAR04 = 0, cumHOUD06 = 0;
@@ -150,6 +143,10 @@ Set(const std::vector<Muscle*>& muscles, Eigen::Vector3d vel, double phase)
 
 			isFirst = true;
 		}
+
+		curStep = 0;
+		BHAR04 = 0, HOUD06 = 0;
+		avgVel.setZero();
 	}
 }
 
