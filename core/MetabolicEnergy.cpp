@@ -145,16 +145,12 @@ Set(const std::vector<Muscle*>& muscles, Eigen::Vector3d vel, double phase)
 			cumBHAR04 = 0, cumHOUD06 = 0;
 			for(int i=0; i<BHAR04_deque.size(); i++)
 				cumBHAR04 += BHAR04_deque[i];
-			for(int i=0; i<HOUD06_deque.size(); i++){
-				std::cout << i << " : " << HOUD06_deque[i] << std::endl;
+			for(int i=0; i<HOUD06_deque.size(); i++)
 				cumHOUD06 += HOUD06_deque[i];
-			}
 
 			isFirst = true;
 		}
 	}
-
-
 }
 
 double
@@ -167,5 +163,8 @@ GetReward()
 
 	metabolic_err = cumHOUD06/(double)mCycleFrames;
 	double reward = exp(-err_scale * metabolic_scale * metabolic_err);
+
+	if(reward == 1)
+		reward = 0;
 	return reward;
 }
