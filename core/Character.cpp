@@ -89,6 +89,10 @@ LoadMuscles(const std::string& path)
 		return;
 	}
 
+	std::string mFileName = "Femur_related_muscle";
+	std::ofstream mFile;
+	mFile.open(mFileName);
+
 	bool isExist = false;
 	double time_step = 1.0/mSimulationHz;
 	TiXmlElement *muscledoc = doc.FirstChildElement("Muscle");
@@ -135,8 +139,10 @@ LoadMuscles(const std::string& path)
 					return;
 				}
 
-				if(body == "FemurL" || body == "FemurR")
+				if(body == "FemurL" || body == "FemurR"){
 					muscle_elem->SetFemur(true);
+					mFile << name + "\n";
+				}
 
 				if(i == 0 || i == num_waypoints-1)
 					muscle_elem->AddAnchor(mSkeleton->getBodyNode(body),glob_pos);
@@ -179,6 +185,7 @@ LoadMuscles(const std::string& path)
 	}
 	mNumMuscle = mMuscles.size();
 	mNumMuscleMap = mMuscles_Map.size();
+	mFile.close();
 }
 
 void
@@ -727,7 +734,7 @@ GetReward_Character()
  	mReward["imit"] = reward_imit;
  	mReward["effi"] = reward_effi;
 
-	double r = 1.0 * reward_imit + 0.0 * reward_effi;
+	double r = 1.0 * reward_imit + 0.1 * reward_effi;
 
 	return r;
 }
@@ -851,8 +858,8 @@ Character::
 GetReward_Character_Efficiency()
 {
 	double r_EnergyMin = 1.0;
-	// if(mUseMuscle)
-	// 	r_EnergyMin = mMetabolicEnergy->GetReward();
+	if(mUseMuscle)
+		r_EnergyMin = mMetabolicEnergy->GetReward();
 	// else
 	// 	r_EnergyMin = this->GetReward_TorqueMin();
 
