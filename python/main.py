@@ -174,8 +174,8 @@ class PPO(object):
 		# ========== Common setting ========== #
 		self.num_simulation_Hz = self.env.GetSimulationHz()
 		self.num_control_Hz = self.env.GetControlHz()
-		self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
 		self.inference_per_sim = 2
+		self.num_simulation_per_control = (self.num_simulation_Hz // self.num_control_Hz) // self.inference_per_sim
 
 		self.rewards = []
 		self.max_iteration = 10000
