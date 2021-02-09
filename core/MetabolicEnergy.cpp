@@ -23,13 +23,16 @@ Initialize(const std::vector<Muscle*>& muscles, double m, int steps, int frames,
 {
 	mNumSteps = steps;
 	mCycleFrames = frames;
+
 	mMassRatio = ratio;
 	if(mMassRatio != 1.0)
 		mLowerBody = true;
-	isFirst = true;
-	isTotalFirst = true;
 
 	mMass = m * mMassRatio;
+
+	isFirst = true;
+	isTotalFirst = true;
+	curStep = 0;
 
 	BHAR04 = 0.0;
 	HOUD06 = 0.0;
@@ -37,21 +40,19 @@ Initialize(const std::vector<Muscle*>& muscles, double m, int steps, int frames,
 	BHAR04_deque = std::deque<double>(mCycleFrames);
 	HOUD06_deque = std::deque<double>(mCycleFrames);
 
-	for(const auto& m : muscles){
-		std::string name = m->GetName();
-		std::string sub_name;
-		int nSize = name.size();
-		if(name[nSize-1]>=48 && name[nSize-1]<=57)
-			sub_name = name.substr(0,nSize-1);
-		else{
-			sub_name = name.substr(0,nSize);
-		}
-		mSubNameSet.insert(sub_name);
+	HOUD06_ByFrame = std::vector<std::vector<double>>(mCycleFrames);
 
-		BHAR04_deque_map[sub_name] = std::deque<double>(mCycleFrames);
-		HOUD06_deque_map[sub_name] = std::deque<double>(mCycleFrames);
-		BHAR04_tmp_map[sub_name] = 0.0;
-		HOUD06_tmp_map[sub_name] = 0.0;
+	for(const auto& m : muscles){
+		std::string name = this->GetCoreName(m->GetName());
+		mNameSet.insert(name);
+
+		BHAR04_map_deque[name] = std::deque<double>(mCycleFrames);
+		HOUD06_map_deque[name] = std::deque<double>(mCycleFrames);
+
+		BHAR04_map_tmp[name] = 0.0;
+		HOUD06_map_tmp[name] = 0.0;
+
+		HOUD06_mapByFrame[name] = std::vector<std::vector<double>>(mCycleFrames);
 	}
 }
 
@@ -60,6 +61,15 @@ MetabolicEnergy::
 Reset()
 {
 	isTotalFirst = true;
+
+	for(auto iter = HOUD06_mapByFrame.begin(); iter != HOUD06_mapByFrame.end(); iter++){
+        for(int i = 0; i != (iter->second).size(); i++)
+            (iter->second).at(i) = std::vector<double>();
+    }
+
+    for(int i=0; i<HOUD06_ByFrame.size(); i++)
+    	HOUD06_ByFrame.at(i) = std::vector<double>();
+
 	this->ResetCycle();
 }
 
@@ -67,23 +77,13 @@ void
 MetabolicEnergy::
 ResetCycle()
 {
-	BHAR04 = 0.0;
-	HOUD06 = 0.0;
+	vel_tmp.setZero();
 	curStep = 0;
-	avgVel.setZero();
-
-	std::fill(BHAR04_deque.begin(), BHAR04_deque.end(), 0.0);
-	std::fill(HOUD06_deque.begin(), HOUD06_deque.end(), 0.0);
-
-	for(auto iter = BHAR04_deque_map.begin(); iter != BHAR04_deque_map.end(); iter++)
-		std::fill(iter->second.begin(), iter->second.end(), 0.0);
-	for(auto iter = HOUD06_deque_map.begin(); iter != HOUD06_deque_map.end(); iter++)
-		std::fill(iter->second.begin(), iter->second.end(), 0.0);
 }
 
 void
 MetabolicEnergy::
-Set(const std::vector<Muscle*>& muscles, Eigen::Vector3d vel, double phase)
+Set(const std::vector<Muscle*>& muscles, Eigen::Vector3d vel, double phase, int frame)
 {
 	if(isFirst == true){
 		this->ResetCycle();
@@ -92,72 +92,66 @@ Set(const std::vector<Muscle*>& muscles, Eigen::Vector3d vel, double phase)
 	curStep++;
 
 	for(const auto& m : muscles){
-		std::string name = m->GetName();
-		std::string sub_name;
-		int nSize = name.size();
-		if(name[nSize-1]>=48 && name[nSize-1]<=57)
-			sub_name = name.substr(0,nSize-1);
-		else{
-			sub_name = name.substr(0,nSize);
-		}
+		std::string name = this->GetCoreName(m->GetName());
 
-		double curBHAR04 = m->GetMetabolicEnergyRate_BHAR04();
-		double curHOUD06 = m->GetMetabolicEnergyRate_HOUD06();
-
-		BHAR04_tmp_map[sub_name] += curBHAR04;
-		HOUD06_tmp_map[sub_name] += curHOUD06;
+		BHAR04_map_tmp[name] += m->GetMetabolicEnergyRate_BHAR04();
+		HOUD06_map_tmp[name] += m->GetMetabolicEnergyRate_HOUD06();
 	}
 
-	avgVel += vel;
+	vel_tmp += vel;
 
 	if(curStep == mNumSteps-1)
 	{
 		BHAR04 = 0.0;
 		HOUD06 = 0.0;
-		for(const auto& sub_name : mSubNameSet){
-			double cBHAR04 = BHAR04_tmp_map[sub_name] / mNumSteps;
-			BHAR04 += cBHAR04;
-			BHAR04_deque_map[sub_name].pop_back();
-			BHAR04_deque_map[sub_name].push_front(cBHAR04);
+		for(const auto& name : mNameSet){
+			double BHAR04_avg = BHAR04_map_tmp[name]/(double)mNumSteps;
+			BHAR04 += BHAR04_avg;
+			BHAR04_map_deque[name].pop_back();
+			BHAR04_map_deque[name].push_front(BHAR04_avg);
 
-			double cHOUD06 = HOUD06_tmp_map[sub_name] / mNumSteps;
-			HOUD06 += cHOUD06;
-			HOUD06_deque_map[sub_name].pop_back();
-			HOUD06_deque_map[sub_name].push_front(cHOUD06);
+			double HOUD06_avg = HOUD06_map_tmp[name]/(double)mNumSteps;
+			HOUD06 += HOUD06_avg;
+			HOUD06_map_deque[name].pop_back();
+			HOUD06_map_deque[name].push_front(HOUD06_avg);
 
-			BHAR04_tmp_map[sub_name] = 0.0;
-			HOUD06_tmp_map[sub_name] = 0.0;
+			HOUD06_mapByFrame[name].at(frame).push_back(HOUD06_avg);
+
+			BHAR04_map_tmp[name] = 0.0;
+			HOUD06_map_tmp[name] = 0.0;
 		}
 
-		double vel_norm = (avgVel.norm())/(double)mNumSteps;
-		double dB = 1.51 * mMass;
-		// double dB = 0.0;
+		double vel_avg = (vel_tmp.norm())/(double)mNumSteps;
+		double dB = 0.0;
+		// double dB = 1.51 * mMass;
 
 		BHAR04 += dB;
-		BHAR04 = BHAR04 / (mMass*vel_norm);
+		BHAR04 = BHAR04/(mMass*vel_avg);
 		BHAR04_deque.pop_back();
 		BHAR04_deque.push_front(BHAR04);
 
 		HOUD06 += dB;
-		HOUD06 = HOUD06 / (mMass*vel_norm);
+		HOUD06 = HOUD06/(mMass*vel_avg);
 		HOUD06_deque.pop_back();
 		HOUD06_deque.push_front(HOUD06);
 
-		if(phase*mCycleFrames >= mCycleFrames-1){
-			cumBHAR04 = 0, cumHOUD06 = 0;
+		HOUD06_ByFrame.at(frame).push_back(HOUD06);
+
+		if(phase*mCycleFrames >= mCycleFrames-1)
+		{
+			BHAR04_cum = 0;
 			for(int i=0; i<BHAR04_deque.size(); i++)
-				cumBHAR04 += BHAR04_deque[i];
+				BHAR04_cum += BHAR04_deque[i];
+
+			HOUD06_cum = 0;
 			for(int i=0; i<HOUD06_deque.size(); i++)
-				cumHOUD06 += HOUD06_deque[i];
+				HOUD06_cum += HOUD06_deque[i];
 
 			if(isTotalFirst)
 				isTotalFirst = false;
-			isFirst = true;
 		}
 
-		curStep = 0;
-		BHAR04 = 0, HOUD06 = 0;
-		avgVel.setZero();
+		isFirst = true;
 	}
 }
 
@@ -166,13 +160,29 @@ MetabolicEnergy::
 GetReward()
 {
 	double err_scale = 1.0;
-	double metabolic_scale = 0.05;
+	double metabolic_scale = 0.01;
 	double metabolic_err = 0.0;
 
-	metabolic_err = cumHOUD06/(double)mCycleFrames;
+	metabolic_err = HOUD06_cum/(double)mCycleFrames;
 	double reward = exp(-err_scale * metabolic_scale * metabolic_err);
 
 	if(isTotalFirst)
 		reward = 0;
 	return reward;
+}
+
+std::string
+MetabolicEnergy::
+GetCoreName(std::string name)
+{
+	std::string coreName;
+
+	int nSize = name.size();
+	if(name[nSize-1]>=48 && name[nSize-1]<=57)
+		coreName = name.substr(0,nSize-1);
+	else{
+		coreName = name.substr(0,nSize);
+	}
+
+	return coreName;
 }

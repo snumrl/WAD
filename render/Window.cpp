@@ -69,7 +69,7 @@ Eigen::Vector4d purple_trans(0.8, 0.2, 0.8, 0.2);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mDevice_On(false),isDrawCharacter(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mGraphMode(0),mCharacterMode(0),mParamMode(0),mViewMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false), mDisplayIter(0)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mDevice_On(false),isDrawCharacter(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mMetabolicEnergyMode(0),mJointTorqueMode(0),mJointAngleMode(0),mCharacterMode(0),mParamMode(0),mViewMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false), mDisplayIter(0)
 {
 	mBackground[0] = 0.96;
 	mBackground[1] = 0.96;
@@ -285,9 +285,8 @@ void
 Window::
 m(bool b)
 {
-	if(b){
+	if(b)
 		mMuscleMode = (mMuscleMode+1)%mMuscleMapNum;
-	}
 	else
 		mMuscleMode = (mMuscleMode-1)%mMuscleMapNum;
 
@@ -304,18 +303,54 @@ m(bool b)
 		muscle_vec = iter->second;
 		idx++;
 	}
-
-	// std::cout << "cur muscle : " << cur_muscle << std::endl;
-	// for(int i=0; i<muscle_vec.size(); i++){
-	// 	std::cout << "name : " << muscle_vec[i]->GetName() << std::endl;
-	// 	std::cout << "F0 : " << muscle_vec[i]->GetF0() << std::endl;
-	// }
-	// std::cout << std::endl;
 }
 
 void
 Window::
-write()
+WriteMetaE()
+{
+	if(!isOpenFile)
+	{
+		mFile << " MetaE";
+		mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
+		auto& HOUD06 = mMetabolicEnergy->GetHOUD06_map_deque();
+		for(auto iter = HOUD06.begin(); iter != HOUD06.end(); iter++)
+			mFile << " " + iter->first;
+	}
+	else
+	{
+		mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
+		std::deque<double> HOUD06 = mMetabolicEnergy->GetHOUD06_deque();
+		auto& HOUD06_ = mMetabolicEnergy->GetHOUD06_map_deque();
+		mFile << " " + std::to_string(HOUD06.at(0));
+		for(auto iter = HOUD06_.begin(); iter != HOUD06_.end(); iter++)
+			mFile << " " + std::to_string((iter->second).at(0));
+	}
+}
+
+void
+Window::
+WriteJointAngle()
+{
+	if(!isOpenFile)
+	{
+		mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+		auto& angles = mJointDatas->GetAngles();
+		for(auto iter = angles.begin(); iter != angles.end(); iter++)
+			mFile << " " + iter->first;
+	}
+	else
+	{
+		mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+		auto& angles = mJointDatas->GetAngles();
+		for(auto iter = angles.begin(); iter != angles.end(); iter++)
+			mFile << " " + std::to_string((iter->second).at(0)*180.0/M_PI);
+	}
+}
+
+void
+Window::
+Write()
 {
 	if(mWriteFile)
 	{
@@ -340,31 +375,27 @@ write()
 			if(ltm->tm_min < 10)
 				min = "0" + min;
 
-			mFileName = month + day + hour + min;
+			mFileName = month + day + "_" + hour + min;
 			mFile.open(mFileName);
 			if(mFile.is_open())
 				std::cout << mFileName << " open" << std::endl;
-			isOpenFile = true;
 
-			mFile << "Time Frame MetaE";
-			auto HOUD06 = mMetabolicEnergy->GetHOUD06_deque_map();
-			for(auto iter = HOUD06.begin(); iter != HOUD06.end(); iter++)
-				mFile << " " + iter->first;
+			mFile << "Time Frame";
+			this->WriteMetaE();
+			this->WriteJointAngle();
+
+			isOpenFile = true;
 		}
 
 		if(isOpenFile)
 		{
 			double t = mEnv->GetWorld()->getTime();
 			double f = mEnv->GetCharacter()->GetCurFrame();
-			mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
-			std::deque<double> HOUD06 = mMetabolicEnergy->GetHOUD06_deque();
-
 			mFile << "\n";
-			mFile << std::to_string(t) + " " + std::to_string(f) + " " + std::to_string(HOUD06.at(0));
+			mFile << std::to_string(t) + " " + std::to_string(f);
 
-			auto HOUD06_ = mMetabolicEnergy->GetHOUD06_deque_map();
-			for(auto iter = HOUD06_.begin(); iter != HOUD06_.end(); iter++)
-				mFile << " " + std::to_string((iter->second).at(0));
+			this->WriteMetaE();
+			this->WriteJointAngle();
 		}
 	}
 	else
@@ -373,9 +404,98 @@ write()
 		{
 			mFile.close();
 			std::cout << mFileName << " close" << std::endl;
+
+			mFileName += "_avg";
+			mFile.open(mFileName);
+			if(mFile.is_open())
+				std::cout << mFileName << " open" << std::endl;
+
+			mFile << "Frame";
+			mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+			auto& anglesByFrame = mJointDatas->GetAnglesByFrame();
+			std::map<std::string, std::vector<double>> avgMap;
+			for(auto iter = anglesByFrame.begin(); iter != anglesByFrame.end(); iter++)
+			{
+				if(iter->first == "FemurR_transverse" || iter->first == "FemurR_sagittal" || iter->first == "FemurR_frontal" || iter->first == "TibiaR_transverse" || iter->first == "TibiaR_sagittal" || iter->first == "TibiaR_frontal" || iter->first == "TalusR_transverse" || iter->first == "TalusR_sagittal" || iter->first == "TalusR_frontal")
+				{
+					mFile << " " + iter->first;
+					std::vector<double> avg;
+					for(int i=0; i<(iter->second).size(); i++)
+					{
+						double sum = 0.0;
+						for(int j=0; j<(iter->second).at(i).size(); j++)
+							sum += (iter->second).at(i).at(j);
+						avg.push_back(sum/(double)(iter->second).at(i).size());
+					}
+
+					avgMap[iter->first] = avg;
+				}
+			}
+
+			mFile << " metaE";
+			mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
+			std::vector<double> avgMap2;
+			auto& HOUD06_ByFrame = mMetabolicEnergy->GetHOUD06_ByFrame();
+			for(int i=0; i<HOUD06_ByFrame.size(); i++)
+			{
+				double sum = 0.0;
+				for(int j=0; j<HOUD06_ByFrame.at(i).size(); j++)
+				{
+					sum += HOUD06_ByFrame.at(i).at(j);
+				}
+				avgMap2.push_back(sum/(double)HOUD06_ByFrame.at(i).size());
+			}
+
+			auto& HOUD06_mapByFrame = mMetabolicEnergy->GetHOUD06_mapByFrame();
+			std::map<std::string, std::vector<double>> avgMap3;
+			for(auto iter = HOUD06_mapByFrame.begin(); iter != HOUD06_mapByFrame.end(); iter++)
+			{
+				mFile << " " + iter->first;
+				std::vector<double> avg;
+				for(int i=0; i<(iter->second).size(); i++)
+				{
+					double sum = 0.0;
+					for(int j=0; j<(iter->second).at(i).size(); j++)
+						sum += (iter->second).at(i).at(j);
+					avg.push_back(sum/(double)(iter->second).at(i).size());
+				}
+				avgMap3[iter->first] = avg;
+			}
+
+			for(int i=0; i<34; i++)
+			{
+				mFile << "\n";
+				mFile << std::to_string(i);
+				for(auto iter = anglesByFrame.begin(); iter != anglesByFrame.end(); iter++)
+				{
+					if(iter->first == "FemurR_transverse" || iter->first == "FemurR_sagittal" || iter->first == "FemurR_frontal" || iter->first == "TibiaR_transverse" || iter->first == "TibiaR_sagittal" || iter->first == "TibiaR_frontal" || iter->first == "TalusR_transverse" || iter->first == "TalusR_sagittal" || iter->first == "TalusR_frontal")
+					{
+						mFile << " " + std::to_string(avgMap[iter->first].at(i)*180.0/M_PI);
+					}
+				}
+
+				mFile << " " + std::to_string(avgMap2.at(i));
+
+				for(auto iter = HOUD06_mapByFrame.begin(); iter != HOUD06_mapByFrame.end(); iter++)
+				{
+					mFile << " "+ std::to_string(avgMap3[iter->first].at(i));
+				}
+			}
+			mFile.close();
+			std::cout << mFileName << " close" << std::endl;
+
 			isOpenFile = false;
 		}
 	}
+}
+
+void
+Window::
+GraphMode()
+{
+	mMetabolicEnergyMode = (mMetabolicEnergyMode+1)%48;
+	mJointTorqueMode = (mJointTorqueMode+1)%9;
+	mJointAngleMode = (mJointAngleMode+1)%11;
 }
 
 void
@@ -400,12 +520,7 @@ keyboard(unsigned char _key, int _x, int _y)
 			mDevice_On = !mDevice_On;
 		break;
 	case 'v' : mViewMode = (mViewMode+1)%4;break;
-	case '\t':
-		if(mEnv->GetUseMuscle())
-			mGraphMode = (mGraphMode+1)%50;
-		else
-			mGraphMode = (mGraphMode+1)%6;
-			break;
+	case '\t': this->GraphMode(); break;
 	case 'm' : this->m(true); break;
 	case 'n' : this->m(false); break;
 	case 'x' : mWriteFile = true; break;
@@ -469,7 +584,7 @@ Step()
 		if(mDeviceNNLoaded)
 			mEnv->GetDevice()->SetAction(action_device);
 
-		this->write();
+		this->Write();
 		mDisplayIter = 0;
 	}
 
@@ -815,19 +930,18 @@ DrawCharacter()
 		DrawTarget();
 
 	if(mDrawGraph){
-		if(!mEnv->GetUseDevice()){
-			if(mEnv->GetUseMuscle())
-				this->DrawMetabolicEnergy_();
-			else
-				this->DrawFemurSignals();
-		}
-
 		if(mEnv->GetUseMuscle())
-			this->DrawMetabolicEnergys();
-		else
-			this->DrawJointTorques();
+			this->DrawMetabolicEnergy_();
+		else if(mEnv->GetUseDevice())
+			this->DrawFemurSignals();
 
+		// this->DrawJointAngles();
 		this->DrawReward();
+
+		// if(mEnv->GetUseMuscle())
+		this->DrawMetabolicEnergys();
+		// else
+		// this->DrawJointTorques();
 	}
 	else{
 		this->DrawVelocity();
@@ -1168,6 +1282,50 @@ DrawFemurSignals()
 
 void
 Window::
+DrawJointAngles()
+{
+	DrawGLBegin();
+
+	double p_w = 0.30, p_h = 0.14, p_x = 0.01, p_y = 0.84;
+	double offset_y = 0.16;
+
+	mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+	int modeNum = mJointDatas->GetAngles().size() / 6;
+	auto iter = mJointDatas->GetAngles().begin();
+	for(int i=0; i<modeNum; i++)
+	{
+		for(int j=0; j<6; j++)
+		{
+			if(mJointAngleMode == i){
+				if(j%6 == 0){
+					DrawAngleGraph(iter->first, iter->second, p_w, p_h, p_x, p_y-j*offset_y);
+				}
+				else if(j%6 == 1){
+					DrawAngleGraph(iter->first, iter->second, p_w, p_h, p_x, p_y-j*offset_y);
+				}
+				else if(j%6 == 2){
+					DrawAngleGraph(iter->first, iter->second, p_w, p_h, p_x, p_y-j*offset_y);
+				}
+				else if(j%6 == 3){
+					DrawAngleGraph(iter->first, iter->second, p_w, p_h, p_x, p_y-j*offset_y);
+				}
+				else if(j%6 == 4){
+					DrawAngleGraph(iter->first, iter->second, p_w, p_h, p_x, p_y-j*offset_y);
+				}
+				else{
+					DrawAngleGraph(iter->first, iter->second, p_w, p_h, p_x, p_y-j*offset_y);
+				}
+			}
+			iter++;
+		}
+	}
+
+	DrawGLEnd();
+}
+
+
+void
+Window::
 DrawJointTorques()
 {
 	DrawGLBegin();
@@ -1182,7 +1340,7 @@ DrawJointTorques()
 	{
 		for(int j=0; j<6; j++)
 		{
-			if(mGraphMode == i)
+			if(mJointTorqueMode == i)
 				DrawTorqueGraph(iter->first, iter->second, p_w, p_h, p_x, p_y-j*offset_y);
 			iter++;
 		}
@@ -1219,13 +1377,15 @@ DrawMetabolicEnergy_()
 	double pr_x = 0.69, pr_y = 0.62;
 
 	double offset_x = 0.0090;
-	double offset_y = 0.0006;
+	double offset_y = 0.0010;
 	double offset = 0.005;
 	double ratio_y = 0.2;
 
 	mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
 	std::deque<double> BHAR04 = mMetabolicEnergy->GetBHAR04_deque();
 	std::deque<double> HOUD06 = mMetabolicEnergy->GetHOUD06_deque();
+
+	offset_x = (p_w - 2*offset)/(double)(HOUD06.size()-1);
 
 	DrawBaseGraph(pl_x, pl_y, p_w, p_h, ratio_y, offset, "BHAR04");
 	DrawLineStrip(pl_x, pl_y, p_h, ratio_y, offset_x, offset_y, offset, red, 2.0, BHAR04);
@@ -1248,14 +1408,14 @@ DrawMetabolicEnergys()
 	double offset_y = 0.16;
 
 	mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
-	int modeNum = mMetabolicEnergy->GetBHAR04_deque_map().size() / 6;
-	auto iter_BHAR04 = mMetabolicEnergy->GetBHAR04_deque_map().begin();
-	auto iter_HOUD06 = mMetabolicEnergy->GetHOUD06_deque_map().begin();
+	int modeNum = mMetabolicEnergy->GetBHAR04_map_deque().size() / 6 + 1;
+	auto iter_BHAR04 = mMetabolicEnergy->GetBHAR04_map_deque().begin();
+	auto iter_HOUD06 = mMetabolicEnergy->GetHOUD06_map_deque().begin();
 	for(int i=0; i<modeNum; i++)
 	{
 		for(int j=0; j<6; j++)
 		{
-			if(mGraphMode == i){
+			if(mMetabolicEnergyMode == i){
 				// DrawMetabolicEnergyGraph(iter->first, iter->second, p_w, p_h, p_x, p_y-j*offset_y);
 				DrawMetabolicEnergyGraph(iter_BHAR04->first, iter_BHAR04->second, iter_HOUD06->second, p_w, p_h, p_x, p_y-j*offset_y);
 			}
@@ -1296,6 +1456,47 @@ DrawMetabolicEnergyGraph(std::string name, std::deque<double> data1, std::deque<
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data2);
 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data2, blue);
 }
+
+void
+Window::
+DrawAngleGraph(std::string name, std::deque<double> data, double w, double h, double x, double y)
+{
+	int dataSize = data.size();
+	double max = -180.0, min = 180.0;
+	for(auto& d : data){
+		d *= (180.0/M_PI);
+		if(d > max)
+			max = d;
+		if(d < min)
+			min = d;
+	}
+
+	double offset = 0.005;
+	double offset_x = (w - offset)/(double)dataSize;
+	double offset_y = (h - offset)/(max-min);
+	double ratio_y = 0.0;
+
+	if(min > 0){
+		offset_y = (h - offset)/max;
+		ratio_y = 0.0;
+	}
+
+	if(max < 0){
+		offset_y = (h - offset)/(0.0 - min);
+		ratio_y = 1.0;
+	}
+
+	if(max >= 0 && min <= 0)
+	{
+		ratio_y = -min / (max - min);
+	}
+
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, name);
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, data);
+	// DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data, red);
+	DrawStringMinMax(x, y, h, ratio_y, offset_x, offset_y, offset, data, blue);
+}
+
 
 void
 Window::
@@ -1424,8 +1625,8 @@ DrawDevice()
 	{
 		isDrawDevice = true;
 		DrawSkeleton(mEnv->GetDevice()->GetSkeleton());
-		if(mDrawGraph)
-			DrawDeviceSignals();
+		// if(mDrawGraph)
+		// 	DrawDeviceSignals();
 		if(mDrawArrow)
 			DrawArrow();
 		isDrawDevice = false;
@@ -1448,7 +1649,7 @@ DrawDeviceSignals()
 	Device* device = mEnv->GetDevice();
 	std::deque<double> data_L = device->GetSignals(0);
 	std::deque<double> data_R = device->GetSignals(1);
-	if(mGraphMode == 0){
+	if(mJointTorqueMode == 0){
 		DrawLineStrip(p_x, p_y-1*0.16, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_L, 180);
 		DrawStringMax(p_x, p_y-1*0.16, p_h, ratio_y, offset_x, offset_y, offset, data_L, blue);
 		DrawLineStrip(p_x, p_y-4*0.16, p_h, ratio_y, offset_x, offset_y, offset, blue, 1.5, data_R, 180);
@@ -1750,7 +1951,7 @@ void
 Window::
 DrawStringMinMax(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, std::deque<double> data, Eigen::Vector4d color)
 {
-	double max = 0, min = 0;
+	double max = -10000, min = 10000;
 	int idx_max = 0, idx_min = 0;
 	for(int i=0; i<data.size(); i++)
 	{

@@ -19,6 +19,10 @@ JointData::
 Initialize(const dart::dynamics::SkeletonPtr& skel)
 {
     windowSize = 200;
+    int frameNum = 34;
+    int stepNum = 16;
+    int dataSize = frameNum*stepNum;
+
     mSkeleton = skel;
     int jointNum = mSkeleton->getNumJoints();
     for(int i=0; i<jointNum; i++)\
@@ -46,9 +50,14 @@ Initialize(const dart::dynamics::SkeletonPtr& skel)
         {
             mTorques[name]  = std::deque<double>(windowSize);
         }
-        else
-        {
-        }
+
+        mAngles[name+"_sagittal"] = std::deque<double>(dataSize);
+        mAngles[name+"_frontal"] = std::deque<double>(dataSize);
+        mAngles[name+"_transverse"] = std::deque<double>(dataSize);
+
+        mAnglesByFrame[name+"_sagittal"] = std::vector<std::vector<double>>(frameNum);
+        mAnglesByFrame[name+"_frontal"] = std::vector<std::vector<double>>(frameNum);
+        mAnglesByFrame[name+"_transverse"] = std::vector<std::vector<double>>(frameNum);
     }
 }
 
@@ -56,8 +65,16 @@ void
 JointData::
 Reset()
 {
-    for(auto iter = mTorques.begin(); iter != mTorques.begin(); iter++)
+    for(auto iter = mTorques.begin(); iter != mTorques.end(); iter++)
         std::fill(iter->second.begin(), iter->second.end(), 0.0);
+
+    for(auto iter = mAngles.begin(); iter != mAngles.end(); iter++)
+        std::fill(iter->second.begin(), iter->second.end(), 0.0);
+
+    for(auto iter = mAnglesByFrame.begin(); iter != mAnglesByFrame.end(); iter++){
+        for(int i = 0; i != (iter->second).size(); i++)
+            (iter->second).at(i) = std::vector<double>();
+    }
 }
 
 void
@@ -102,4 +119,68 @@ SetTorques(std::string name, double torque)
 {
     mTorques[name].pop_back();
     mTorques[name].push_front(torque);
+}
+
+void
+JointData::
+SetAngles(int frame)
+{
+    int jointNum = mSkeleton->getNumJoints();
+    Eigen::VectorXd pos = mSkeleton->getPositions();
+    for(int i=0; i<jointNum; i++)
+    {
+        auto joint = mSkeleton->getJoint(i);
+        int idx = joint->getIndexInSkeleton(0);
+        std::string name = joint->getName();
+
+        if(joint->getType() == "FreeJoint")
+        {
+            this->SetAngles(name+"_sagittal", pos[idx]);
+            this->SetAngles(name+"_frontal", pos[idx+1]);
+            this->SetAngles(name+"_transverse", pos[idx+2]);
+
+            this->SetAngles(name+"_sagittal", pos[idx], frame);
+            this->SetAngles(name+"_frontal", pos[idx+1], frame);
+            this->SetAngles(name+"_transverse", pos[idx+2], frame);
+        }
+        else if(joint->getType() == "BallJoint")
+        {
+            this->SetAngles(name+"_sagittal", pos[idx]);
+            this->SetAngles(name+"_frontal", pos[idx+1]);
+            this->SetAngles(name+"_transverse", pos[idx+2]);
+
+            this->SetAngles(name+"_sagittal", pos[idx], frame);
+            this->SetAngles(name+"_frontal", pos[idx+1], frame);
+            this->SetAngles(name+"_transverse", pos[idx+2], frame);
+        }
+        else if(joint->getType() == "RevoluteJoint")
+        {
+            this->SetAngles(name+"_sagittal", pos[idx]);
+            this->SetAngles(name+"_frontal", 0.0);
+            this->SetAngles(name+"_transverse", 0.0);
+
+            this->SetAngles(name+"_sagittal", pos[idx], frame);
+            this->SetAngles(name+"_frontal", 0.0, frame);
+            this->SetAngles(name+"_transverse", 0.0, frame);
+
+        }
+        else
+        {
+        }
+    }
+}
+
+void
+JointData::
+SetAngles(std::string name, double angle, int frame)
+{
+    mAnglesByFrame[name].at(frame).push_back(angle);
+}
+
+void
+JointData::
+SetAngles(std::string name, double angle)
+{
+    mAngles[name].pop_back();
+    mAngles[name].push_front(angle);
 }

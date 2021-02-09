@@ -573,7 +573,7 @@ Step_Muscles(int simCount, int randomSampleIndex, bool isRender)
 	mStepCnt_total++;
 
 	this->SetCurVelocity();
-	mMetabolicEnergy->Set(this->GetMuscles(), mCurVel3d, this->GetPhase());
+	mMetabolicEnergy->Set(this->GetMuscles(), mCurVel3d, this->GetPhase(), (int)mCurFrame);
 	if(isRender)
 		this->SetMeasure();
 }
@@ -583,6 +583,7 @@ Character::
 SetMeasure()
 {
 	mJointDatas->SetTorques(mDesiredTorque);
+	mJointDatas->SetAngles((int)mCurFrame);
 	mContacts->Set();
 	// this->SetCoT();
 }
@@ -850,8 +851,8 @@ Character::
 GetReward_Character_Efficiency()
 {
 	double r_EnergyMin = 1.0;
-	if(mUseMuscle)
-		r_EnergyMin = mMetabolicEnergy->GetReward();
+	// if(mUseMuscle)
+	// 	r_EnergyMin = mMetabolicEnergy->GetReward();
 	// else
 	// 	r_EnergyMin = this->GetReward_TorqueMin();
 

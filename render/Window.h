@@ -62,7 +62,9 @@ public:
 	void DrawReward();
 	// void DrawTorques();
 	void DrawJointTorques();
+	void DrawJointAngles();
 	// void DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double y);
+	void DrawAngleGraph(std::string name, std::deque<double> data, double w, double h, double x, double y);
 	void DrawTorqueGraph(std::string name, std::deque<double> data, double w, double h, double x, double y);
 	void DrawMetabolicEnergyGraph(std::string name, std::deque<double> data, double w, double h, double x, double y);
 	void DrawMetabolicEnergyGraph(std::string name, std::deque<double> data1, std::deque<double> data2, double w, double h, double x, double y);
@@ -105,7 +107,10 @@ public:
     void DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::deque<double>& data, int idx, Eigen::Vector4d color1, double line_width1, std::deque<double>& data1, int idx1);
 
     void m(bool b);
-    void write();
+    void GraphMode();
+    void Write();
+    void WriteMetaE();
+    void WriteJointAngle();
 private:
 
 	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module,rms_module;
@@ -132,10 +137,13 @@ private:
 	bool isDrawTarget;
 	bool isDrawDevice;
 
-	int mGraphMode;
 	int mCharacterMode;
 	int mParamMode;
 	int mViewMode;
+
+	int mJointAngleMode;
+	int mJointTorqueMode;
+	int mMetabolicEnergyMode;
 
 	bool mTalusL;
 	bool mTalusR;
