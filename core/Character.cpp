@@ -734,7 +734,7 @@ GetReward_Character()
  	mReward["imit"] = reward_imit;
  	mReward["effi"] = reward_effi;
 
-	double r = 1.0 * reward_imit + 0.1 * reward_effi;
+	double r = 1.0 * reward_imit + 0.05 * reward_effi;
 
 	return r;
 }

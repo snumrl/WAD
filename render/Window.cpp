@@ -316,6 +316,12 @@ WriteMetaE()
 		auto& HOUD06 = mMetabolicEnergy->GetHOUD06_map_deque();
 		for(auto iter = HOUD06.begin(); iter != HOUD06.end(); iter++)
 			mFile << " " + iter->first;
+
+		auto&  muscles = mEnv->GetCharacter()->GetMuscles();
+		for(auto m : muscles)
+		{
+			mFile << " " + m->GetName();
+		}
 	}
 	else
 	{
@@ -325,6 +331,12 @@ WriteMetaE()
 		mFile << " " + std::to_string(HOUD06.at(0));
 		for(auto iter = HOUD06_.begin(); iter != HOUD06_.end(); iter++)
 			mFile << " " + std::to_string((iter->second).at(0));
+
+		auto&  muscles = mEnv->GetCharacter()->GetMuscles();
+		for(auto m : muscles)
+		{
+			mFile << " " + std::to_string(m->GetForce());
+		}
 	}
 }
 

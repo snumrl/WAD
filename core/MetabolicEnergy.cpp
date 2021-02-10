@@ -140,15 +140,18 @@ Set(const std::vector<Muscle*>& muscles, Eigen::Vector3d vel, double phase, int 
 		if(phase*mCycleFrames >= mCycleFrames-1)
 		{
 			BHAR04_cum = 0;
-			for(int i=0; i<BHAR04_deque.size(); i++)
-				BHAR04_cum += BHAR04_deque[i];
-
 			HOUD06_cum = 0;
-			for(int i=0; i<HOUD06_deque.size(); i++)
-				HOUD06_cum += HOUD06_deque[i];
 
-			if(isTotalFirst)
+			if(isTotalFirst){
 				isTotalFirst = false;
+			}
+			else{
+				for(int i=0; i<BHAR04_deque.size(); i++)
+					BHAR04_cum += BHAR04_deque[i];
+
+				for(int i=0; i<HOUD06_deque.size(); i++)
+					HOUD06_cum += HOUD06_deque[i];
+			}
 		}
 
 		isFirst = true;
