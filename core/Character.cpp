@@ -734,7 +734,7 @@ GetReward_Character()
  	mReward["imit"] = reward_imit;
  	mReward["effi"] = reward_effi;
 
-	double r = 1.0 * reward_imit + 0.05 * reward_effi;
+	double r = 1.0 * reward_imit + 0.0 * reward_effi;
 
 	return r;
 }
@@ -1303,7 +1303,7 @@ LoadBVHset(double lower, double upper)
 		sr += 0.1;
 	}
 
-	mBVH = mBVHset.at(0);
+	mBVH = mBVHset.at(mBVHset.size()-1);
 }
 
 void
