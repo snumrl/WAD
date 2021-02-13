@@ -197,6 +197,7 @@ private:
 	int mNumState;
 	int mNumState_Char;
 	int mNumAction;
+	int mNumAdaptiveDof;
 	int mNumTotalRelatedDof;
 	int mNumMuscle;
 	int mNumMuscleMap;
