@@ -27,9 +27,13 @@ public:
 private:
     dart::dynamics::SkeletonPtr mSkeleton;
 
-    int windowSize;
+    int mWindowSize;
+    int mDataSize;
+    int mNumFrames;
+    int mNumSteps;
     std::map<std::string, std::deque<double>> mTorques;
     std::map<std::string, std::deque<double>> mAngles;
+    std::map<std::string, std::deque<double>> mTorquesNorm;
 
     std::map<std::string, std::vector<std::vector<double>>> mAnglesByFrame;
 };

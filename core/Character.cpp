@@ -734,7 +734,7 @@ GetReward_Character()
  	mReward["imit"] = reward_imit;
  	mReward["effi"] = reward_effi;
 
-	double r = 1.0 * reward_imit + 0.0 * reward_effi;
+	double r = 1.0 * reward_imit + 0.1 * reward_effi;
 
 	return r;
 }
@@ -827,7 +827,7 @@ GetReward_Character_Imitation()
 
 	//=====================================
 
-	double sig_p = 8.0;
+	double sig_p = 4.0;
 	double sig_q = 0.4;
 	double sig_ee_rot = 20.0;
 	double sig_ee_pos = 40.0;
@@ -877,6 +877,7 @@ double
 Character::
 GetReward_TorqueMin()
 {
+
 	// std::vector<std::deque<double>> ts = mTorques->GetTorques();
 	// int idx = 0;
 	// double sum = 0.0;

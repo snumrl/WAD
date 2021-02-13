@@ -139,9 +139,6 @@ Set(const std::vector<Muscle*>& muscles, Eigen::Vector3d vel, double phase, int 
 
 		if(phase*mCycleFrames >= mCycleFrames-1)
 		{
-			BHAR04_cum = 0;
-			HOUD06_cum = 0;
-
 			if(isTotalFirst){
 				isTotalFirst = false;
 			}
@@ -166,8 +163,13 @@ GetReward()
 	double metabolic_scale = 0.01;
 	double metabolic_err = 0.0;
 
-	metabolic_err = HOUD06_cum/(double)mCycleFrames;
-	double reward = exp(-err_scale * metabolic_scale * metabolic_err);
+	double reward = 0.0;
+	if(HOUD06_cum != 0.0){
+		metabolic_err = HOUD06_cum/(double)mCycleFrames;
+		reward = exp(-err_scale * metabolic_scale * metabolic_err);
+		HOUD06_cum = 0.0;
+		BHAR04_cum = 0.0;
+	}
 
 	if(isTotalFirst)
 		reward = 0;
