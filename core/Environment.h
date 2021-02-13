@@ -38,6 +38,7 @@ public:
 	int GetNumParamState_Device();
 	int GetNumAction();
 	int GetNumAction_Device();
+	int GetNumActiveDof();
 
 public:
 	void SetWorld();

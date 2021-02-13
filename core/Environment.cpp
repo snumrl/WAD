@@ -435,7 +435,7 @@ int
 Environment::
 GetNumAction()
 {
-	return mCharacter->GetNumActiveDof();
+	return mCharacter->GetNumAction();
 }
 
 int
@@ -443,6 +443,13 @@ Environment::
 GetNumAction_Device()
 {
 	return mDevice->GetNumAction();
+}
+
+int
+Environment::
+GetNumActiveDof()
+{
+	return mCharacter->GetNumActiveDof();
 }
 
 void

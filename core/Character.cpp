@@ -203,9 +203,6 @@ Initialize()
 	mNumBodyNodes = mSkeleton->getNumBodyNodes();
 	mNumJoints = mSkeleton->getNumJoints();
 
-	this->SetPDParameters();
-	this->SetTargetPosAndVel(mWorld->getTime());
-
 	mRootJointDof = 6;
 	mNumActiveDof = mDof - mRootJointDof;
 	mNumState_Char = this->GetState().rows();
@@ -217,8 +214,12 @@ Initialize()
 	mStepCnt = 0;
 	mStepCnt_total = 0;
 
-	mAction = Eigen::VectorXd::Zero(mNumActiveDof);
+	mNumAction = mNumActiveDof * 2;
+	mAction = Eigen::VectorXd::Zero(mNumAction);
 	mDesiredTorque = Eigen::VectorXd::Zero(mDof);
+
+	this->SetPDParameters();
+	this->SetTargetPosAndVel(mWorld->getTime());
 
 	mAngVel = Eigen::VectorXd::Zero(mNumBodyNodes*3);
 	mAngVel_prev = Eigen::VectorXd::Zero(mNumBodyNodes*3);
@@ -945,7 +946,7 @@ Character::
 SetDesiredTorques()
 {
 	Eigen::VectorXd p_des = mTargetPositions;
-	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction;
+	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction.segment(50,50);
 	mDesiredTorque = this->GetSPDForces(p_des);
 
 	for(int i=0; i<mDesiredTorque.size(); i++){
@@ -1055,6 +1056,8 @@ SetTargetPositions(double t,double dt,int frame,int frameNext, double frameFract
 		cycleOffset[1] = 0.0;
 		mTargetPositions.segment(3,3) += cycleCount*cycleOffset;
 	}
+
+	mTargetPositions.segment(6,50) += mAction.segment(50,50);
 
 	Eigen::Isometry3d T_current = dart::dynamics::FreeJoint::convertToTransform(mTargetPositions.head<6>());
 	T_current = mBVH->GetT0().inverse()*T_current;

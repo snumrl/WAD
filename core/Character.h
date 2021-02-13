@@ -120,7 +120,7 @@ public:
 	int GetNumState_Char(){return mNumState_Char;}
 	int GetNumDof(){return mDof;}
 	int GetNumActiveDof(){return mNumActiveDof;}
-	int GetNumAction(){return mNumActiveDof;}
+	int GetNumAction(){return mNumAction;}
 	int GetRootJointDof(){return mRootJointDof;}
 	int GetNumTotalRelatedDofs(){return mNumTotalRelatedDof;}
 
@@ -196,6 +196,7 @@ private:
 	int mRootJointDof;
 	int mNumState;
 	int mNumState_Char;
+	int mNumAction;
 	int mNumTotalRelatedDof;
 	int mNumMuscle;
 	int mNumMuscleMap;

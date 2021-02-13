@@ -94,6 +94,7 @@ class PPO(object):
 		if self.use_device:
 			self.num_state_device = self.env.GetNumState_Device()
 		self.num_action = self.env.GetNumAction()
+		self.num_active_dof = self.env.GetNumActiveDof()
 		self.rms = RunningMeanStd(shape=(self.num_state))
 
 		self.num_epochs = 10
@@ -135,8 +136,8 @@ class PPO(object):
 		# ========== Muscle setting ========= #
 		if self.use_muscle:
 			self.num_muscles = self.env.GetNumMuscles()
-			self.num_action_muscle = self.env.GetNumAction()
-			self.muscle_model = MuscleNN(self.env.GetNumTotalMuscleRelatedDofs(), self.num_action_muscle,self.num_muscles)
+			self.num_action_muscle = self.env.GetNumActiveDof()
+			self.muscle_model = MuscleNN(self.env.GetNumTotalMuscleRelatedDofs(), self.num_action_muscle, self.num_muscles)
 			self.muscle_buffer = MuscleBuffer(30000)
 			# self.rms_muscle = RunningMeanStd(shape=(self.env.GetNumTotalMuscleRelatedDofs()))
 
@@ -443,7 +444,7 @@ class PPO(object):
 				stack_JtA = np.vstack(batch.JtA).astype(np.float32)
 				stack_tau_des = np.vstack(batch.tau_des).astype(np.float32)
 				stack_L = np.vstack(batch.L).astype(np.float32)
-				stack_L = stack_L.reshape(self.muscle_batch_size, self.num_action, self.num_muscles)
+				stack_L = stack_L.reshape(self.muscle_batch_size, self.num_active_dof, self.num_muscles)
 				stack_b = np.vstack(batch.b).astype(np.float32)
 
 				stack_JtA = Tensor(stack_JtA)

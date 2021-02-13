@@ -214,6 +214,13 @@ GetNumState_Device()
 
 int
 EnvManager::
+GetNumActiveDof()
+{
+	return mEnvs[0]->GetNumActiveDof();
+}
+
+int
+EnvManager::
 GetNumAction()
 {
 	return mEnvs[0]->GetNumAction();
@@ -421,6 +428,7 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("GetNumState",&EnvManager::GetNumState)
 		.def("GetNumState_Char",&EnvManager::GetNumState_Char)
 		.def("GetNumState_Device",&EnvManager::GetNumState_Device)
+		.def("GetNumActiveDof",&EnvManager::GetNumActiveDof)
 		.def("GetNumAction",&EnvManager::GetNumAction)
 		.def("GetNumAction_Device",&EnvManager::GetNumAction_Device)
 		.def("GetNumSteps",&EnvManager::GetNumSteps)

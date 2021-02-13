@@ -37,6 +37,7 @@ public:
 	int GetNumState_Device();
 	int GetNumAction();
 	int GetNumAction_Device();
+	int GetNumActiveDof();
 	int GetNumSteps();
 	int GetControlHz();
 	int GetSimulationHz();

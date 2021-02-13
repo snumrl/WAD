@@ -166,7 +166,7 @@ GetReward()
 	double reward = 0.0;
 	if(HOUD06_cum != 0.0){
 		metabolic_err = HOUD06_cum/(double)mCycleFrames;
-		reward = exp(-err_scale * metabolic_scale * metabolic_err);
+		reward = 1.0 - exp(-err_scale * metabolic_scale * metabolic_err);
 		HOUD06_cum = 0.0;
 		BHAR04_cum = 0.0;
 	}

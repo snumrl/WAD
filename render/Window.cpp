@@ -150,7 +150,7 @@ LoadMuscleNN(const std::string& muscle_nn_path)
 	boost::python::str str;
 	str = ("num_total_muscle_related_dofs = "+std::to_string(mEnv->GetCharacter()->GetNumTotalRelatedDofs())).c_str();
 	p::exec(str,mns);
-	str = ("num_actions = "+std::to_string(mEnv->GetCharacter()->GetNumAction())).c_str();
+	str = ("num_actions = "+std::to_string(mEnv->GetCharacter()->GetNumActiveDof())).c_str();
 	p::exec(str,mns);
 	str = ("num_muscles = "+std::to_string(mEnv->GetCharacter()->GetNumMuscles())).c_str();
 	p::exec(str,mns);
