@@ -936,6 +936,7 @@ SetAction(const Eigen::VectorXd& a)
 {
 	double action_scale = 0.1;
 	mAction = a*action_scale;
+	mAction.segment(50,50) *= 0.1;
 
 	double t = mWorld->getTime();
 	this->SetTargetPosAndVel(t);
