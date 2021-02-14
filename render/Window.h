@@ -55,6 +55,7 @@ public:
 	void DrawShapeFrame(const dart::dynamics::ShapeFrame* shapeFrame);
 	void DrawShape(const dart::dynamics::Shape* shape,const Eigen::Vector4d& color);
 	void DrawTarget();
+	void DrawAdaptiveTarget();
 	void DrawMuscles(const std::vector<Muscle*>& muscles);
 	void DrawShadow(const Eigen::Vector3d& scale, const aiScene* mesh,double y);
 	void DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine3d& M,double y);
@@ -124,6 +125,7 @@ private:
 	bool mSimulating;
 	bool mDrawCharacter;
 	bool mDrawTarget;
+	bool mDrawAdaptiveTarget;
 	bool mDrawGraph;
 	bool mDrawParameter;
 	bool mDrawArrow;
@@ -135,6 +137,7 @@ private:
 	bool mDevice_On;
 	bool isDrawCharacter;
 	bool isDrawTarget;
+	bool isDrawAdaptiveTarget;
 	bool isDrawDevice;
 
 	int mCharacterMode;

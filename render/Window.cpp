@@ -69,7 +69,7 @@ Eigen::Vector4d purple_trans(0.8, 0.2, 0.8, 0.2);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mDevice_On(false),isDrawCharacter(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mMetabolicEnergyMode(0),mJointTorqueMode(0),mJointAngleMode(0),mCharacterMode(0),mParamMode(0),mViewMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false), mDisplayIter(0)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawAdaptiveTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mDevice_On(false),isDrawCharacter(false),isDrawTarget(false),isDrawAdaptiveTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mMetabolicEnergyMode(0),mJointTorqueMode(0),mJointAngleMode(0),mCharacterMode(0),mParamMode(0),mViewMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false), mDisplayIter(0)
 {
 	mBackground[0] = 0.96;
 	mBackground[1] = 0.96;
@@ -524,6 +524,7 @@ keyboard(unsigned char _key, int _x, int _y)
 	case 'g': mDrawGraph = !mDrawGraph;break;
 	case 'a': mDrawArrow = !mDrawArrow;break;
 	case 't': mDrawTarget = !mDrawTarget;break;
+	case 'T': mDrawAdaptiveTarget = !mDrawAdaptiveTarget;break;
 	case ' ': mSimulating = !mSimulating;break;
 	case 'c': mDrawCharacter = !mDrawCharacter;break;
 	case 'p': mDrawParameter = !mDrawParameter;break;
@@ -941,6 +942,9 @@ DrawCharacter()
 	if(mDrawTarget)
 		DrawTarget();
 
+	if(mDrawAdaptiveTarget)
+		DrawAdaptiveTarget();
+
 	if(mDrawGraph){
 		if(mEnv->GetUseMuscle())
 			this->DrawMetabolicEnergy_();
@@ -1016,6 +1020,8 @@ DrawShapeFrame(const ShapeFrame* sf)
 		mColor << 0.75, 0.75, 0.75, 1.0;
 	if(isDrawTarget)
 		mColor << 1.0, 0.6, 0.6, 0.3;
+	if(isDrawAdaptiveTarget)
+		mColor << 0.6, 1.0, 0.6, 0.3;
 	if(isDrawDevice)
 		mColor << 0.3, 0.3, 0.3, 1.0;
 	DrawShape(sf->getShape().get(), mColor);
@@ -1229,6 +1235,25 @@ DrawTarget()
 	skeleton->setPositions(cur_pos);
 
 	isDrawTarget = false;
+}
+
+void
+Window::
+DrawAdaptiveTarget()
+{
+	isDrawAdaptiveTarget = true;
+
+	Character* character = mEnv->GetCharacter();
+	SkeletonPtr skeleton = character->GetSkeleton();
+
+	Eigen::VectorXd cur_pos = skeleton->getPositions();
+
+	skeleton->setPositions(character->GetAdaptiveTargetPositions());
+	DrawBodyNode(skeleton->getRootBodyNode());
+
+	skeleton->setPositions(cur_pos);
+
+	isDrawAdaptiveTarget = false;
 }
 
 void

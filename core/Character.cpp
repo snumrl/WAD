@@ -770,7 +770,8 @@ GetReward_Character_Imitation()
 	}
 
 	// Target Position and Velocity
-	mSkeleton->setPositions(mTargetPositions);
+	// mSkeleton->setPositions(mTargetPositions);
+	mSkeleton->setPositions(mAdaptiveTargetPositions);
 	mSkeleton->setVelocities(mTargetVelocities);
 	mSkeleton->computeForwardKinematics(true, true, false);
 
@@ -825,7 +826,8 @@ GetReward_Character_Imitation()
 	}
 
 	//Angle Difference
-	Eigen::VectorXd q_diff = mSkeleton->getPositionDifferences(cur_q, mTargetPositions);
+	// Eigen::VectorXd q_diff = mSkeleton->getPositionDifferences(cur_q, mTargetPositions);
+	Eigen::VectorXd q_diff = mSkeleton->getPositionDifferences(cur_q, mAdaptiveTargetPositions);
 
 	//=====================================
 
@@ -947,8 +949,10 @@ void
 Character::
 SetDesiredTorques()
 {
-	Eigen::VectorXd p_des = mTargetPositions;
-	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction.segment(0,50);
+	// Eigen::VectorXd p_des = mTargetPositions;
+	// p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction.segment(0,50);
+	Eigen::VectorXd p_des = mAdaptiveTargetPositions;
+	p_des.tail(mAdaptiveTargetPositions.rows() - mRootJointDof) += mAction.segment(0,50);
 	mDesiredTorque = this->GetSPDForces(p_des);
 
 	for(int i=0; i<mDesiredTorque.size(); i++){
@@ -1059,13 +1063,16 @@ SetTargetPositions(double t,double dt,int frame,int frameNext, double frameFract
 		mTargetPositions.segment(3,3) += cycleCount*cycleOffset;
 	}
 
-	mTargetPositions.segment(6,mNumAdaptiveDof) += mAction.segment(50,mNumAdaptiveDof);
+	mAdaptiveTargetPositions = mTargetPositions;
+	// mTargetPositions.segment(6,mNumAdaptiveDof) += mAction.segment(50,mNumAdaptiveDof);
+	mAdaptiveTargetPositions.segment(6,mNumAdaptiveDof) += mAction.segment(50,mNumAdaptiveDof);
 
 	Eigen::Isometry3d T_current = dart::dynamics::FreeJoint::convertToTransform(mTargetPositions.head<6>());
 	T_current = mBVH->GetT0().inverse()*T_current;
 	Eigen::Isometry3d T_head = mTc*T_current;
 	Eigen::Vector6d p_head = dart::dynamics::FreeJoint::convertToPositions(T_head);
 	mTargetPositions.head<6>() = p_head;
+	mAdaptiveTargetPositions.head<6>() = p_head;
 }
 
 void

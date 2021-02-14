@@ -101,6 +101,7 @@ public:
 	const Eigen::VectorXd& GetActivationLevels(){return mActivationLevels;}
 	const Eigen::VectorXd& GetTargetPositions(){ return mTargetPositions; }
 	const Eigen::VectorXd& GetTargetVelocities(){ return mTargetVelocities; }
+	const Eigen::VectorXd& GetAdaptiveTargetPositions(){return mAdaptiveTargetPositions;}
 	Eigen::VectorXd GetDesiredTorques();
 	Eigen::VectorXd GetSPDForces(const Eigen::VectorXd& p_desired);
 
@@ -233,6 +234,8 @@ private:
 
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;
+	Eigen::VectorXd mAdaptiveTargetPositions;
+	Eigen::VectorXd mAdaptiveTargetVelocities;
 	Eigen::VectorXd mDesiredTorque;
 
 	Eigen::VectorXd mAction;
