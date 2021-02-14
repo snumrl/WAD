@@ -214,7 +214,7 @@ Initialize()
 	mStepCnt = 0;
 	mStepCnt_total = 0;
 
-	mNumAdaptiveDof = 24;
+	mNumAdaptiveDof = 18;
 	mNumAction = mNumActiveDof + mNumAdaptiveDof;
 	mAction = Eigen::VectorXd::Zero(mNumAction);
 	mDesiredTorque = Eigen::VectorXd::Zero(mDof);
@@ -939,7 +939,7 @@ SetAction(const Eigen::VectorXd& a)
 {
 	double action_scale = 0.1;
 	mAction = a*action_scale;
-	mAction.segment(50,mNumAdaptiveDof) *= 0.1;
+	mAction.segment(50,mNumAdaptiveDof) *= 0.5;
 
 	double t = mWorld->getTime();
 	this->SetTargetPosAndVel(t);
