@@ -372,6 +372,7 @@ Initialize_Rewards()
 	mRewardTags.push_back("smooth");
 	mRewardTags.push_back("min");
 	mRewardTags.push_back("contact");
+	mRewardTags.push_back("reg");
 	mRewardTags.push_back("effi");
 
 	int reward_window = 70;
@@ -870,11 +871,33 @@ GetReward_Character_Efficiency()
 	double r_ContactForce = 1.0;
 	// double r_ContactForce = mContacts->GetReward();
 
+	double r_ActionReg = 1.0;
+	r_ActionReg = this->GetReward_ActionReg();
+
 	mReward["min"] = r_EnergyMin;
 	mReward["contact"] = r_ContactForce;
+	mReward["reg"] = r_ActionReg;
 
-	double r = r_EnergyMin * r_ContactForce;
+	double r = r_EnergyMin + r_ActionReg;
 	return r;
+}
+
+double
+Character::
+GetReward_ActionReg()
+{
+	double actionNorm = mAction.segment(50, mNumAdaptiveDof).norm();
+
+	double err_scale = 1.0;
+	double actionReg_scale = 2.0;
+	double actionReg_err = 0.0;
+
+	actionReg_err = actionNorm;
+
+	double reward = 0.0;
+	reward = exp(-err_scale * actionReg_scale * actionReg_err);
+
+	return reward;
 }
 
 double
@@ -939,7 +962,7 @@ SetAction(const Eigen::VectorXd& a)
 {
 	double action_scale = 0.1;
 	mAction = a*action_scale;
-	mAction.segment(50,mNumAdaptiveDof) *= 0.5;
+	mAction.segment(50,mNumAdaptiveDof) *= 0.2;
 
 	double t = mWorld->getTime();
 	this->SetTargetPosAndVel(t);

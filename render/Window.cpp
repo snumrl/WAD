@@ -1601,22 +1601,22 @@ DrawReward()
 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, imit, green);
 
 	y = 0.25;
+	std::deque<double> effi = map["effi"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "effi");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, effi);
+	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, effi, green);
+
+	y = 0.13;
 	std::deque<double> min = map["min"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "min");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, min);
 	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
-	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, min, green);
-
-	y = 0.13;
-	std::deque<double> contact = map["contact"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "contact");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, contact);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	y = 0.01;
-	std::deque<double> smooth = map["smooth"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "smooth");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, smooth);
+	std::deque<double> reg = map["reg"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "reg");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, reg);
 	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	x = 0.85;
@@ -1649,6 +1649,17 @@ DrawReward()
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "com");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, com);
 	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+
+	// std::deque<double> contact = map["contact"];
+	// DrawBaseGraph(x, y, w, h, ratio_y, offset, "contact");
+	// DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, contact);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+
+	// y = 0.01;
+	// std::deque<double> smooth = map["smooth"];
+	// DrawBaseGraph(x, y, w, h, ratio_y, offset, "smooth");
+	// DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, smooth);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	DrawGLEnd();
 }

@@ -87,6 +87,7 @@ public:
 	double GetReward_Character();
 	double GetReward_Character_Imitation();
 	double GetReward_Character_Efficiency();
+	double GetReward_ActionReg();
 	double GetReward_TorqueMin();
 	double GetCurReward(){return mCurReward;}
 
