@@ -339,9 +339,25 @@ IsEndOfEpisode()
 	Eigen::VectorXd p_tar = mCharacter->GetTargetPositions();
 	double dist = (p.segment<3>(3) - p_tar.segment<3>(3)).norm();
 
+	Eigen::Isometry3d cur_root_inv = char_skel->getRootBodyNode()->getWorldTransform().inverse();
+
+	char_skel->setPositions(mCharacter->GetTargetPositions());
+	char_skel->computeForwardKinematics(true,false,false);
+
+	Eigen::Isometry3d root_diff = cur_root_inv * char_skel->getRootBodyNode()->getWorldTransform();
+
+	Eigen::AngleAxisd root_diff_aa(root_diff.linear());
+	double angle = std::fmod(root_diff_aa.angle()+M_PI, 2*M_PI)-M_PI;
+	Eigen::Vector3d root_pos_diff = root_diff.translation();
+
+	char_skel->setPositions(p);
+	char_skel->setVelocities(v);
+
 	if(root_y < 1.4)
 		isTerminal = true;
 	else if(dist > 0.5)
+		isTerminal = true;
+	else if(std::abs(angle) > 0.4*M_PI)
 		isTerminal = true;
 	else if (dart::math::isNan(p) || dart::math::isNan(v))
 		isTerminal = true;

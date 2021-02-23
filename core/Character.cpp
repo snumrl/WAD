@@ -205,6 +205,16 @@ Initialize()
 
 	mRootJointDof = 6;
 	mNumActiveDof = mDof - mRootJointDof;
+
+	// mNumAdaptiveDof = 18;
+	// mNumAction = mNumActiveDof + mNumAdaptiveDof;
+	mNumAction = mDof - 3 + 1;
+	mAction = Eigen::VectorXd::Zero(mNumAction);
+	mDesiredTorque = Eigen::VectorXd::Zero(mDof);
+
+	this->SetPDParameters();
+	this->SetTargetPosAndVel(mWorld->getTime());
+
 	mNumState_Char = this->GetState().rows();
 	mNumState = mNumState_Char;
 
@@ -213,14 +223,6 @@ Initialize()
 
 	mStepCnt = 0;
 	mStepCnt_total = 0;
-
-	mNumAdaptiveDof = 18;
-	mNumAction = mNumActiveDof + mNumAdaptiveDof;
-	mAction = Eigen::VectorXd::Zero(mNumAction);
-	mDesiredTorque = Eigen::VectorXd::Zero(mDof);
-
-	this->SetPDParameters();
-	this->SetTargetPosAndVel(mWorld->getTime());
 
 	mAngVel = Eigen::VectorXd::Zero(mNumBodyNodes*3);
 	mAngVel_prev = Eigen::VectorXd::Zero(mNumBodyNodes*3);
@@ -582,8 +584,8 @@ Step_Muscles(int simCount, int randomSampleIndex, bool isRender)
 	mStepCnt++;
 	mStepCnt_total++;
 
-	this->SetCurVelocity();
-	mMetabolicEnergy->Set(this->GetMuscles(), mCurVel3d, this->GetPhase(), (int)mCurFrame);
+	// this->SetCurVelocity();
+	// mMetabolicEnergy->Set(this->GetMuscles(), mCurVel3d, this->GetPhase(), (int)mCurFrame);
 	if(isRender)
 		this->SetMeasure();
 }
@@ -686,6 +688,9 @@ Eigen::VectorXd
 Character::
 GetState_Character()
 {
+	Eigen::VectorXd cur_p = mSkeleton->getPositions();
+	Eigen::VectorXd cur_v = mSkeleton->getVelocities();
+
 	dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
 	double h = root->getCOM()[1];
 	double w = root->getCOM()[0];
@@ -704,11 +709,37 @@ GetState_Character()
 	p *= 0.8;
 	v *= 0.2;
 
+	double curTime = mWorld->getTime();
+	this->SetTargetPosAndVel(curTime + mWorld->getTimeStep());
+	mSkeleton->setPositions(mTargetPositions);
+	mSkeleton->setVelocities(mTargetVelocities);
+
+	double h_next = h - root->getCOM()[1];
+	double w_next = w - root->getCOM()[0];
+
+	Eigen::VectorXd p_next, v_next;
+	p_next.resize((mNumBodyNodes-1)*3);
+	v_next.resize((mNumBodyNodes)*3);
+
+	for(int i=1; i<mNumBodyNodes; i++)
+	{
+		p_next.segment<3>(3*(i-1)) = mSkeleton->getBodyNode(i)->getCOM() - root->getCOM();
+		v_next.segment<3>(3*(i-1)) = mSkeleton->getBodyNode(i)->getCOMLinearVelocity() - root->getCOMLinearVelocity();
+	}
+	v_next.tail<3>() = root->getCOMLinearVelocity();
+
+	p_next *= 0.8;
+	v_next *= 0.2;
+
 	std::pair<double, double> phase = this->GetPhases();
 
 	Eigen::VectorXd state;
-	state.resize(2 + p.rows() + v.rows() + 2);
-	state << h, w, p, v, phase.first, phase.second;
+	state.resize(2+p.rows()+v.rows()+2+p_next.rows()+v_next.rows()+2);
+	state << h,w,p,v, h_next,w_next,p_next,v_next, phase.first,phase.second;
+
+	mSkeleton->setPositions(cur_p);
+	mSkeleton->setVelocities(cur_v);
+	mSkeleton->computeForwardKinematics(true, true, false);
 
 	return state;
 }
@@ -771,8 +802,7 @@ GetReward_Character_Imitation()
 	}
 
 	// Target Position and Velocity
-	// mSkeleton->setPositions(mTargetPositions);
-	mSkeleton->setPositions(mAdaptiveTargetPositions);
+	mSkeleton->setPositions(mTargetPositions);
 	mSkeleton->setVelocities(mTargetVelocities);
 	mSkeleton->computeForwardKinematics(true, true, false);
 
@@ -827,8 +857,7 @@ GetReward_Character_Imitation()
 	}
 
 	//Angle Difference
-	// Eigen::VectorXd q_diff = mSkeleton->getPositionDifferences(cur_q, mTargetPositions);
-	Eigen::VectorXd q_diff = mSkeleton->getPositionDifferences(cur_q, mAdaptiveTargetPositions);
+	Eigen::VectorXd q_diff = mSkeleton->getPositionDifferences(cur_q, mTargetPositions);
 
 	//=====================================
 
@@ -863,8 +892,8 @@ Character::
 GetReward_Character_Efficiency()
 {
 	double r_EnergyMin = 1.0;
-	if(mUseMuscle)
-		r_EnergyMin = mMetabolicEnergy->GetReward();
+	// if(mUseMuscle)
+	// 	r_EnergyMin = mMetabolicEnergy->GetReward();
 	// else
 	// 	r_EnergyMin = this->GetReward_TorqueMin();
 
@@ -886,7 +915,8 @@ double
 Character::
 GetReward_ActionReg()
 {
-	double actionNorm = mAction.segment(mNumActiveDof, mNumAdaptiveDof).norm();
+	// double actionNorm = mAction.segment(mNumActiveDof, mNumAdaptiveDof).norm();
+	double actionNorm = mAction.segment(0, mDof).norm();
 
 	double err_scale = 1.0;
 	double actionReg_scale = 2.0;
@@ -960,11 +990,15 @@ void
 Character::
 SetAction(const Eigen::VectorXd& a)
 {
-	double action_scale = 0.1;
+	double action_scale = 0.01;
 	mAction = a * action_scale;
-	mAction.segment(mNumActiveDof, mNumAdaptiveDof) *= 0.2;
-
+	// mAction.segment(mNumActiveDof, mNumAdaptiveDof) *= 0.2;
+	for(int i=0; i<mAction.size(); i++){
+		mAction[i] = Utils::Clamp(mAction[i], -0.1, 0.1);
+	}
+	// std::cout << "action : " << mAction << std::endl;
 	double t = mWorld->getTime();
+	// this->SetTargetPosAndVel(t + mWorld->getTimeStep());
 	this->SetTargetPosAndVel(t);
 }
 
@@ -974,8 +1008,9 @@ SetDesiredTorques()
 {
 	// Eigen::VectorXd p_des = mTargetPositions;
 	// p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction.segment(0,50);
-	Eigen::VectorXd p_des = mAdaptiveTargetPositions;
-	p_des.tail(mAdaptiveTargetPositions.rows() - mRootJointDof) += mAction.segment(0,mNumActiveDof);
+	// Eigen::VectorXd p_des = mAdaptiveTargetPositions;
+	Eigen::VectorXd p_des = mTargetPositions;
+	// p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction.segment(0,mDof);
 	mDesiredTorque = this->GetSPDForces(p_des);
 
 	for(int i=0; i<mDesiredTorque.size(); i++){
@@ -1086,16 +1121,13 @@ SetTargetPositions(double t,double dt,int frame,int frameNext, double frameFract
 		mTargetPositions.segment(3,3) += cycleCount*cycleOffset;
 	}
 
-	mAdaptiveTargetPositions = mTargetPositions;
-	// mTargetPositions.segment(6,mNumAdaptiveDof) += mAction.segment(50,mNumAdaptiveDof);
-	mAdaptiveTargetPositions.segment(6,mNumAdaptiveDof) += mAction.segment(mNumActiveDof,mNumAdaptiveDof);
+	mTargetPositions.segment(3, mDof) += mAction.segment(3, mDof);
 
 	Eigen::Isometry3d T_current = dart::dynamics::FreeJoint::convertToTransform(mTargetPositions.head<6>());
 	T_current = mBVH->GetT0().inverse()*T_current;
 	Eigen::Isometry3d T_head = mTc*T_current;
 	Eigen::Vector6d p_head = dart::dynamics::FreeJoint::convertToPositions(T_head);
 	mTargetPositions.head<6>() = p_head;
-	mAdaptiveTargetPositions.head<6>() = p_head;
 }
 
 void

@@ -946,9 +946,9 @@ DrawCharacter()
 		DrawAdaptiveTarget();
 
 	if(mDrawGraph){
-		if(mEnv->GetUseMuscle())
-			this->DrawMetabolicEnergy_();
-		else if(mEnv->GetUseDevice())
+		// if(mEnv->GetUseMuscle())
+		// 	this->DrawMetabolicEnergy_();
+		// else if(mEnv->GetUseDevice())
 			this->DrawFemurSignals();
 
 		// this->DrawJointAngles();
@@ -960,10 +960,10 @@ DrawCharacter()
 		// this->DrawJointTorques();
 	}
 	else{
-		this->DrawVelocity();
-		this->DrawCoT();
-		this->DrawContactForce();
-		this->DrawMetabolicEnergy();
+		// this->DrawVelocity();
+		// this->DrawCoT();
+		// this->DrawContactForce();
+		// this->DrawMetabolicEnergy();
 	}
 	this->DrawTime();
 }
