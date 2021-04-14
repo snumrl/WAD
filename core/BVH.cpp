@@ -366,6 +366,7 @@ SetMotionFrames()
 					p[idx+2] *= mSpeedRatio;
 					if(p[idx+2] > 0)
 						p[idx+2] *= 0.5;
+
 				}
 
 				if(jointName == "TalusL" || jointName == "TalusR"){

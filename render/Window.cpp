@@ -956,10 +956,10 @@ DrawCharacter()
 		// this->DrawJointTorques();
 	}
 	else{
-		this->DrawVelocity();
-		this->DrawCoT();
-		this->DrawContactForce();
-		this->DrawMetabolicEnergy();
+		// this->DrawVelocity();
+		// this->DrawCoT();
+		// this->DrawContactForce();
+		// this->DrawMetabolicEnergy();
 	}
 	this->DrawTime();
 }
@@ -1204,11 +1204,11 @@ DrawMuscles(const std::vector<Muscle*>& muscles)
 	glEnable(GL_LIGHTING);
 	glDisable(GL_DEPTH_TEST);
 
-	DrawGLBegin();
-	bool big = true;
-	DrawString(0.70, 0.29, big, "Muscle : " + cur_muscle);
-	DrawString(0.70, 0.26, big, "f0 : " + std::to_string(f0));
-	DrawGLEnd();
+	// DrawGLBegin();
+	// bool big = true;
+	// DrawString(0.70, 0.29, big, "Muscle : " + cur_muscle);
+	// DrawString(0.70, 0.26, big, "f0 : " + std::to_string(f0));
+	// DrawGLEnd();
 	// DrawString(0.70, 0.29, big, "l_mt0 : " + std::to_string(l_mt0));
 }
 

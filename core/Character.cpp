@@ -827,7 +827,7 @@ GetReward_Character_Imitation()
 
 	//=====================================
 
-	double sig_p = 8.0;
+	double sig_p = 4.0;
 	double sig_q = 0.4;
 	double sig_ee_rot = 20.0;
 	double sig_ee_pos = 40.0;
@@ -858,8 +858,8 @@ Character::
 GetReward_Character_Efficiency()
 {
 	double r_EnergyMin = 1.0;
-	if(mUseMuscle)
-		r_EnergyMin = mMetabolicEnergy->GetReward();
+	// if(mUseMuscle)
+	// 	r_EnergyMin = mMetabolicEnergy->GetReward();
 	// else
 	// 	r_EnergyMin = this->GetReward_TorqueMin();
 

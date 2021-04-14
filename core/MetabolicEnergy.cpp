@@ -163,7 +163,7 @@ MetabolicEnergy::
 GetReward()
 {
 	double err_scale = 1.0;
-	double metabolic_scale = 0.01;
+	double metabolic_scale = 0.05;
 	double metabolic_err = 0.0;
 
 	metabolic_err = HOUD06_cum/(double)mCycleFrames;
