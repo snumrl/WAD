@@ -23,6 +23,8 @@ Initialize(const dart::dynamics::SkeletonPtr& skel)
     mNumSteps = 16;
     mDataSize = mNumFrames*mNumSteps;
 
+    mTorquesNormCum = 0.0;
+
     mSkeleton = skel;
     int jointNum = mSkeleton->getNumJoints();
     for(int i=0; i<jointNum; i++)\
@@ -40,7 +42,8 @@ Initialize(const dart::dynamics::SkeletonPtr& skel)
             mTorques[name+"_b"] = std::deque<double>(mWindowSize);
             mTorques[name+"_c"] = std::deque<double>(mWindowSize);
 
-            mTorquesNorm[name] = std::deque<double>(mNumFrames);
+            // mTorquesNorm[name] = std::deque<double>(mNumFrames);
+            mTorquesNorm[name] = std::deque<double>(mDataSize);
         }
         else if(joint->getType() == "BallJoint")
         {
@@ -48,13 +51,15 @@ Initialize(const dart::dynamics::SkeletonPtr& skel)
             mTorques[name+"_y"] = std::deque<double>(mWindowSize);
             mTorques[name+"_z"] = std::deque<double>(mWindowSize);
 
-            mTorquesNorm[name] = std::deque<double>(mNumFrames);
+            // mTorquesNorm[name] = std::deque<double>(mNumFrames);
+            mTorquesNorm[name] = std::deque<double>(mDataSize);
         }
         else if(joint->getType() == "RevoluteJoint")
         {
             mTorques[name]  = std::deque<double>(mWindowSize);
 
-            mTorquesNorm[name] = std::deque<double>(mNumFrames);
+            // mTorquesNorm[name] = std::deque<double>(mNumFrames);
+            mTorquesNorm[name] = std::deque<double>(mDataSize);
         }
 
         mAngles[name+"_sagittal"] = std::deque<double>(mDataSize);
@@ -72,6 +77,9 @@ JointData::
 Reset()
 {
     for(auto iter = mTorques.begin(); iter != mTorques.end(); iter++)
+        std::fill(iter->second.begin(), iter->second.end(), 0.0);
+
+    for(auto iter = mTorquesNorm.begin(); iter != mTorquesNorm.end(); iter++)
         std::fill(iter->second.begin(), iter->second.end(), 0.0);
 
     for(auto iter = mAngles.begin(); iter != mAngles.end(); iter++)
@@ -108,21 +116,41 @@ SetTorques(const Eigen::VectorXd& torques)
             this->SetTorques(name+"_a", torques[idx+3]);
             this->SetTorques(name+"_b", torques[idx+4]);
             this->SetTorques(name+"_c", torques[idx+5]);
+
+            this->SetTorquesNorm(name, (torques.segment(idx, 6)).norm());
         }
         else if(joint->getType() == "BallJoint")
         {
             this->SetTorques(name+"_x", torques[idx+0]);
             this->SetTorques(name+"_y", torques[idx+1]);
             this->SetTorques(name+"_z", torques[idx+2]);
+
+            this->SetTorquesNorm(name, (torques.segment(idx, 3)).norm());
         }
         else if(joint->getType() == "RevoluteJoint")
         {
             this->SetTorques(name, torques[idx+0]);
+
+            this->SetTorquesNorm(name, fabs(torques[idx]));
         }
         else
         {
         }
     }
+
+    // if(phase*mCycleFrames >= mCycleFrames-1)
+    // {
+    //     if(isTotalFirst){
+    //         isTotalFirst = false;
+    //     }
+    //     else{
+    //               for(int i=0; i<HOUD06_deque.size(); i++)
+    //                 HOUD06_cum += HOUD06_deque[i];
+    //         }
+    //     }
+
+    // for(int i=0; i<mTorquesNorm.size(); i++)
+    //     mTorquesNormCum += mTorquesNorm[i];
 
     // if(curStep == mNumSteps-1)
     // {
@@ -190,6 +218,14 @@ SetTorques(std::string name, double torque)
 
 void
 JointData::
+SetTorquesNorm(std::string name, double norm)
+{
+    mTorquesNorm[name].pop_back();
+    mTorquesNorm[name].push_front(norm);
+}
+
+void
+JointData::
 SetAngles(int frame)
 {
     int jointNum = mSkeleton->getNumJoints();
@@ -250,4 +286,27 @@ SetAngles(std::string name, double angle)
 {
     mAngles[name].pop_back();
     mAngles[name].push_front(angle);
+}
+
+
+double
+JointData::
+GetReward()
+{
+    double err_scale = 1.0;
+    double torque_scale = 0.01;
+    double torque_err = 0.0;
+
+    double reward = 0.0;
+    // if(HOUD06_cum != 0.0){
+    //     metabolic_err = HOUD06_cum/(double)mCycleFrames;
+    //     // reward = 1.0 - exp(-err_scale * metabolic_scale * metabolic_err);
+    //     reward = exp(-err_scale * metabolic_scale * metabolic_err);
+    //     HOUD06_cum = 0.0;
+    //     BHAR04_cum = 0.0;
+    // }
+
+    // if(isTotalFirst)
+    //     reward = 0;
+    return reward;
 }

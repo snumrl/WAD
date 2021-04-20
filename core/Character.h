@@ -89,6 +89,7 @@ public:
 	double GetReward_Character_Efficiency();
 	double GetReward_ActionReg();
 	double GetReward_TorqueMin();
+	double GetReward_Vel();
 	double GetCurReward(){return mCurReward;}
 
 	void SetAction(const Eigen::VectorXd& a);
@@ -159,6 +160,7 @@ public:
 	void SetMeasure();
 	void SetCoT();
 	void SetCurVelocity();
+	void SetTrajectory();
 
 	double GetCoT(){return mCurCoT;}
 	double GetCurVelocity(){return mCurVel;}
@@ -240,6 +242,7 @@ private:
 	Eigen::VectorXd mDesiredTorque;
 
 	Eigen::VectorXd mAction;
+	Eigen::VectorXd mAction_prev;
 	Eigen::VectorXd mActivationLevels;
 
 	Eigen::VectorXd mAngVel, mAngVel_prev;
@@ -252,6 +255,7 @@ private:
 	Eigen::VectorXd mDefaultForces;
 
 	std::vector<std::deque<double>> mFemurSignals;
+	std::deque<Eigen::Vector3d> mRootTrajectory;
 
 	std::vector<std::string> mRewardTags;
 	std::map<std::string, double> mReward;

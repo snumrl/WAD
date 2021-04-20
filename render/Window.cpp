@@ -949,18 +949,18 @@ DrawCharacter()
 		// if(mEnv->GetUseMuscle())
 		// 	this->DrawMetabolicEnergy_();
 		// else if(mEnv->GetUseDevice())
-			this->DrawFemurSignals();
+		// 	this->DrawFemurSignals();
 
 		// this->DrawJointAngles();
 		this->DrawReward();
 
-		// if(mEnv->GetUseMuscle())
-		this->DrawMetabolicEnergys();
+		if(mEnv->GetUseMuscle())
+			this->DrawMetabolicEnergys();
 		// else
 		// this->DrawJointTorques();
 	}
 	else{
-		// this->DrawVelocity();
+		this->DrawVelocity();
 		// this->DrawCoT();
 		// this->DrawContactForce();
 		// this->DrawMetabolicEnergy();

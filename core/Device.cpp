@@ -148,8 +148,8 @@ GetState() const
 	// state << rotation.w(), rotation.x(), rotation.y(), rotation.z(),
 	//             root_linvel / 10., root_angvel/10., positions.tail<6>(), velocities.tail<6>()/10.;
 
-	double history_window = 0.3;
-	double history_interval = 0.01;
+	double history_window = 0.20;
+	double history_interval = 0.05;
 	int offset = (history_interval * mSimulationHz);
 	int history_num = (history_window+0.001)/(history_interval)+1;
 
@@ -158,7 +158,7 @@ GetState() const
 	double scaler = 2.0;
 	for(int i=0; i<history_num; i++)
 	{
-		double signal_y = mDeviceSignals_y.at(mDelta_t_idx + i*offset);
+		double signal_y = mDeviceSignals_y.at(mDelta_t_idx - i*offset);
 		double torque_l = mK_ * signal_y;
 		double torque_r = mK_ * signal_y;
 		double des_torque_l =  1*torque_l;
