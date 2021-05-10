@@ -18,12 +18,18 @@ void
 JointData::
 Initialize(const dart::dynamics::SkeletonPtr& skel)
 {
+    isTotalFirst = true;
+    isFirst = true;
+    curStep = 0;
+
     mWindowSize = 200;
-    mNumFrames = 34;
+    mCycleFrames = 34;
     mNumSteps = 16;
-    mDataSize = mNumFrames*mNumSteps;
+    mDataSize = mCycleFrames*mNumSteps;
 
     mTorquesNormCum = 0.0;
+    mTorquesNormCycle = std::deque<double>(mCycleFrames);
+    mTorquesFrame = std::deque<int>(mCycleFrames);
 
     mSkeleton = skel;
     int jointNum = mSkeleton->getNumJoints();
@@ -42,7 +48,7 @@ Initialize(const dart::dynamics::SkeletonPtr& skel)
             mTorques[name+"_b"] = std::deque<double>(mWindowSize);
             mTorques[name+"_c"] = std::deque<double>(mWindowSize);
 
-            // mTorquesNorm[name] = std::deque<double>(mNumFrames);
+            // mTorquesNorm[name] = std::deque<double>(mCycleFrames);
             mTorquesNorm[name] = std::deque<double>(mDataSize);
         }
         else if(joint->getType() == "BallJoint")
@@ -51,14 +57,14 @@ Initialize(const dart::dynamics::SkeletonPtr& skel)
             mTorques[name+"_y"] = std::deque<double>(mWindowSize);
             mTorques[name+"_z"] = std::deque<double>(mWindowSize);
 
-            // mTorquesNorm[name] = std::deque<double>(mNumFrames);
+            // mTorquesNorm[name] = std::deque<double>(mCycleFrames);
             mTorquesNorm[name] = std::deque<double>(mDataSize);
         }
         else if(joint->getType() == "RevoluteJoint")
         {
             mTorques[name]  = std::deque<double>(mWindowSize);
 
-            // mTorquesNorm[name] = std::deque<double>(mNumFrames);
+            // mTorquesNorm[name] = std::deque<double>(mCycleFrames);
             mTorquesNorm[name] = std::deque<double>(mDataSize);
         }
 
@@ -66,9 +72,9 @@ Initialize(const dart::dynamics::SkeletonPtr& skel)
         mAngles[name+"_frontal"] = std::deque<double>(mDataSize);
         mAngles[name+"_transverse"] = std::deque<double>(mDataSize);
 
-        mAnglesByFrame[name+"_sagittal"] = std::vector<std::vector<double>>(mNumFrames);
-        mAnglesByFrame[name+"_frontal"] = std::vector<std::vector<double>>(mNumFrames);
-        mAnglesByFrame[name+"_transverse"] = std::vector<std::vector<double>>(mNumFrames);
+        mAnglesByFrame[name+"_sagittal"] = std::vector<std::vector<double>>(mCycleFrames);
+        mAnglesByFrame[name+"_frontal"] = std::vector<std::vector<double>>(mCycleFrames);
+        mAnglesByFrame[name+"_transverse"] = std::vector<std::vector<double>>(mCycleFrames);
     }
 }
 
@@ -89,17 +95,30 @@ Reset()
         for(int i = 0; i != (iter->second).size(); i++)
             (iter->second).at(i) = std::vector<double>();
     }
+
+    for(int i=0; i<mTorquesNormCycle.size(); i++)
+    {
+        mTorquesNormCycle.pop_back();
+        mTorquesNormCycle.push_front(0.0);
+
+        mTorquesFrame.pop_back();
+        mTorquesFrame.push_front(0);
+    }
+
+    mTorquesNormCum = 0.0;
+    curStep = 0;
 }
+
 
 void
 JointData::
-SetTorques(const Eigen::VectorXd& torques)
+SetTorques(const Eigen::VectorXd& torques, double phase, int frame)
 {
-    // if(isFirst == true){
-    //     curStep = 0;
-    //     isFirst = false;
-    // }
-    // curStep++;
+    if(isFirst == true){
+        curStep = 0;
+        isFirst = false;
+    }
+    curStep++;
 
     int jointNum = mSkeleton->getNumJoints();
     for(int i=0; i<jointNum; i++)
@@ -107,8 +126,9 @@ SetTorques(const Eigen::VectorXd& torques)
         auto joint = mSkeleton->getJoint(i);
         int idx = joint->getIndexInSkeleton(0);
         std::string name = joint->getName();
+        std::string type = joint->getType();
 
-        if(joint->getType() == "FreeJoint")
+        if(type == "FreeJoint")
         {
             this->SetTorques(name+"_x", torques[idx+0]);
             this->SetTorques(name+"_y", torques[idx+1]);
@@ -119,7 +139,7 @@ SetTorques(const Eigen::VectorXd& torques)
 
             this->SetTorquesNorm(name, (torques.segment(idx, 6)).norm());
         }
-        else if(joint->getType() == "BallJoint")
+        else if(type == "BallJoint")
         {
             this->SetTorques(name+"_x", torques[idx+0]);
             this->SetTorques(name+"_y", torques[idx+1]);
@@ -127,7 +147,7 @@ SetTorques(const Eigen::VectorXd& torques)
 
             this->SetTorquesNorm(name, (torques.segment(idx, 3)).norm());
         }
-        else if(joint->getType() == "RevoluteJoint")
+        else if(type == "RevoluteJoint")
         {
             this->SetTorques(name, torques[idx+0]);
 
@@ -138,75 +158,176 @@ SetTorques(const Eigen::VectorXd& torques)
         }
     }
 
-    // if(phase*mCycleFrames >= mCycleFrames-1)
-    // {
-    //     if(isTotalFirst){
-    //         isTotalFirst = false;
-    //     }
-    //     else{
-    //               for(int i=0; i<HOUD06_deque.size(); i++)
-    //                 HOUD06_cum += HOUD06_deque[i];
-    //         }
-    //     }
+    if(curStep == mNumSteps-1)
+    {
+        double sum = 0.0;
+        for(int i=0; i<jointNum; i++)
+        {
+            auto joint = mSkeleton->getJoint(i);
+            std::string name = joint->getName();
+            std::string type = joint->getType();
 
-    // for(int i=0; i<mTorquesNorm.size(); i++)
-    //     mTorquesNormCum += mTorquesNorm[i];
+            if(type == "FreeJoint")
+            {
+                for(int j=0; j<mNumSteps; j++)
+                    sum += mTorquesNorm[name].at(j);
+            }
+            else if(type == "BallJoint")
+            {
+                for(int j=0; j<mNumSteps; j++)
+                    sum += mTorquesNorm[name].at(j);
+            }
+            else if(type == "RevoluteJoint")
+            {
+                for(int j=0; j<mNumSteps; j++)
+                    sum += mTorquesNorm[name].at(j);
+            }
+            else
+            {
+            }
+        }
 
-    // if(curStep == mNumSteps-1)
-    // {
-    //     double torqueNorm = 0.0;
-    //     for(int i=0; i<jointNum; i++)
-    //     {
-    //         auto joint = mSkeleton->getJoint(i);
-    //         int idx = joint->getIndexInSkeleton(0);
-    //         std::string name = joint->getName();
+        sum /= (double)mNumSteps;
+        sum /= (double)jointNum;
 
-    //         double jointTorqueNorm = 0.0;
+        mTorquesNormCycle.pop_back();
+        mTorquesNormCycle.push_front(sum);
 
-    //         if(joint->getType() == "FreeJoint")
-    //         {
-    //         }
-    //         else if(joint->getType() == "BallJoint")
-    //         {
-    //             for(int j=0; j<mNumSteps; j++ ){
-    //                 double x = mTorques[name+"_x"].at(j);
-    //                 double y = mTorques[name+"_y"].at(j);
-    //                 double z = mTorques[name+"_z"].at(j);
-    //                 jointTorqueNorm += std::sqrt(x*x + y*y +z*z);
-    //             }
-    //             torqueNorm += (jointTorqueNorm/(double)mNumSteps);
-    //         }
-    //         else if(joint->getType() == "RevoluteJoint")
-    //         {
-    //             this->SetTorques(name, torques[idx+0]);
-    //             for(int j=0; j<mNumSteps; j++){
-    //                 double t = mTorques[name].at(j);
-    //                 jointTorqueNorm += std::sqrt(t*t);
-    //             }
-    //             torqueNorm += (jointTorqueNorm/(double)mNumSteps);
-    //         }
-    //         else
-    //         {
-    //         }
-    //     }
-    //     mTorqueNorm_deque.pop_back();
-    //     mTorqueNorm_deque.push_front(torqueNorm);
+        mTorquesFrame.pop_back();
+        mTorquesFrame.push_front(frame);
 
-    //     if(phase*mCycleFrames >= mCycleFrames-1)
-    //     {
-    //         if(isTotalFirst){
-    //             isTotalFirst = false;
-    //         }
-    //         else{
-    //             for(int i=0; i<mTorqueNorm_deque.size(); i++){
-    //                 mTorqueNorm_cum += mTorqueNorm_deque[i];
-    //             }
-    //         }
-    //     }
+        if(phase*mCycleFrames >= mCycleFrames-1)
+        {
+            if(isTotalFirst){
+                isTotalFirst = false;
+            }
+            else{
+                for(int i=0; i<mTorquesNormCycle.size(); i++)
+                    mTorquesNormCum += mTorquesNormCycle[i];
+            }
+        }
 
-    //     isFirst = true;
-    // }
+        isFirst = true;
+    }
 }
+
+
+// void
+// JointData::
+// SetTorques(const Eigen::VectorXd& torques)
+// {
+//     // if(isFirst == true){
+//     //     curStep = 0;
+//     //     isFirst = false;
+//     // }
+//     // curStep++;
+
+//     int jointNum = mSkeleton->getNumJoints();
+//     for(int i=0; i<jointNum; i++)
+//     {
+//         auto joint = mSkeleton->getJoint(i);
+//         int idx = joint->getIndexInSkeleton(0);
+//         std::string name = joint->getName();
+
+//         if(joint->getType() == "FreeJoint")
+//         {
+//             this->SetTorques(name+"_x", torques[idx+0]);
+//             this->SetTorques(name+"_y", torques[idx+1]);
+//             this->SetTorques(name+"_z", torques[idx+2]);
+//             this->SetTorques(name+"_a", torques[idx+3]);
+//             this->SetTorques(name+"_b", torques[idx+4]);
+//             this->SetTorques(name+"_c", torques[idx+5]);
+
+//             this->SetTorquesNorm(name, (torques.segment(idx, 6)).norm());
+//         }
+//         else if(joint->getType() == "BallJoint")
+//         {
+//             this->SetTorques(name+"_x", torques[idx+0]);
+//             this->SetTorques(name+"_y", torques[idx+1]);
+//             this->SetTorques(name+"_z", torques[idx+2]);
+
+//             this->SetTorquesNorm(name, (torques.segment(idx, 3)).norm());
+//         }
+//         else if(joint->getType() == "RevoluteJoint")
+//         {
+//             this->SetTorques(name, torques[idx+0]);
+
+//             this->SetTorquesNorm(name, fabs(torques[idx]));
+//         }
+//         else
+//         {
+//         }
+//     }
+
+//     // if(phase*mCycleFrames >= mCycleFrames-1)
+//     // {
+//     //     if(isTotalFirst){
+//     //         isTotalFirst = false;
+//     //     }
+//     //     else{
+//     //               for(int i=0; i<HOUD06_deque.size(); i++)
+//     //                 HOUD06_cum += HOUD06_deque[i];
+//     //         }
+//     //     }
+
+//     // for(int i=0; i<mTorquesNorm.size(); i++)
+//     //     mTorquesNormCum += mTorquesNorm[i];
+
+//     // if(curStep == mNumSteps-1)
+//     // {
+//     //     double torqueNorm = 0.0;
+//     //     for(int i=0; i<jointNum; i++)
+//     //     {
+//     //         auto joint = mSkeleton->getJoint(i);
+//     //         int idx = joint->getIndexInSkeleton(0);
+//     //         std::string name = joint->getName();
+
+//     //         double jointTorqueNorm = 0.0;
+
+//     //         if(joint->getType() == "FreeJoint")
+//     //         {
+//     //         }
+//     //         else if(joint->getType() == "BallJoint")
+//     //         {
+//     //             for(int j=0; j<mNumSteps; j++ ){
+//     //                 double x = mTorques[name+"_x"].at(j);
+//     //                 double y = mTorques[name+"_y"].at(j);
+//     //                 double z = mTorques[name+"_z"].at(j);
+//     //                 jointTorqueNorm += std::sqrt(x*x + y*y +z*z);
+//     //             }
+//     //             torqueNorm += (jointTorqueNorm/(double)mNumSteps);
+//     //         }
+//     //         else if(joint->getType() == "RevoluteJoint")
+//     //         {
+//     //             this->SetTorques(name, torques[idx+0]);
+//     //             for(int j=0; j<mNumSteps; j++){
+//     //                 double t = mTorques[name].at(j);
+//     //                 jointTorqueNorm += std::sqrt(t*t);
+//     //             }
+//     //             torqueNorm += (jointTorqueNorm/(double)mNumSteps);
+//     //         }
+//     //         else
+//     //         {
+//     //         }
+//     //     }
+//     //     mTorqueNorm_deque.pop_back();
+//     //     mTorqueNorm_deque.push_front(torqueNorm);
+
+//     //     if(phase*mCycleFrames >= mCycleFrames-1)
+//     //     {
+//     //         if(isTotalFirst){
+//     //             isTotalFirst = false;
+//     //         }
+//     //         else{
+//     //             for(int i=0; i<mTorqueNorm_deque.size(); i++){
+//     //                 mTorqueNorm_cum += mTorqueNorm_deque[i];
+//     //             }
+//     //         }
+//     //     }
+
+//     //     isFirst = true;
+//     // }
+// }
 
 void
 JointData::
@@ -235,37 +356,25 @@ SetAngles(int frame)
         auto joint = mSkeleton->getJoint(i);
         int idx = joint->getIndexInSkeleton(0);
         std::string name = joint->getName();
+        std::string type = joint->getType();
 
-        if(joint->getType() == "FreeJoint")
+        if(type == "FreeJoint")
         {
-            this->SetAngles(name+"_sagittal", pos[idx]);
-            this->SetAngles(name+"_frontal", pos[idx+1]);
-            this->SetAngles(name+"_transverse", pos[idx+2]);
-
             this->SetAngles(name+"_sagittal", pos[idx], frame);
             this->SetAngles(name+"_frontal", pos[idx+1], frame);
             this->SetAngles(name+"_transverse", pos[idx+2], frame);
         }
-        else if(joint->getType() == "BallJoint")
+        else if(type == "BallJoint")
         {
-            this->SetAngles(name+"_sagittal", pos[idx]);
-            this->SetAngles(name+"_frontal", pos[idx+1]);
-            this->SetAngles(name+"_transverse", pos[idx+2]);
-
             this->SetAngles(name+"_sagittal", pos[idx], frame);
             this->SetAngles(name+"_frontal", pos[idx+1], frame);
             this->SetAngles(name+"_transverse", pos[idx+2], frame);
         }
-        else if(joint->getType() == "RevoluteJoint")
+        else if(type == "RevoluteJoint")
         {
-            this->SetAngles(name+"_sagittal", pos[idx]);
-            this->SetAngles(name+"_frontal", 0.0);
-            this->SetAngles(name+"_transverse", 0.0);
-
             this->SetAngles(name+"_sagittal", pos[idx], frame);
             this->SetAngles(name+"_frontal", 0.0, frame);
             this->SetAngles(name+"_transverse", 0.0, frame);
-
         }
         else
         {
@@ -277,36 +386,36 @@ void
 JointData::
 SetAngles(std::string name, double angle, int frame)
 {
+    mAngles[name].pop_back();
+    mAngles[name].push_front(angle);
+
     mAnglesByFrame[name].at(frame).push_back(angle);
 }
 
-void
-JointData::
-SetAngles(std::string name, double angle)
-{
-    mAngles[name].pop_back();
-    mAngles[name].push_front(angle);
-}
-
+// void
+// JointData::
+// SetAngles(std::string name, double angle)
+// {
+//     mAngles[name].pop_back();
+//     mAngles[name].push_front(angle);
+// }
 
 double
 JointData::
 GetReward()
 {
     double err_scale = 1.0;
-    double torque_scale = 0.01;
+    double torque_scale = 0.02;
     double torque_err = 0.0;
 
     double reward = 0.0;
-    // if(HOUD06_cum != 0.0){
-    //     metabolic_err = HOUD06_cum/(double)mCycleFrames;
-    //     // reward = 1.0 - exp(-err_scale * metabolic_scale * metabolic_err);
-    //     reward = exp(-err_scale * metabolic_scale * metabolic_err);
-    //     HOUD06_cum = 0.0;
-    //     BHAR04_cum = 0.0;
-    // }
+    if(mTorquesNormCum != 0.0){
+        torque_err = mTorquesNormCum/(double)mCycleFrames;
+        reward = exp(-err_scale * torque_scale * torque_err);
+        // std::cout << "err : " << torque_err << std::endl;
+        // std::cout << "rew : " << reward << std::endl;
+        mTorquesNormCum = 0.0;
+    }
 
-    // if(isTotalFirst)
-    //     reward = 0;
     return reward;
 }

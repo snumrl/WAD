@@ -154,11 +154,11 @@ GetState() const
 	int history_num = (history_window+0.001)/(history_interval)+1;
 
 	int parameter_num = mNumParamState;
-	Eigen::VectorXd state(history_num*2+parameter_num);
+	Eigen::VectorXd state((history_num+3)*2+parameter_num);
 	double scaler = 2.0;
-	for(int i=0; i<history_num; i++)
+	for(int i=0; i<history_num+3; i++)
 	{
-		double signal_y = mDeviceSignals_y.at(mDelta_t_idx - i*offset);
+		double signal_y = mDeviceSignals_y.at(mDelta_t_idx - (i-3)*offset);
 		double torque_l = mK_ * signal_y;
 		double torque_r = mK_ * signal_y;
 		double des_torque_l =  1*torque_l;

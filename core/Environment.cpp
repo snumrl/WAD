@@ -309,8 +309,7 @@ Step(bool device_onoff, bool isRender)
 			mDevice->Step((double)mSimCount/(double)mNumSteps);
 	}
 
-	auto char_skel = mCharacter->GetSkeleton();
-
+	// auto char_skel = mCharacter->GetSkeleton();
 	// double root_y = mCharacter->GetSkeleton()->getBodyNode(0)->getTransform().translation()[1] - mGround->getRootBodyNode()->getCOM()[1];
 	// std::cout << "root y : " << root_y << std::endl;
 

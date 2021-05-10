@@ -279,7 +279,6 @@ class PPO(object):
 		states_next = [None]*self.num_slaves
 		terminated = [False]*self.num_slaves
 
-
 		states = self.env.GetStates()
 
 		if self.use_adaptive_sampling:
@@ -365,6 +364,8 @@ class PPO(object):
 				delta = rewards[i] + values[i+1] * self.gamma - values[i]
 				ad_t = delta + self.gamma * self.lb * ad_t
 				advantages[i] = ad_t
+				if np.isnan(ad_t):
+					print("reward : ", rewards[i])
 			self.sum_return += epi_return
 			TD = values[:size] + advantages
 

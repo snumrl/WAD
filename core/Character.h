@@ -90,22 +90,33 @@ public:
 	double GetReward_ActionReg();
 	double GetReward_TorqueMin();
 	double GetReward_Vel();
+	double GetReward_Width();
+	double GetReward_Height();
+	double GetReward_Pose();
 	double GetCurReward(){return mCurReward;}
 
 	void SetAction(const Eigen::VectorXd& a);
 	void SetActivationLevels(const Eigen::VectorXd& a){mActivationLevels = a;}
 	void SetDesiredTorques();
+
 	void SetTargetPosAndVel(double t);
 	void SetTargetPositions(double t,double dt,int frame, int frameNext, double frameFraction);
 	void SetTargetVelocities(double t,double dt,int frame, int frameNext, double frameFraction);
+
+	void SetReferencePosAndVel(double t);
+	void SetReferencePositions(double t,double dt,int frame, int frameNext, double frameFraction);
+	void SetReferenceVelocities(double t,double dt,int frame, int frameNext, double frameFraction);
 
 	const Eigen::VectorXd& GetAction(){ return mAction; }
 	const Eigen::VectorXd& GetActivationLevels(){return mActivationLevels;}
 	const Eigen::VectorXd& GetTargetPositions(){ return mTargetPositions; }
 	const Eigen::VectorXd& GetTargetVelocities(){ return mTargetVelocities; }
-	const Eigen::VectorXd& GetAdaptiveTargetPositions(){return mAdaptiveTargetPositions;}
+	const Eigen::VectorXd& GetReferencePositions(){return mReferencePositions;}
 	Eigen::VectorXd GetDesiredTorques();
 	Eigen::VectorXd GetSPDForces(const Eigen::VectorXd& p_desired);
+
+	void GetNextPosition(Eigen::VectorXd cur, Eigen::VectorXd delta, Eigen::VectorXd& next);
+	Eigen::VectorXd GetEndEffectorStatePosAndVel(const Eigen::VectorXd pos, const Eigen::VectorXd vel);
 
 	Eigen::VectorXd GetMuscleTorques();
 	MuscleTuple& GetCurrentMuscleTuple(){ return mCurrentMuscleTuple; }
@@ -237,8 +248,13 @@ private:
 
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;
-	Eigen::VectorXd mAdaptiveTargetPositions;
-	Eigen::VectorXd mAdaptiveTargetVelocities;
+	Eigen::VectorXd mTargetPositions_prev;
+	Eigen::VectorXd mTargetVelocities_prev;
+
+	Eigen::VectorXd mReferencePositions;
+	Eigen::VectorXd mReferenceVelocities;
+	Eigen::VectorXd mReferenceTargetPositions;
+	Eigen::VectorXd mReferenceTargetVelocities;
 	Eigen::VectorXd mDesiredTorque;
 
 	Eigen::VectorXd mAction;

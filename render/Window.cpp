@@ -69,7 +69,7 @@ Eigen::Vector4d purple_trans(0.8, 0.2, 0.8, 0.2);
 
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawAdaptiveTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mDevice_On(false),isDrawCharacter(false),isDrawTarget(false),isDrawAdaptiveTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mMetabolicEnergyMode(0),mJointTorqueMode(0),mJointAngleMode(0),mCharacterMode(0),mParamMode(0),mViewMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false), mDisplayIter(0)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawReference(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mDevice_On(false),isDrawCharacter(false),isDrawTarget(false),isDrawReference(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mMetabolicEnergyMode(0),mJointTorqueMode(0),mJointAngleMode(0),mCharacterMode(0),mParamMode(0),mViewMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false), mDisplayIter(0)
 {
 	mBackground[0] = 0.96;
 	mBackground[1] = 0.96;
@@ -360,6 +360,50 @@ WriteJointAngle()
 	}
 }
 
+// void
+// Window::
+// WriteJointTorque()
+// {
+// 	if(!isOpenFile)
+// 	{
+// 		mFile << " torqueNorm";
+// 	}
+// 	else
+// 	{
+// 		mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+// 		auto& torquesNormCycle = mJointDatas->GetTorquesNormCycle();
+// 		for(auto iter = angles.begin(); iter != angles.end(); iter++)
+// 			mFile << " " + std::to_string((iter->second).at(0)*180.0/M_PI);
+// 	}
+
+// }
+
+void
+Window::
+WriteFileName()
+{
+	time_t now = std::time(0);
+	tm* ltm = std::localtime(&now);
+
+	std::string month = std::to_string(ltm->tm_mon);
+	if(ltm->tm_mon < 10)
+		month = "0"+month;
+
+	std::string day = std::to_string(ltm->tm_mday);
+	if(ltm->tm_mday < 10)
+		day = "0"+day;
+
+	std::string hour = std::to_string(ltm->tm_hour);
+	if(ltm->tm_hour < 10)
+		hour = "0" + hour;
+
+	std::string min = std::to_string(ltm->tm_min);
+	if(ltm->tm_min < 10)
+		min = "0" + min;
+
+	mFileName = month + day + "_" + hour + min;
+}
+
 void
 Window::
 Write()
@@ -368,26 +412,8 @@ Write()
 	{
 		if(!isOpenFile)
 		{
-			time_t now = std::time(0);
-			tm* ltm = std::localtime(&now);
+			this->WriteFileName();
 
-			std::string month = std::to_string(ltm->tm_mon);
-			if(ltm->tm_mon < 10)
-				month = "0"+month;
-
-			std::string day = std::to_string(ltm->tm_mday);
-			if(ltm->tm_mday < 10)
-				day = "0"+day;
-
-			std::string hour = std::to_string(ltm->tm_hour);
-			if(ltm->tm_hour < 10)
-				hour = "0" + hour;
-
-			std::string min = std::to_string(ltm->tm_min);
-			if(ltm->tm_min < 10)
-				min = "0" + min;
-
-			mFileName = month + day + "_" + hour + min;
 			mFile.open(mFileName);
 			if(mFile.is_open())
 				std::cout << mFileName << " open" << std::endl;
@@ -395,6 +421,7 @@ Write()
 			mFile << "Time Frame";
 			this->WriteMetaE();
 			this->WriteJointAngle();
+			// this->WriteJointTorque();
 
 			isOpenFile = true;
 		}
@@ -444,6 +471,7 @@ Write()
 				}
 			}
 
+			mFile << " TorqueFrame torqueNorm";
 			mFile << " metaE";
 			mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
 			std::vector<double> avgMap2;
@@ -474,6 +502,10 @@ Write()
 				avgMap3[iter->first] = avg;
 			}
 
+			mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+			std::deque<double> torquesNormCycle = mJointDatas->GetTorquesNormCycle();
+			std::deque<int> torquesFrame = mJointDatas->GetTorquesFrame();
+
 			for(int i=0; i<34; i++)
 			{
 				mFile << "\n";
@@ -485,6 +517,9 @@ Write()
 						mFile << " " + std::to_string(avgMap[iter->first].at(i)*180.0/M_PI);
 					}
 				}
+
+				mFile << " " + std::to_string(torquesFrame.at(i));
+				mFile << " " + std::to_string(torquesNormCycle.at(i));
 
 				mFile << " " + std::to_string(avgMap2.at(i));
 
@@ -524,7 +559,7 @@ keyboard(unsigned char _key, int _x, int _y)
 	case 'g': mDrawGraph = !mDrawGraph;break;
 	case 'a': mDrawArrow = !mDrawArrow;break;
 	case 't': mDrawTarget = !mDrawTarget;break;
-	case 'T': mDrawAdaptiveTarget = !mDrawAdaptiveTarget;break;
+	case 'T': mDrawReference = !mDrawReference;break;
 	case ' ': mSimulating = !mSimulating;break;
 	case 'c': mDrawCharacter = !mDrawCharacter;break;
 	case 'p': mDrawParameter = !mDrawParameter;break;
@@ -942,8 +977,8 @@ DrawCharacter()
 	if(mDrawTarget)
 		DrawTarget();
 
-	if(mDrawAdaptiveTarget)
-		DrawAdaptiveTarget();
+	if(mDrawReference)
+		DrawReference();
 
 	if(mDrawGraph){
 		// if(mEnv->GetUseMuscle())
@@ -1020,7 +1055,7 @@ DrawShapeFrame(const ShapeFrame* sf)
 		mColor << 0.75, 0.75, 0.75, 1.0;
 	if(isDrawTarget)
 		mColor << 1.0, 0.6, 0.6, 0.3;
-	if(isDrawAdaptiveTarget)
+	if(isDrawReference)
 		mColor << 0.6, 1.0, 0.6, 0.3;
 	if(isDrawDevice)
 		mColor << 0.3, 0.3, 0.3, 1.0;
@@ -1239,21 +1274,21 @@ DrawTarget()
 
 void
 Window::
-DrawAdaptiveTarget()
+DrawReference()
 {
-	isDrawAdaptiveTarget = true;
+	isDrawReference = true;
 
 	Character* character = mEnv->GetCharacter();
 	SkeletonPtr skeleton = character->GetSkeleton();
 
 	Eigen::VectorXd cur_pos = skeleton->getPositions();
 
-	skeleton->setPositions(character->GetAdaptiveTargetPositions());
+	skeleton->setPositions(character->GetReferencePositions());
 	DrawBodyNode(skeleton->getRootBodyNode());
 
 	skeleton->setPositions(cur_pos);
 
-	isDrawAdaptiveTarget = false;
+	isDrawReference = false;
 }
 
 void
