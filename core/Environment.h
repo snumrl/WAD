@@ -30,6 +30,7 @@ public:
 	Eigen::VectorXd GetState_Device();
 	double GetReward();
 	std::map<std::string, std::deque<double>> GetRewards();
+	double GetAdaptiveTime();
 
 	int GetNumState();
 	int GetNumState_Char();
@@ -46,6 +47,7 @@ public:
 	void SetUseMuscle(bool use_muscle){mUseMuscle = use_muscle;}
 	void SetUseDevice(bool use_device){mUseDevice = use_device;}
 	void SetUseDeviceNN(bool use_device_nn){mUseDeviceNN = use_device_nn;}
+	void SetUseAdaptiveMotion(bool b){mUseAdaptiveMotion = b;}
 	void SetUseAdaptiveSampling(bool b){mUseAdaptiveSampling = b;}
 	void SetControlHz(int con_hz) {mControlHz = con_hz;}
 	void SetSimulationHz(int sim_hz) {mSimulationHz = sim_hz;}
@@ -98,6 +100,7 @@ private:
 	bool mUseMuscle;
 	bool mUseDevice;
 	bool mUseDeviceNN;
+	bool mUseAdaptiveMotion;
 	bool mUseAdaptiveSampling;
 
 	int mNumParamState;

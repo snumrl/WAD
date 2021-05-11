@@ -65,7 +65,12 @@ public:
 	void SetPhase();
 	void SetPhases();
 	double GetPhase(){ return mPhase; }
+	double GetAdaptiveTime(){ return mAdaptiveTime; }
 	std::pair<double,double> GetPhases(){ return mPhases; }
+	std::pair<double,double> GetAdaptivePhases(){ return mAdaptivePhases; }
+
+	double GetCurTime();
+	double GetControlTimeStep();
 
 	void SetConstraints();
 	void RemoveConstraints();
@@ -106,12 +111,16 @@ public:
 	void SetReferencePosAndVel(double t);
 	void SetReferencePositions(double t,double dt,int frame, int frameNext, double frameFraction);
 	void SetReferenceVelocities(double t,double dt,int frame, int frameNext, double frameFraction);
+	void SetReferenceOriginalPosAndVel(double t);
+	void SetReferenceOriginalPositions(double t,double dt,int frame, int frameNext, double frameFraction);
+	void SetReferenceOriginalVelocities(double t,double dt,int frame, int frameNext, double frameFraction);
 
 	const Eigen::VectorXd& GetAction(){ return mAction; }
 	const Eigen::VectorXd& GetActivationLevels(){return mActivationLevels;}
 	const Eigen::VectorXd& GetTargetPositions(){ return mTargetPositions; }
 	const Eigen::VectorXd& GetTargetVelocities(){ return mTargetVelocities; }
 	const Eigen::VectorXd& GetReferencePositions(){return mReferencePositions;}
+	const Eigen::VectorXd& GetReferenceOriginalPositions(){return mReferenceOriginalPositions;}
 	Eigen::VectorXd GetDesiredTorques();
 	Eigen::VectorXd GetSPDForces(const Eigen::VectorXd& p_desired);
 
@@ -152,6 +161,8 @@ public:
 	JointData* GetJointDatas(){return mJointDatas;}
 	MetabolicEnergy* GetMetabolicEnergy(){return mMetabolicEnergy;}
 	Contact* GetContacts(){return mContacts;}
+
+	void SetAdaptiveMotion(bool b){ mAdaptiveMotion = b;}
 
 	void SetMass();
 	void SetMassRatio(double r);
@@ -213,6 +224,8 @@ private:
 	int mNumState_Char;
 	int mNumAction;
 	int mNumAdaptiveDof;
+	int mNumAdaptiveSpatialDof;
+	int mNumAdaptiveTemporalDof;
 	int mNumTotalRelatedDof;
 	int mNumMuscle;
 	int mNumMuscleMap;
@@ -224,12 +237,17 @@ private:
 	int mNumSteps;
 	double mCurFrame;
 	double mPhase;
+	double mAdaptivePhase;
+	double mAdaptiveTime;
+	double mTemporalDisplacement;
 	std::pair<double,double> mPhases;
+	std::pair<double,double> mAdaptivePhases;
 
 	bool mUseDevice;
 	bool mUseMuscle;
 	bool mOnDevice;
 	bool mLowerBody;
+	bool mAdaptiveMotion;
 
 	double mMass;
 	double mMassRatio;
@@ -251,10 +269,11 @@ private:
 	Eigen::VectorXd mTargetPositions_prev;
 	Eigen::VectorXd mTargetVelocities_prev;
 
+	Eigen::VectorXd mReferenceOriginalPositions;
+	Eigen::VectorXd mReferenceOriginalVelocities;
 	Eigen::VectorXd mReferencePositions;
 	Eigen::VectorXd mReferenceVelocities;
-	Eigen::VectorXd mReferenceTargetPositions;
-	Eigen::VectorXd mReferenceTargetVelocities;
+
 	Eigen::VectorXd mDesiredTorque;
 
 	Eigen::VectorXd mAction;

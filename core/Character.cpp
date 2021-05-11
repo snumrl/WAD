@@ -13,7 +13,7 @@ using namespace MASS;
 
 Character::
 Character(dart::simulation::WorldPtr& wPtr)
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mNumParamState(0),mMass(0)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mNumParamState(0),mMass(0),mAdaptiveMotion(false)
 {
 	this->SetWorld(wPtr);
 
@@ -206,18 +206,26 @@ Initialize()
 	mRootJointDof = 6;
 	mNumActiveDof = mDof - mRootJointDof;
 
-	mNumAdaptiveDof = mDof; // 24 32
-	mNumAction = mNumActiveDof + mNumAdaptiveDof;
-	// mNumAction = mNumActiveDof + 6 + 9 + 9;
-	// mNumAction = mNumActiveDof + mDof;
+	mNumAction = mNumActiveDof
+	if(mAdaptiveMotion){
+		mNumAdaptiveSpatialDof = mDof; // lower : 24, upper : 32
+		mNumAdaptiveTemporalDof = 1;
+		mNumAdaptiveDof = mNumAdaptiveSpatialDof + mNumAdaptiveTemporalDof;
+		mNumAction += mNumAdaptiveDof;
+	}
+
 	mAction = Eigen::VectorXd::Zero(mNumAction);
 	mAction_prev = Eigen::VectorXd::Zero(mNumAction);
 	mDesiredTorque = Eigen::VectorXd::Zero(mDof);
 
+	mAdaptiveTime = 0.0;
+	mTemporalDisplacement = 0.0;
+
 	this->SetPDParameters();
-	this->SetReferencePosAndVel(mWorld->getTime());
-	mTargetPositions = mReferencePositions;
-	mTargetVelocities = mReferenceVelocities;
+	// this->SetReferencePosAndVel(mWorld->getTime());
+	this->SetReferenceOriginalPosAndVel(mWorld->getTime());
+	mTargetPositions = mReferenceOriginalPositions;
+	mTargetVelocities = mReferenceOriginalVelocities;
 	// this->SetTargetPosAndVel(mWorld->getTime());
 
 	mNumState_Char = this->GetState().rows();
@@ -473,10 +481,13 @@ Reset()
 	mSkeleton->clearExternalForces();
 
 	double worldTime = mWorld->getTime();
+	mAdaptiveTime = worldTime;
+	mTemporalDisplacement = 0.0;
 	this->SetPhase();
-	this->SetReferencePosAndVel(worldTime);
-	mTargetPositions = mReferencePositions;
-	mTargetVelocities = mReferenceVelocities;
+	// this->SetReferencePosAndVel(worldTime);
+	this->SetReferenceOriginalPosAndVel(worldTime);
+	mTargetPositions = mReferenceOriginalPositions;
+	mTargetVelocities = mReferenceOriginalVelocities;
 	// this->SetTargetPosAndVel(worldTime);
 
 	mSkeleton->setPositions(mTargetPositions);
@@ -784,6 +795,26 @@ GetState()
 // 	return state;
 // }
 
+double
+Character::
+GetCurTime()
+{
+	double time = 0.0;
+	if(mAdaptiveMotion)
+		time = mAdaptiveTime;
+	else
+		time = mWorld->getTime();
+
+	return time;
+}
+
+double
+Character::
+GetControlTimeStep()
+{
+	return (double)mNumSteps*mWorld->getTimeStep();
+}
+
 Eigen::VectorXd
 Character::
 GetState_Character()
@@ -811,8 +842,8 @@ GetState_Character()
 	p *= 0.8;
 	v *= 0.2;
 
-	double curTime = mWorld->getTime();
-	double nextTime = curTime + (double)mNumSteps*mWorld->getTimeStep();
+	double curTime = this->GetCurTime();
+	double nextTime = curTime + this->GetControlTimeStep();
 
 	this->SetReferencePosAndVel(nextTime);
 	Eigen::VectorXd next_ref_pos = mReferencePositions;
@@ -833,7 +864,11 @@ GetState_Character()
 
 	p_cur = mTargetPositions - cur_p;
 
-	std::pair<double, double> phase = this->GetPhases();
+	std::pair<double, double> phase;
+	if(mAdaptiveMotion)
+		phase = this->GetAdaptivePhases();
+	else
+		phase = this->GetPhases();
 
 	Eigen::VectorXd state;
 	// state.resize(2+p.rows()+v.rows()+2+mDof-5);
@@ -877,7 +912,6 @@ GetEndEffectorStatePosAndVel(const Eigen::VectorXd pos, const Eigen::VectorXd ve
 	dart::dynamics::BodyNode* root = mSkeleton->getRootBodyNode();
 	Eigen::Isometry3d cur_root_inv = root->getWorldTransform().inverse();
 
-	// int num_body_nodes = mInterestedBodies.size();
 	int num_ee = mEndEffectors.size();
 	Eigen::VectorXd p_save = mSkeleton->getPositions();
 	Eigen::VectorXd v_save = mSkeleton->getVelocities();
@@ -1233,7 +1267,7 @@ GetReward_Character_Efficiency()
 
 	// double r = r_EnergyMin + r_ActionReg;
 	// double r = 0.55 * r_Vel + 0.15 * r_Width + 0.15 * r_Height + 0.15 * r_Pose;
-	double r = 0.30 * r_EnergyMin + 0.10 * r_Width + 0.20 * r_Pose + 0.40 * r_Vel;
+	double r = 0.30 * r_EnergyMin + 0.10 * r_Width + 0.30 * r_Pose + 0.30 * r_Vel;
 	return r;
 }
 
@@ -1243,7 +1277,6 @@ GetReward_Pose()
 {
 	Eigen::VectorXd pose_cur, pose_ref;
 
-	// int num_body_nodes = mInterestedBodies.size();
 	int num_ee = mEndEffectors.size();
 	Eigen::VectorXd p_save = mSkeleton->getPositions();
 	Eigen::VectorXd v_save = mSkeleton->getVelocities();
@@ -1254,23 +1287,23 @@ GetReward_Pose()
 	dart::dynamics::BodyNode* root_ref = mSkeleton->getRootBodyNode();
 	Eigen::Isometry3d cur_root_inv = root_ref->getWorldTransform().inverse();
 
-	Eigen::VectorXd head_ref = Eigen::VectorXd::Zero(4);
+	// Eigen::VectorXd head_ref = Eigen::VectorXd::Zero(4);
 
-	// pose_ref.resize((num_ee)*6);
-	pose_ref.resize((num_ee)*3);
+	pose_ref.resize((num_ee)*6);
+	// pose_ref.resize((num_ee)*3);
 	for(int i=0;i<num_ee;i++)
 	{
 		Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
 		Eigen::Vector3d rot = Utils::QuaternionToAxisAngle(Eigen::Quaterniond(transform.linear()));
 
 		// pose_ref.segment<3>(3*i) << rot;
-		pose_ref.segment<3>(3*i) << transform.translation();
-		// pose_ref.segment<6>(6*i) << rot, transform.translation();
-		if(i==2)
-			head_ref.segment<3>(0) << rot;
+		// pose_ref.segment<3>(3*i) << transform.translation();
+		pose_ref.segment<6>(6*i) << rot, transform.translation();
+		// if(i==2)
+		// 	head_ref.segment<3>(0) << rot;
 	}
 
-	head_ref[3] = mSkeleton->getBodyNode("Head")->getCOM()[1];
+	// head_ref[3] = mSkeleton->getBodyNode("Head")->getCOM()[1];
 
 	// restore
 	mSkeleton->setPositions(p_save);
@@ -1280,23 +1313,23 @@ GetReward_Pose()
 	dart::dynamics::BodyNode* root_cur = mSkeleton->getRootBodyNode();
 	cur_root_inv = root_cur->getWorldTransform().inverse();
 
-	Eigen::VectorXd head_cur = Eigen::VectorXd::Zero(4);
+	// Eigen::VectorXd head_cur = Eigen::VectorXd::Zero(4);
 
-	// pose_cur.resize((num_ee)*6);
-	pose_cur.resize((num_ee)*3);
+	pose_cur.resize((num_ee)*6);
+	// pose_cur.resize((num_ee)*3);
 	for(int i=0;i<num_ee;i++)
 	{
 		Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
 		Eigen::Vector3d rot = Utils::QuaternionToAxisAngle(Eigen::Quaterniond(transform.linear()));
 		// pose_cur.segment<3>(3*i) << rot;
-		pose_cur.segment<3>(3*i) << transform.translation();
-		// pose_cur.segment<6>(6*i) << rot, transform.translation();
+		// pose_cur.segment<3>(3*i) << transform.translation();
+		pose_cur.segment<6>(6*i) << rot, transform.translation();
 
-		if(i==2)
-			head_cur.segment<3>(0) << rot;
+		// if(i==2)
+		// 	head_cur.segment<3>(0) << rot;
 	}
 
-	head_cur[3] = mSkeleton->getBodyNode("Head")->getCOM()[1];
+	// head_cur[3] = mSkeleton->getBodyNode("Head")->getCOM()[1];
 
 	double err_scale = 1.0;
 	double pose_scale = 1.0;
@@ -1307,14 +1340,15 @@ GetReward_Pose()
 
 	pose_err = (pose_cur-pose_ref).norm();
 
-	head_err = (head_cur-head_ref).norm();
+	// head_err = (head_cur-head_ref).norm();
 
 	double pose_reward = 0.0;
 	double head_reward = 0.0;
 	pose_reward = exp(-1.0 * pose_scale * pose_err);
-	head_reward = exp(-1.0 * head_scale * head_err);
+	// head_reward = exp(-1.0 * head_scale * head_err);
 
-	double reward = 0.5 * pose_reward + 0.5 * head_reward;
+	// double reward = 0.5 * pose_reward + 0.5 * head_reward;
+	double reward = 1.0 * pose_reward + 0.0 * head_reward;
 
 	return reward;
 }
@@ -1458,22 +1492,40 @@ SetPhases()
 	double sin = std::sin(rad);
 
 	mPhases = std::pair<double, double>(cos, sin);
+
+	double rad2 = 2*M_PI*mAdaptivePhase;
+	double cos2 = std::cos(rad2);
+	double sin2 = std::sin(rad2);
+
+	mAdaptivePhases = std::pair<double, double>(cos2, sin2);
 }
 
 void
 Character::
 SetPhase()
 {
-	double t = mWorld->getTime();
 	double cycleTime = mBVH->GetMaxTime();
-	int cycleCount = (int)(t/cycleTime);
-	double phase = t;
+
+	double worldTime = mWorld->getTime();
+	int cycleCount = (int)(worldTime/cycleTime);
+
+	double phase = worldTime;
 	if(mBVH->IsCyclic())
-		phase = (t - cycleCount*cycleTime)/cycleTime;
+		phase = (worldTime - cycleCount*cycleTime)/cycleTime;
 	if(phase < 0)
 		phase += (cycleTime)/cycleTime;
 
 	mPhase = phase;
+
+	int adaptiveCycleCount = (int)(mAdaptiveTime/cycleTime);
+
+	double adaptivePhase = mAdaptiveTime;
+	if(mBVH->IsCyclic())
+		adaptivePhase = (mAdaptiveTime - adaptiveCycleCount*cycleTime)/cycleTime;
+	if(phase < 0)
+		adaptivePhase += (cycleTime)/cycleTime;
+
+	mAdaptivePhase = adaptivePhase;
 
 	this->SetPhases();
 }
@@ -1503,6 +1555,7 @@ SetAction(const Eigen::VectorXd& a)
 	double root_pos_scale = 0.01;
 	double adap_lower_scale = 0.01;
 	double adap_upper_scale = 0.001;
+	double adap_temporal_scale = 1.0;
 
 	mAction.segment(0,pd_dof) = a.segment(0,pd_dof) * pd_scale;
 	// mAction.segment(pd_dof,3) = a.segment(pd_dof,3) * root_ori_scale;
@@ -1514,6 +1567,7 @@ SetAction(const Eigen::VectorXd& a)
 	mAction.segment(pd_dof+3,3) = Eigen::VectorXd::Zero(3);
 	mAction.segment(pd_dof+6,18) = Eigen::VectorXd::Zero(18);
 	mAction.segment(pd_dof+24,32) = Eigen::VectorXd::Zero(32);
+	mAction[pd_dof+56] = 0;
 
 	double t = mWorld->getTime();
 	// std::cout << "time : " << t << std::endl;
@@ -1522,6 +1576,7 @@ SetAction(const Eigen::VectorXd& a)
 		mAction.segment(pd_dof+3,3) = a.segment(pd_dof+3,3) * root_pos_scale;
 		mAction.segment(pd_dof+6,18) = a.segment(pd_dof+6,18) * adap_lower_scale;
 		mAction.segment(pd_dof+24,32) = a.segment(pd_dof+24,32) * adap_upper_scale;
+		mAction[pd_dof+56] = a[pd_dof+56] * adap_temporal_scale;
 
 		for(int i=pd_dof; i<mAction.size(); i++){
 			if(i < pd_dof+3)
@@ -1530,17 +1585,31 @@ SetAction(const Eigen::VectorXd& a)
 				mAction[i] = Utils::Clamp(mAction[i], -0.1, 0.1);
 			else if(i >= pd_dof+6 && i < pd_dof+24)
 				mAction[i] = Utils::Clamp(mAction[i], -0.1, 0.1);
-			else
+			else if(i >= pd_dof+24 && i < pd_dof+56)
 				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);
+			else
+				mAction[i] = Utils::Clamp(mAction[i], -1.0, 0.5);
 		}
 	}
 
 	if(mAction_prev.norm() == 0)
 		mAction_prev = mAction;
 
-	// double t = mWorld->getTime();
-	// this->SetTargetPosAndVel(t + mWorld->getTimeStep());
-	this->SetTargetPosAndVel(t);
+	if(mAdaptiveMotion)
+	{
+		double timeStep = (double)mNumSteps*mWorld->getTimeStep();
+		mTemporalDisplacement = timeStep * exp(mAction[pd_dof+56]);
+		// mAdaptiveTime += mTemporalDisplacement;
+		this->SetTargetPosAndVel(mAdaptiveTime);
+	}
+	else
+	{
+		// double t = mWorld->getTime();
+		// this->SetTargetPosAndVel(t + mWorld->getTimeStep());
+		this->SetTargetPosAndVel(t);
+	}
+
+	mAdaptiveTime += mTemporalDisplacement;
 }
 
 void
@@ -1689,6 +1758,93 @@ SetReferenceVelocities(double t,double dt, int frame,int frameNext, double frame
 
 void
 Character::
+SetReferenceOriginalPosAndVel(double t)
+{
+	double frameTime = t;
+	double dt = 1.0/(double)mControlHz;
+
+	if(mBVH->IsCyclic()){
+		double cycleTime = mBVH->GetMaxTime();
+		int cycleCount = (int)(t/cycleTime);
+
+		frameTime = t - cycleCount*cycleTime;
+		if(frameTime < 0)
+			frameTime += cycleTime;
+	}
+
+	int frame = (int)(frameTime/dt);
+	int frameNext = frame + 1;
+
+	if(mBVH->IsCyclic()){
+		if(frameNext >= mBVH->GetNumTotalFrames())
+			frameNext = frame;
+	}
+	else{
+		if(frameNext > 941){
+			frameNext = 941;
+			frame = 941;
+		}
+	}
+
+	double frameFraction = (frameTime - frame*dt)/dt;
+	mCurFrame = frame + frameFraction;
+
+	this->SetReferenceOriginalPositions(t,dt,frame,frameNext,frameFraction);
+	this->SetReferenceOriginalVelocities(t,dt,frame,frameNext,frameFraction);
+}
+
+void
+Character::
+SetReferenceOriginalPositions(double t,double dt,int frame,int frameNext, double frameFraction)
+{
+	Eigen::VectorXd frameData, frameDataNext;
+	if(mBVH->IsCyclic()){
+		frameData = mBVH->GetMotion(frame);
+		frameDataNext = mBVH->GetMotion(frameNext);
+	}
+	else{
+		frameData = mBVH->GetMotionNonCyclic(frame);
+		frameDataNext = mBVH->GetMotionNonCyclic(frameNext);
+	}
+
+	// Eigen::VectorXd p = Utils::GetPoseSlerp(mSkeleton, frameFraction, frameData, frameDataNext);
+	mReferenceOriginalPositions = (1-frameFraction)*frameData + (frameFraction)* frameDataNext;
+
+	if(mBVH->IsCyclic()) {
+		double cycleTime = mBVH->GetMaxTime();
+		int cycleCount = (int)(t/cycleTime);
+
+		Eigen::Vector3d cycleOffset = mBVH->GetCycleOffset();
+		cycleOffset[1] = 0.0;
+		mReferenceOriginalPositions.segment(3,3) += cycleCount*cycleOffset;
+	}
+
+	Eigen::Isometry3d T_current_reference = dart::dynamics::FreeJoint::convertToTransform(mReferenceOriginalPositions.head<6>());
+	T_current_reference = mBVH->GetT0().inverse()*T_current_reference;
+	Eigen::Isometry3d T_head_reference = mTc*T_current_reference;
+	Eigen::Vector6d p_head_reference = dart::dynamics::FreeJoint::convertToPositions(T_head_reference);
+	mReferenceOriginalPositions.head<6>() = p_head_reference;
+}
+
+void
+Character::
+SetReferenceOriginalVelocities(double t,double dt, int frame,int frameNext, double frameFraction)
+{
+	Eigen::VectorXd frameVel, frameNextVel;
+	if(mBVH->IsCyclic()){
+		frameVel = mBVH->GetMotionVel(frame);
+		frameNextVel = mBVH->GetMotionVel(frameNext);
+	}
+	else{
+		frameVel = mBVH->GetMotionVelNonCyclic(frame);
+		frameNextVel = mBVH->GetMotionVelNonCyclic(frameNext);
+	}
+
+	mReferenceOriginalVelocities = (1-frameFraction)*frameVel + (frameFraction)*frameNextVel;
+}
+
+void
+Character::
 SetTargetPosAndVel(double t)
 {
 	double frameTime = t;
@@ -1756,8 +1912,12 @@ SetTargetPositions(double t,double dt,int frame,int frameNext, double frameFract
 	Eigen::Vector6d p_head_reference = dart::dynamics::FreeJoint::convertToPositions(T_head_reference);
 	mReferencePositions.head<6>() = p_head_reference;
 
-	double curTime = mWorld->getTime();
-	double nextTime = curTime + (double)mNumSteps*mWorld->getTimeStep();
+	double curTime = t;
+	double nextTime;
+	if(mAdaptiveMotion)
+		nextTime = curTime + mTemporalDisplacement;
+	else
+		nextTime = curTime + (double)mNumSteps*mWorld->getTimeStep();
 
 	this->SetReferencePosAndVel(nextTime);
 	Eigen::VectorXd next_ref_pos = mReferencePositions;
@@ -1766,6 +1926,8 @@ SetTargetPositions(double t,double dt,int frame,int frameNext, double frameFract
 	this->SetReferencePosAndVel(curTime);
 	Eigen::VectorXd cur_ref_pos = mReferencePositions;
 	Eigen::VectorXd cur_ref_vel = mReferenceVelocities;
+
+	this->SetReferenceOriginalPosAndVel(mWorld->getTime());
 
 	// Eigen::VectorXd delta_ref = mSkeleton->getPositionDifferences(next_ref_pos, cur_ref_pos);
 	Eigen::VectorXd delta_ref = next_ref_pos - cur_ref_pos;

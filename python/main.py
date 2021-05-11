@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
+import scipy.integrate as integrate
 
 import collections
 from collections import namedtuple
@@ -28,7 +29,7 @@ LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
-Episode = namedtuple('Episode',('s','a','r', 'value', 'logprob'))
+Episode = namedtuple('Episode',('s','a','r', 'value', 'logprob', 't'))
 class EpisodeBuffer(object):
 	def __init__(self):
 		self.data = []
@@ -277,6 +278,7 @@ class PPO(object):
 		rewards = [None]*self.num_slaves
 		states = [None]*self.num_slaves
 		states_next = [None]*self.num_slaves
+		adaptive_times = [None]*self.num_slaves
 		terminated = [False]*self.num_slaves
 
 		states = self.env.GetStates()
@@ -318,7 +320,8 @@ class PPO(object):
 				elif self.env.IsEndOfEpisode(j) is False:
 					terminated_state = False
 					rewards[j] = self.env.GetReward(j)
-					self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j])
+					adaptive_times[j] = self.env.GetAdaptiveTime(j)
+					self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j], adaptive_times[j])
 					local_step += 1
 
 				if terminated_state or (nan_occur is True):
@@ -352,20 +355,37 @@ class PPO(object):
 			size = len(data)
 			if size == 0:
 				continue
-			states, actions, rewards, values, logprobs = zip(*data)
+			# states, actions, rewards, values, logprobs = zip(*data)
+			states, actions, rewards, values, logprobs, adaptiveTimes = zip(*data)
 
 			values = np.concatenate((values, np.zeros(1)), axis=0)
 			advantages = np.zeros(size)
 			ad_t = 0
 
 			epi_return = 0.0
+			# for i in reversed(range(len(data))):
+			# 	epi_return += rewards[i]
+			# 	delta = rewards[i] + values[i+1] * self.gamma - values[i]
+			# 	ad_t = delta + self.gamma * self.lb * ad_t
+			# 	advantages[i] = ad_t
+			# 	if np.isnan(ad_t):
+			# 		print("reward : ", rewards[i])
+
+			time_step = 0.0
 			for i in reversed(range(len(data))):
+				time_step = 0
+				if i < size:
+					time_step = (adaptiveTimes[i+1] - adaptiveTimes[i])*self.num_control_Hz
+
 				epi_return += rewards[i]
-				delta = rewards[i] + values[i+1] * self.gamma - values[i]
-				ad_t = delta + self.gamma * self.lb * ad_t
+				t = integrate.quad(lambda x: pow(self.gamma, x),0,time_step)[0]
+				delta = t*rewards[i] + values[i+1] * pow(self.gamma, time_step) - values[i]
+				ad_t = delta + pow(self.gamma, time_step) * pow(self.lb, time_step) * ad_t
 				advantages[i] = ad_t
+
 				if np.isnan(ad_t):
 					print("reward : ", rewards[i])
+
 			self.sum_return += epi_return
 			TD = values[:size] + advantages
 

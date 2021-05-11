@@ -76,6 +76,15 @@ ParseMetaFile(const std::string& meta_file)
 			else
 				this->SetUseDeviceNN(false);
 		}
+		else if(!index.compare("use_adaptive_motion"))
+		{
+			std::string str2;
+			ss>>str2;
+			if(!str2.compare("true"))
+				this->SetUseAdaptiveMotion(true);
+			else
+				this->SetUseAdaptiveMotion(false);
+		}
 		else if(!index.compare("use_adaptive_sampling"))
 		{
 			std::string str2;
@@ -231,6 +240,9 @@ Initialize(const std::string& meta_file, bool load_obj)
 
 	if(mUseAdaptiveSampling)
 		this->SetAdaptiveParamNums();
+
+	if(mUseAdaptiveMotion)
+		mCharacter->SetAdaptiveMotion(mUseAdaptiveMotion);
 
 	mCharacter->Initialize();
 
@@ -410,6 +422,14 @@ GetRewards()
 {
 	return mCharacter->GetRewards();
 }
+
+double
+Environment::
+GetAdaptiveTime()
+{
+	return mCharacter->GetAdaptiveTime();
+}
+
 
 int
 Environment::
