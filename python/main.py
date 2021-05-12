@@ -373,16 +373,17 @@ class PPO(object):
 
 			time_step = 0.0
 			for i in reversed(range(len(data))):
-				time_step = 0
-				if i < size:
-					time_step = (adaptiveTimes[i+1] - adaptiveTimes[i])*self.num_control_Hz
+				if i == size -1:
+					time_step = 0
+				else:
+					time_step = adaptiveTimes[i+1] - adaptiveTimes[i]
+				time_step *= self.num_control_Hz
+				t = integrate.quad(lambda x: pow(self.gamma, x), 0, time_step)[0]
 
 				epi_return += rewards[i]
-				t = integrate.quad(lambda x: pow(self.gamma, x),0,time_step)[0]
 				delta = t*rewards[i] + values[i+1] * pow(self.gamma, time_step) - values[i]
 				ad_t = delta + pow(self.gamma, time_step) * pow(self.lb, time_step) * ad_t
 				advantages[i] = ad_t
-
 				if np.isnan(ad_t):
 					print("reward : ", rewards[i])
 

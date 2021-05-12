@@ -13,7 +13,7 @@ using namespace MASS;
 
 Character::
 Character(dart::simulation::WorldPtr& wPtr)
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mNumParamState(0),mMass(0),mAdaptiveMotion(false)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mNumParamState(0),mMass(0),mAdaptiveMotion(true)
 {
 	this->SetWorld(wPtr);
 
@@ -21,7 +21,11 @@ Character(dart::simulation::WorldPtr& wPtr)
 	mForceRatio = 1.0;
 	mSpeedRatio = 1.0;
 
-	mLowerBody = true;
+	mLowerBody = false;
+	mLowerBodyDof = 24;
+	mUpperBodyDof = 32;
+	mLowerMuscleRelatedDof = 30;
+	mUpperMuscleRelatedDof = 26;
 }
 
 Character::
@@ -33,8 +37,17 @@ Character::
 	for(int i=0; i<mMuscles.size(); i++)
 		delete(mMuscles[i]);
 
+	for(int i=0; i<mMusclesFemur.size(); i++)
+		delete(mMusclesFemur[i]);
+
+	for(int i=0; i<mBVHset.size(); i++)
+		delete(mBVHset[i]);
+
 	delete mBVH;
 	delete mDevice;
+	delete mContacts;
+	delete mJointDatas;
+	delete mMetabolicEnergy;
 }
 
 void
@@ -160,16 +173,16 @@ LoadMuscles(const std::string& path)
 			std::string sub_name;
 			if(muscle_name[name_size-1] >= 48 && muscle_name[name_size-1] <= 57){
 				std::string sub_name = muscle_name.substr(2,name_size-3);
-				mMuscles_Map[sub_name].push_back(muscle_elem);
+				mMusclesMap[sub_name].push_back(muscle_elem);
 			}
 			else{
 				std::string sub_name = muscle_name.substr(2,name_size-2);
-				if(mMuscles_Map.count(sub_name) == 0){
-					mMuscles_Map.insert(std::make_pair(sub_name, std::vector<Muscle*>()));
-					mMuscles_Map[sub_name].push_back(muscle_elem);
+				if(mMusclesMap.count(sub_name) == 0){
+					mMusclesMap.insert(std::make_pair(sub_name, std::vector<Muscle*>()));
+					mMusclesMap[sub_name].push_back(muscle_elem);
 				}
 				else{
-					mMuscles_Map[sub_name].push_back(muscle_elem);
+					mMusclesMap[sub_name].push_back(muscle_elem);
 				}
 			}
 
@@ -177,14 +190,14 @@ LoadMuscles(const std::string& path)
 			{
 				muscle_elem->SetMt0Ratio(1.0);
 				muscle_elem->SetF0Ratio(1.0);
-				mMuscles_Femur.push_back(muscle_elem);
+				mMusclesFemur.push_back(muscle_elem);
 			}
 
 			mMuscles.push_back(muscle_elem);
 		}
 	}
 	mNumMuscle = mMuscles.size();
-	mNumMuscleMap = mMuscles_Map.size();
+	mNumMuscleMap = mMusclesMap.size();
 	mFile.close();
 }
 
@@ -200,13 +213,12 @@ Initialize()
 	mWorld->addSkeleton(mSkeleton);
 
 	mDof = mSkeleton->getNumDofs();
-	mNumBodyNodes = mSkeleton->getNumBodyNodes();
 	mNumJoints = mSkeleton->getNumJoints();
+	mNumBodyNodes = mSkeleton->getNumBodyNodes();
 
 	mRootJointDof = 6;
 	mNumActiveDof = mDof - mRootJointDof;
-
-	mNumAction = mNumActiveDof
+	mNumAction = mNumActiveDof;
 	if(mAdaptiveMotion){
 		mNumAdaptiveSpatialDof = mDof; // lower : 24, upper : 32
 		mNumAdaptiveTemporalDof = 1;
@@ -228,20 +240,14 @@ Initialize()
 	mTargetVelocities = mReferenceOriginalVelocities;
 	// this->SetTargetPosAndVel(mWorld->getTime());
 
-	mNumState_Char = this->GetState().rows();
-	mNumState = mNumState_Char;
+	mNumStateChar = this->GetState().rows();
+	mNumState = mNumStateChar;
 
 	mTc = mBVH->GetT0();
 	mTc.translation()[1] = 0.0;
 
 	mStepCnt = 0;
-	mStepCnt_total = 0;
-
-	mAngVel = Eigen::VectorXd::Zero(mNumBodyNodes*3);
-	mAngVel_prev = Eigen::VectorXd::Zero(mNumBodyNodes*3);
-
-	mPos = Eigen::VectorXd::Zero(mNumBodyNodes*3);
-	mPos_prev = Eigen::VectorXd::Zero(mNumBodyNodes*3);
+	mStepCntTotal = 0;
 
 	this->Initialize_JointWeights();
 	this->Initialize_Rewards();
@@ -498,16 +504,6 @@ Reset()
 	mAction_prev.setZero();
 	mDesiredTorque.setZero();
 
-	mRootPos = mSkeleton->getCOM();
-	mRootPos_prev = mSkeleton->getCOM();
-
-	mAngVel.setZero();
-	mPos.setZero();
-	for(int i=0; i<mNumBodyNodes; i++){
-		mAngVel_prev.segment<3>(i*3) = mSkeleton->getBodyNode(i)->getAngularVelocity();
-		mPos_prev.segment<3>(i*3) = mSkeleton->getBodyNode(i)->getCOM();
-	}
-
 	for(int i=0; i<mFemurSignals.at(0).size(); i++){
 		mFemurSignals.at(0).at(i) = 0.0;
 		mFemurSignals.at(1).at(i) = 0.0;
@@ -547,27 +543,10 @@ Step(bool isRender)
 	SetDesiredTorques();
 	mSkeleton->setForces(mDesiredTorque);
 
-	if(mStepCnt == mNumSteps){
-		mStepCnt = 0;
-		this->SetTrajectory();
-		this->SetCurVelocity();
-	}
+	this->SetMeasure(isRender);
+
 	mStepCnt++;
-	mStepCnt_total++;
-
-	mJointDatas->SetTorques(mDesiredTorque, this->GetPhase(), (int)mCurFrame);
-
-	if(isRender)
-		this->SetMeasure();
-}
-
-void
-Character::
-SetTrajectory()
-{
-	mRootTrajectory.pop_back();
-	mRootTrajectory.push_front(mSkeleton->getCOM());
-	Eigen::Vector3d com = mSkeleton->getCOM();
+	mStepCntTotal++;
 }
 
 void
@@ -583,60 +562,85 @@ Step_Muscles(int simCount, int randomSampleIndex, bool isRender)
 	}
 
 	if(simCount == randomSampleIndex)
-	{
-		int m = mMuscles.size();
-		Eigen::MatrixXd JtA = Eigen::MatrixXd::Zero(mDof,m);
-		Eigen::VectorXd Jtp = Eigen::VectorXd::Zero(mDof);
-
-		for(int i=0; i<mMuscles.size(); i++)
-		{
-			auto muscle = mMuscles[i];
-			// muscle->Update();
-			Eigen::MatrixXd Jt = muscle->GetJacobianTranspose();
-			auto Ap = muscle->GetForceJacobianAndPassive();
-
-			JtA.block(0,i,mDof,1) = Jt*Ap.first;
-			Jtp += Jt*Ap.second;
-		}
-
-		mCurrentMuscleTuple.JtA = GetMuscleTorques();
-		mCurrentMuscleTuple.L =JtA.block(mRootJointDof,0,mDof-mRootJointDof,m);
-		mCurrentMuscleTuple.b =Jtp.segment(mRootJointDof,mDof-mRootJointDof);
-		if(mLowerBody){
-			Eigen::VectorXd tmp = mDesiredTorque;
-			tmp.tail<26>().setZero();
-			mCurrentMuscleTuple.tau_des = tmp.tail(tmp.rows()-mRootJointDof);
-		}
-		else
-			mCurrentMuscleTuple.tau_des = mDesiredTorque.tail(mDesiredTorque.rows()-mRootJointDof);
-		mMuscleTuples.push_back(mCurrentMuscleTuple);
-	}
+		this->SetMuscleTuple();
 
 	if(mLowerBody){
 		mDesiredTorque.head<30>().setZero();
-		mSkeleton->setForces(mDesiredTorque);
+		mSkeleton->setForces(mDesiredTorque); // upper body torque control
 	}
 
+	this->SetMeasure(isRender);
+
+	mStepCnt++;
+	mStepCntTotal++;
+}
+
+void
+Character::
+SetMuscleTuple()
+{
+	int m = mMuscles.size();
+	Eigen::MatrixXd JtA = Eigen::MatrixXd::Zero(mDof,m);
+	Eigen::VectorXd Jtp = Eigen::VectorXd::Zero(mDof);
+
+	for(int i=0; i<m; i++)
+	{
+		auto muscle = mMuscles[i];
+		Eigen::MatrixXd Jt = muscle->GetJacobianTranspose();
+		auto Ap = muscle->GetForceJacobianAndPassive();
+
+		JtA.block(0,i,mDof,1) = Jt*Ap.first;
+		Jtp += Jt*Ap.second;
+	}
+
+	mCurrentMuscleTuple.JtA = GetMuscleTorques();
+	mCurrentMuscleTuple.L =JtA.block(mRootJointDof,0,mDof-mRootJointDof,m);
+	mCurrentMuscleTuple.b =Jtp.segment(mRootJointDof,mDof-mRootJointDof);
+
+	if(mLowerBody)
+	{
+		Eigen::VectorXd lbTorque = mDesiredTorque; // lower body related torque
+		lbTorque.tail<26>().setZero();
+		mCurrentMuscleTuple.tau_des = lbTorque.tail(mNumActiveDof);
+	}
+	else
+	{
+		mCurrentMuscleTuple.tau_des = mDesiredTorque.tail(mNumActiveDof);
+	}
+
+	mMuscleTuples.push_back(mCurrentMuscleTuple);
+}
+
+void
+Character::
+SetMeasure(bool isRender)
+{
 	if(mStepCnt == mNumSteps){
 		mStepCnt = 0;
 		this->SetTrajectory();
 		this->SetCurVelocity();
 	}
-	mStepCnt++;
-	mStepCnt_total++;
 
-	mMetabolicEnergy->Set(this->GetMuscles(), mCurVel3d, this->GetPhase(), (int)mCurFrame);
+	if(mUseMuscle)
+		mMetabolicEnergy->Set(this->GetMuscles(), mCurVel3d, this->GetPhase(), (int)mCurFrame);
+	else
+		mJointDatas->SetTorques(mDesiredTorque, this->GetPhase(), (int)mCurFrame);
+
 	if(isRender)
-		this->SetMeasure();
+	{
+		mJointDatas->SetAngles((int)mCurFrame);
+		mContacts->Set();
+		// this->SetCoT();
+	}
 }
 
 void
 Character::
-SetMeasure()
+SetTrajectory()
 {
-	mJointDatas->SetAngles((int)mCurFrame);
-	mContacts->Set();
-	// this->SetCoT();
+	mRootTrajectory.pop_back();
+	mRootTrajectory.push_front(mSkeleton->getCOM());
+	Eigen::Vector3d com = mSkeleton->getCOM();
 }
 
 void
@@ -679,22 +683,15 @@ SetCoT()
 		return;
 	}
 
-	mCurCoT *= (mStepCnt_total-1);
+	mCurCoT *= (mStepCntTotal-1);
 	mCurCoT += vel_tor / (m * g * v);
-	mCurCoT /= mStepCnt_total;
+	mCurCoT /= mStepCntTotal;
 }
 
 void
 Character::
 SetCurVelocity()
 {
-	// mRootPos = mSkeleton->getCOM();
-	// double time_step = mSkeleton->getTimeStep();
-	// double x_diff = (mRootPos[0]-mRootPos_prev[0])/time_step;
-	// double z_diff = (mRootPos[2]-mRootPos_prev[2])/time_step;
-	// mRootPos_prev = mRootPos;
-	// mCurVel = std::sqrt(x_diff*x_diff + z_diff*z_diff);
-
 	double time_step = mRootTrajectory.size()*1.0/30.0;
 	double x_diff = (mRootTrajectory[0][0] - mRootTrajectory[mRootTrajectory.size()-1][0])/time_step;
 	double z_diff = (mRootTrajectory[0][2]-mRootTrajectory[mRootTrajectory.size()-1][2])/time_step;
@@ -706,6 +703,27 @@ SetCurVelocity()
 	mCurVel3d = mSkeleton->getCOMLinearVelocity();
 	// mCurVel = mCurVel3d.norm();
 }
+
+double
+Character::
+GetCurTime()
+{
+	double time = 0.0;
+	if(mAdaptiveMotion)
+		time = mAdaptiveTime;
+	else
+		time = mWorld->getTime();
+
+	return time;
+}
+
+double
+Character::
+GetControlTimeStep()
+{
+	return (double)mNumSteps*mWorld->getTimeStep();
+}
+
 
 Eigen::VectorXd
 Character::
@@ -720,8 +738,7 @@ GetState()
 	state << state_character;
 	if(mUseDevice)
 	{
-		Eigen::VectorXd state_device;
-		state_device = mDevice->GetState();
+		Eigen::VectorXd state_device = mDevice->GetState();
 		state_dim += state_device.rows();
 		state.resize(state_dim);
 		state << state_character, state_device;
@@ -795,25 +812,6 @@ GetState()
 // 	return state;
 // }
 
-double
-Character::
-GetCurTime()
-{
-	double time = 0.0;
-	if(mAdaptiveMotion)
-		time = mAdaptiveTime;
-	else
-		time = mWorld->getTime();
-
-	return time;
-}
-
-double
-Character::
-GetControlTimeStep()
-{
-	return (double)mNumSteps*mWorld->getTimeStep();
-}
 
 Eigen::VectorXd
 Character::
@@ -1267,7 +1265,7 @@ GetReward_Character_Efficiency()
 
 	// double r = r_EnergyMin + r_ActionReg;
 	// double r = 0.55 * r_Vel + 0.15 * r_Width + 0.15 * r_Height + 0.15 * r_Pose;
-	double r = 0.30 * r_EnergyMin + 0.10 * r_Width + 0.30 * r_Pose + 0.30 * r_Vel;
+	double r = 0.20 * r_EnergyMin + 0.10 * r_Width + 0.35 * r_Pose + 0.35 * r_Vel;
 	return r;
 }
 
@@ -1287,7 +1285,7 @@ GetReward_Pose()
 	dart::dynamics::BodyNode* root_ref = mSkeleton->getRootBodyNode();
 	Eigen::Isometry3d cur_root_inv = root_ref->getWorldTransform().inverse();
 
-	// Eigen::VectorXd head_ref = Eigen::VectorXd::Zero(4);
+	Eigen::VectorXd head_ref = Eigen::VectorXd::Zero(4);
 
 	pose_ref.resize((num_ee)*6);
 	// pose_ref.resize((num_ee)*3);
@@ -1299,11 +1297,11 @@ GetReward_Pose()
 		// pose_ref.segment<3>(3*i) << rot;
 		// pose_ref.segment<3>(3*i) << transform.translation();
 		pose_ref.segment<6>(6*i) << rot, transform.translation();
-		// if(i==2)
-		// 	head_ref.segment<3>(0) << rot;
+		if(i==2)
+			head_ref.segment<3>(0) << rot;
 	}
 
-	// head_ref[3] = mSkeleton->getBodyNode("Head")->getCOM()[1];
+	head_ref[3] = mSkeleton->getBodyNode("Head")->getCOM()[1];
 
 	// restore
 	mSkeleton->setPositions(p_save);
@@ -1313,7 +1311,7 @@ GetReward_Pose()
 	dart::dynamics::BodyNode* root_cur = mSkeleton->getRootBodyNode();
 	cur_root_inv = root_cur->getWorldTransform().inverse();
 
-	// Eigen::VectorXd head_cur = Eigen::VectorXd::Zero(4);
+	Eigen::VectorXd head_cur = Eigen::VectorXd::Zero(4);
 
 	pose_cur.resize((num_ee)*6);
 	// pose_cur.resize((num_ee)*3);
@@ -1325,11 +1323,11 @@ GetReward_Pose()
 		// pose_cur.segment<3>(3*i) << transform.translation();
 		pose_cur.segment<6>(6*i) << rot, transform.translation();
 
-		// if(i==2)
-		// 	head_cur.segment<3>(0) << rot;
+		if(i==2)
+			head_cur.segment<3>(0) << rot;
 	}
 
-	// head_cur[3] = mSkeleton->getBodyNode("Head")->getCOM()[1];
+	head_cur[3] = mSkeleton->getBodyNode("Head")->getCOM()[1];
 
 	double err_scale = 1.0;
 	double pose_scale = 1.0;
@@ -1340,15 +1338,15 @@ GetReward_Pose()
 
 	pose_err = (pose_cur-pose_ref).norm();
 
-	// head_err = (head_cur-head_ref).norm();
+	head_err = (head_cur-head_ref).norm();
 
 	double pose_reward = 0.0;
 	double head_reward = 0.0;
 	pose_reward = exp(-1.0 * pose_scale * pose_err);
-	// head_reward = exp(-1.0 * head_scale * head_err);
+	head_reward = exp(-1.0 * head_scale * head_err);
 
 	// double reward = 0.5 * pose_reward + 0.5 * head_reward;
-	double reward = 1.0 * pose_reward + 0.0 * head_reward;
+	double reward = 0.5 * pose_reward + 0.5 * head_reward;
 
 	return reward;
 }
@@ -1416,7 +1414,7 @@ GetReward_Vel()
 	double vel_scale = 2.0;
 	double vel_err = 0.0;
 
-	vel_err = fabs(mCurVel - 1.5);
+	vel_err = fabs(mCurVel - 0.5);
 
 	double reward = 0.0;
 	reward = exp(-1.0 * vel_scale * vel_err);
@@ -1642,10 +1640,10 @@ GetDesiredTorques()
 	if(mLowerBody){
 		Eigen::VectorXd tmp = mDesiredTorque;
 		tmp.tail<26>().setZero();
-		return tmp.tail(tmp.rows()-mRootJointDof);
+		return tmp.tail(mNumActiveDof);
 	}
 	else
-		return mDesiredTorque.tail(mDesiredTorque.rows()-mRootJointDof);
+		return mDesiredTorque.tail(mNumActiveDof);
 }
 
 Eigen::VectorXd
@@ -1933,7 +1931,8 @@ SetTargetPositions(double t,double dt,int frame,int frameNext, double frameFract
 	Eigen::VectorXd delta_ref = next_ref_pos - cur_ref_pos;
 
 	// delta_ref += mAction.segment(mNumActiveDof, mDof);
-	delta_ref.segment(0, mNumAdaptiveDof) += mAction.segment(mNumActiveDof, mNumAdaptiveDof);
+	// delta_ref.segment(0, mNumAdaptiveDof) += mAction.segment(mNumActiveDof, mNumAdaptiveDof);
+	delta_ref.segment(0, mNumAdaptiveSpatialDof) += mAction.segment(mNumActiveDof, mNumAdaptiveSpatialDof);
 
 	// Eigen::VectorXd prev = mTargetPositions;
 	// this->GetNextPosition(prev, delta_ref, mTargetPositions);
@@ -1997,30 +1996,30 @@ void
 Character::
 SetConstraints()
 {
-	mWeldJoint_Hip = std::make_shared<dart::constraint::WeldJointConstraint>(
+	mWeldJointHip = std::make_shared<dart::constraint::WeldJointConstraint>(
 		mSkeleton->getBodyNode(0), mDevice->GetSkeleton()->getBodyNode(0)
 		);
 
-	mWeldJoint_LeftLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
+	mWeldJointLeftLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
 		mSkeleton->getBodyNode("FemurL"), mDevice->GetSkeleton()->getBodyNode("RodLeft")
 		);
 
-	mWeldJoint_RightLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
+	mWeldJointRightLeg = std::make_shared<dart::constraint::WeldJointConstraint>(
 		mSkeleton->getBodyNode("FemurR"), mDevice->GetSkeleton()->getBodyNode("RodRight")
 		);
 
-	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_Hip);
-	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
-	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
+	mWorld->getConstraintSolver()->addConstraint(mWeldJointHip);
+	mWorld->getConstraintSolver()->addConstraint(mWeldJointLeftLeg);
+	mWorld->getConstraintSolver()->addConstraint(mWeldJointRightLeg);
 }
 
 void
 Character::
 RemoveConstraints()
 {
-	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_Hip);
-	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_LeftLeg);
-	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_RightLeg);
+	mWorld->getConstraintSolver()->removeConstraint(mWeldJointHip);
+	mWorld->getConstraintSolver()->removeConstraint(mWeldJointLeftLeg);
+	mWorld->getConstraintSolver()->removeConstraint(mWeldJointRightLeg);
 }
 
 void
@@ -2044,9 +2043,9 @@ SetDevice_On()
 {
 	mDevice->Reset();
 
-	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_Hip);
-	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_LeftLeg);
-	mWorld->getConstraintSolver()->addConstraint(mWeldJoint_RightLeg);
+	mWorld->getConstraintSolver()->addConstraint(mWeldJointHip);
+	mWorld->getConstraintSolver()->addConstraint(mWeldJointLeftLeg);
+	mWorld->getConstraintSolver()->addConstraint(mWeldJointRightLeg);
 	mWorld->addSkeleton(mDevice->GetSkeleton());
 }
 
@@ -2054,9 +2053,9 @@ void
 Character::
 SetDevice_Off()
 {
-	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_Hip);
-	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_LeftLeg);
-	mWorld->getConstraintSolver()->removeConstraint(mWeldJoint_RightLeg);
+	mWorld->getConstraintSolver()->removeConstraint(mWeldJointHip);
+	mWorld->getConstraintSolver()->removeConstraint(mWeldJointLeftLeg);
+	mWorld->getConstraintSolver()->removeConstraint(mWeldJointRightLeg);
 	mWorld->removeSkeleton(mDevice->GetSkeleton());
 }
 
@@ -2111,8 +2110,8 @@ SetForceRatio(double r)
 	{
 		for(int i=0; i<mMuscles.size(); i++)
 			mMuscles.at(i)->SetF0Ratio(mForceRatio);
-		// for(int i=0; i<mMuscles_Femur.size(); i++)
-		// 	mMuscles_Femur.at(i)->SetF0Ratio(mForceRatio);
+		// for(int i=0; i<mMusclesFemur.size(); i++)
+		// 	mMusclesFemur.at(i)->SetF0Ratio(mForceRatio);
 	}
 	else
 	{

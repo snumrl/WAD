@@ -10,7 +10,7 @@ Device(dart::simulation::WorldPtr& wPtr)
 :mUseDeviceNN(false),mNumParamState(0)
 {
 	mWorld = wPtr;
-	mDelta_t = 0.25;
+	mDelta_t = 0.3;
 	mK_ = 15.0;
 }
 
@@ -148,17 +148,21 @@ GetState() const
 	// state << rotation.w(), rotation.x(), rotation.y(), rotation.z(),
 	//             root_linvel / 10., root_angvel/10., positions.tail<6>(), velocities.tail<6>()/10.;
 
-	double history_window = 0.20;
-	double history_interval = 0.05;
+	// double history_window = 0.20;
+	// double history_interval = 0.05;
+	// int offset = (history_interval * mSimulationHz);
+	// int history_num = (history_window+0.001)/(history_interval)+1;
+
+	double history_interval = 0.15;
 	int offset = (history_interval * mSimulationHz);
-	int history_num = (history_window+0.001)/(history_interval)+1;
+	int history_num = 5;
 
 	int parameter_num = mNumParamState;
-	Eigen::VectorXd state((history_num+3)*2+parameter_num);
+	Eigen::VectorXd state(history_num*2+parameter_num);
 	double scaler = 2.0;
-	for(int i=0; i<history_num+3; i++)
+	for(int i=0; i<history_num; i++)
 	{
-		double signal_y = mDeviceSignals_y.at(mDelta_t_idx - (i-3)*offset);
+		double signal_y = mDeviceSignals_y.at(mDelta_t_idx - (i-2)*offset);
 		double torque_l = mK_ * signal_y;
 		double torque_r = mK_ * signal_y;
 		double des_torque_l =  1*torque_l;
