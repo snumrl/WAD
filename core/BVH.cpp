@@ -577,15 +577,18 @@ const Eigen::VectorXd&
 BVH::
 GetMotion(int k)
 {
-	return mMotionFrames[k];
+	if(mCyclic)
+		return mMotionFrames[k];
+	else
+		return mMotionFramesNonCyclicTmp[k];
 }
 
-const Eigen::VectorXd&
-BVH::
-GetMotionNonCyclic(int k)
-{
-	return mMotionFramesNonCyclicTmp[k];
-}
+// const Eigen::VectorXd&
+// BVH::
+// GetMotionNonCyclic(int k)
+// {
+// 	return mMotionFramesNonCyclicTmp[k];
+// }
 
 void
 BVH::
@@ -637,7 +640,10 @@ Eigen::VectorXd
 BVH::
 GetMotionVel(int k)
 {
-	return mMotionVelFrames.row(k);
+	if(mCyclic)
+		return mMotionVelFrames.row(k);
+	else
+		return mMotionVelFramesNonCyclic.row(k);
 }
 
 void
@@ -687,12 +693,12 @@ SetMotionVelFramesNonCyclic(int frames, bool blend)
 	}
 }
 
-Eigen::VectorXd
-BVH::
-GetMotionVelNonCyclic(int k)
-{
-	return mMotionVelFramesNonCyclic.row(k);
-}
+// Eigen::VectorXd
+// BVH::
+// GetMotionVelNonCyclic(int k)
+// {
+// 	return mMotionVelFramesNonCyclic.row(k);
+// }
 
 std::map<std::string,MASS::BVHNode::CHANNEL> BVHNode::CHANNEL_NAME =
 {

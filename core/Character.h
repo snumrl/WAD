@@ -89,7 +89,6 @@ public:
 	void Step_Muscles(int simCount, int randomSampleIndex, bool isRender);
 	void SetMuscleTuple();
 
-
 	double GetReward();
 	double GetReward_Character();
 	double GetReward_Character_Imitation();
@@ -105,6 +104,12 @@ public:
 	void SetAction(const Eigen::VectorXd& a);
 	void SetActivationLevels(const Eigen::VectorXd& a){mActivationLevels = a;}
 	void SetDesiredTorques();
+
+	void GetFrameNum(double t, double dt, int& frame, int& frameNext, double& frameFraction);
+
+	void GetPosAndVel(double t, Eigen::VectorXd& pos, Eigen::VectorXd& vel);
+	void GetPos(double t, double dt, int frame, int frameNext, double frameFraction, Eigen::VectorXd& pos);
+	void GetVel(double t, double dt, int frame, int frameNext, double frameFraction, Eigen::VectorXd& vel);
 
 	void SetTargetPosAndVel(double t);
 	void SetTargetPositions(double t,double dt,int frame, int frameNext, double frameFraction);

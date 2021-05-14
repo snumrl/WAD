@@ -65,9 +65,9 @@ public:
 
 	Eigen::Matrix3d Get(const std::string& bvh_node);
 	const Eigen::VectorXd& GetMotion(int k);
-	const Eigen::VectorXd& GetMotionNonCyclic(int k);
+	// const Eigen::VectorXd& GetMotionNonCyclic(int k);
 	Eigen::VectorXd GetMotionVel(int k);
-	Eigen::VectorXd GetMotionVelNonCyclic(int k);
+	// Eigen::VectorXd GetMotionVelNonCyclic(int k);
 	double GetSpeedRatio(){return mSpeedRatio;}
 
 	void SetSkeleton(const dart::dynamics::SkeletonPtr& skel){mSkeleton = skel;}

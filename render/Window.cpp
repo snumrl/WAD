@@ -1283,8 +1283,8 @@ DrawReference()
 
 	Eigen::VectorXd cur_pos = skeleton->getPositions();
 
-	// skeleton->setPositions(character->GetReferencePositions());
-	skeleton->setPositions(character->GetReferenceOriginalPositions());
+	skeleton->setPositions(character->GetReferencePositions());
+	// skeleton->setPositions(character->GetReferenceOriginalPositions());
 	DrawBodyNode(skeleton->getRootBodyNode());
 
 	skeleton->setPositions(cur_pos);
