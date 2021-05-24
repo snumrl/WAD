@@ -107,24 +107,24 @@ GetStates_Device()
 	return toNumPyArray(states);
 }
 
-double
+np::ndarray
 EnvManager::
 GetReward(int id)
 {
-	return mEnvs[id]->GetReward();
+	return toNumPyArray(mEnvs[id]->GetReward());
 }
 
-np::ndarray
-EnvManager::
-GetRewards()
-{
-	std::vector<float> rewards(mNumEnvs);
-	for (int id = 0;id<mNumEnvs;++id)
-	{
-		rewards[id] = mEnvs[id]->GetReward();
-	}
-	return toNumPyArray(rewards);
-}
+// np::ndarray
+// EnvManager::
+// GetRewards()
+// {
+// 	std::vector<float> rewards(mNumEnvs);
+// 	for (int id = 0;id<mNumEnvs;++id)
+// 	{
+// 		rewards[id] = mEnvs[id]->GetReward();
+// 	}
+// 	return toNumPyArray(rewards);
+// }
 
 double
 EnvManager::
@@ -437,7 +437,7 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("GetState_Device",&EnvManager::GetState_Device)
 		.def("GetStates_Device",&EnvManager::GetStates_Device)
 		.def("GetReward",&EnvManager::GetReward)
-		.def("GetRewards",&EnvManager::GetRewards)
+		// .def("GetRewards",&EnvManager::GetRewards)
 		.def("GetAdaptiveTime",&EnvManager::GetAdaptiveTime)
 		.def("GetAdaptiveTimes",&EnvManager::GetAdaptiveTimes)
 		.def("SetAction",&EnvManager::SetAction)

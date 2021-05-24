@@ -380,8 +380,10 @@ class PPO(object):
 				time_step *= self.num_control_Hz
 				t = integrate.quad(lambda x: pow(self.gamma, x), 0, time_step)[0]
 
-				epi_return += rewards[i]
-				delta = t*rewards[i] + values[i+1] * pow(self.gamma, time_step) - values[i]
+				epi_return += rewards[i][0] + rewards[i][1]
+				delta = t*rewards[i][0] + values[i+1] * pow(self.gamma, time_step) - values[i]
+				if rewards[i][1] != 0:
+					delta += rewards[i][1]
 				ad_t = delta + pow(self.gamma, time_step) * pow(self.lb, time_step) * ad_t
 				advantages[i] = ad_t
 				if np.isnan(ad_t):

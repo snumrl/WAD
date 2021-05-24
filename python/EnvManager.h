@@ -21,9 +21,9 @@ public:
 	np::ndarray GetState_Device(int id);
 	np::ndarray GetStates_Device();
 
-	double GetReward(int id);
+	np::ndarray GetReward(int id);
 	double GetAdaptiveTime(int id);
-	np::ndarray GetRewards();
+	// np::ndarray GetRewards();
 	np::ndarray GetAdaptiveTimes();
 
 	void SetAction(np::ndarray np_array, int id);

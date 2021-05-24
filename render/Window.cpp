@@ -360,23 +360,25 @@ WriteJointAngle()
 	}
 }
 
-// void
-// Window::
-// WriteJointTorque()
-// {
-// 	if(!isOpenFile)
-// 	{
-// 		mFile << " torqueNorm";
-// 	}
-// 	else
-// 	{
-// 		mJointDatas = mEnv->GetCharacter()->GetJointDatas();
-// 		auto& torquesNormCycle = mJointDatas->GetTorquesNormCycle();
-// 		for(auto iter = angles.begin(); iter != angles.end(); iter++)
-// 			mFile << " " + std::to_string((iter->second).at(0)*180.0/M_PI);
-// 	}
-
-// }
+void
+Window::
+WriteJointTorque()
+{
+	if(!isOpenFile)
+	{
+		mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+		auto& torquesNorm = mJointDatas->GetTorquesNorm();
+		for(auto iter = torquesNorm.begin(); iter != torquesNorm.end(); iter++)
+			mFile << " " + iter->first;
+	}
+	else
+	{
+		mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+		auto& torquesNorm = mJointDatas->GetTorquesNorm();
+		for(auto iter = torquesNorm.begin(); iter != torquesNorm.end(); iter++)
+			mFile << " " + std::to_string((iter->second).at(0));
+	}
+}
 
 void
 Window::
@@ -418,23 +420,25 @@ Write()
 			if(mFile.is_open())
 				std::cout << mFileName << " open" << std::endl;
 
-			mFile << "Time Frame";
-			this->WriteMetaE();
-			this->WriteJointAngle();
-			// this->WriteJointTorque();
+			mFile << "Time Frame AdtFrame";
+			// this->WriteMetaE();
+			// this->WriteJointAngle();
+			this->WriteJointTorque();
 
 			isOpenFile = true;
 		}
 
 		if(isOpenFile)
 		{
-			double t = mEnv->GetWorld()->getTime();
-			double f = mEnv->GetCharacter()->GetCurFrame();
+			double t = (mEnv->GetWorld()->getTime());
+			double f = mEnv->GetCharacter()->GetFrame();
+			double af = mEnv->GetCharacter()->GetAdaptiveFrame();
 			mFile << "\n";
-			mFile << std::to_string(t) + " " + std::to_string(f);
+			mFile << std::to_string(t) + " " + std::to_string(f) + " " + std::to_string(af);
 
-			this->WriteMetaE();
-			this->WriteJointAngle();
+			// this->WriteMetaE();
+			// this->WriteJointAngle();
+			this->WriteJointTorque();
 		}
 	}
 	else
@@ -444,97 +448,232 @@ Write()
 			mFile.close();
 			std::cout << mFileName << " close" << std::endl;
 
-			mFileName += "_avg";
-			mFile.open(mFileName);
-			if(mFile.is_open())
-				std::cout << mFileName << " open" << std::endl;
+			// mFileName += "_avg";
+			// mFile.open(mFileName);
+			// if(mFile.is_open())
+			// 	std::cout << mFileName << " open" << std::endl;
 
-			mFile << "Frame";
-			mJointDatas = mEnv->GetCharacter()->GetJointDatas();
-			auto& anglesByFrame = mJointDatas->GetAnglesByFrame();
-			std::map<std::string, std::vector<double>> avgMap;
-			for(auto iter = anglesByFrame.begin(); iter != anglesByFrame.end(); iter++)
-			{
-				if(iter->first == "FemurR_transverse" || iter->first == "FemurR_sagittal" || iter->first == "FemurR_frontal" || iter->first == "TibiaR_transverse" || iter->first == "TibiaR_sagittal" || iter->first == "TibiaR_frontal" || iter->first == "TalusR_transverse" || iter->first == "TalusR_sagittal" || iter->first == "TalusR_frontal")
-				{
-					mFile << " " + iter->first;
-					std::vector<double> avg;
-					for(int i=0; i<(iter->second).size(); i++)
-					{
-						double sum = 0.0;
-						for(int j=0; j<(iter->second).at(i).size(); j++)
-							sum += (iter->second).at(i).at(j);
-						avg.push_back(sum/(double)(iter->second).at(i).size());
-					}
+			// mFile << "Frame";
+			// mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+			// auto& anglesByFrame = mJointDatas->GetAnglesByFrame();
+			// std::map<std::string, std::vector<double>> avgMap;
+			// for(auto iter = anglesByFrame.begin(); iter != anglesByFrame.end(); iter++)
+			// {
+			// 	if(iter->first == "FemurR_transverse" || iter->first == "FemurR_sagittal" || iter->first == "FemurR_frontal" || iter->first == "TibiaR_transverse" || iter->first == "TibiaR_sagittal" || iter->first == "TibiaR_frontal" || iter->first == "TalusR_transverse" || iter->first == "TalusR_sagittal" || iter->first == "TalusR_frontal")
+			// 	{
+			// 		mFile << " " + iter->first;
+			// 		std::vector<double> avg;
+			// 		for(int i=0; i<(iter->second).size(); i++)
+			// 		{
+			// 			double sum = 0.0;
+			// 			for(int j=0; j<(iter->second).at(i).size(); j++)
+			// 				sum += (iter->second).at(i).at(j);
+			// 			avg.push_back(sum/(double)(iter->second).at(i).size());
+			// 		}
 
-					avgMap[iter->first] = avg;
-				}
-			}
+			// 		avgMap[iter->first] = avg;
+			// 	}
+			// }
 
-			mFile << " TorqueFrame torqueNorm";
-			mFile << " metaE";
-			mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
-			std::vector<double> avgMap2;
-			auto& HOUD06_ByFrame = mMetabolicEnergy->GetHOUD06_ByFrame();
-			for(int i=0; i<HOUD06_ByFrame.size(); i++)
-			{
-				double sum = 0.0;
-				for(int j=0; j<HOUD06_ByFrame.at(i).size(); j++)
-				{
-					sum += HOUD06_ByFrame.at(i).at(j);
-				}
-				avgMap2.push_back(sum/(double)HOUD06_ByFrame.at(i).size());
-			}
+			// mFile << " TorqueFrame torqueNorm";
+			// mFile << " metaE";
+			// mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
+			// std::vector<double> avgMap2;
+			// auto& HOUD06_ByFrame = mMetabolicEnergy->GetHOUD06_ByFrame();
+			// for(int i=0; i<HOUD06_ByFrame.size(); i++)
+			// {
+			// 	double sum = 0.0;
+			// 	for(int j=0; j<HOUD06_ByFrame.at(i).size(); j++)
+			// 	{
+			// 		sum += HOUD06_ByFrame.at(i).at(j);
+			// 	}
+			// 	avgMap2.push_back(sum/(double)HOUD06_ByFrame.at(i).size());
+			// }
 
-			auto& HOUD06_mapByFrame = mMetabolicEnergy->GetHOUD06_mapByFrame();
-			std::map<std::string, std::vector<double>> avgMap3;
-			for(auto iter = HOUD06_mapByFrame.begin(); iter != HOUD06_mapByFrame.end(); iter++)
-			{
-				mFile << " " + iter->first;
-				std::vector<double> avg;
-				for(int i=0; i<(iter->second).size(); i++)
-				{
-					double sum = 0.0;
-					for(int j=0; j<(iter->second).at(i).size(); j++)
-						sum += (iter->second).at(i).at(j);
-					avg.push_back(sum/(double)(iter->second).at(i).size());
-				}
-				avgMap3[iter->first] = avg;
-			}
+			// auto& HOUD06_mapByFrame = mMetabolicEnergy->GetHOUD06_mapByFrame();
+			// std::map<std::string, std::vector<double>> avgMap3;
+			// for(auto iter = HOUD06_mapByFrame.begin(); iter != HOUD06_mapByFrame.end(); iter++)
+			// {
+			// 	mFile << " " + iter->first;
+			// 	std::vector<double> avg;
+			// 	for(int i=0; i<(iter->second).size(); i++)
+			// 	{
+			// 		double sum = 0.0;
+			// 		for(int j=0; j<(iter->second).at(i).size(); j++)
+			// 			sum += (iter->second).at(i).at(j);
+			// 		avg.push_back(sum/(double)(iter->second).at(i).size());
+			// 	}
+			// 	avgMap3[iter->first] = avg;
+			// }
 
-			mJointDatas = mEnv->GetCharacter()->GetJointDatas();
-			std::deque<double> torquesNormCycle = mJointDatas->GetTorquesNormCycle();
-			std::deque<int> torquesFrame = mJointDatas->GetTorquesFrame();
+			// mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+			// std::deque<double> torquesNormCycle = mJointDatas->GetTorquesNormCycle();
+			// std::deque<int> torquesFrame = mJointDatas->GetTorquesFrame();
 
-			for(int i=0; i<34; i++)
-			{
-				mFile << "\n";
-				mFile << std::to_string(i);
-				for(auto iter = anglesByFrame.begin(); iter != anglesByFrame.end(); iter++)
-				{
-					if(iter->first == "FemurR_transverse" || iter->first == "FemurR_sagittal" || iter->first == "FemurR_frontal" || iter->first == "TibiaR_transverse" || iter->first == "TibiaR_sagittal" || iter->first == "TibiaR_frontal" || iter->first == "TalusR_transverse" || iter->first == "TalusR_sagittal" || iter->first == "TalusR_frontal")
-					{
-						mFile << " " + std::to_string(avgMap[iter->first].at(i)*180.0/M_PI);
-					}
-				}
+			// for(int i=0; i<34; i++)
+			// {
+			// 	mFile << "\n";
+			// 	mFile << std::to_string(i);
+			// 	for(auto iter = anglesByFrame.begin(); iter != anglesByFrame.end(); iter++)
+			// 	{
+			// 		if(iter->first == "FemurR_transverse" || iter->first == "FemurR_sagittal" || iter->first == "FemurR_frontal" || iter->first == "TibiaR_transverse" || iter->first == "TibiaR_sagittal" || iter->first == "TibiaR_frontal" || iter->first == "TalusR_transverse" || iter->first == "TalusR_sagittal" || iter->first == "TalusR_frontal")
+			// 		{
+			// 			mFile << " " + std::to_string(avgMap[iter->first].at(i)*180.0/M_PI);
+			// 		}
+			// 	}
 
-				mFile << " " + std::to_string(torquesFrame.at(i));
-				mFile << " " + std::to_string(torquesNormCycle.at(i));
+			// 	mFile << " " + std::to_string(torquesFrame.at(i));
+			// 	mFile << " " + std::to_string(torquesNormCycle.at(i));
 
-				mFile << " " + std::to_string(avgMap2.at(i));
+			// 	mFile << " " + std::to_string(avgMap2.at(i));
 
-				for(auto iter = HOUD06_mapByFrame.begin(); iter != HOUD06_mapByFrame.end(); iter++)
-				{
-					mFile << " "+ std::to_string(avgMap3[iter->first].at(i));
-				}
-			}
-			mFile.close();
-			std::cout << mFileName << " close" << std::endl;
+			// 	for(auto iter = HOUD06_mapByFrame.begin(); iter != HOUD06_mapByFrame.end(); iter++)
+			// 	{
+			// 		mFile << " "+ std::to_string(avgMap3[iter->first].at(i));
+			// 	}
+			// }
+			// mFile.close();
+			// std::cout << mFileName << " close" << std::endl;
 
 			isOpenFile = false;
 		}
 	}
 }
+
+
+
+// void
+// Window::
+// Write()
+// {
+// 	if(mWriteFile)
+// 	{
+// 		if(!isOpenFile)
+// 		{
+// 			this->WriteFileName();
+
+// 			mFile.open(mFileName);
+// 			if(mFile.is_open())
+// 				std::cout << mFileName << " open" << std::endl;
+
+// 			mFile << "Time Frame AdtFrame";
+// 			this->WriteMetaE();
+// 			this->WriteJointAngle();
+// 			// this->WriteJointTorque();
+
+// 			isOpenFile = true;
+// 		}
+
+// 		if(isOpenFile)
+// 		{
+// 			double t = mEnv->GetWorld()->getTime();
+// 			double f = mEnv->GetCharacter()->GetFrame();
+// 			double af = mEnv->GetCharacter()->GetAdaptiveFrame();
+// 			mFile << "\n";
+// 			mFile << std::to_string(t) + " " + std::to_string(f) + " " + std::to_string(af);
+
+// 			this->WriteMetaE();
+// 			this->WriteJointAngle();
+// 		}
+// 	}
+// 	else
+// 	{
+// 		if(isOpenFile)
+// 		{
+// 			mFile.close();
+// 			std::cout << mFileName << " close" << std::endl;
+
+// 			mFileName += "_avg";
+// 			mFile.open(mFileName);
+// 			if(mFile.is_open())
+// 				std::cout << mFileName << " open" << std::endl;
+
+// 			mFile << "Frame";
+// 			mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+// 			auto& anglesByFrame = mJointDatas->GetAnglesByFrame();
+// 			std::map<std::string, std::vector<double>> avgMap;
+// 			for(auto iter = anglesByFrame.begin(); iter != anglesByFrame.end(); iter++)
+// 			{
+// 				if(iter->first == "FemurR_transverse" || iter->first == "FemurR_sagittal" || iter->first == "FemurR_frontal" || iter->first == "TibiaR_transverse" || iter->first == "TibiaR_sagittal" || iter->first == "TibiaR_frontal" || iter->first == "TalusR_transverse" || iter->first == "TalusR_sagittal" || iter->first == "TalusR_frontal")
+// 				{
+// 					mFile << " " + iter->first;
+// 					std::vector<double> avg;
+// 					for(int i=0; i<(iter->second).size(); i++)
+// 					{
+// 						double sum = 0.0;
+// 						for(int j=0; j<(iter->second).at(i).size(); j++)
+// 							sum += (iter->second).at(i).at(j);
+// 						avg.push_back(sum/(double)(iter->second).at(i).size());
+// 					}
+
+// 					avgMap[iter->first] = avg;
+// 				}
+// 			}
+
+// 			mFile << " TorqueFrame torqueNorm";
+// 			mFile << " metaE";
+// 			mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
+// 			std::vector<double> avgMap2;
+// 			auto& HOUD06_ByFrame = mMetabolicEnergy->GetHOUD06_ByFrame();
+// 			for(int i=0; i<HOUD06_ByFrame.size(); i++)
+// 			{
+// 				double sum = 0.0;
+// 				for(int j=0; j<HOUD06_ByFrame.at(i).size(); j++)
+// 				{
+// 					sum += HOUD06_ByFrame.at(i).at(j);
+// 				}
+// 				avgMap2.push_back(sum/(double)HOUD06_ByFrame.at(i).size());
+// 			}
+
+// 			auto& HOUD06_mapByFrame = mMetabolicEnergy->GetHOUD06_mapByFrame();
+// 			std::map<std::string, std::vector<double>> avgMap3;
+// 			for(auto iter = HOUD06_mapByFrame.begin(); iter != HOUD06_mapByFrame.end(); iter++)
+// 			{
+// 				mFile << " " + iter->first;
+// 				std::vector<double> avg;
+// 				for(int i=0; i<(iter->second).size(); i++)
+// 				{
+// 					double sum = 0.0;
+// 					for(int j=0; j<(iter->second).at(i).size(); j++)
+// 						sum += (iter->second).at(i).at(j);
+// 					avg.push_back(sum/(double)(iter->second).at(i).size());
+// 				}
+// 				avgMap3[iter->first] = avg;
+// 			}
+
+// 			mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+// 			std::deque<double> torquesNormCycle = mJointDatas->GetTorquesNormCycle();
+// 			std::deque<int> torquesFrame = mJointDatas->GetTorquesFrame();
+
+// 			for(int i=0; i<34; i++)
+// 			{
+// 				mFile << "\n";
+// 				mFile << std::to_string(i);
+// 				for(auto iter = anglesByFrame.begin(); iter != anglesByFrame.end(); iter++)
+// 				{
+// 					if(iter->first == "FemurR_transverse" || iter->first == "FemurR_sagittal" || iter->first == "FemurR_frontal" || iter->first == "TibiaR_transverse" || iter->first == "TibiaR_sagittal" || iter->first == "TibiaR_frontal" || iter->first == "TalusR_transverse" || iter->first == "TalusR_sagittal" || iter->first == "TalusR_frontal")
+// 					{
+// 						mFile << " " + std::to_string(avgMap[iter->first].at(i)*180.0/M_PI);
+// 					}
+// 				}
+
+// 				mFile << " " + std::to_string(torquesFrame.at(i));
+// 				mFile << " " + std::to_string(torquesNormCycle.at(i));
+
+// 				mFile << " " + std::to_string(avgMap2.at(i));
+
+// 				for(auto iter = HOUD06_mapByFrame.begin(); iter != HOUD06_mapByFrame.end(); iter++)
+// 				{
+// 					mFile << " "+ std::to_string(avgMap3[iter->first].at(i));
+// 				}
+// 			}
+// 			mFile.close();
+// 			std::cout << mFileName << " close" << std::endl;
+
+// 			isOpenFile = false;
+// 		}
+// 	}
+// }
 
 void
 Window::
@@ -632,7 +771,7 @@ Step()
 		if(mDeviceNNLoaded)
 			mEnv->GetDevice()->SetAction(action_device);
 
-		this->Write();
+		// this->Write();
 		mDisplayIter = 0;
 	}
 
@@ -648,8 +787,10 @@ Step()
 	}
 	else
 	{
-		for(int i=0; i<num; i++)
+		for(int i=0; i<num; i++){
+			this->Write();
 			mEnv->Step(mDevice_On, true);
+		}
 	}
 
 	mEnv->GetReward();
@@ -847,11 +988,17 @@ DrawTime()
 	DrawGLBegin();
 
 	double t = mEnv->GetWorld()->getTime();
-	double f = mEnv->GetCharacter()->GetCurFrame();
+	t -= 1.0/(double)(2.0*mEnv->GetControlHz());
+	if(t<0)
+		t = 0.0;
+	double f = mEnv->GetCharacter()->GetFrame();
 	double p = mEnv->GetCharacter()->GetPhase();
+	double af = mEnv->GetCharacter()->GetAdaptiveFrame();
+	double ap = mEnv->GetCharacter()->GetAdaptivePhase();
 	bool big = true;
 	DrawString(0.47, 0.93, big, "Time : " + std::to_string(t) + " s");
-	DrawString(0.47, 0.90, big, "Frame : " + std::to_string(f) + ", " + std::to_string(p));
+	DrawString(0.44, 0.90, big, "Ref Phase : " + std::to_string(p));
+	DrawString(0.44, 0.87, big, "Adt Phase : " + std::to_string(ap));
 
 	DrawGLEnd();
 }

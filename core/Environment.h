@@ -28,7 +28,8 @@ public:
 
 	Eigen::VectorXd GetState();
 	Eigen::VectorXd GetState_Device();
-	double GetReward();
+	// std::vector<double> GetReward();
+	std::pair<double,double> GetReward();
 	std::map<std::string, std::deque<double>> GetRewards();
 	double GetAdaptiveTime();
 

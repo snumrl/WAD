@@ -37,6 +37,8 @@ public:
 	void LoadBVH(const std::string& path,bool cyclic=true);
 	void LoadBVHset(double lower, double upper);
 
+	bool isLowerBody(std::string& body);
+
 	const dart::dynamics::SkeletonPtr& GetSkeleton(){return mSkeleton;}
 	const std::vector<Muscle*>& GetMuscles() {return mMuscles;}
 	const std::vector<dart::dynamics::BodyNode*>& GetEndEffectors(){return mEndEffectors;}
@@ -62,9 +64,13 @@ public:
 	int GetSimulationHz(){ return mSimulationHz; }
 	int GetControlHz(){ return mControlHz; }
 	int GetNumSteps(){ return mNumSteps; }
+	void SetFrame();
 	void SetPhase();
 	void SetPhases();
 	double GetPhase(){ return mPhase; }
+	double GetPhasePrev(){ return mPhasePrev; }
+	double GetAdaptivePhase(){ return mAdaptivePhase; }
+	double GetAdaptivePhasePrev(){ return mAdaptivePhasePrev; }
 	double GetAdaptiveTime(){ return mAdaptiveTime; }
 	std::pair<double,double> GetPhases(){ return mPhases; }
 	std::pair<double,double> GetAdaptivePhases(){ return mAdaptivePhases; }
@@ -89,12 +95,15 @@ public:
 	void Step_Muscles(int simCount, int randomSampleIndex, bool isRender);
 	void SetMuscleTuple();
 
-	double GetReward();
-	double GetReward_Character();
-	double GetReward_Character_Imitation();
-	double GetReward_Character_Efficiency();
+	std::pair<double,double> GetReward();
+	std::pair<double,double> GetReward_Character();
+	std::pair<double,double> GetReward_Character_Imitation();
+	std::pair<double,double> GetReward_Character_Efficiency();
+	// std::vector<double> GetReward();
+	// std::vector<double> GetReward_Character();
+	// double GetReward_Character_Imitation();
+	// std::vector<double> GetReward_Character_Efficiency();
 	double GetReward_ActionReg();
-	double GetReward_TorqueMin();
 	double GetReward_Vel();
 	double GetReward_Width();
 	double GetReward_Height();
@@ -106,28 +115,15 @@ public:
 	void SetDesiredTorques();
 
 	void GetFrameNum(double t, double dt, int& frame, int& frameNext, double& frameFraction);
-
 	void GetPosAndVel(double t, Eigen::VectorXd& pos, Eigen::VectorXd& vel);
 	void GetPos(double t, double dt, int frame, int frameNext, double frameFraction, Eigen::VectorXd& pos);
 	void GetVel(double t, double dt, int frame, int frameNext, double frameFraction, Eigen::VectorXd& vel);
-
-	void SetTargetPosAndVel(double t);
-	void SetTargetPositions(double t,double dt,int frame, int frameNext, double frameFraction);
-	void SetTargetVelocities(double t,double dt,int frame, int frameNext, double frameFraction);
-
-	void SetReferencePosAndVel(double t);
-	void SetReferencePositions(double t,double dt,int frame, int frameNext, double frameFraction);
-	void SetReferenceVelocities(double t,double dt,int frame, int frameNext, double frameFraction);
-	void SetReferenceOriginalPosAndVel(double t);
-	void SetReferenceOriginalPositions(double t,double dt,int frame, int frameNext, double frameFraction);
-	void SetReferenceOriginalVelocities(double t,double dt,int frame, int frameNext, double frameFraction);
 
 	const Eigen::VectorXd& GetAction(){ return mAction; }
 	const Eigen::VectorXd& GetActivationLevels(){return mActivationLevels;}
 	const Eigen::VectorXd& GetTargetPositions(){ return mTargetPositions; }
 	const Eigen::VectorXd& GetTargetVelocities(){ return mTargetVelocities; }
 	const Eigen::VectorXd& GetReferencePositions(){return mReferencePositions;}
-	const Eigen::VectorXd& GetReferenceOriginalPositions(){return mReferenceOriginalPositions;}
 	Eigen::VectorXd GetDesiredTorques();
 	Eigen::VectorXd GetSPDForces(const Eigen::VectorXd& p_desired);
 
@@ -163,7 +159,10 @@ public:
 	void SetRewards();
 	std::map<std::string, std::deque<double>> GetRewards(){return mRewards;}
 
-	double GetCurFrame(){ return mCurFrame; }
+	double GetFrame(){ return mFrame;}
+	double GetFramePrev(){ return mFramePrev;}
+	double GetAdaptiveFrame(){ return mAdaptiveFrame;}
+	double GetAdaptiveFramePrev(){ return mAdaptiveFramePrev;}
 	std::deque<double> GetSignals(int idx);
 	JointData* GetJointDatas(){return mJointDatas;}
 	MetabolicEnergy* GetMetabolicEnergy(){return mMetabolicEnergy;}
@@ -231,8 +230,6 @@ private:
 	int mNumAdaptiveSpatialDof;
 	int mNumAdaptiveTemporalDof;
 	int mNumTotalRelatedDof;
-	int mLowerBodyDof;
-	int mUpperBodyDof;
 	int mLowerMuscleRelatedDof;
 	int mUpperMuscleRelatedDof;
 
@@ -249,19 +246,27 @@ private:
 	int mStepCnt;
 	int mStepCntTotal;
 
-	double mCurFrame;
-	double mPhase;
-	double mAdaptivePhase;
 	double mAdaptiveTime;
 	double mTemporalDisplacement;
+	double mFrame;
+	double mFramePrev;
+	double mAdaptiveFrame;
+	double mAdaptiveFramePrev;
+	double mPhase;
+	double mPhasePrev;
+	double mAdaptivePhase;
+	double mAdaptivePhasePrev;
 	std::pair<double,double> mPhases;
 	std::pair<double,double> mAdaptivePhases;
+
+	double mTimeOffset;
 
 	bool mUseDevice;
 	bool mUseMuscle;
 	bool mOnDevice;
 	bool mLowerBody;
 	bool mAdaptiveMotion;
+	bool mAdaptiveLowerBody;
 
 	double mMass;
 	double mMassRatio;
@@ -270,6 +275,7 @@ private:
 
 	double mCurCoT;
 	double mCurVel;
+	double mCurHeadVel;
 	Eigen::Vector3d mCurVel3d;
 
 	Eigen::Isometry3d mTc;
@@ -279,8 +285,6 @@ private:
 	Eigen::VectorXd mTargetVelocities;
 	Eigen::VectorXd mReferencePositions;
 	Eigen::VectorXd mReferenceVelocities;
-	Eigen::VectorXd mReferenceOriginalPositions;
-	Eigen::VectorXd mReferenceOriginalVelocities;
 
 	Eigen::VectorXd mDesiredTorque;
 
@@ -295,6 +299,7 @@ private:
 
 	std::vector<std::deque<double>> mFemurSignals;
 	std::deque<Eigen::Vector3d> mRootTrajectory;
+	std::deque<Eigen::Vector3d> mHeadTrajectory;
 
 	std::vector<std::string> mRewardTags;
 	std::map<std::string, double> mReward;

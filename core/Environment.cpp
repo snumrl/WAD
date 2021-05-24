@@ -295,7 +295,8 @@ Reset(bool RSI)
 
 	if (RSI)
 	{
-		t = 1.0/(double)mControlHz * (rand()%16 + 8);
+		// t = 1.0/(double)mControlHz * (rand()%16 + 8);
+		t = 0.1 + 0.01 * (rand()%90);
 	}
 
 	mWorld->reset();
@@ -325,13 +326,13 @@ Step(bool device_onoff, bool isRender)
 	// double root_y = mCharacter->GetSkeleton()->getBodyNode(0)->getTransform().translation()[1] - mGround->getRootBodyNode()->getCOM()[1];
 	// std::cout << "root y : " << root_y << std::endl;
 
-	// if(mStepCnt == 20)
-	// 	mStepCnt = 0;
-	// mStepCnt++;
-	// mStepCnt_total++;
 	mWorld->step();
-	mCharacter->SetPhase();
 	mSimCount++;
+	if(mSimCount == mNumSteps)
+	{
+		mCharacter->SetPhase();
+		mCharacter->SetFrame();
+	}
 }
 
 bool
@@ -409,12 +410,19 @@ GetState_Device()
 	return mDevice->GetState();
 }
 
-double
+std::pair<double,double>
 Environment::
 GetReward()
 {
 	return mCharacter->GetReward();
 }
+
+// std::vector<double>
+// Environment::
+// GetReward()
+// {
+// 	return mCharacter->GetReward();
+// }
 
 std::map<std::string, std::deque<double>>
 Environment::

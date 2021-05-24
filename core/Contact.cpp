@@ -39,7 +39,6 @@ Contact::
 Set()
 {
     this->Clear();
-
     const dart::collision::CollisionResult& result = mWorld->getLastCollisionResult();
 
     for(auto iter = mContactObjects.begin(); iter != mContactObjects.end(); iter++)
@@ -55,6 +54,7 @@ Set()
                     shapeNode == contact.collisionObject2->getShapeFrame())
                 {
                     (iter->second).push_back(std::make_pair(contact.force, contact.point));
+                    // std::cout << name << " : " << body->getCOM()[0] << " " << body->getCOM()[1] << " " << body->getCOM()[2] << std::endl;
                     Eigen::Vector3d cur_force = contact.force;
                     force_vector += cur_force;
                 }

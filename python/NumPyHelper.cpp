@@ -1,4 +1,5 @@
 #include "NumPyHelper.h"
+#include <iostream>
 
 np::ndarray toNumPyArray(const std::vector<float>& val)
 {
@@ -30,6 +31,24 @@ np::ndarray toNumPyArray(const std::vector<double>& val)
 
 	return array;
 }
+np::ndarray toNumPyArray(const std::pair<double,double>& val)
+{
+	std::vector<double> val_;
+	val_.push_back(val.first);
+	val_.push_back(val.second);
+	int n = val_.size();
+	p::tuple shape = p::make_tuple(n);
+	np::dtype dtype = np::dtype::get_builtin<double>();
+	np::ndarray array = np::empty(shape,dtype);
+
+	double* dest = reinterpret_cast<double*>(array.get_data());
+	for(int i=0;i<n;i++)
+	{
+		dest[i] = val_[i];
+	}
+
+	return array;
+}
 np::ndarray toNumPyArray(const std::vector<Eigen::VectorXd>& val)
 {
 	int n =val.size();
@@ -48,7 +67,7 @@ np::ndarray toNumPyArray(const std::vector<Eigen::VectorXd>& val)
 		}
 	}
 
-	return array;	
+	return array;
 }
 np::ndarray toNumPyArray(const std::vector<Eigen::MatrixXd>& val)
 {
@@ -201,17 +220,17 @@ std::vector<Eigen::VectorXd> toEigenVectorVector(const np::ndarray& array)
 {
 	std::vector<Eigen::VectorXd> mat;
 	mat.resize(array.shape(0));
-	
+
 	float* srcs = reinterpret_cast<float*>(array.get_data());
 	int index = 0;
-	
+
 	for(int i=0;i<array.shape(0);i++){
 		mat[i].resize(array.shape(1));
 		for(int j=0;j<array.shape(1);j++)
 			mat[i][j] = srcs[index++];
 	}
 
-	return mat;	
+	return mat;
 }
 Eigen::MatrixXd toEigenMatrix(const np::ndarray& array)
 {

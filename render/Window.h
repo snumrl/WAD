@@ -113,6 +113,7 @@ public:
     void WriteFileName();
     void WriteMetaE();
     void WriteJointAngle();
+    void WriteJointTorque();
 private:
 
 	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module,rms_module;
