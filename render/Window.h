@@ -11,7 +11,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/embed.h>
 
-namespace p = pybind11;
+namespace py = pybind11;
 namespace MASS
 {
 
@@ -30,18 +30,20 @@ public:
 	Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_path);
 	Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_path,const std::string& device_nn_path);
 
+    void LoadMuscleNN(const std::string& muscle_nn_path);
+    void LoadDeviceNN(const std::string& device_nn_path);
+
 	void draw() override;
 	void keyboard(unsigned char _key, int _x, int _y) override;
 	void displayTimer(int _val) override;
 	void Step();
 	void Reset();
 
+    void SetFocus();
 	void SetTrajectory();
-	void SetFocus();
+
 	void SetViewMatrix();
 
-	void LoadMuscleNN(const std::string& muscle_nn_path);
-	void LoadDeviceNN(const std::string& device_nn_path);
 	Eigen::VectorXd GetActionFromNN();
 	Eigen::VectorXd GetActionFromNN_Device();
 	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt);
@@ -117,7 +119,7 @@ public:
     void WriteJointTorque();
 private:
 
-	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module,rms_module;
+	py::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module,rms_module;
 
 	Environment* mEnv;
 	JointData* mJointDatas;

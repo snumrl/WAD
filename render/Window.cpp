@@ -15,6 +15,7 @@ using namespace dart::dynamics;
 using namespace dart::simulation;
 using namespace dart::gui;
 using namespace std;
+
 Eigen::Matrix3d
 R_x(double x)
 {
@@ -82,20 +83,20 @@ Window(Environment* env)
 	mFootinterval.resize(20);
 	mDisplayTimeout = 1000 / 60.0;
 
-	mm = p::module::import("__main__");
+	mm = py::module::import("__main__");
 	mns = mm.attr("__dict__");
 
-	p::str module_dir = (std::string(MASS_ROOT_DIR)+"/python").c_str();
-	sys_module = p::module::import("sys");
+	py::str module_dir = (std::string(MASS_ROOT_DIR)+"/python").c_str();
+	sys_module = py::module::import("sys");
 	sys_module.attr("path").attr("insert")(1, module_dir);
-	p::exec("import torch",mns);
-	p::exec("import torch.nn as nn",mns);
-	p::exec("import torch.optim as optim",mns);
-	p::exec("import torch.nn.functional as F",mns);
-	p::exec("import torchvision.transforms as T",mns);
-	p::exec("import numpy as np",mns);
-	p::exec("from Model import *",mns);
-	p::exec("from RunningMeanStd import *",mns);
+	py::exec("import torch",mns);
+	py::exec("import torch.nn as nn",mns);
+	py::exec("import torch.optim as optim",mns);
+	py::exec("import torch.nn.functional as F",mns);
+	py::exec("import torchvision.transforms as T",mns);
+	py::exec("import numpy as np",mns);
+	py::exec("from Model import *",mns);
+	py::exec("from RunningMeanStd import *",mns);
 }
 
 Window::
@@ -104,18 +105,18 @@ Window(Environment* env, const std::string& nn_path)
 {
 	mNNLoaded = true;
 
-	p::str str;
+	py::str str;
 	str = ("num_state = "+std::to_string(mEnv->GetCharacter()->GetNumState())).c_str();
-	p::exec(str, mns);
+	py::exec(str, mns);
 	str = ("num_action = "+std::to_string(mEnv->GetCharacter()->GetNumAction())).c_str();
-	p::exec(str, mns);
+	py::exec(str, mns);
 
-	nn_module = p::eval("SimulationNN(num_state,num_action)", mns);
-	p::object load = nn_module.attr("load");
+	nn_module = py::eval("SimulationNN(num_state,num_action)", mns);
+	py::object load = nn_module.attr("load");
 	load(nn_path);
 
-	rms_module = p::eval("RunningMeanStd()", mns);
-	p::object load_rms = rms_module.attr("load2");
+	rms_module = py::eval("RunningMeanStd()", mns);
+	py::object load_rms = rms_module.attr("load2");
 	load_rms(nn_path);
 
 }
@@ -148,20 +149,20 @@ LoadMuscleNN(const std::string& muscle_nn_path)
 {
 	mMuscleNNLoaded = true;
 
-	p::str str;
+	py::str str;
 	str = ("num_total_muscle_related_dofs = "+std::to_string(mEnv->GetCharacter()->GetNumTotalRelatedDofs())).c_str();
-	p::exec(str,mns);
+	py::exec(str,mns);
 	str = ("num_actions = "+std::to_string(mEnv->GetCharacter()->GetNumActiveDof())).c_str();
-	p::exec(str,mns);
+	py::exec(str,mns);
 	str = ("num_muscles = "+std::to_string(mEnv->GetCharacter()->GetNumMuscles())).c_str();
-	p::exec(str,mns);
+	py::exec(str,mns);
 
 	mMuscleNum = mEnv->GetCharacter()->GetNumMuscles();
 	mMuscleMapNum = mEnv->GetCharacter()->GetNumMusclesMap();
 
-	muscle_nn_module = p::eval("MuscleNN(num_total_muscle_related_dofs,num_actions,num_muscles)",mns);
+	muscle_nn_module = py::eval("MuscleNN(num_total_muscle_related_dofs,num_actions,num_muscles)",mns);
 
-	p::object load = muscle_nn_module.attr("load");
+	py::object load = muscle_nn_module.attr("load");
 	load(muscle_nn_path);
 }
 
@@ -172,15 +173,15 @@ LoadDeviceNN(const std::string& device_nn_path)
 	mDeviceNNLoaded = true;
 	mDevice_On = true;
 
-	p::str str;
+	py::str str;
 	str = ("num_state_device = "+std::to_string(mEnv->GetCharacter()->GetDevice()->GetNumState())).c_str();
-	p::exec(str,mns);
+	py::exec(str,mns);
 	str = ("num_action_device = "+std::to_string(mEnv->GetCharacter()->GetDevice()->GetNumAction())).c_str();
-	p::exec(str,mns);
+	py::exec(str,mns);
 
-	device_nn_module = p::eval("SimulationNN(num_state_device,num_action_device)",mns);
+	device_nn_module = py::eval("SimulationNN(num_state_device,num_action_device)",mns);
 
-	p::object load = device_nn_module.attr("load");
+	py::object load = device_nn_module.attr("load");
 	load(device_nn_path);
 }
 
@@ -2378,20 +2379,20 @@ Window::
 GetActionFromNN_Device()
 {
 	Eigen::VectorXd state = mEnv->GetCharacter()->GetDevice()->GetState();
-	p::array_t<float> state_np = p::array_t<float>(state.rows());
-	p::buffer_info state_buf = state_np.request(true);
+	py::array_t<float> state_np = py::array_t<float>(state.rows());
+	py::buffer_info state_buf = state_np.request(true);
 	float* dest = reinterpret_cast<float*>(state_buf.ptr);
 
 	for(int i =0;i<state.rows();i++)
 		dest[i] = state[i];
 
-	p::object get_action_device;
+	py::object get_action_device;
 	get_action_device = device_nn_module.attr("get_action");
 
-	p::object temp = get_action_device(state_np);
-	p::array_t<float> action_np = p::array_t<float>(temp);
+	py::object temp = get_action_device(state_np);
+	py::array_t<float> action_np = py::array_t<float>(temp);
 
-	p::buffer_info action_buf = action_np.request(true);
+	py::buffer_info action_buf = action_np.request(true);
 	float* srcs = reinterpret_cast<float*>(action_buf.ptr);
 
 	Eigen::VectorXd action(mEnv->GetCharacter()->GetDevice()->GetNumAction());
@@ -2401,10 +2402,10 @@ GetActionFromNN_Device()
 	return action;
 }
 
-p::array_t<float> toNumPyArray(const Eigen::VectorXd& vec)
+py::array_t<float> toNumPyArray(const Eigen::VectorXd& vec)
 {
 	int n = vec.rows();
-	p::array_t<float> array = p::array_t<float>(n);
+	py::array_t<float> array = py::array_t<float>(n);
 
 	auto array_buf = array.request(true);
 	float* dest = reinterpret_cast<float*>(array_buf.ptr);
@@ -2421,24 +2422,24 @@ Window::
 GetActionFromNN()
 {
 	Eigen::VectorXd state = mEnv->GetCharacter()->GetState();
-	p::array_t<float> state_np = p::array_t<float>(state.rows());
-	p::buffer_info state_buf = state_np.request(true);
+	py::array_t<float> state_np = py::array_t<float>(state.rows());
+	py::buffer_info state_buf = state_np.request(true);
 	float* dest = reinterpret_cast<float*>(state_buf.ptr);
 
 	for(int i =0;i<state.rows();i++)
 		dest[i] = state[i];
 
-	p::object apply;
+	py::object apply;
 	apply = rms_module.attr("apply_no_update");
-	p::object state_np_tmp = apply(state_np);
-	p::array_t<float> state_np_ = p::array_t<float>(state_np_tmp);
+	py::object state_np_tmp = apply(state_np);
+	py::array_t<float> state_np_ = py::array_t<float>(state_np_tmp);
 
-	p::object get_action;
+	py::object get_action;
 	get_action = nn_module.attr("get_action");
-	p::object temp = get_action(state_np_);
-	p::array_t<float> action_np = p::array_t<float>(temp);
+	py::object temp = get_action(state_np_);
+	py::array_t<float> action_np = py::array_t<float>(temp);
 
-	p::buffer_info action_buf = action_np.request(true);
+	py::buffer_info action_buf = action_np.request(true);
 	float* srcs = reinterpret_cast<float*>(action_buf.ptr);
 
 	Eigen::VectorXd action(mEnv->GetCharacter()->GetNumAction());
@@ -2458,13 +2459,13 @@ GetActivationFromNN(const Eigen::VectorXd& mt)
 		return Eigen::VectorXd::Zero(mEnv->GetCharacter()->GetMuscles().size());
 	}
 
-	p::object get_activation = muscle_nn_module.attr("get_activation");
+	py::object get_activation = muscle_nn_module.attr("get_activation");
 	mEnv->GetCharacter()->SetDesiredTorques();
 	Eigen::VectorXd dt = mEnv->GetCharacter()->GetDesiredTorques();
-	p::array_t<float> mt_np = toNumPyArray(mt);
-	p::array_t<float> dt_np = toNumPyArray(dt);
-	p::array_t<float> activation_np = get_activation(mt_np,dt_np);
-	p::buffer_info activation_np_buf = activation_np.request(false);
+	py::array_t<float> mt_np = toNumPyArray(mt);
+	py::array_t<float> dt_np = toNumPyArray(dt);
+	py::array_t<float> activation_np = get_activation(mt_np,dt_np);
+	py::buffer_info activation_np_buf = activation_np.request(false);
 	float* srcs = reinterpret_cast<float*>(activation_np_buf.ptr);
 
 	Eigen::VectorXd activation(mEnv->GetCharacter()->GetMuscles().size());

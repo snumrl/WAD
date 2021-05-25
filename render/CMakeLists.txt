@@ -4,6 +4,8 @@ project(render)
 link_directories(../core/)
 include_directories(../core/)
 
+add_compile_options(-fvisibility=hidden)
+
 if (POLICY CMP0072)
     cmake_policy (SET CMP0072 OLD)
 endif(POLICY CMP0072)

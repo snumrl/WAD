@@ -22,8 +22,8 @@ public:
 	py::array_t<float> GetStates_Device();
 
 	py::array_t<float> GetReward(int id);
+
 	double GetAdaptiveTime(int id);
-	py::array_t<float> GetRewards();
 	py::array_t<float> GetAdaptiveTimes();
 
 	void SetAction(py::array_t<float> np_array, int id);
@@ -43,7 +43,6 @@ public:
 	int GetNumSteps();
 	int GetControlHz();
 	int GetSimulationHz();
-	double GetVelocity(int idx);
 
 	bool UseMuscle();
 	bool UseDevice();
@@ -51,11 +50,12 @@ public:
 
 	void SetDesiredTorques();
 	py::array_t<float> GetDesiredTorques();
+
 	//For Muscle Transitions
 	int GetNumTotalMuscleRelatedDofs();
 	int GetNumMuscles();
-	py::array_t<float> GetMuscleTorques();
 	py::list GetMuscleTuples();
+	py::array_t<float> GetMuscleTorques();
 
 	// adaptive sampling
 	bool UseAdaptiveSampling();
@@ -68,7 +68,6 @@ public:
 
 private:
 	std::vector<MASS::Environment*> mEnvs;
-
 	int mNumEnvs;
 };
 

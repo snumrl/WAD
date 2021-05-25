@@ -13,9 +13,9 @@ namespace MASS
 class BVH;
 class Muscle;
 class Device;
-class JointData;
-class MetabolicEnergy;
-class Contact;
+// class JointData;
+// class MetabolicEnergy;
+// class Contact;
 // class Torques;
 
 struct MuscleTuple
@@ -103,6 +103,7 @@ public:
 	// std::vector<double> GetReward_Character();
 	// double GetReward_Character_Imitation();
 	// std::vector<double> GetReward_Character_Efficiency();
+	double GetReward_Energy();
 	double GetReward_ActionReg();
 	double GetReward_Vel();
 	double GetReward_Width();
@@ -219,7 +220,7 @@ private:
 	bool mBVHcyclic;
 
 	Device* mDevice;
-	Contact* mContacts;
+	MASS::Contact* mContacts;
 	JointData* mJointDatas;
 	MetabolicEnergy* mMetabolicEnergy;
 
@@ -318,7 +319,6 @@ private:
     Eigen::VectorXd mParamMin;
     Eigen::VectorXd mParamMax;
 };
-
 
 
 };

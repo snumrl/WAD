@@ -1,6 +1,5 @@
 #include "EnvManager.h"
 #include "DARTHelper.h"
-#include "Device.h"
 #include <omp.h>
 
 EnvManager::
@@ -61,6 +60,7 @@ void
 EnvManager::
 Resets(bool RSI)
 {
+#pragma omp parallel for
 	for (int id=0; id<mNumEnvs; ++id)
 	{
 		mEnvs[id]->Reset(RSI);
@@ -79,6 +79,7 @@ EnvManager::
 GetStates()
 {
 	Eigen::MatrixXd states(mNumEnvs,this->GetNumState());
+#pragma omp parallel for
 	for (int id=0; id<mNumEnvs; ++id)
 	{
 		states.row(id) = mEnvs[id]->GetState().transpose();
@@ -99,6 +100,7 @@ EnvManager::
 GetStates_Device()
 {
 	Eigen::MatrixXd states(mNumEnvs,this->GetNumState_Device());
+#pragma omp parallel for
 	for (int id = 0;id<mNumEnvs;++id)
 	{
 		states.row(id) = mEnvs[id]->GetState_Device().transpose();
@@ -113,18 +115,6 @@ GetReward(int id)
 {
 	return toNumPyArray(mEnvs[id]->GetReward());
 }
-
-// py::array_t<float>
-// EnvManager::
-// GetRewards()
-// {
-// 	std::vector<float> rewards(mNumEnvs);
-// 	for (int id = 0;id<mNumEnvs;++id)
-// 	{
-// 		rewards[id] = mEnvs[id]->GetReward();
-// 	}
-// 	return toNumPyArray(rewards);
-// }
 
 double
 EnvManager::
@@ -157,6 +147,7 @@ EnvManager::
 SetActions(py::array_t<float> np_array)
 {
 	Eigen::MatrixXd action = toEigenMatrix(np_array);
+#pragma omp parallel for
 	for (int id = 0;id<mNumEnvs;++id)
 	{
 		mEnvs[id]->SetAction(action.row(id).transpose());
@@ -168,6 +159,7 @@ EnvManager::
 SetActions_Device(py::array_t<float> np_array)
 {
 	Eigen::MatrixXd action = toEigenMatrix(np_array);
+#pragma omp parallel for
 	for (int id = 0;id<mNumEnvs;++id)
 	{
 		mEnvs[id]->SetAction_Device(action.row(id).transpose());
@@ -179,8 +171,11 @@ EnvManager::
 SetActivationLevels(py::array_t<float> np_array)
 {
 	std::vector<Eigen::VectorXd> activations = toEigenVectorVector(np_array);
+#pragma omp parallel for
 	for (int id = 0; id < mNumEnvs; ++id)
+	{
 		mEnvs[id]->GetCharacter()->SetActivationLevels(activations[id]);
+	}
 }
 
 bool
@@ -195,19 +190,13 @@ EnvManager::
 IsEndOfEpisodes()
 {
 	std::vector<bool> is_end_vector(mNumEnvs);
+#pragma omp parallel for
 	for (int id = 0;id<mNumEnvs;++id)
 	{
 		is_end_vector[id] = mEnvs[id]->IsEndOfEpisode();
 	}
 
 	return toNumPyArray(is_end_vector);
-}
-
-double
-EnvManager::
-GetVelocity(int idx)
-{
-	return mEnvs[idx]->GetCharacter()->GetCurVelocity();
 }
 
 int
@@ -432,7 +421,6 @@ PYBIND11_MODULE(pymss, m){
 		.def("GetState_Device",&EnvManager::GetState_Device)
 		.def("GetStates_Device",&EnvManager::GetStates_Device)
 		.def("GetReward",&EnvManager::GetReward)
-		// .def("GetRewards",&EnvManager::GetRewards)
 		.def("GetAdaptiveTime",&EnvManager::GetAdaptiveTime)
 		.def("GetAdaptiveTimes",&EnvManager::GetAdaptiveTimes)
 		.def("SetAction",&EnvManager::SetAction)
@@ -450,7 +438,6 @@ PYBIND11_MODULE(pymss, m){
 		.def("GetNumSteps",&EnvManager::GetNumSteps)
 		.def("GetControlHz",&EnvManager::GetControlHz)
 		.def("GetSimulationHz",&EnvManager::GetSimulationHz)
-		.def("GetVelocity",&EnvManager::GetVelocity)
 		.def("UseMuscle",&EnvManager::UseMuscle)
 		.def("UseDevice",&EnvManager::UseDevice)
 		.def("UseDeviceNN",&EnvManager::UseDeviceNN)

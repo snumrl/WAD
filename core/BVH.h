@@ -12,22 +12,20 @@
 
 namespace MASS
 {
+
 Eigen::Matrix3d R_x(double x);
 Eigen::Matrix3d R_y(double y);
 Eigen::Matrix3d R_z(double z);
+
 class BVHNode
 {
 public:
 	enum CHANNEL
 	{
-		Xpos=0,
-		Ypos=1,
-		Zpos=2,
-		Xrot=3,
-		Yrot=4,
-		Zrot=5
+		Xpos=0, Ypos=1, Zpos=2, Xrot=3, Yrot=4, Zrot=5
 	};
-	static std::map<std::string,MASS::BVHNode::CHANNEL> CHANNEL_NAME;
+
+	static std::map<std::string, MASS::BVHNode::CHANNEL> CHANNEL_NAME;
 
 	BVHNode(const std::string& name,BVHNode* parent);
 	void SetChannel(int c_offset,std::vector<std::string>& c_name);
@@ -125,7 +123,5 @@ private:
 	Eigen::MatrixXd mMotionVelFramesNonCyclic;
 	Eigen::Vector3d mCycleOffset;
 };
-
 };
-
 #endif

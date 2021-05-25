@@ -7,6 +7,7 @@
 using namespace dart::dynamics;
 namespace MASS
 {
+
 Eigen::Matrix3d
 R_x(double x)
 {
@@ -717,4 +718,3 @@ std::map<std::string,MASS::BVHNode::CHANNEL> BVHNode::CHANNEL_NAME =
 };
 
 };
-

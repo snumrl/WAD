@@ -4,22 +4,21 @@ import math
 import time
 import random
 import numpy as np
+import scipy.integrate as integrate
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
-import scipy.integrate as integrate
 
+import mcmc
 import collections
 from collections import namedtuple
 from collections import deque
-from itertools import count
-from datetime import datetime
-
-import mcmc
-from pymss import EnvManager
 from IPython import embed
+
+from pymss import EnvManager
 from Model import *
 from RunningMeanStd import *
 
@@ -278,8 +277,8 @@ class PPO(object):
 		rewards = [None]*self.num_slaves
 		states = [None]*self.num_slaves
 		states_next = [None]*self.num_slaves
-		adaptive_times = [None]*self.num_slaves
 		terminated = [False]*self.num_slaves
+		adaptive_times = [None]*self.num_slaves
 
 		states = self.env.GetStates()
 
