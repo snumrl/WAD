@@ -846,8 +846,8 @@ GetState_Character()
 		cur_time = 0.21;
 
 	Eigen::VectorXd state;
-	state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1);
-	state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time;
+	state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1+24);
+	state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time,mAction.segment(mNumActiveDof,24);
 
 	return state;
 }
@@ -936,44 +936,6 @@ GetReward()
 	return std::make_pair(r_continuous, r_spike);
 }
 
-// std::vector<double>
-// Character::
-// GetReward()
-// {
-// 	std::pair<double,double> rewards_character = this->GetReward_Character();
-
-// 	double r_continuous = 0.0;
-// 	double r_spike = 0.0;
-
-// 	r_continuous += rewards_character->first;
-// 	r_spike += reward_character->second;
-
-// 	double r_total = r_continuous + r_spike;
-// 	mReward["reward"] = r_total;
-// 	mCurReward =r_total;
-
-// 	this->SetRewards();
-
-// 	return std::make_pair(r_continuous, r_spike);
-
-
-// 	std::vector<double> reward_character = this->GetReward_Character();
-
-
-
-// 	double reward = reward_character[0] + reward_character[1] + 0;
-// 	mReward["reward"] = reward;
-// 	mCurReward =reward;
-
-// 	this->SetRewards();
-
-// 	std::vector<double> rewards(2,0);
-// 	rewards[0] = reward_character[0];
-// 	rewards[1] = reward_character[1];
-
-// 	return rewards;
-// }
-
 std::pair<double,double>
 Character::
 GetReward_Character()
@@ -998,30 +960,6 @@ GetReward_Character()
 
 	return std::make_pair(r_continuous,r_spike);
 }
-
-// std::vector<double>
-// Character::
-// GetReward_Character()
-// {
-// 	double reward_imit = GetReward_Character_Imitation();
-// 	std::vector<double> rewards_effi = GetReward_Character_Efficiency();
-
-// 	double reward_effi = rewards_effi[0];
-
-// 	mReward["imit"] = reward_imit;
-//  	mReward["effi"] = reward_effi;
-
-//  	reward_imit *= 1.0;
-// 	reward_effi *= 1.0;
-
-// 	std::vector<double> rewards(2,0);
-// 	rewards[0] = reward_imit + reward_effi;
-// 	rewards[1] = rewards_effi[1];
-
-// 	// double r = reward_imit + reward_effi;
-
-// 	return rewards;
-// }
 
 std::pair<double,double>
 Character::
@@ -1153,7 +1091,7 @@ GetReward_Character_Efficiency()
 	// double r_ContactForce = mContacts->GetReward();
 
 	double r_ActionReg = 1.0;
-	// r_ActionReg = this->GetReward_ActionReg();
+	r_ActionReg = this->GetReward_ActionReg();
 
 	double r_Vel = 1.0;
 	r_Vel = this->GetReward_Vel();
@@ -1171,60 +1109,13 @@ GetReward_Character_Efficiency()
 	// mReward["reg"] = r_ActionReg;
 	mReward["min"] = r_Vel;
 	mReward["reg"] = r_Pose;
-	mReward["com"] = r_EnergyMin;
+	mReward["com"] = r_ActionReg;
 
-	double r_continuous = 0.10 * r_Width + 0.60 * r_Pose + 0.30 * r_Vel;
+	double r_continuous = 0.10 * r_Width + 0.40 * r_Pose + 0.20 * r_Vel + 0.30 * r_ActionReg;
 	double r_spike = 0.0 * r_EnergyMin;
 
 	return std::make_pair(r_continuous,r_spike);
 }
-
-// std::vector<double>
-// Character::
-// GetReward_Character_Efficiency()
-// {
-// 	std::vector<double> rewards(2, 0); // 0 : continuous 1: spike
-// 	if(mWorld->getTime() < mTimeOffset)
-// 		return rewards;
-
-// 	double r_EnergyMin = 1.0;
-// 	if(mUseMuscle)
-// 		r_EnergyMin = mMetabolicEnergy->GetReward();
-// 	else
-// 		r_EnergyMin = mJointDatas->GetReward();
-
-// 	double r_ContactForce = 1.0;
-// 	// double r_ContactForce = mContacts->GetReward();
-
-// 	double r_ActionReg = 1.0;
-// 	// r_ActionReg = this->GetReward_ActionReg();
-
-// 	double r_Vel = 1.0;
-// 	r_Vel = this->GetReward_Vel();
-
-// 	double r_Width = 1.0;
-// 	r_Width = this->GetReward_Width();
-
-// 	// double r_Height = 1.0;
-// 	// r_Height = this->GetReward_Height();
-
-// 	double r_Pose = 1.0;
-// 	r_Pose = this->GetReward_Pose();
-
-// 	// mReward["min"] = r_EnergyMin;
-// 	// mReward["reg"] = r_ActionReg;
-// 	mReward["min"] = r_Vel;
-// 	mReward["reg"] = r_Pose;
-// 	mReward["com"] = r_EnergyMin;
-
-// 	// double r = r_EnergyMin + r_ActionReg;
-// 	// double r = 0.55 * r_Vel + 0.15 * r_Width + 0.15 * r_Height + 0.15 * r_Pose;
-// 	rewards[0] = 0.10 * r_Width + 0.60 * r_Pose + 0.30 * r_Vel;
-// 	rewards[1] = 10.0 * r_EnergyMin;
-// 	// double r = 0.0 * r_EnergyMin + 0.10 * r_Width + 0.60 * r_Pose + 0.30 * r_Vel;
-// 	// double r = 1.0 * r_EnergyMin + (0.1 * r_Width + 0.5 * r_Pose + 0.4 * r_Vel);
-// 	return rewards;
-// }
 
 double
 Character::
@@ -1409,11 +1300,13 @@ GetReward_ActionReg()
 	// double actionNorm = mAction.segment(mNumActiveDof, mNumAdaptiveDof).norm();
 	// double actionNorm = mAction.segment(0, mDof).norm();
 	// double actionNorm = mAction.norm();
+	Eigen::VectorXd prev = mAction_prev.segment(mNumActiveDof,24);
+	Eigen::VectorXd cur = mAction.segment(mNumActiveDof,24);
 
-	double actionDiff = (mAction - mAction_prev).norm();
+	double actionDiff = (prev-cur).norm();
 
 	double err_scale = 1.0;
-	double actionReg_scale = 4.0;
+	double actionReg_scale = 10.0;
 	double actionReg_err = 0.0;
 
 	actionReg_err = actionDiff;
@@ -1497,6 +1390,8 @@ void
 Character::
 SetAction(const Eigen::VectorXd& a)
 {
+	mAction_prev = mAction;
+
 	int pd_dof = mNumActiveDof;
 	double pd_scale = 0.1;
 	double root_ori_scale = 0.005;
@@ -1556,8 +1451,8 @@ SetAction(const Eigen::VectorXd& a)
 		}
 	}
 
-	if(mAction_prev.norm() == 0)
-		mAction_prev = mAction;
+	// if(mAction_prev.norm() == 0)
+	// 	mAction_prev = mAction;
 
 	double timeStep = (double)mNumSteps*mWorld->getTimeStep();
 	if(mAdaptiveMotion)
@@ -1588,7 +1483,6 @@ SetAction(const Eigen::VectorXd& a)
 		this->GetPosAndVel(t+timeStep, mTargetPositions, mTargetVelocities);
 	}
 
-	mAction_prev = mAction;
 	mStepCnt = 0;
 }
 

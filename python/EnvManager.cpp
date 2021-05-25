@@ -67,14 +67,14 @@ Resets(bool RSI)
 	}
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetState(int id)
 {
 	return toNumPyArray(mEnvs[id]->GetState());
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetStates()
 {
@@ -87,14 +87,14 @@ GetStates()
 	return toNumPyArray(states);
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetState_Device(int id)
 {
 	return toNumPyArray(mEnvs[id]->GetState_Device());
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetStates_Device()
 {
@@ -107,14 +107,14 @@ GetStates_Device()
 	return toNumPyArray(states);
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetReward(int id)
 {
 	return toNumPyArray(mEnvs[id]->GetReward());
 }
 
-// np::ndarray
+// py::array_t<float>
 // EnvManager::
 // GetRewards()
 // {
@@ -133,7 +133,7 @@ GetAdaptiveTime(int id)
 	return mEnvs[id]->GetAdaptiveTime();
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetAdaptiveTimes()
 {
@@ -147,14 +147,14 @@ GetAdaptiveTimes()
 
 void
 EnvManager::
-SetAction(np::ndarray np_array, int id)
+SetAction(py::array_t<float> np_array, int id)
 {
 	mEnvs[id]->SetAction(toEigenVector(np_array));
 }
 
 void
 EnvManager::
-SetActions(np::ndarray np_array)
+SetActions(py::array_t<float> np_array)
 {
 	Eigen::MatrixXd action = toEigenMatrix(np_array);
 	for (int id = 0;id<mNumEnvs;++id)
@@ -165,7 +165,7 @@ SetActions(np::ndarray np_array)
 
 void
 EnvManager::
-SetActions_Device(np::ndarray np_array)
+SetActions_Device(py::array_t<float> np_array)
 {
 	Eigen::MatrixXd action = toEigenMatrix(np_array);
 	for (int id = 0;id<mNumEnvs;++id)
@@ -176,7 +176,7 @@ SetActions_Device(np::ndarray np_array)
 
 void
 EnvManager::
-SetActivationLevels(np::ndarray np_array)
+SetActivationLevels(py::array_t<float> np_array)
 {
 	std::vector<Eigen::VectorXd> activations = toEigenVectorVector(np_array);
 	for (int id = 0; id < mNumEnvs; ++id)
@@ -190,7 +190,7 @@ IsEndOfEpisode(int id)
 	return mEnvs[id]->IsEndOfEpisode();
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 IsEndOfEpisodes()
 {
@@ -305,7 +305,7 @@ SetDesiredTorques()
 	}
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetDesiredTorques()
 {
@@ -334,7 +334,7 @@ GetNumMuscles()
 	return mEnvs[0]->GetCharacter()->GetNumMuscles();
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetMuscleTorques()
 {
@@ -348,17 +348,17 @@ GetMuscleTorques()
 	return toNumPyArray(mt);
 }
 
-p::list
+py::list
 EnvManager::
 GetMuscleTuples()
 {
-	p::list all;
+	py::list all;
 	for (int id = 0; id < mNumEnvs; ++id)
 	{
 		auto& tps = mEnvs[id]->GetCharacter()->GetMuscleTuples();
 		for(int j=0;j<tps.size();j++)
 		{
-			p::list t;
+			py::list t;
 			t.append(toNumPyArray(tps[j].JtA));
 			t.append(toNumPyArray(tps[j].tau_des));
 			t.append(toNumPyArray(tps[j].L));
@@ -379,7 +379,7 @@ EnvManager::UseAdaptiveSampling()
 
 void
 EnvManager::
-SetParamState(int id, np::ndarray np_array)
+SetParamState(int id, py::array_t<float> np_array)
 {
 	mEnvs[id]->SetParamState(toEigenVector(np_array));
 }
@@ -405,28 +405,23 @@ GetNumParamState_Device()
 	return mEnvs[0]->GetNumParamState_Device();
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetMinV()
 {
 	return toNumPyArray(mEnvs[0]->GetMinV());
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetMaxV()
 {
 	return toNumPyArray(mEnvs[0]->GetMaxV());
 }
 
-using namespace boost::python;
-
-BOOST_PYTHON_MODULE(pymss)
-{
-	Py_Initialize();
-	np::initialize();
-
-	class_<EnvManager>("EnvManager",init<std::string,int>())
+PYBIND11_MODULE(pymss, m){
+	py::class_<EnvManager>(m, "EnvManager")
+		.def(py::init<std::string, int>())
 		.def("Step",&EnvManager::Step)
 		.def("Steps",&EnvManager::Steps)
 		.def("StepsAtOnce",&EnvManager::StepsAtOnce)

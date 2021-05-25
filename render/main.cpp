@@ -7,8 +7,6 @@
 #include "Muscle.h"
 #include "Window.h"
 #include "dart/gui/gui.hpp"
-namespace p = boost::python;
-namespace np = boost::python::numpy;
 int main(int argc,char** argv)
 {
 	MASS::Environment* env = new MASS::Environment();
@@ -20,8 +18,7 @@ int main(int argc,char** argv)
 	}
 	env->Initialize(std::string(argv[1]), true);
 
-	Py_Initialize();
-	np::initialize();
+	pybind11::scoped_interpreter guard{};
 	glutInit(&argc, argv);
 
 	MASS::Window* window;

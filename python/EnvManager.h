@@ -1,13 +1,13 @@
 #ifndef __ENV_MANAGER_H__
 #define __ENV_MANAGER_H__
 #include "Environment.h"
-#include <boost/python.hpp>
-#include <boost/python/numpy.hpp>
 #include "NumPyHelper.h"
+
+namespace py = pybind11;
 class EnvManager
 {
 public:
-	EnvManager(std::string meta_file,int num_envs);
+	EnvManager(std::string meta_file, int num_envs);
 
 	void Step(int id);
 	void Steps(int num, bool onDevice);
@@ -16,23 +16,23 @@ public:
 	void Reset(bool RSI, int id);
 	void Resets(bool RSI);
 
-	np::ndarray GetState(int id);
-	np::ndarray GetStates();
-	np::ndarray GetState_Device(int id);
-	np::ndarray GetStates_Device();
+	py::array_t<float> GetState(int id);
+	py::array_t<float> GetStates();
+	py::array_t<float> GetState_Device(int id);
+	py::array_t<float> GetStates_Device();
 
-	np::ndarray GetReward(int id);
+	py::array_t<float> GetReward(int id);
 	double GetAdaptiveTime(int id);
-	// np::ndarray GetRewards();
-	np::ndarray GetAdaptiveTimes();
+	py::array_t<float> GetRewards();
+	py::array_t<float> GetAdaptiveTimes();
 
-	void SetAction(np::ndarray np_array, int id);
-	void SetActions(np::ndarray np_array);
-	void SetActions_Device(np::ndarray np_array);
-	void SetActivationLevels(np::ndarray np_array);
+	void SetAction(py::array_t<float> np_array, int id);
+	void SetActions(py::array_t<float> np_array);
+	void SetActions_Device(py::array_t<float> np_array);
+	void SetActivationLevels(py::array_t<float> np_array);
 
 	bool IsEndOfEpisode(int id);
-	np::ndarray IsEndOfEpisodes();
+	py::array_t<float> IsEndOfEpisodes();
 
 	int GetNumState();
 	int GetNumState_Char();
@@ -50,21 +50,21 @@ public:
 	bool UseDeviceNN();
 
 	void SetDesiredTorques();
-	np::ndarray GetDesiredTorques();
+	py::array_t<float> GetDesiredTorques();
 	//For Muscle Transitions
 	int GetNumTotalMuscleRelatedDofs();
 	int GetNumMuscles();
-	np::ndarray GetMuscleTorques();
-	p::list GetMuscleTuples();
+	py::array_t<float> GetMuscleTorques();
+	py::list GetMuscleTuples();
 
 	// adaptive sampling
 	bool UseAdaptiveSampling();
-	void SetParamState(int id, np::ndarray np_array);
+	void SetParamState(int id, py::array_t<float> np_array);
 	int GetNumParamState();
 	int GetNumParamState_Char();
 	int GetNumParamState_Device();
-	np::ndarray GetMinV();
-	np::ndarray GetMaxV();
+	py::array_t<float> GetMinV();
+	py::array_t<float> GetMaxV();
 
 private:
 	std::vector<MASS::Environment*> mEnvs;

@@ -3,14 +3,15 @@
 
 #include "dart/dart.hpp"
 #include "dart/gui/gui.hpp"
-#include <boost/python.hpp>
-#include <boost/python/numpy.hpp>
-#include <iostream>
-#include <fstream>
 #include "ShapeRenderer.h"
 
-namespace p = boost::python;
-namespace np = boost::python::numpy;
+#include <iostream>
+#include <fstream>
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+#include <pybind11/embed.h>
+
+namespace p = pybind11;
 namespace MASS
 {
 

@@ -82,10 +82,11 @@ Window(Environment* env)
 	mFootinterval.resize(20);
 	mDisplayTimeout = 1000 / 60.0;
 
-	mm = p::import("__main__");
+	mm = p::module::import("__main__");
 	mns = mm.attr("__dict__");
-	sys_module = p::import("sys");
+
 	p::str module_dir = (std::string(MASS_ROOT_DIR)+"/python").c_str();
+	sys_module = p::module::import("sys");
 	sys_module.attr("path").attr("insert")(1, module_dir);
 	p::exec("import torch",mns);
 	p::exec("import torch.nn as nn",mns);
@@ -103,7 +104,7 @@ Window(Environment* env, const std::string& nn_path)
 {
 	mNNLoaded = true;
 
-	boost::python::str str;
+	p::str str;
 	str = ("num_state = "+std::to_string(mEnv->GetCharacter()->GetNumState())).c_str();
 	p::exec(str, mns);
 	str = ("num_action = "+std::to_string(mEnv->GetCharacter()->GetNumAction())).c_str();
@@ -147,7 +148,7 @@ LoadMuscleNN(const std::string& muscle_nn_path)
 {
 	mMuscleNNLoaded = true;
 
-	boost::python::str str;
+	p::str str;
 	str = ("num_total_muscle_related_dofs = "+std::to_string(mEnv->GetCharacter()->GetNumTotalRelatedDofs())).c_str();
 	p::exec(str,mns);
 	str = ("num_actions = "+std::to_string(mEnv->GetCharacter()->GetNumActiveDof())).c_str();
@@ -171,7 +172,7 @@ LoadDeviceNN(const std::string& device_nn_path)
 	mDeviceNNLoaded = true;
 	mDevice_On = true;
 
-	boost::python::str str;
+	p::str str;
 	str = ("num_state_device = "+std::to_string(mEnv->GetCharacter()->GetDevice()->GetNumState())).c_str();
 	p::exec(str,mns);
 	str = ("num_action_device = "+std::to_string(mEnv->GetCharacter()->GetDevice()->GetNumAction())).c_str();
@@ -2376,21 +2377,22 @@ Eigen::VectorXd
 Window::
 GetActionFromNN_Device()
 {
-	p::object get_action_device;
-	get_action_device = device_nn_module.attr("get_action");
 	Eigen::VectorXd state = mEnv->GetCharacter()->GetDevice()->GetState();
-	p::tuple shape = p::make_tuple(state.rows());
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray state_np = np::empty(shape,dtype);
+	p::array_t<float> state_np = p::array_t<float>(state.rows());
+	p::buffer_info state_buf = state_np.request(true);
+	float* dest = reinterpret_cast<float*>(state_buf.ptr);
 
-	float* dest = reinterpret_cast<float*>(state_np.get_data());
 	for(int i =0;i<state.rows();i++)
 		dest[i] = state[i];
 
-	p::object temp = get_action_device(state_np);
-	np::ndarray action_np = np::from_object(temp);
+	p::object get_action_device;
+	get_action_device = device_nn_module.attr("get_action");
 
-	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+	p::object temp = get_action_device(state_np);
+	p::array_t<float> action_np = p::array_t<float>(temp);
+
+	p::buffer_info action_buf = action_np.request(true);
+	float* srcs = reinterpret_cast<float*>(action_buf.ptr);
 
 	Eigen::VectorXd action(mEnv->GetCharacter()->GetDevice()->GetNumAction());
 	for(int i=0;i<action.rows();i++)
@@ -2399,16 +2401,17 @@ GetActionFromNN_Device()
 	return action;
 }
 
-np::ndarray toNumPyArray(const Eigen::VectorXd& vec)
+p::array_t<float> toNumPyArray(const Eigen::VectorXd& vec)
 {
 	int n = vec.rows();
-	p::tuple shape = p::make_tuple(n);
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray array = np::empty(shape,dtype);
+	p::array_t<float> array = p::array_t<float>(n);
 
-	float* dest = reinterpret_cast<float*>(array.get_data());
+	auto array_buf = array.request(true);
+	float* dest = reinterpret_cast<float*>(array_buf.ptr);
 	for(int i =0;i<n;i++)
+	{
 		dest[i] = vec[i];
+	}
 
 	return array;
 }
@@ -2418,24 +2421,25 @@ Window::
 GetActionFromNN()
 {
 	Eigen::VectorXd state = mEnv->GetCharacter()->GetState();
-	p::tuple shape = p::make_tuple(state.rows());
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray state_np = np::empty(shape,dtype);
+	p::array_t<float> state_np = p::array_t<float>(state.rows());
+	p::buffer_info state_buf = state_np.request(true);
+	float* dest = reinterpret_cast<float*>(state_buf.ptr);
 
-	float* dest = reinterpret_cast<float*>(state_np.get_data());
 	for(int i =0;i<state.rows();i++)
 		dest[i] = state[i];
 
 	p::object apply;
 	apply = rms_module.attr("apply_no_update");
 	p::object state_np_tmp = apply(state_np);
-	np::ndarray state_np_ = np::from_object(state_np_tmp);
+	p::array_t<float> state_np_ = p::array_t<float>(state_np_tmp);
 
 	p::object get_action;
 	get_action = nn_module.attr("get_action");
 	p::object temp = get_action(state_np_);
-	np::ndarray action_np = np::from_object(temp);
-	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+	p::array_t<float> action_np = p::array_t<float>(temp);
+
+	p::buffer_info action_buf = action_np.request(true);
+	float* srcs = reinterpret_cast<float*>(action_buf.ptr);
 
 	Eigen::VectorXd action(mEnv->GetCharacter()->GetNumAction());
 	for(int i=0;i<action.rows();i++)
@@ -2457,13 +2461,13 @@ GetActivationFromNN(const Eigen::VectorXd& mt)
 	p::object get_activation = muscle_nn_module.attr("get_activation");
 	mEnv->GetCharacter()->SetDesiredTorques();
 	Eigen::VectorXd dt = mEnv->GetCharacter()->GetDesiredTorques();
-	np::ndarray mt_np = toNumPyArray(mt);
-	np::ndarray dt_np = toNumPyArray(dt);
-	p::object temp = get_activation(mt_np,dt_np);
-	np::ndarray activation_np = np::from_object(temp);
+	p::array_t<float> mt_np = toNumPyArray(mt);
+	p::array_t<float> dt_np = toNumPyArray(dt);
+	p::array_t<float> activation_np = get_activation(mt_np,dt_np);
+	p::buffer_info activation_np_buf = activation_np.request(false);
+	float* srcs = reinterpret_cast<float*>(activation_np_buf.ptr);
 
 	Eigen::VectorXd activation(mEnv->GetCharacter()->GetMuscles().size());
-	float* srcs = reinterpret_cast<float*>(activation_np.get_data());
 	for(int i=0; i<activation.rows(); i++){
 		activation[i] = srcs[i];
 	}
