@@ -110,6 +110,8 @@ public:
 	double GetCurReward(){return mCurReward;}
 
 	void SetAction(const Eigen::VectorXd& a);
+	void SetActionAdaptiveMotion(const Eigen::VectorXd& a);
+	void SetActionImitationLearning(const Eigen::VectorXd& a);
 	void SetActivationLevels(const Eigen::VectorXd& a){mActivationLevels = a;}
 	void SetDesiredTorques();
 
@@ -229,6 +231,8 @@ private:
 	int mNumAdaptiveDof;
 	int mNumAdaptiveSpatialDof;
 	int mNumAdaptiveTemporalDof;
+	int mAdaptiveLowerDof;
+	int mAdaptiveUpperDof;
 	int mNumTotalRelatedDof;
 	int mLowerMuscleRelatedDof;
 	int mUpperMuscleRelatedDof;
@@ -320,7 +324,6 @@ private:
     Eigen::VectorXd mParamMax;
 };
 
-
-};
+}
 
 #endif

@@ -77,13 +77,13 @@ Set(const Eigen::VectorXd& m_t)
 	{
 		switch(mChannel[i])
 		{
-		case Xpos:break;
-		case Ypos:break;
-		case Zpos:break;
-		case Xrot:mR = mR*R_x(m_t[mChannelOffset+i]);break;
-		case Yrot:mR = mR*R_y(m_t[mChannelOffset+i]);break;
-		case Zrot:mR = mR*R_z(m_t[mChannelOffset+i]);break;
-		default:break;
+			case Xpos:break;
+			case Ypos:break;
+			case Zpos:break;
+			case Xrot:mR = mR*R_x(m_t[mChannelOffset+i]);break;
+			case Yrot:mR = mR*R_y(m_t[mChannelOffset+i]);break;
+			case Zrot:mR = mR*R_z(m_t[mChannelOffset+i]);break;
+			default:break;
 		}
 	}
 

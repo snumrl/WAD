@@ -8,7 +8,7 @@ namespace MASS
 
 Character::
 Character(WorldPtr& wPtr)
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mNumParamState(0),mMass(0),mAdaptiveMotion(true)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mNumParamState(0),mMass(0)
 {
 	this->SetWorld(wPtr);
 
@@ -20,9 +20,12 @@ Character(WorldPtr& wPtr)
 	mLowerMuscleRelatedDof = 30;
 	mUpperMuscleRelatedDof = 26;
 
+	mAdaptiveMotion = true;
 	mAdaptiveLowerBody = false;
-	mTimeOffset = 2.0;
+	mAdaptiveLowerDof = 24;
+	mAdaptiveUpperDof = 32;
 
+	mTimeOffset = 2.0;
 }
 
 Character::
@@ -224,9 +227,9 @@ Initialize()
 	if(mAdaptiveMotion)
 	{
 		if(mAdaptiveLowerBody)
-			mNumAdaptiveSpatialDof = 24; // lower : 24
+			mNumAdaptiveSpatialDof = mAdaptiveLowerDof;
 		else
-			mNumAdaptiveSpatialDof = mDof; // lower : 24, upper : 32
+			mNumAdaptiveSpatialDof = mAdaptiveLowerDof+mAdaptiveUpperDof;
 		mNumAdaptiveTemporalDof = 1;
 		mNumAdaptiveDof = mNumAdaptiveSpatialDof + mNumAdaptiveTemporalDof;
 		mNumAction += mNumAdaptiveDof;
@@ -860,7 +863,7 @@ GetState_Character()
 		cur_time = 0.21;
 
 	Eigen::VectorXd action;
-	if(mLowerBody)
+	if(mAdaptiveLowerBody)
 		action = mAction.segment(mNumActiveDof,24);
 	else
 		action = mAction.segment(mNumActiveDof,56);
@@ -1423,91 +1426,88 @@ SetFrame()
 
 void
 Character::
-SetAction(const Eigen::VectorXd& a)
+SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 {
-	mAction_prev = mAction;
-
 	int pd_dof = mNumActiveDof;
+	int l_dof = mAdaptiveLowerDof;
+	int u_dof = mAdaptiveUpperDof;
+	int sp_dof = mNumAdaptiveSpatialDof;
+	int ad_dof = mNumAdaptiveDof;
+
 	double pd_scale = 0.1;
 	double root_ori_scale = 0.002;
 	double root_pos_scale = 0.004;
-	double adap_lower_scale = 0.004;
-	double adap_upper_scale = 0.004;
-	double adap_temporal_scale = 0.2;
+	double lower_scale = 0.004; // adaptive lower body
+	double upper_scale = 0.004; // adaptive upper body
+	double temporal_scale = 0.2; // adaptive temporal displacement
 
 	mAction.segment(0,pd_dof) = a.segment(0,pd_dof) * pd_scale;
-	mAction.segment(pd_dof,3) = Eigen::VectorXd::Zero(3);
-	mAction.segment(pd_dof+3,3) = Eigen::VectorXd::Zero(3);
-	mAction.segment(pd_dof+6,18) = Eigen::VectorXd::Zero(18);
-	if(mAdaptiveLowerBody){
-		mAction[pd_dof+24] = 0;
-	}
-	else{
-		mAction.segment(pd_dof+24,32) = Eigen::VectorXd::Zero(32);
-		mAction[pd_dof+56] = 0;
-	}
+	mAction.segment(pd_dof,ad_dof) = Eigen::VectorXd::Zero(ad_dof);
 
 	double t = mWorld->getTime();
 	if(t >= mTimeOffset){
 		mAction.segment(pd_dof,3) = a.segment(pd_dof,3) * root_ori_scale;
 		mAction.segment(pd_dof+3,3) = a.segment(pd_dof+3,3) * root_pos_scale;
-		mAction.segment(pd_dof+6,18) = a.segment(pd_dof+6,18) * adap_lower_scale;
-		if(mAdaptiveLowerBody){
-			mAction[pd_dof+24] = a[pd_dof+24] * adap_temporal_scale;
-		}
-		else{
-			mAction.segment(pd_dof+24,32) = a.segment(pd_dof+24,32) * adap_upper_scale;
-			mAction[pd_dof+56] = a[pd_dof+56] * adap_temporal_scale;
-		}
+		mAction.segment(pd_dof+6,l_dof-6) = a.segment(pd_dof+6,l_dof-6) * lower_scale;
+		mAction.segment(pd_dof+l_dof,(sp_dof-l_dof)) = a.segment(pd_dof+l_dof,(sp_dof-l_dof)) * upper_scale;
+		mAction[pd_dof+sp_dof] = a[pd_dof+sp_dof] * temporal_scale;
 
 		for(int i=pd_dof; i<mAction.size(); i++){
 			if(i < pd_dof+3)
 				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);
 			else if(i >= pd_dof+3 && i < pd_dof+6)
 				mAction[i] = Utils::Clamp(mAction[i], -0.02, 0.02);
-			else if(i >= pd_dof+6 && i < pd_dof+24)
+			else if(i >= pd_dof+6 && i < pd_dof+l_dof)
 				mAction[i] = Utils::Clamp(mAction[i], -0.02, 0.02);
-			else{
-				if(mAdaptiveLowerBody){
-					mAction[i] = Utils::Clamp(mAction[i], -1.0, 1.0);
-				}
-				else{
-					if(i >= pd_dof+24 && i < pd_dof+56)
-						mAction[i] = Utils::Clamp(mAction[i], -0.02, 0.02);
-					else
-						mAction[i] = Utils::Clamp(mAction[i], -1.0, 1.0);
-				}
-			}
+			else if(i >= pd_dof+l_dof && i < pd_dof+sp_dof)
+				mAction[i] = Utils::Clamp(mAction[i], -0.02, 0.02);
+			else
+				mAction[i] = Utils::Clamp(mAction[i], -1.0, 1.0);
 		}
 	}
 
 	double timeStep = (double)mNumSteps*mWorld->getTimeStep();
+	mTemporalDisplacement = timeStep * exp(mAction[pd_dof+sp_dof]);
+
+	double cur_time = mAdaptiveTime;
+	double next_time = mAdaptiveTime + mTemporalDisplacement;
+	Eigen::VectorXd cur_pos, cur_vel;
+	Eigen::VectorXd next_pos, next_vel;
+	this->GetPosAndVel(cur_time, cur_pos, cur_vel);
+	this->GetPosAndVel(next_time, next_pos, next_vel);
+
+	Eigen::VectorXd delta_pos = next_pos - cur_pos;
+	delta_pos.segment(0, sp_dof) += mAction.segment(pd_dof, sp_dof);
+
+	mTargetPositions += delta_pos;
+	mTargetVelocities = next_vel;
+
+	this->GetPosAndVel(mWorld->getTime()+timeStep, mReferencePositions, mReferenceVelocities);
+}
+
+void
+Character::
+SetActionImitationLearning(const Eigen::VectorXd& a)
+{
+	int pd_dof = mNumActiveDof;
+	double pd_scale = 0.1;
+	mAction.segment(0,pd_dof) = a.segment(0,pd_dof) * pd_scale;
+
+	double t = mWorld->getTime();
+	double timeStep = (double)mNumSteps*mWorld->getTimeStep();
+	this->GetPosAndVel(t+timeStep, mTargetPositions, mTargetVelocities);
+}
+
+void
+Character::
+SetAction(const Eigen::VectorXd& a)
+{
+	mAction_prev = mAction;
+
 	if(mAdaptiveMotion)
-	{
-		if(mAdaptiveLowerBody)
-			mTemporalDisplacement = timeStep * exp(mAction[pd_dof+24]);
-		else
-			mTemporalDisplacement = timeStep * exp(mAction[pd_dof+56]);
-
-		double cur_time = mAdaptiveTime;
-		double next_time = mAdaptiveTime + mTemporalDisplacement;
-		Eigen::VectorXd cur_pos, cur_vel;
-		Eigen::VectorXd next_pos, next_vel;
-		this->GetPosAndVel(cur_time, cur_pos, cur_vel);
-		this->GetPosAndVel(next_time, next_pos, next_vel);
-
-		Eigen::VectorXd delta_pos = next_pos - cur_pos;
-		delta_pos.segment(0, mNumAdaptiveSpatialDof) += mAction.segment(mNumActiveDof, mNumAdaptiveSpatialDof);
-
-		mTargetPositions += delta_pos;
-		mTargetVelocities = next_vel;
-
-		this->GetPosAndVel(mWorld->getTime()+timeStep, mReferencePositions, mReferenceVelocities);
-	}
+		this->SetActionAdaptiveMotion(a);
 	else
-	{
-		this->GetPosAndVel(t+timeStep, mTargetPositions, mTargetVelocities);
-	}
+		this->SetActionImitationLearning(a);
 
 	mStepCnt = 0;
 }
