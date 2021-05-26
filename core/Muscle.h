@@ -129,8 +129,8 @@ private:
 	double mMetabolicEnergyRate_BHAR04;
 	double mMetabolicEnergyRate_HOUD06;
 
-	double vcemax = 0.0;
-	double vcemin = 0.0;
+	double vcemax;
+	double vcemin;
 };
 
 }

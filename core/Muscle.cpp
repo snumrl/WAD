@@ -49,6 +49,8 @@ Muscle(std::string name,double _f0,double _lm0,double _lt0,double _pen_angle,dou
 	l_m_prev = l_m;
 	f0_default = f0;
 
+	vcemax = 0.0;
+	vcemin = 0.0;
 }
 
 Muscle::
