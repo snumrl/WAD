@@ -1,53 +1,6 @@
 #include "Window.h"
-#include "Environment.h"
-#include "Character.h"
-#include "Device.h"
-#include "BVH.h"
-#include "Utils.h"
-#include "Muscle.h"
 #include <iostream>
-#include <fstream>
-#include <deque>
 #include <ctime>
-using namespace MASS;
-using namespace dart;
-using namespace dart::dynamics;
-using namespace dart::simulation;
-using namespace dart::gui;
-using namespace std;
-Eigen::Matrix3d
-R_x(double x)
-{
-	double cosa = cos(x*3.141592/180.0);
-	double sina = sin(x*3.141592/180.0);
-	Eigen::Matrix3d R;
-	R<< 1,0     ,0    ,
-		0,cosa  ,-sina,
-		0,sina  ,cosa ;
-	return R;
-}
-
-Eigen::Matrix3d R_y(double y)
-{
-	double cosa = cos(y*3.141592/180.0);
-	double sina = sin(y*3.141592/180.0);
-	Eigen::Matrix3d R;
-	R <<cosa ,0,sina,
-		0    ,1,   0,
-		-sina,0,cosa;
-	return R;
-}
-
-Eigen::Matrix3d R_z(double z)
-{
-	double cosa = cos(z*3.141592/180.0);
-	double sina = sin(z*3.141592/180.0);
-	Eigen::Matrix3d R;
-	R<< cosa,-sina,0,
-		sina,cosa ,0,
-		0   ,0    ,1;
-	return R;
-}
 
 Eigen::Vector4d white(0.9, 0.9, 0.9, 1.0);
 Eigen::Vector4d black(0.1, 0.1, 0.1, 1.0);
@@ -67,9 +20,12 @@ Eigen::Vector4d blue_trans(0.2, 0.2, 0.8, 0.2);
 Eigen::Vector4d yellow_trans(0.8, 0.8, 0.2, 0.2);
 Eigen::Vector4d purple_trans(0.8, 0.2, 0.8, 0.2);
 
+namespace MASS
+{
+
 Window::
 Window(Environment* env)
-	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mDevice_On(false),isDrawCharacter(false),isDrawTarget(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mMetabolicEnergyMode(0),mJointTorqueMode(0),mJointAngleMode(0),mCharacterMode(0),mParamMode(0),mViewMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false), mDisplayIter(0)
+	:mEnv(env),mFocus(true),mSimulating(false),mDrawCharacter(true),mDrawTarget(false),mDrawReference(false),mDrawOBJ(false),mDrawShadow(true),mMuscleNNLoaded(false),mDeviceNNLoaded(false),mDevice_On(false),isDrawCharacter(false),isDrawTarget(false),isDrawReference(false),isDrawDevice(false),mDrawArrow(false),mDrawGraph(false),mMetabolicEnergyMode(0),mJointTorqueMode(0),mJointAngleMode(0),mCharacterMode(0),mParamMode(0),mViewMode(0),mDrawParameter(true),mTalusL(false),mTalusR(false), mDisplayIter(0)
 {
 	mBackground[0] = 0.96;
 	mBackground[1] = 0.96;
@@ -82,19 +38,20 @@ Window(Environment* env)
 	mFootinterval.resize(20);
 	mDisplayTimeout = 1000 / 60.0;
 
-	mm = p::import("__main__");
+	mm = py::module::import("__main__");
 	mns = mm.attr("__dict__");
-	sys_module = p::import("sys");
-	p::str module_dir = (std::string(MASS_ROOT_DIR)+"/python").c_str();
+
+	py::str module_dir = (std::string(MASS_ROOT_DIR)+"/python").c_str();
+	sys_module = py::module::import("sys");
 	sys_module.attr("path").attr("insert")(1, module_dir);
-	p::exec("import torch",mns);
-	p::exec("import torch.nn as nn",mns);
-	p::exec("import torch.optim as optim",mns);
-	p::exec("import torch.nn.functional as F",mns);
-	p::exec("import torchvision.transforms as T",mns);
-	p::exec("import numpy as np",mns);
-	p::exec("from Model import *",mns);
-	p::exec("from RunningMeanStd import *",mns);
+	py::exec("import torch",mns);
+	py::exec("import torch.nn as nn",mns);
+	py::exec("import torch.optim as optim",mns);
+	py::exec("import torch.nn.functional as F",mns);
+	py::exec("import torchvision.transforms as T",mns);
+	py::exec("import numpy as np",mns);
+	py::exec("from Model import *",mns);
+	py::exec("from RunningMeanStd import *",mns);
 }
 
 Window::
@@ -103,18 +60,18 @@ Window(Environment* env, const std::string& nn_path)
 {
 	mNNLoaded = true;
 
-	boost::python::str str;
+	py::str str;
 	str = ("num_state = "+std::to_string(mEnv->GetCharacter()->GetNumState())).c_str();
-	p::exec(str, mns);
+	py::exec(str, mns);
 	str = ("num_action = "+std::to_string(mEnv->GetCharacter()->GetNumAction())).c_str();
-	p::exec(str, mns);
+	py::exec(str, mns);
 
-	nn_module = p::eval("SimulationNN(num_state,num_action)", mns);
-	p::object load = nn_module.attr("load");
+	nn_module = py::eval("SimulationNN(num_state,num_action)", mns);
+	py::object load = nn_module.attr("load");
 	load(nn_path);
 
-	rms_module = p::eval("RunningMeanStd()", mns);
-	p::object load_rms = rms_module.attr("load2");
+	rms_module = py::eval("RunningMeanStd()", mns);
+	py::object load_rms = rms_module.attr("load2");
 	load_rms(nn_path);
 
 }
@@ -147,20 +104,20 @@ LoadMuscleNN(const std::string& muscle_nn_path)
 {
 	mMuscleNNLoaded = true;
 
-	boost::python::str str;
+	py::str str;
 	str = ("num_total_muscle_related_dofs = "+std::to_string(mEnv->GetCharacter()->GetNumTotalRelatedDofs())).c_str();
-	p::exec(str,mns);
-	str = ("num_actions = "+std::to_string(mEnv->GetCharacter()->GetNumAction())).c_str();
-	p::exec(str,mns);
+	py::exec(str,mns);
+	str = ("num_actions = "+std::to_string(mEnv->GetCharacter()->GetNumActiveDof())).c_str();
+	py::exec(str,mns);
 	str = ("num_muscles = "+std::to_string(mEnv->GetCharacter()->GetNumMuscles())).c_str();
-	p::exec(str,mns);
+	py::exec(str,mns);
 
 	mMuscleNum = mEnv->GetCharacter()->GetNumMuscles();
 	mMuscleMapNum = mEnv->GetCharacter()->GetNumMusclesMap();
 
-	muscle_nn_module = p::eval("MuscleNN(num_total_muscle_related_dofs,num_actions,num_muscles)",mns);
+	muscle_nn_module = py::eval("MuscleNN(num_total_muscle_related_dofs,num_actions,num_muscles)",mns);
 
-	p::object load = muscle_nn_module.attr("load");
+	py::object load = muscle_nn_module.attr("load");
 	load(muscle_nn_path);
 }
 
@@ -171,15 +128,15 @@ LoadDeviceNN(const std::string& device_nn_path)
 	mDeviceNNLoaded = true;
 	mDevice_On = true;
 
-	boost::python::str str;
+	py::str str;
 	str = ("num_state_device = "+std::to_string(mEnv->GetCharacter()->GetDevice()->GetNumState())).c_str();
-	p::exec(str,mns);
+	py::exec(str,mns);
 	str = ("num_action_device = "+std::to_string(mEnv->GetCharacter()->GetDevice()->GetNumAction())).c_str();
-	p::exec(str,mns);
+	py::exec(str,mns);
 
-	device_nn_module = p::eval("SimulationNN(num_state_device,num_action_device)",mns);
+	device_nn_module = py::eval("SimulationNN(num_state_device,num_action_device)",mns);
 
-	p::object load = device_nn_module.attr("load");
+	py::object load = device_nn_module.attr("load");
 	load(device_nn_path);
 }
 
@@ -362,52 +319,83 @@ WriteJointAngle()
 
 void
 Window::
+WriteJointTorque()
+{
+	if(!isOpenFile)
+	{
+		mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+		auto& torquesNorm = mJointDatas->GetTorquesNorm();
+		for(auto iter = torquesNorm.begin(); iter != torquesNorm.end(); iter++)
+			mFile << " " + iter->first;
+	}
+	else
+	{
+		mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+		auto& torquesNorm = mJointDatas->GetTorquesNorm();
+		for(auto iter = torquesNorm.begin(); iter != torquesNorm.end(); iter++)
+			mFile << " " + std::to_string((iter->second).at(0));
+	}
+}
+
+void
+Window::
+WriteFileName()
+{
+	time_t now = std::time(0);
+	tm* ltm = std::localtime(&now);
+
+	std::string month = std::to_string(ltm->tm_mon);
+	if(ltm->tm_mon < 10)
+		month = "0"+month;
+
+	std::string day = std::to_string(ltm->tm_mday);
+	if(ltm->tm_mday < 10)
+		day = "0"+day;
+
+	std::string hour = std::to_string(ltm->tm_hour);
+	if(ltm->tm_hour < 10)
+		hour = "0" + hour;
+
+	std::string min = std::to_string(ltm->tm_min);
+	if(ltm->tm_min < 10)
+		min = "0" + min;
+
+	mFileName = month + day + "_" + hour + min;
+}
+
+void
+Window::
 Write()
 {
 	if(mWriteFile)
 	{
 		if(!isOpenFile)
 		{
-			time_t now = std::time(0);
-			tm* ltm = std::localtime(&now);
+			this->WriteFileName();
 
-			std::string month = std::to_string(ltm->tm_mon);
-			if(ltm->tm_mon < 10)
-				month = "0"+month;
-
-			std::string day = std::to_string(ltm->tm_mday);
-			if(ltm->tm_mday < 10)
-				day = "0"+day;
-
-			std::string hour = std::to_string(ltm->tm_hour);
-			if(ltm->tm_hour < 10)
-				hour = "0" + hour;
-
-			std::string min = std::to_string(ltm->tm_min);
-			if(ltm->tm_min < 10)
-				min = "0" + min;
-
-			mFileName = month + day + "_" + hour + min;
 			mFile.open(mFileName);
 			if(mFile.is_open())
 				std::cout << mFileName << " open" << std::endl;
 
-			mFile << "Time Frame";
-			this->WriteMetaE();
-			this->WriteJointAngle();
+			mFile << "Time Frame AdtFrame";
+			// this->WriteMetaE();
+			// this->WriteJointAngle();
+			this->WriteJointTorque();
 
 			isOpenFile = true;
 		}
 
 		if(isOpenFile)
 		{
-			double t = mEnv->GetWorld()->getTime();
-			double f = mEnv->GetCharacter()->GetCurFrame();
+			double t = (mEnv->GetWorld()->getTime());
+			double f = mEnv->GetCharacter()->GetFrame();
+			double af = mEnv->GetCharacter()->GetAdaptiveFrame();
 			mFile << "\n";
-			mFile << std::to_string(t) + " " + std::to_string(f);
+			mFile << std::to_string(t) + " " + std::to_string(f) + " " + std::to_string(af);
 
-			this->WriteMetaE();
-			this->WriteJointAngle();
+			// this->WriteMetaE();
+			// this->WriteJointAngle();
+			this->WriteJointTorque();
 		}
 	}
 	else
@@ -417,89 +405,232 @@ Write()
 			mFile.close();
 			std::cout << mFileName << " close" << std::endl;
 
-			mFileName += "_avg";
-			mFile.open(mFileName);
-			if(mFile.is_open())
-				std::cout << mFileName << " open" << std::endl;
+			// mFileName += "_avg";
+			// mFile.open(mFileName);
+			// if(mFile.is_open())
+			// 	std::cout << mFileName << " open" << std::endl;
 
-			mFile << "Frame";
-			mJointDatas = mEnv->GetCharacter()->GetJointDatas();
-			auto& anglesByFrame = mJointDatas->GetAnglesByFrame();
-			std::map<std::string, std::vector<double>> avgMap;
-			for(auto iter = anglesByFrame.begin(); iter != anglesByFrame.end(); iter++)
-			{
-				if(iter->first == "FemurR_transverse" || iter->first == "FemurR_sagittal" || iter->first == "FemurR_frontal" || iter->first == "TibiaR_transverse" || iter->first == "TibiaR_sagittal" || iter->first == "TibiaR_frontal" || iter->first == "TalusR_transverse" || iter->first == "TalusR_sagittal" || iter->first == "TalusR_frontal")
-				{
-					mFile << " " + iter->first;
-					std::vector<double> avg;
-					for(int i=0; i<(iter->second).size(); i++)
-					{
-						double sum = 0.0;
-						for(int j=0; j<(iter->second).at(i).size(); j++)
-							sum += (iter->second).at(i).at(j);
-						avg.push_back(sum/(double)(iter->second).at(i).size());
-					}
+			// mFile << "Frame";
+			// mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+			// auto& anglesByFrame = mJointDatas->GetAnglesByFrame();
+			// std::map<std::string, std::vector<double>> avgMap;
+			// for(auto iter = anglesByFrame.begin(); iter != anglesByFrame.end(); iter++)
+			// {
+			// 	if(iter->first == "FemurR_transverse" || iter->first == "FemurR_sagittal" || iter->first == "FemurR_frontal" || iter->first == "TibiaR_transverse" || iter->first == "TibiaR_sagittal" || iter->first == "TibiaR_frontal" || iter->first == "TalusR_transverse" || iter->first == "TalusR_sagittal" || iter->first == "TalusR_frontal")
+			// 	{
+			// 		mFile << " " + iter->first;
+			// 		std::vector<double> avg;
+			// 		for(int i=0; i<(iter->second).size(); i++)
+			// 		{
+			// 			double sum = 0.0;
+			// 			for(int j=0; j<(iter->second).at(i).size(); j++)
+			// 				sum += (iter->second).at(i).at(j);
+			// 			avg.push_back(sum/(double)(iter->second).at(i).size());
+			// 		}
 
-					avgMap[iter->first] = avg;
-				}
-			}
+			// 		avgMap[iter->first] = avg;
+			// 	}
+			// }
 
-			mFile << " metaE";
-			mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
-			std::vector<double> avgMap2;
-			auto& HOUD06_ByFrame = mMetabolicEnergy->GetHOUD06_ByFrame();
-			for(int i=0; i<HOUD06_ByFrame.size(); i++)
-			{
-				double sum = 0.0;
-				for(int j=0; j<HOUD06_ByFrame.at(i).size(); j++)
-				{
-					sum += HOUD06_ByFrame.at(i).at(j);
-				}
-				avgMap2.push_back(sum/(double)HOUD06_ByFrame.at(i).size());
-			}
+			// mFile << " TorqueFrame torqueNorm";
+			// mFile << " metaE";
+			// mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
+			// std::vector<double> avgMap2;
+			// auto& HOUD06_ByFrame = mMetabolicEnergy->GetHOUD06_ByFrame();
+			// for(int i=0; i<HOUD06_ByFrame.size(); i++)
+			// {
+			// 	double sum = 0.0;
+			// 	for(int j=0; j<HOUD06_ByFrame.at(i).size(); j++)
+			// 	{
+			// 		sum += HOUD06_ByFrame.at(i).at(j);
+			// 	}
+			// 	avgMap2.push_back(sum/(double)HOUD06_ByFrame.at(i).size());
+			// }
 
-			auto& HOUD06_mapByFrame = mMetabolicEnergy->GetHOUD06_mapByFrame();
-			std::map<std::string, std::vector<double>> avgMap3;
-			for(auto iter = HOUD06_mapByFrame.begin(); iter != HOUD06_mapByFrame.end(); iter++)
-			{
-				mFile << " " + iter->first;
-				std::vector<double> avg;
-				for(int i=0; i<(iter->second).size(); i++)
-				{
-					double sum = 0.0;
-					for(int j=0; j<(iter->second).at(i).size(); j++)
-						sum += (iter->second).at(i).at(j);
-					avg.push_back(sum/(double)(iter->second).at(i).size());
-				}
-				avgMap3[iter->first] = avg;
-			}
+			// auto& HOUD06_mapByFrame = mMetabolicEnergy->GetHOUD06_mapByFrame();
+			// std::map<std::string, std::vector<double>> avgMap3;
+			// for(auto iter = HOUD06_mapByFrame.begin(); iter != HOUD06_mapByFrame.end(); iter++)
+			// {
+			// 	mFile << " " + iter->first;
+			// 	std::vector<double> avg;
+			// 	for(int i=0; i<(iter->second).size(); i++)
+			// 	{
+			// 		double sum = 0.0;
+			// 		for(int j=0; j<(iter->second).at(i).size(); j++)
+			// 			sum += (iter->second).at(i).at(j);
+			// 		avg.push_back(sum/(double)(iter->second).at(i).size());
+			// 	}
+			// 	avgMap3[iter->first] = avg;
+			// }
 
-			for(int i=0; i<34; i++)
-			{
-				mFile << "\n";
-				mFile << std::to_string(i);
-				for(auto iter = anglesByFrame.begin(); iter != anglesByFrame.end(); iter++)
-				{
-					if(iter->first == "FemurR_transverse" || iter->first == "FemurR_sagittal" || iter->first == "FemurR_frontal" || iter->first == "TibiaR_transverse" || iter->first == "TibiaR_sagittal" || iter->first == "TibiaR_frontal" || iter->first == "TalusR_transverse" || iter->first == "TalusR_sagittal" || iter->first == "TalusR_frontal")
-					{
-						mFile << " " + std::to_string(avgMap[iter->first].at(i)*180.0/M_PI);
-					}
-				}
+			// mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+			// std::deque<double> torquesNormCycle = mJointDatas->GetTorquesNormCycle();
+			// std::deque<int> torquesFrame = mJointDatas->GetTorquesFrame();
 
-				mFile << " " + std::to_string(avgMap2.at(i));
+			// for(int i=0; i<34; i++)
+			// {
+			// 	mFile << "\n";
+			// 	mFile << std::to_string(i);
+			// 	for(auto iter = anglesByFrame.begin(); iter != anglesByFrame.end(); iter++)
+			// 	{
+			// 		if(iter->first == "FemurR_transverse" || iter->first == "FemurR_sagittal" || iter->first == "FemurR_frontal" || iter->first == "TibiaR_transverse" || iter->first == "TibiaR_sagittal" || iter->first == "TibiaR_frontal" || iter->first == "TalusR_transverse" || iter->first == "TalusR_sagittal" || iter->first == "TalusR_frontal")
+			// 		{
+			// 			mFile << " " + std::to_string(avgMap[iter->first].at(i)*180.0/M_PI);
+			// 		}
+			// 	}
 
-				for(auto iter = HOUD06_mapByFrame.begin(); iter != HOUD06_mapByFrame.end(); iter++)
-				{
-					mFile << " "+ std::to_string(avgMap3[iter->first].at(i));
-				}
-			}
-			mFile.close();
-			std::cout << mFileName << " close" << std::endl;
+			// 	mFile << " " + std::to_string(torquesFrame.at(i));
+			// 	mFile << " " + std::to_string(torquesNormCycle.at(i));
+
+			// 	mFile << " " + std::to_string(avgMap2.at(i));
+
+			// 	for(auto iter = HOUD06_mapByFrame.begin(); iter != HOUD06_mapByFrame.end(); iter++)
+			// 	{
+			// 		mFile << " "+ std::to_string(avgMap3[iter->first].at(i));
+			// 	}
+			// }
+			// mFile.close();
+			// std::cout << mFileName << " close" << std::endl;
 
 			isOpenFile = false;
 		}
 	}
 }
+
+
+
+// void
+// Window::
+// Write()
+// {
+// 	if(mWriteFile)
+// 	{
+// 		if(!isOpenFile)
+// 		{
+// 			this->WriteFileName();
+
+// 			mFile.open(mFileName);
+// 			if(mFile.is_open())
+// 				std::cout << mFileName << " open" << std::endl;
+
+// 			mFile << "Time Frame AdtFrame";
+// 			this->WriteMetaE();
+// 			this->WriteJointAngle();
+// 			// this->WriteJointTorque();
+
+// 			isOpenFile = true;
+// 		}
+
+// 		if(isOpenFile)
+// 		{
+// 			double t = mEnv->GetWorld()->getTime();
+// 			double f = mEnv->GetCharacter()->GetFrame();
+// 			double af = mEnv->GetCharacter()->GetAdaptiveFrame();
+// 			mFile << "\n";
+// 			mFile << std::to_string(t) + " " + std::to_string(f) + " " + std::to_string(af);
+
+// 			this->WriteMetaE();
+// 			this->WriteJointAngle();
+// 		}
+// 	}
+// 	else
+// 	{
+// 		if(isOpenFile)
+// 		{
+// 			mFile.close();
+// 			std::cout << mFileName << " close" << std::endl;
+
+// 			mFileName += "_avg";
+// 			mFile.open(mFileName);
+// 			if(mFile.is_open())
+// 				std::cout << mFileName << " open" << std::endl;
+
+// 			mFile << "Frame";
+// 			mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+// 			auto& anglesByFrame = mJointDatas->GetAnglesByFrame();
+// 			std::map<std::string, std::vector<double>> avgMap;
+// 			for(auto iter = anglesByFrame.begin(); iter != anglesByFrame.end(); iter++)
+// 			{
+// 				if(iter->first == "FemurR_transverse" || iter->first == "FemurR_sagittal" || iter->first == "FemurR_frontal" || iter->first == "TibiaR_transverse" || iter->first == "TibiaR_sagittal" || iter->first == "TibiaR_frontal" || iter->first == "TalusR_transverse" || iter->first == "TalusR_sagittal" || iter->first == "TalusR_frontal")
+// 				{
+// 					mFile << " " + iter->first;
+// 					std::vector<double> avg;
+// 					for(int i=0; i<(iter->second).size(); i++)
+// 					{
+// 						double sum = 0.0;
+// 						for(int j=0; j<(iter->second).at(i).size(); j++)
+// 							sum += (iter->second).at(i).at(j);
+// 						avg.push_back(sum/(double)(iter->second).at(i).size());
+// 					}
+
+// 					avgMap[iter->first] = avg;
+// 				}
+// 			}
+
+// 			mFile << " TorqueFrame torqueNorm";
+// 			mFile << " metaE";
+// 			mMetabolicEnergy = mEnv->GetCharacter()->GetMetabolicEnergy();
+// 			std::vector<double> avgMap2;
+// 			auto& HOUD06_ByFrame = mMetabolicEnergy->GetHOUD06_ByFrame();
+// 			for(int i=0; i<HOUD06_ByFrame.size(); i++)
+// 			{
+// 				double sum = 0.0;
+// 				for(int j=0; j<HOUD06_ByFrame.at(i).size(); j++)
+// 				{
+// 					sum += HOUD06_ByFrame.at(i).at(j);
+// 				}
+// 				avgMap2.push_back(sum/(double)HOUD06_ByFrame.at(i).size());
+// 			}
+
+// 			auto& HOUD06_mapByFrame = mMetabolicEnergy->GetHOUD06_mapByFrame();
+// 			std::map<std::string, std::vector<double>> avgMap3;
+// 			for(auto iter = HOUD06_mapByFrame.begin(); iter != HOUD06_mapByFrame.end(); iter++)
+// 			{
+// 				mFile << " " + iter->first;
+// 				std::vector<double> avg;
+// 				for(int i=0; i<(iter->second).size(); i++)
+// 				{
+// 					double sum = 0.0;
+// 					for(int j=0; j<(iter->second).at(i).size(); j++)
+// 						sum += (iter->second).at(i).at(j);
+// 					avg.push_back(sum/(double)(iter->second).at(i).size());
+// 				}
+// 				avgMap3[iter->first] = avg;
+// 			}
+
+// 			mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+// 			std::deque<double> torquesNormCycle = mJointDatas->GetTorquesNormCycle();
+// 			std::deque<int> torquesFrame = mJointDatas->GetTorquesFrame();
+
+// 			for(int i=0; i<34; i++)
+// 			{
+// 				mFile << "\n";
+// 				mFile << std::to_string(i);
+// 				for(auto iter = anglesByFrame.begin(); iter != anglesByFrame.end(); iter++)
+// 				{
+// 					if(iter->first == "FemurR_transverse" || iter->first == "FemurR_sagittal" || iter->first == "FemurR_frontal" || iter->first == "TibiaR_transverse" || iter->first == "TibiaR_sagittal" || iter->first == "TibiaR_frontal" || iter->first == "TalusR_transverse" || iter->first == "TalusR_sagittal" || iter->first == "TalusR_frontal")
+// 					{
+// 						mFile << " " + std::to_string(avgMap[iter->first].at(i)*180.0/M_PI);
+// 					}
+// 				}
+
+// 				mFile << " " + std::to_string(torquesFrame.at(i));
+// 				mFile << " " + std::to_string(torquesNormCycle.at(i));
+
+// 				mFile << " " + std::to_string(avgMap2.at(i));
+
+// 				for(auto iter = HOUD06_mapByFrame.begin(); iter != HOUD06_mapByFrame.end(); iter++)
+// 				{
+// 					mFile << " "+ std::to_string(avgMap3[iter->first].at(i));
+// 				}
+// 			}
+// 			mFile.close();
+// 			std::cout << mFileName << " close" << std::endl;
+
+// 			isOpenFile = false;
+// 		}
+// 	}
+// }
 
 void
 Window::
@@ -524,6 +655,7 @@ keyboard(unsigned char _key, int _x, int _y)
 	case 'g': mDrawGraph = !mDrawGraph;break;
 	case 'a': mDrawArrow = !mDrawArrow;break;
 	case 't': mDrawTarget = !mDrawTarget;break;
+	case 'T': mDrawReference = !mDrawReference;break;
 	case ' ': mSimulating = !mSimulating;break;
 	case 'c': mDrawCharacter = !mDrawCharacter;break;
 	case 'p': mDrawParameter = !mDrawParameter;break;
@@ -596,7 +728,7 @@ Step()
 		if(mDeviceNNLoaded)
 			mEnv->GetDevice()->SetAction(action_device);
 
-		this->Write();
+		// this->Write();
 		mDisplayIter = 0;
 	}
 
@@ -612,8 +744,10 @@ Step()
 	}
 	else
 	{
-		for(int i=0; i<num; i++)
+		for(int i=0; i<num; i++){
+			this->Write();
 			mEnv->Step(mDevice_On, true);
+		}
 	}
 
 	mEnv->GetReward();
@@ -756,7 +890,7 @@ DrawContactForce()
 			Eigen::Vector3d p = ((iter->second).at(i)).second;
 			double norm = f.norm();
 			if(norm != 0)
-				drawArrow3D(p, f/norm, norm, 0.005, 0.015);
+				dart::gui::drawArrow3D(p, f/norm, norm, 0.005, 0.015);
 		}
 	}
 
@@ -811,11 +945,17 @@ DrawTime()
 	DrawGLBegin();
 
 	double t = mEnv->GetWorld()->getTime();
-	double f = mEnv->GetCharacter()->GetCurFrame();
+	t -= 1.0/(double)(2.0*mEnv->GetControlHz());
+	if(t<0)
+		t = 0.0;
+	double f = mEnv->GetCharacter()->GetFrame();
 	double p = mEnv->GetCharacter()->GetPhase();
+	double af = mEnv->GetCharacter()->GetAdaptiveFrame();
+	double ap = mEnv->GetCharacter()->GetAdaptivePhase();
 	bool big = true;
 	DrawString(0.47, 0.93, big, "Time : " + std::to_string(t) + " s");
-	DrawString(0.47, 0.90, big, "Frame : " + std::to_string(f) + ", " + std::to_string(p));
+	DrawString(0.44, 0.90, big, "Ref Phase : " + std::to_string(p));
+	DrawString(0.44, 0.87, big, "Adt Phase : " + std::to_string(ap));
 
 	DrawGLEnd();
 }
@@ -941,22 +1081,26 @@ DrawCharacter()
 	if(mDrawTarget)
 		DrawTarget();
 
+	if(mDrawReference)
+		DrawReference();
+
 	if(mDrawGraph){
-		if(mEnv->GetUseMuscle())
-			this->DrawMetabolicEnergy_();
-		else if(mEnv->GetUseDevice())
-			this->DrawFemurSignals();
+		// if(mEnv->GetUseMuscle())
+		// 	this->DrawMetabolicEnergy_();
+		// else if(mEnv->GetUseDevice())
+		// 	this->DrawFemurSignals();
 
 		// this->DrawJointAngles();
 		this->DrawReward();
 
-		// if(mEnv->GetUseMuscle())
-		this->DrawMetabolicEnergys();
+		if(mEnv->GetUseMuscle())
+			this->DrawMetabolicEnergys();
 		// else
 		// this->DrawJointTorques();
 	}
 	else{
-		// this->DrawVelocity();
+		this->DrawVelocity();
+
 		// this->DrawCoT();
 		// this->DrawContactForce();
 		// this->DrawMetabolicEnergy();
@@ -1016,6 +1160,8 @@ DrawShapeFrame(const ShapeFrame* sf)
 		mColor << 0.75, 0.75, 0.75, 1.0;
 	if(isDrawTarget)
 		mColor << 1.0, 0.6, 0.6, 0.3;
+	if(isDrawReference)
+		mColor << 0.6, 1.0, 0.6, 0.3;
 	if(isDrawDevice)
 		mColor << 0.3, 0.3, 0.3, 1.0;
 	DrawShape(sf->getShape().get(), mColor);
@@ -1229,6 +1375,26 @@ DrawTarget()
 	skeleton->setPositions(cur_pos);
 
 	isDrawTarget = false;
+}
+
+void
+Window::
+DrawReference()
+{
+	isDrawReference = true;
+
+	Character* character = mEnv->GetCharacter();
+	SkeletonPtr skeleton = character->GetSkeleton();
+
+	Eigen::VectorXd cur_pos = skeleton->getPositions();
+
+	skeleton->setPositions(character->GetReferencePositions());
+	// skeleton->setPositions(character->GetReferenceOriginalPositions());
+	DrawBodyNode(skeleton->getRootBodyNode());
+
+	skeleton->setPositions(cur_pos);
+
+	isDrawReference = false;
 }
 
 void
@@ -1576,22 +1742,22 @@ DrawReward()
 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, imit, green);
 
 	y = 0.25;
+	std::deque<double> effi = map["effi"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "effi");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, effi);
+	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, effi, green);
+
+	y = 0.13;
 	std::deque<double> min = map["min"];
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "min");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, min);
 	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
-	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, min, green);
-
-	y = 0.13;
-	std::deque<double> contact = map["contact"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "contact");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, contact);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	y = 0.01;
-	std::deque<double> smooth = map["smooth"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "smooth");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, smooth);
+	std::deque<double> reg = map["reg"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "reg");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, reg);
 	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	x = 0.85;
@@ -1624,6 +1790,17 @@ DrawReward()
 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "com");
 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, com);
 	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+
+	// std::deque<double> contact = map["contact"];
+	// DrawBaseGraph(x, y, w, h, ratio_y, offset, "contact");
+	// DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, contact);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+
+	// y = 0.01;
+	// std::deque<double> smooth = map["smooth"];
+	// DrawBaseGraph(x, y, w, h, ratio_y, offset, "smooth");
+	// DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, smooth);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	DrawGLEnd();
 }
@@ -1692,9 +1869,9 @@ DrawArrow()
 	dir_L2[2] *= -1;
 
 	if(f[6] < 0)
-		drawArrow3D(p_L, dir_L2,-0.04*f[6], 0.01, 0.03);
+		dart::gui::drawArrow3D(p_L, dir_L2,-0.04*f[6], 0.01, 0.03);
 	else
-		drawArrow3D(p_L, dir_L1, 0.04*f[6], 0.01, 0.03);
+		dart::gui::drawArrow3D(p_L, dir_L1, 0.04*f[6], 0.01, 0.03);
 
 	Eigen::Isometry3d trans_R = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurR")->getTransform();
 	Eigen::Vector3d p_R = trans_R.translation();
@@ -1704,9 +1881,9 @@ DrawArrow()
 	dir_R2[2] *= -1;
 
 	if(f[7] < 0)
-		drawArrow3D(p_R, dir_R2,-0.04*f[7], 0.015, 0.03);
+		dart::gui::drawArrow3D(p_R, dir_R2,-0.04*f[7], 0.015, 0.03);
 	else
-		drawArrow3D(p_R, dir_R1, 0.04*f[7], 0.015, 0.03);
+		dart::gui::drawArrow3D(p_R, dir_R1, 0.04*f[7], 0.015, 0.03);
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_COLOR_MATERIAL);
@@ -2157,21 +2334,22 @@ Eigen::VectorXd
 Window::
 GetActionFromNN_Device()
 {
-	p::object get_action_device;
-	get_action_device = device_nn_module.attr("get_action");
 	Eigen::VectorXd state = mEnv->GetCharacter()->GetDevice()->GetState();
-	p::tuple shape = p::make_tuple(state.rows());
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray state_np = np::empty(shape,dtype);
+	py::array_t<float> state_np = py::array_t<float>(state.rows());
+	py::buffer_info state_buf = state_np.request(true);
+	float* dest = reinterpret_cast<float*>(state_buf.ptr);
 
-	float* dest = reinterpret_cast<float*>(state_np.get_data());
 	for(int i =0;i<state.rows();i++)
 		dest[i] = state[i];
 
-	p::object temp = get_action_device(state_np);
-	np::ndarray action_np = np::from_object(temp);
+	py::object get_action_device;
+	get_action_device = device_nn_module.attr("get_action");
 
-	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+	py::object temp = get_action_device(state_np);
+	py::array_t<float> action_np = py::array_t<float>(temp);
+
+	py::buffer_info action_buf = action_np.request(true);
+	float* srcs = reinterpret_cast<float*>(action_buf.ptr);
 
 	Eigen::VectorXd action(mEnv->GetCharacter()->GetDevice()->GetNumAction());
 	for(int i=0;i<action.rows();i++)
@@ -2180,16 +2358,17 @@ GetActionFromNN_Device()
 	return action;
 }
 
-np::ndarray toNumPyArray(const Eigen::VectorXd& vec)
+py::array_t<float> toNumPyArray(const Eigen::VectorXd& vec)
 {
 	int n = vec.rows();
-	p::tuple shape = p::make_tuple(n);
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray array = np::empty(shape,dtype);
+	py::array_t<float> array = py::array_t<float>(n);
 
-	float* dest = reinterpret_cast<float*>(array.get_data());
+	auto array_buf = array.request(true);
+	float* dest = reinterpret_cast<float*>(array_buf.ptr);
 	for(int i =0;i<n;i++)
+	{
 		dest[i] = vec[i];
+	}
 
 	return array;
 }
@@ -2199,24 +2378,25 @@ Window::
 GetActionFromNN()
 {
 	Eigen::VectorXd state = mEnv->GetCharacter()->GetState();
-	p::tuple shape = p::make_tuple(state.rows());
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray state_np = np::empty(shape,dtype);
+	py::array_t<float> state_np = py::array_t<float>(state.rows());
+	py::buffer_info state_buf = state_np.request(true);
+	float* dest = reinterpret_cast<float*>(state_buf.ptr);
 
-	float* dest = reinterpret_cast<float*>(state_np.get_data());
 	for(int i =0;i<state.rows();i++)
 		dest[i] = state[i];
 
-	p::object apply;
+	py::object apply;
 	apply = rms_module.attr("apply_no_update");
-	p::object state_np_tmp = apply(state_np);
-	np::ndarray state_np_ = np::from_object(state_np_tmp);
+	py::object state_np_tmp = apply(state_np);
+	py::array_t<float> state_np_ = py::array_t<float>(state_np_tmp);
 
-	p::object get_action;
+	py::object get_action;
 	get_action = nn_module.attr("get_action");
-	p::object temp = get_action(state_np_);
-	np::ndarray action_np = np::from_object(temp);
-	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+	py::object temp = get_action(state_np_);
+	py::array_t<float> action_np = py::array_t<float>(temp);
+
+	py::buffer_info action_buf = action_np.request(true);
+	float* srcs = reinterpret_cast<float*>(action_buf.ptr);
 
 	Eigen::VectorXd action(mEnv->GetCharacter()->GetNumAction());
 	for(int i=0;i<action.rows();i++)
@@ -2235,19 +2415,21 @@ GetActivationFromNN(const Eigen::VectorXd& mt)
 		return Eigen::VectorXd::Zero(mEnv->GetCharacter()->GetMuscles().size());
 	}
 
-	p::object get_activation = muscle_nn_module.attr("get_activation");
+	py::object get_activation = muscle_nn_module.attr("get_activation");
 	mEnv->GetCharacter()->SetDesiredTorques();
 	Eigen::VectorXd dt = mEnv->GetCharacter()->GetDesiredTorques();
-	np::ndarray mt_np = toNumPyArray(mt);
-	np::ndarray dt_np = toNumPyArray(dt);
-	p::object temp = get_activation(mt_np,dt_np);
-	np::ndarray activation_np = np::from_object(temp);
+	py::array_t<float> mt_np = toNumPyArray(mt);
+	py::array_t<float> dt_np = toNumPyArray(dt);
+	py::array_t<float> activation_np = get_activation(mt_np,dt_np);
+	py::buffer_info activation_np_buf = activation_np.request(false);
+	float* srcs = reinterpret_cast<float*>(activation_np_buf.ptr);
 
 	Eigen::VectorXd activation(mEnv->GetCharacter()->GetMuscles().size());
-	float* srcs = reinterpret_cast<float*>(activation_np.get_data());
 	for(int i=0; i<activation.rows(); i++){
 		activation[i] = srcs[i];
 	}
 
 	return activation;
+}
+
 }

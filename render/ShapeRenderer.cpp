@@ -3,10 +3,11 @@
 //
 
 #include "ShapeRenderer.h"
-
 #include <GL/glew.h>
 #include <assimp/cimport.h>
-// #include "GLfunctions.h"
+
+namespace MASS
+{
 
 std::vector<Eigen::Vector3f> buildCircle(float radius, int steps)
 {
@@ -257,4 +258,6 @@ void ShapeRenderer::renderMeshRecursive(const aiScene* scene, const std::vector<
     }
 
     glPopMatrix();
+}
+
 }

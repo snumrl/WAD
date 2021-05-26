@@ -1,11 +1,17 @@
 #ifndef __MASS_ENVIRONMENT_H__
 #define __MASS_ENVIRONMENT_H__
 #include "dart/dart.hpp"
+#include "dart/collision/bullet/bullet.hpp"
+#include "BVH.h"
 #include "Character.h"
 #include "Muscle.h"
+#include "Device.h"
+#include "DARTHelper.h"
 #include <map>
 #include <deque>
 
+using namespace dart::dynamics;
+using namespace dart::simulation;
 namespace MASS
 {
 
@@ -28,8 +34,9 @@ public:
 
 	Eigen::VectorXd GetState();
 	Eigen::VectorXd GetState_Device();
-	double GetReward();
+	std::pair<double,double> GetReward();
 	std::map<std::string, std::deque<double>> GetRewards();
+	double GetAdaptiveTime();
 
 	int GetNumState();
 	int GetNumState_Char();
@@ -38,6 +45,7 @@ public:
 	int GetNumParamState_Device();
 	int GetNumAction();
 	int GetNumAction_Device();
+	int GetNumActiveDof();
 
 public:
 	void SetWorld();
@@ -45,6 +53,7 @@ public:
 	void SetUseMuscle(bool use_muscle){mUseMuscle = use_muscle;}
 	void SetUseDevice(bool use_device){mUseDevice = use_device;}
 	void SetUseDeviceNN(bool use_device_nn){mUseDeviceNN = use_device_nn;}
+	void SetUseAdaptiveMotion(bool b){mUseAdaptiveMotion = b;}
 	void SetUseAdaptiveSampling(bool b){mUseAdaptiveSampling = b;}
 	void SetControlHz(int con_hz) {mControlHz = con_hz;}
 	void SetSimulationHz(int sim_hz) {mSimulationHz = sim_hz;}
@@ -62,8 +71,8 @@ public:
 	int GetNumSteps(){return mNumSteps;}
 	Character* GetCharacter(){return mCharacter;}
 	Device* GetDevice(){return mDevice;}
-	const dart::dynamics::SkeletonPtr& GetGround(){return mGround;}
-	const dart::simulation::WorldPtr& GetWorld(){return mWorld;}
+	const SkeletonPtr& GetGround(){return mGround;}
+	const WorldPtr& GetWorld(){return mWorld;}
 
 	void SetAdaptiveParamNums();
 	void SetAdaptiveParams();
@@ -75,8 +84,8 @@ public:
 	Eigen::VectorXd GetMaxV();
 
 private:
-	dart::simulation::WorldPtr mWorld;
-	dart::dynamics::SkeletonPtr mGround;
+	WorldPtr mWorld;
+	SkeletonPtr mGround;
 	Character* mCharacter;
 	Device* mDevice;
 
@@ -97,6 +106,7 @@ private:
 	bool mUseMuscle;
 	bool mUseDevice;
 	bool mUseDeviceNN;
+	bool mUseAdaptiveMotion;
 	bool mUseAdaptiveSampling;
 
 	int mNumParamState;
@@ -105,6 +115,6 @@ private:
 	std::map<std::string, std::pair<double, double>> mParam_Character;
 	std::map<std::string, std::pair<double, double>> mParam_Device;
 };
-};
+}
 
 #endif

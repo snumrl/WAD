@@ -1,12 +1,10 @@
 #include "MetabolicEnergy.h"
-#include "Muscle.h"
 
-using namespace dart;
-using namespace dart::dynamics;
-using namespace MASS;
+namespace MASS
+{
 
 MetabolicEnergy::
-MetabolicEnergy(const dart::simulation::WorldPtr& wPtr)
+MetabolicEnergy(const WorldPtr& wPtr)
 {
 	mWorld = wPtr;
 	mLowerBody = false;
@@ -139,9 +137,6 @@ Set(const std::vector<Muscle*>& muscles, Eigen::Vector3d vel, double phase, int 
 
 		if(phase*mCycleFrames >= mCycleFrames-1)
 		{
-			BHAR04_cum = 0;
-			HOUD06_cum = 0;
-
 			if(isTotalFirst){
 				isTotalFirst = false;
 			}
@@ -166,8 +161,14 @@ GetReward()
 	double metabolic_scale = 0.05;
 	double metabolic_err = 0.0;
 
-	metabolic_err = HOUD06_cum/(double)mCycleFrames;
-	double reward = exp(-err_scale * metabolic_scale * metabolic_err);
+	double reward = 0.0;
+	if(HOUD06_cum != 0.0){
+		metabolic_err = HOUD06_cum/(double)mCycleFrames;
+		// reward = 1.0 - exp(-err_scale * metabolic_scale * metabolic_err);
+		reward = exp(-err_scale * metabolic_scale * metabolic_err);
+		HOUD06_cum = 0.0;
+		BHAR04_cum = 0.0;
+	}
 
 	if(isTotalFirst)
 		reward = 0;
@@ -188,4 +189,6 @@ GetCoreName(std::string name)
 	}
 
 	return coreName;
+}
+
 }

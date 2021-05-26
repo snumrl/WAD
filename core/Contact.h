@@ -1,19 +1,22 @@
 #ifndef __MASS_CONTACT_H__
 #define __MASS_CONTACT_H__
+
 #include "dart/dart.hpp"
 #include <deque>
 #include <map>
 
+using namespace dart::dynamics;
+using namespace dart::simulation;
 namespace MASS
 {
 
 class Contact
 {
 public:
-    Contact(const dart::simulation::WorldPtr& wPtr);
+    Contact(const WorldPtr& wPtr);
     ~Contact();
 
-    void Initialize(const dart::dynamics::SkeletonPtr& skel, double m, int steps);
+    void Initialize(const SkeletonPtr& skel, double m, int steps);
     void Clear();
     double GetReward();
 
@@ -30,8 +33,8 @@ public:
     const std::deque<double>& GetContactForceDeque(std::string name){return mContactForceDequeMap[name];}
 
 private:
-    dart::simulation::WorldPtr mWorld;
-    dart::dynamics::SkeletonPtr mSkeleton;
+    WorldPtr mWorld;
+    SkeletonPtr mSkeleton;
     int mWindowSize;
     int mNumSteps;
     double mMass;
@@ -40,6 +43,6 @@ private:
     std::map<std::string, std::deque<double>> mContactForceDequeMap;
 };
 
-};
+}
 
 #endif

@@ -1,16 +1,15 @@
 #include "Device.h"
-#include "DARTHelper.h"
 #include <iostream>
 
-using namespace MASS;
-using namespace dart::dynamics;
+namespace MASS
+{
 
 Device::
-Device(dart::simulation::WorldPtr& wPtr)
+Device(WorldPtr& wPtr)
 :mUseDeviceNN(false),mNumParamState(0)
 {
 	mWorld = wPtr;
-	mDelta_t = 0.25;
+	mDelta_t = 0.3;
 	mK_ = 15.0;
 }
 
@@ -73,7 +72,7 @@ void
 Device::
 Reset()
 {
-	dart::dynamics::SkeletonPtr skel_char = mCharacter->GetSkeleton();
+	SkeletonPtr skel_char = mCharacter->GetSkeleton();
 
 	Eigen::VectorXd p(mNumDof);
 	Eigen::VectorXd v(mNumDof);
@@ -139,7 +138,7 @@ GetState() const
 	// Eigen::VectorXd positions = mSkeleton->getPositions();
 	// Eigen::VectorXd velocities = mSkeleton->getVelocities();
 
-	// dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
+	// BodyNode* root = mSkeleton->getBodyNode(0);
 	// Eigen::Quaterniond rotation(root->getWorldTransform().rotation());
 	// Eigen::Vector3d root_linvel = root->getCOMLinearVelocity();
 	// Eigen::Vector3d root_angvel = root->getAngularVelocity();
@@ -148,17 +147,21 @@ GetState() const
 	// state << rotation.w(), rotation.x(), rotation.y(), rotation.z(),
 	//             root_linvel / 10., root_angvel/10., positions.tail<6>(), velocities.tail<6>()/10.;
 
-	double history_window = 0.1;
-	double history_interval = 0.01;
+	// double history_window = 0.20;
+	// double history_interval = 0.05;
+	// int offset = (history_interval * mSimulationHz);
+	// int history_num = (history_window+0.001)/(history_interval)+1;
+
+	double history_interval = 0.15;
 	int offset = (history_interval * mSimulationHz);
-	int history_num = (history_window+0.001)/(history_interval)+1;
+	int history_num = 5;
 
 	int parameter_num = mNumParamState;
 	Eigen::VectorXd state(history_num*2+parameter_num);
 	double scaler = 2.0;
 	for(int i=0; i<history_num; i++)
 	{
-		double signal_y = mDeviceSignals_y.at(mDelta_t_idx + i*offset);
+		double signal_y = mDeviceSignals_y.at(mDelta_t_idx - (i-2)*offset);
 		double torque_l = mK_ * signal_y;
 		double torque_r = mK_ * signal_y;
 		double des_torque_l =  1*torque_l;
@@ -250,7 +253,7 @@ double
 Device::
 GetAngleQ(const std::string& name)
 {
-	dart::dynamics::SkeletonPtr skel_char = mCharacter->GetSkeleton();
+	SkeletonPtr skel_char = mCharacter->GetSkeleton();
 	Eigen::Vector3d dir = skel_char->getBodyNode(0)->getCOMLinearVelocity();
 	dir /= dir.norm();
 
@@ -395,4 +398,6 @@ SetAdaptiveParams(std::string name, double lower, double upper)
 		this->SetMinMaxV(1, lower, upper);
 		this->SetDelta_t(lower);
 	}
+}
+
 }

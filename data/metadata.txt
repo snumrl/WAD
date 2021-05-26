@@ -1,6 +1,7 @@
-use_muscle true
+use_muscle false
 use_device false
 use_device_nn false
+use_adaptive_motion true
 use_adaptive_sampling false
 con_hz 30
 sim_hz 480

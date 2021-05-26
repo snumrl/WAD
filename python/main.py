@@ -4,21 +4,21 @@ import math
 import time
 import random
 import numpy as np
+import scipy.integrate as integrate
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
 
+import mcmc
 import collections
 from collections import namedtuple
 from collections import deque
-from itertools import count
-from datetime import datetime
-
-import mcmc
-from pymss import EnvManager
 from IPython import embed
+
+from pymss import EnvManager
 from Model import *
 from RunningMeanStd import *
 
@@ -28,7 +28,7 @@ LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
-Episode = namedtuple('Episode',('s','a','r', 'value', 'logprob'))
+Episode = namedtuple('Episode',('s','a','r', 'value', 'logprob', 't'))
 class EpisodeBuffer(object):
 	def __init__(self):
 		self.data = []
@@ -94,6 +94,7 @@ class PPO(object):
 		if self.use_device:
 			self.num_state_device = self.env.GetNumState_Device()
 		self.num_action = self.env.GetNumAction()
+		self.num_active_dof = self.env.GetNumActiveDof()
 		self.rms = RunningMeanStd(shape=(self.num_state))
 
 		self.num_epochs = 10
@@ -135,8 +136,8 @@ class PPO(object):
 		# ========== Muscle setting ========= #
 		if self.use_muscle:
 			self.num_muscles = self.env.GetNumMuscles()
-			self.num_action_muscle = self.env.GetNumAction()
-			self.muscle_model = MuscleNN(self.env.GetNumTotalMuscleRelatedDofs(), self.num_action_muscle,self.num_muscles)
+			self.num_action_muscle = self.env.GetNumActiveDof()
+			self.muscle_model = MuscleNN(self.env.GetNumTotalMuscleRelatedDofs(), self.num_action_muscle, self.num_muscles)
 			self.muscle_buffer = MuscleBuffer(30000)
 			# self.rms_muscle = RunningMeanStd(shape=(self.env.GetNumTotalMuscleRelatedDofs()))
 
@@ -277,7 +278,7 @@ class PPO(object):
 		states = [None]*self.num_slaves
 		states_next = [None]*self.num_slaves
 		terminated = [False]*self.num_slaves
-
+		adaptive_times = [None]*self.num_slaves
 
 		states = self.env.GetStates()
 
@@ -318,7 +319,8 @@ class PPO(object):
 				elif self.env.IsEndOfEpisode(j) is False:
 					terminated_state = False
 					rewards[j] = self.env.GetReward(j)
-					self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j])
+					adaptive_times[j] = self.env.GetAdaptiveTime(j)
+					self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j], adaptive_times[j])
 					local_step += 1
 
 				if terminated_state or (nan_occur is True):
@@ -352,18 +354,40 @@ class PPO(object):
 			size = len(data)
 			if size == 0:
 				continue
-			states, actions, rewards, values, logprobs = zip(*data)
+			# states, actions, rewards, values, logprobs = zip(*data)
+			states, actions, rewards, values, logprobs, adaptiveTimes = zip(*data)
 
 			values = np.concatenate((values, np.zeros(1)), axis=0)
 			advantages = np.zeros(size)
 			ad_t = 0
 
 			epi_return = 0.0
+			# for i in reversed(range(len(data))):
+			# 	epi_return += rewards[i]
+			# 	delta = rewards[i] + values[i+1] * self.gamma - values[i]
+			# 	ad_t = delta + self.gamma * self.lb * ad_t
+			# 	advantages[i] = ad_t
+			# 	if np.isnan(ad_t):
+			# 		print("reward : ", rewards[i])
+
+			time_step = 0.0
 			for i in reversed(range(len(data))):
-				epi_return += rewards[i]
-				delta = rewards[i] + values[i+1] * self.gamma - values[i]
-				ad_t = delta + self.gamma * self.lb * ad_t
+				if i == size -1:
+					time_step = 0
+				else:
+					time_step = adaptiveTimes[i+1] - adaptiveTimes[i]
+				time_step *= self.num_control_Hz
+				t = integrate.quad(lambda x: pow(self.gamma, x), 0, time_step)[0]
+
+				epi_return += rewards[i][0] + rewards[i][1]
+				delta = t*rewards[i][0] + values[i+1] * pow(self.gamma, time_step) - values[i]
+				if rewards[i][1] != 0:
+					delta += rewards[i][1]
+				ad_t = delta + pow(self.gamma, time_step) * pow(self.lb, time_step) * ad_t
 				advantages[i] = ad_t
+				if np.isnan(ad_t):
+					print("reward : ", rewards[i])
+
 			self.sum_return += epi_return
 			TD = values[:size] + advantages
 
@@ -443,7 +467,7 @@ class PPO(object):
 				stack_JtA = np.vstack(batch.JtA).astype(np.float32)
 				stack_tau_des = np.vstack(batch.tau_des).astype(np.float32)
 				stack_L = np.vstack(batch.L).astype(np.float32)
-				stack_L = stack_L.reshape(self.muscle_batch_size, self.num_action, self.num_muscles)
+				stack_L = stack_L.reshape(self.muscle_batch_size, self.num_active_dof, self.num_muscles)
 				stack_b = np.vstack(batch.b).astype(np.float32)
 
 				stack_JtA = Tensor(stack_JtA)

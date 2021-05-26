@@ -1,17 +1,9 @@
 #include "Environment.h"
-#include "DARTHelper.h"
-#include "Character.h"
-#include "BVH.h"
-#include "Muscle.h"
-#include "Device.h"
-#include "dart/collision/bullet/bullet.hpp"
 #include <ctime>
 #include <regex>
-using namespace dart;
-using namespace dart::simulation;
-using namespace dart::dynamics;
-using namespace MASS;
-using namespace std;
+
+namespace MASS
+{
 
 Environment::
 Environment()
@@ -75,6 +67,15 @@ ParseMetaFile(const std::string& meta_file)
 				this->SetUseDeviceNN(true);
 			else
 				this->SetUseDeviceNN(false);
+		}
+		else if(!index.compare("use_adaptive_motion"))
+		{
+			std::string str2;
+			ss>>str2;
+			if(!str2.compare("true"))
+				this->SetUseAdaptiveMotion(true);
+			else
+				this->SetUseAdaptiveMotion(false);
 		}
 		else if(!index.compare("use_adaptive_sampling"))
 		{
@@ -232,6 +233,9 @@ Initialize(const std::string& meta_file, bool load_obj)
 	if(mUseAdaptiveSampling)
 		this->SetAdaptiveParamNums();
 
+	if(mUseAdaptiveMotion)
+		mCharacter->SetAdaptiveMotion(mUseAdaptiveMotion);
+
 	mCharacter->Initialize();
 
 	if(mUseDevice){
@@ -283,7 +287,8 @@ Reset(bool RSI)
 
 	if (RSI)
 	{
-		t = 1.0/(double)mControlHz * (rand()%16 + 8);
+		// t = 1.0/(double)mControlHz * (rand()%16 + 8);
+		t = 0.1 + 0.01 * (rand()%90);
 	}
 
 	mWorld->reset();
@@ -309,18 +314,17 @@ Step(bool device_onoff, bool isRender)
 			mDevice->Step((double)mSimCount/(double)mNumSteps);
 	}
 
-	auto char_skel = mCharacter->GetSkeleton();
-
+	// auto char_skel = mCharacter->GetSkeleton();
 	// double root_y = mCharacter->GetSkeleton()->getBodyNode(0)->getTransform().translation()[1] - mGround->getRootBodyNode()->getCOM()[1];
 	// std::cout << "root y : " << root_y << std::endl;
 
-	// if(mStepCnt == 20)
-	// 	mStepCnt = 0;
-	// mStepCnt++;
-	// mStepCnt_total++;
 	mWorld->step();
-	mCharacter->SetPhase();
 	mSimCount++;
+	if(mSimCount == mNumSteps)
+	{
+		mCharacter->SetPhase();
+		mCharacter->SetFrame();
+	}
 }
 
 bool
@@ -339,9 +343,25 @@ IsEndOfEpisode()
 	Eigen::VectorXd p_tar = mCharacter->GetTargetPositions();
 	double dist = (p.segment<3>(3) - p_tar.segment<3>(3)).norm();
 
+	Eigen::Isometry3d cur_root_inv = char_skel->getRootBodyNode()->getWorldTransform().inverse();
+
+	char_skel->setPositions(mCharacter->GetTargetPositions());
+	char_skel->computeForwardKinematics(true,false,false);
+
+	Eigen::Isometry3d root_diff = cur_root_inv * char_skel->getRootBodyNode()->getWorldTransform();
+
+	Eigen::AngleAxisd root_diff_aa(root_diff.linear());
+	double angle = std::fmod(root_diff_aa.angle()+M_PI, 2*M_PI)-M_PI;
+	Eigen::Vector3d root_pos_diff = root_diff.translation();
+
+	char_skel->setPositions(p);
+	char_skel->setVelocities(v);
+
 	if(root_y < 1.4)
 		isTerminal = true;
 	else if(dist > 0.5)
+		isTerminal = true;
+	else if(std::abs(angle) > 0.4*M_PI)
 		isTerminal = true;
 	else if (dart::math::isNan(p) || dart::math::isNan(v))
 		isTerminal = true;
@@ -382,12 +402,19 @@ GetState_Device()
 	return mDevice->GetState();
 }
 
-double
+std::pair<double,double>
 Environment::
 GetReward()
 {
 	return mCharacter->GetReward();
 }
+
+// std::vector<double>
+// Environment::
+// GetReward()
+// {
+// 	return mCharacter->GetReward();
+// }
 
 std::map<std::string, std::deque<double>>
 Environment::
@@ -395,6 +422,14 @@ GetRewards()
 {
 	return mCharacter->GetRewards();
 }
+
+double
+Environment::
+GetAdaptiveTime()
+{
+	return mCharacter->GetAdaptiveTime();
+}
+
 
 int
 Environment::
@@ -435,7 +470,7 @@ int
 Environment::
 GetNumAction()
 {
-	return mCharacter->GetNumActiveDof();
+	return mCharacter->GetNumAction();
 }
 
 int
@@ -443,6 +478,13 @@ Environment::
 GetNumAction_Device()
 {
 	return mDevice->GetNumAction();
+}
+
+int
+Environment::
+GetNumActiveDof()
+{
+	return mCharacter->GetNumActiveDof();
 }
 
 void
@@ -512,4 +554,6 @@ GetMaxV()
 		max_v << mCharacter->GetMaxV(), mDevice->GetMaxV();
 
 	return max_v;
+}
+
 }

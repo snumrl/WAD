@@ -1,12 +1,13 @@
 #include "BVH.h"
-#include "Utils.h"
 #include <iostream>
-#include <Eigen/Geometry>
-#include "dart/dart.hpp"
 
-using namespace dart::dynamics;
 namespace MASS
 {
+
+Eigen::Matrix3d R_x(double x);
+Eigen::Matrix3d R_y(double y);
+Eigen::Matrix3d R_z(double z);
+
 Eigen::Matrix3d
 R_x(double x)
 {
@@ -45,6 +46,15 @@ BVHNode::
 BVHNode(const std::string& name,BVHNode* parent)
 	:mParent(parent),mName(name),mChannelOffset(0),mNumChannels(0)
 {
+	CHANNEL_NAME =
+	{
+		{"Xposition",Xpos},{"XPOSITION",Xpos},
+		{"Yposition",Ypos},{"YPOSITION",Ypos},
+		{"Zposition",Zpos},{"ZPOSITION",Zpos},
+		{"Xrotation",Xrot},{"XROTATION",Xrot},
+		{"Yrotation",Yrot},{"YROTATION",Yrot},
+		{"Zrotation",Zrot},{"ZROTATION",Zrot}
+	};
 }
 
 void
@@ -127,7 +137,7 @@ GetNode(const std::string& name)
 }
 
 BVH::
-BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map)
+BVH(const SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map)
 	:mSkeleton(skel),mBVHMap(bvh_map),mCyclic(true),mParse(false)
 {
 	mSpeedRatio = 1.0;
@@ -135,7 +145,7 @@ BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::stri
 
 BVHNode*
 BVH::
-ReadHierarchy(BVHNode* parent,const std::string& name,int& channel_offset,std::ifstream& is)
+ReadHierarchy(BVHNode* parent, const std::string& name,int& channel_offset,std::ifstream& is)
 {
 	char buffer[256];
 	double offset[3];
@@ -413,8 +423,8 @@ SetMotionFramesNonCyclic(int frames, bool blend)
 	Eigen::Vector3d p0_footl = mSkeleton->getBodyNode("TalusL")->getWorldTransform().translation();
 	Eigen::Vector3d p0_footr = mSkeleton->getBodyNode("TalusR")->getWorldTransform().translation();
 
-	Eigen::Isometry3d T0_phase = dart::dynamics::FreeJoint::convertToTransform(mMotionFrames[0].head<6>());
-	Eigen::Isometry3d T1_phase = dart::dynamics::FreeJoint::convertToTransform(mMotionFrames.back().head<6>());
+	Eigen::Isometry3d T0_phase = FreeJoint::convertToTransform(mMotionFrames[0].head<6>());
+	Eigen::Isometry3d T1_phase = FreeJoint::convertToTransform(mMotionFrames.back().head<6>());
 
 	Eigen::Isometry3d T0_nc = T0_phase;
 	Eigen::Isometry3d T01 = T1_phase*T0_phase.inverse();
@@ -456,12 +466,12 @@ SetMotionFramesNonCyclic(int frames, bool blend)
 				//// rotate "root" to seamlessly stitch foot
 				pos = Utils::solveMCIKRoot(mSkeleton, constraints);
 				pos[4] -= 0.006;
-				T0_nc = dart::dynamics::FreeJoint::convertToTransform(pos.head<6>());
+				T0_nc = FreeJoint::convertToTransform(pos.head<6>());
 			}
 			else
 			{
 				pos = mMotionFrames[phase];
-				Eigen::Isometry3d T_current = dart::dynamics::FreeJoint::convertToTransform(pos.head<6>());
+				Eigen::Isometry3d T_current = FreeJoint::convertToTransform(pos.head<6>());
 				Eigen::Isometry3d T0_phase_nc = T0_nc * T0_phase.inverse();
 
 				if(phase < smooth_time)
@@ -480,7 +490,7 @@ SetMotionFramesNonCyclic(int frames, bool blend)
 					T_current = T0_phase_nc* T_current;
 				}
 
-				pos.head<6>() = dart::dynamics::FreeJoint::convertToPositions(T_current);
+				pos.head<6>() = FreeJoint::convertToPositions(T_current);
 				pos[28] -= phase * 0.002;
 				pos[4] += 0.002;
 				if(phase == 31 || phase == 1)
@@ -578,15 +588,18 @@ const Eigen::VectorXd&
 BVH::
 GetMotion(int k)
 {
-	return mMotionFrames[k];
+	if(mCyclic)
+		return mMotionFrames[k];
+	else
+		return mMotionFramesNonCyclicTmp[k];
 }
 
-const Eigen::VectorXd&
-BVH::
-GetMotionNonCyclic(int k)
-{
-	return mMotionFramesNonCyclicTmp[k];
-}
+// const Eigen::VectorXd&
+// BVH::
+// GetMotionNonCyclic(int k)
+// {
+// 	return mMotionFramesNonCyclicTmp[k];
+// }
 
 void
 BVH::
@@ -638,7 +651,10 @@ Eigen::VectorXd
 BVH::
 GetMotionVel(int k)
 {
-	return mMotionVelFrames.row(k);
+	if(mCyclic)
+		return mMotionVelFrames.row(k);
+	else
+		return mMotionVelFramesNonCyclic.row(k);
 }
 
 void
@@ -688,28 +704,4 @@ SetMotionVelFramesNonCyclic(int frames, bool blend)
 	}
 }
 
-Eigen::VectorXd
-BVH::
-GetMotionVelNonCyclic(int k)
-{
-	return mMotionVelFramesNonCyclic.row(k);
 }
-
-std::map<std::string,MASS::BVHNode::CHANNEL> BVHNode::CHANNEL_NAME =
-{
-	{"Xposition",Xpos},
-	{"XPOSITION",Xpos},
-	{"Yposition",Ypos},
-	{"YPOSITION",Ypos},
-	{"Zposition",Zpos},
-	{"ZPOSITION",Zpos},
-	{"Xrotation",Xrot},
-	{"XROTATION",Xrot},
-	{"Yrotation",Yrot},
-	{"YROTATION",Yrot},
-	{"Zrotation",Zrot},
-	{"ZROTATION",Zrot}
-};
-
-};
-

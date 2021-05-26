@@ -1,20 +1,19 @@
 #ifndef __MASS_METABOLIC_ENERGY_H__
 #define __MASS_METABOLIC_ENERGY_H__
 #include "dart/dart.hpp"
+#include "Muscle.h"
 #include <deque>
 #include <map>
 #include <set>
 
+using namespace dart::simulation;
 namespace MASS
 {
 
-class BVH;
-class Muscle;
-class Character;
 class MetabolicEnergy
 {
 public:
-    MetabolicEnergy(const dart::simulation::WorldPtr& wPtr);
+    MetabolicEnergy(const WorldPtr& wPtr);
     ~MetabolicEnergy();
 
     void Initialize(const std::vector<Muscle*>& muscles, double m, int steps, int frames, double ratio);
@@ -42,7 +41,7 @@ public:
     const std::map<std::string, std::vector<std::vector<double>>>& GetHOUD06_mapByFrame(){return HOUD06_mapByFrame;}
 
 private:
-    dart::simulation::WorldPtr mWorld;
+    WorldPtr mWorld;
 
     bool isFirst;
     bool isTotalFirst;
@@ -76,6 +75,6 @@ private:
     std::map<std::string, std::vector<std::vector<double>>> HOUD06_mapByFrame;
 };
 
-};
+}
 
 #endif

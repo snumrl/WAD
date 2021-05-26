@@ -3,24 +3,23 @@
 
 #include "dart/dart.hpp"
 #include "dart/gui/gui.hpp"
-#include <boost/python.hpp>
-#include <boost/python/numpy.hpp>
-#include <iostream>
-#include <fstream>
 #include "ShapeRenderer.h"
+#include "Environment.h"
+#include "Muscle.h"
+#include "JointData.h"
+#include "MetabolicEnergy.h"
+#include "Contact.h"
+#include <fstream>
+#include <deque>
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+#include <pybind11/embed.h>
 
-namespace p = boost::python;
-namespace np = boost::python::numpy;
+using namespace dart::dynamics;
+namespace py = pybind11;
 namespace MASS
 {
 
-class Environment;
-class Muscle;
-class BVH;
-class JointData;
-class MetabolicEnergy;
-class Contact;
-// class Torques;
 class Window : public dart::gui::Win3D
 {
 public:
@@ -29,18 +28,20 @@ public:
 	Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_path);
 	Window(Environment* env,const std::string& nn_path,const std::string& muscle_nn_path,const std::string& device_nn_path);
 
+    void LoadMuscleNN(const std::string& muscle_nn_path);
+    void LoadDeviceNN(const std::string& device_nn_path);
+
 	void draw() override;
 	void keyboard(unsigned char _key, int _x, int _y) override;
 	void displayTimer(int _val) override;
 	void Step();
 	void Reset();
 
+    void SetFocus();
 	void SetTrajectory();
-	void SetFocus();
+
 	void SetViewMatrix();
 
-	void LoadMuscleNN(const std::string& muscle_nn_path);
-	void LoadDeviceNN(const std::string& device_nn_path);
 	Eigen::VectorXd GetActionFromNN();
 	Eigen::VectorXd GetActionFromNN_Device();
 	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt);
@@ -49,18 +50,18 @@ public:
 
 	void DrawGround();
 	void DrawCharacter();
-	void DrawEntity(const dart::dynamics::Entity* entity);
-	void DrawBodyNode(const dart::dynamics::BodyNode* bn);
-	void DrawSkeleton(const dart::dynamics::SkeletonPtr& skel);
-	void DrawShapeFrame(const dart::dynamics::ShapeFrame* shapeFrame);
-	void DrawShape(const dart::dynamics::Shape* shape,const Eigen::Vector4d& color);
+	void DrawEntity(const Entity* entity);
+	void DrawBodyNode(const BodyNode* bn);
+	void DrawSkeleton(const SkeletonPtr& skel);
+	void DrawShapeFrame(const ShapeFrame* shapeFrame);
+	void DrawShape(const Shape* shape,const Eigen::Vector4d& color);
 	void DrawTarget();
+	void DrawReference();
 	void DrawMuscles(const std::vector<Muscle*>& muscles);
 	void DrawShadow(const Eigen::Vector3d& scale, const aiScene* mesh,double y);
 	void DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine3d& M,double y);
 
 	void DrawReward();
-	// void DrawTorques();
 	void DrawJointTorques();
 	void DrawJointAngles();
 	// void DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double y);
@@ -109,11 +110,13 @@ public:
     void m(bool b);
     void GraphMode();
     void Write();
+    void WriteFileName();
     void WriteMetaE();
     void WriteJointAngle();
+    void WriteJointTorque();
 private:
 
-	p::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module,rms_module;
+	py::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module,rms_module;
 
 	Environment* mEnv;
 	JointData* mJointDatas;
@@ -124,6 +127,7 @@ private:
 	bool mSimulating;
 	bool mDrawCharacter;
 	bool mDrawTarget;
+	bool mDrawReference;
 	bool mDrawGraph;
 	bool mDrawParameter;
 	bool mDrawArrow;
@@ -135,6 +139,7 @@ private:
 	bool mDevice_On;
 	bool isDrawCharacter;
 	bool isDrawTarget;
+	bool isDrawReference;
 	bool isDrawDevice;
 
 	int mCharacterMode;
@@ -167,6 +172,6 @@ private:
 	std::ofstream mFile;
 
 };
-};
+}
 
 #endif

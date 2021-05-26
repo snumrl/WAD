@@ -7,11 +7,11 @@
 
 #include <dart/dart.hpp>
 #include <unordered_map>
-
 #include "Muscle.h"
 
 using namespace dart::dynamics;
-using namespace MASS;
+namespace MASS
+{
 
 struct ShapeRenderer {
     std::unordered_map<const MeshShape*, std::vector<uint32_t>> meshShapeVbo;
@@ -29,4 +29,5 @@ private:
                              const aiNode* node, int& vboIdx);
 };
 
+}
 #endif //MSS_SHAPERENDERER_H

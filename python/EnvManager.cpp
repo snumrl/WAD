@@ -1,6 +1,4 @@
 #include "EnvManager.h"
-#include "DARTHelper.h"
-#include "Device.h"
 #include <omp.h>
 
 EnvManager::
@@ -61,24 +59,26 @@ void
 EnvManager::
 Resets(bool RSI)
 {
+#pragma omp parallel for
 	for (int id=0; id<mNumEnvs; ++id)
 	{
 		mEnvs[id]->Reset(RSI);
 	}
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetState(int id)
 {
 	return toNumPyArray(mEnvs[id]->GetState());
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetStates()
 {
 	Eigen::MatrixXd states(mNumEnvs,this->GetNumState());
+#pragma omp parallel for
 	for (int id=0; id<mNumEnvs; ++id)
 	{
 		states.row(id) = mEnvs[id]->GetState().transpose();
@@ -87,18 +87,19 @@ GetStates()
 	return toNumPyArray(states);
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetState_Device(int id)
 {
 	return toNumPyArray(mEnvs[id]->GetState_Device());
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetStates_Device()
 {
 	Eigen::MatrixXd states(mNumEnvs,this->GetNumState_Device());
+#pragma omp parallel for
 	for (int id = 0;id<mNumEnvs;++id)
 	{
 		states.row(id) = mEnvs[id]->GetState_Device().transpose();
@@ -107,37 +108,45 @@ GetStates_Device()
 	return toNumPyArray(states);
 }
 
-double
+py::array_t<float>
 EnvManager::
 GetReward(int id)
 {
-	return mEnvs[id]->GetReward();
+	return toNumPyArray(mEnvs[id]->GetReward());
 }
 
-np::ndarray
+double
 EnvManager::
-GetRewards()
+GetAdaptiveTime(int id)
 {
-	std::vector<float> rewards(mNumEnvs);
+	return mEnvs[id]->GetAdaptiveTime();
+}
+
+py::array_t<float>
+EnvManager::
+GetAdaptiveTimes()
+{
+	std::vector<float> adaptiveTimes(mNumEnvs);
 	for (int id = 0;id<mNumEnvs;++id)
 	{
-		rewards[id] = mEnvs[id]->GetReward();
+		adaptiveTimes[id] = mEnvs[id]->GetAdaptiveTime();
 	}
-	return toNumPyArray(rewards);
+	return toNumPyArray(adaptiveTimes);
 }
 
 void
 EnvManager::
-SetAction(np::ndarray np_array, int id)
+SetAction(py::array_t<float> np_array, int id)
 {
 	mEnvs[id]->SetAction(toEigenVector(np_array));
 }
 
 void
 EnvManager::
-SetActions(np::ndarray np_array)
+SetActions(py::array_t<float> np_array)
 {
 	Eigen::MatrixXd action = toEigenMatrix(np_array);
+#pragma omp parallel for
 	for (int id = 0;id<mNumEnvs;++id)
 	{
 		mEnvs[id]->SetAction(action.row(id).transpose());
@@ -146,9 +155,10 @@ SetActions(np::ndarray np_array)
 
 void
 EnvManager::
-SetActions_Device(np::ndarray np_array)
+SetActions_Device(py::array_t<float> np_array)
 {
 	Eigen::MatrixXd action = toEigenMatrix(np_array);
+#pragma omp parallel for
 	for (int id = 0;id<mNumEnvs;++id)
 	{
 		mEnvs[id]->SetAction_Device(action.row(id).transpose());
@@ -157,11 +167,14 @@ SetActions_Device(np::ndarray np_array)
 
 void
 EnvManager::
-SetActivationLevels(np::ndarray np_array)
+SetActivationLevels(py::array_t<float> np_array)
 {
 	std::vector<Eigen::VectorXd> activations = toEigenVectorVector(np_array);
+#pragma omp parallel for
 	for (int id = 0; id < mNumEnvs; ++id)
+	{
 		mEnvs[id]->GetCharacter()->SetActivationLevels(activations[id]);
+	}
 }
 
 bool
@@ -171,24 +184,18 @@ IsEndOfEpisode(int id)
 	return mEnvs[id]->IsEndOfEpisode();
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 IsEndOfEpisodes()
 {
 	std::vector<bool> is_end_vector(mNumEnvs);
+#pragma omp parallel for
 	for (int id = 0;id<mNumEnvs;++id)
 	{
 		is_end_vector[id] = mEnvs[id]->IsEndOfEpisode();
 	}
 
 	return toNumPyArray(is_end_vector);
-}
-
-double
-EnvManager::
-GetVelocity(int idx)
-{
-	return mEnvs[idx]->GetCharacter()->GetCurVelocity();
 }
 
 int
@@ -210,6 +217,13 @@ EnvManager::
 GetNumState_Device()
 {
 	return mEnvs[0]->GetNumState_Device();
+}
+
+int
+EnvManager::
+GetNumActiveDof()
+{
+	return mEnvs[0]->GetNumActiveDof();
 }
 
 int
@@ -279,7 +293,7 @@ SetDesiredTorques()
 	}
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetDesiredTorques()
 {
@@ -308,7 +322,7 @@ GetNumMuscles()
 	return mEnvs[0]->GetCharacter()->GetNumMuscles();
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetMuscleTorques()
 {
@@ -322,17 +336,17 @@ GetMuscleTorques()
 	return toNumPyArray(mt);
 }
 
-p::list
+py::list
 EnvManager::
 GetMuscleTuples()
 {
-	p::list all;
+	py::list all;
 	for (int id = 0; id < mNumEnvs; ++id)
 	{
 		auto& tps = mEnvs[id]->GetCharacter()->GetMuscleTuples();
 		for(int j=0;j<tps.size();j++)
 		{
-			p::list t;
+			py::list t;
 			t.append(toNumPyArray(tps[j].JtA));
 			t.append(toNumPyArray(tps[j].tau_des));
 			t.append(toNumPyArray(tps[j].L));
@@ -353,7 +367,7 @@ EnvManager::UseAdaptiveSampling()
 
 void
 EnvManager::
-SetParamState(int id, np::ndarray np_array)
+SetParamState(int id, py::array_t<float> np_array)
 {
 	mEnvs[id]->SetParamState(toEigenVector(np_array));
 }
@@ -379,28 +393,23 @@ GetNumParamState_Device()
 	return mEnvs[0]->GetNumParamState_Device();
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetMinV()
 {
 	return toNumPyArray(mEnvs[0]->GetMinV());
 }
 
-np::ndarray
+py::array_t<float>
 EnvManager::
 GetMaxV()
 {
 	return toNumPyArray(mEnvs[0]->GetMaxV());
 }
 
-using namespace boost::python;
-
-BOOST_PYTHON_MODULE(pymss)
-{
-	Py_Initialize();
-	np::initialize();
-
-	class_<EnvManager>("EnvManager",init<std::string,int>())
+PYBIND11_MODULE(pymss, m){
+	py::class_<EnvManager>(m, "EnvManager")
+		.def(py::init<std::string, int>())
 		.def("Step",&EnvManager::Step)
 		.def("Steps",&EnvManager::Steps)
 		.def("StepsAtOnce",&EnvManager::StepsAtOnce)
@@ -411,7 +420,8 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("GetState_Device",&EnvManager::GetState_Device)
 		.def("GetStates_Device",&EnvManager::GetStates_Device)
 		.def("GetReward",&EnvManager::GetReward)
-		.def("GetRewards",&EnvManager::GetRewards)
+		.def("GetAdaptiveTime",&EnvManager::GetAdaptiveTime)
+		.def("GetAdaptiveTimes",&EnvManager::GetAdaptiveTimes)
 		.def("SetAction",&EnvManager::SetAction)
 		.def("SetActions",&EnvManager::SetActions)
 		.def("SetActions_Device",&EnvManager::SetActions_Device)
@@ -421,12 +431,12 @@ BOOST_PYTHON_MODULE(pymss)
 		.def("GetNumState",&EnvManager::GetNumState)
 		.def("GetNumState_Char",&EnvManager::GetNumState_Char)
 		.def("GetNumState_Device",&EnvManager::GetNumState_Device)
+		.def("GetNumActiveDof",&EnvManager::GetNumActiveDof)
 		.def("GetNumAction",&EnvManager::GetNumAction)
 		.def("GetNumAction_Device",&EnvManager::GetNumAction_Device)
 		.def("GetNumSteps",&EnvManager::GetNumSteps)
 		.def("GetControlHz",&EnvManager::GetControlHz)
 		.def("GetSimulationHz",&EnvManager::GetSimulationHz)
-		.def("GetVelocity",&EnvManager::GetVelocity)
 		.def("UseMuscle",&EnvManager::UseMuscle)
 		.def("UseDevice",&EnvManager::UseDevice)
 		.def("UseDeviceNN",&EnvManager::UseDeviceNN)

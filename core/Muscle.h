@@ -2,17 +2,19 @@
 #define __MASS_MUSCLE_H__
 #include "dart/dart.hpp"
 
+using namespace dart::dynamics;
 namespace MASS
 {
+
 struct Anchor
 {
-	Anchor(std::vector<dart::dynamics::BodyNode*> bns,std::vector<Eigen::Vector3d> lps,std::vector<double> ws);
+	Anchor(std::vector<BodyNode*> bns,std::vector<Eigen::Vector3d> lps,std::vector<double> ws);
 	~Anchor();
 
 	Eigen::Vector3d GetPoint();
 
 	int num_related_bodies;
-	std::vector<dart::dynamics::BodyNode*> bodynodes;
+	std::vector<BodyNode*> bodynodes;
 	std::vector<Eigen::Vector3d> local_positions;
 	std::vector<double> weights;
 };
@@ -25,8 +27,8 @@ public:
 
 	void Reset();
 
-	void AddAnchor(const dart::dynamics::SkeletonPtr& skel,dart::dynamics::BodyNode* bn,const Eigen::Vector3d& glob_pos,int num_related_bodies);
-	void AddAnchor(dart::dynamics::BodyNode* bn,const Eigen::Vector3d& glob_pos);
+	void AddAnchor(const SkeletonPtr& skel,BodyNode* bn,const Eigen::Vector3d& glob_pos,int num_related_bodies);
+	void AddAnchor(BodyNode* bn,const Eigen::Vector3d& glob_pos);
 	const std::vector<Anchor*>& GetAnchors(){return mAnchors;}
 	void Update();
 	void ApplyForceToBody();
@@ -46,6 +48,7 @@ public:
 	Eigen::VectorXd GetRelatedJtA();
 
 	void ComputeJacobians();
+
 private:
 	std::string mName;
 	std::vector<Anchor*> mAnchors;
@@ -126,8 +129,8 @@ private:
 	double mMetabolicEnergyRate_BHAR04;
 	double mMetabolicEnergyRate_HOUD06;
 
-	double vcemax = 0.0;
-	double vcemin = 0.0;
+	double vcemax;
+	double vcemin;
 };
 
 }
