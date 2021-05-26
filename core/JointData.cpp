@@ -1,8 +1,7 @@
 #include "JointData.h"
 
-using namespace dart;
-using namespace dart::dynamics;
-using namespace MASS;
+namespace MASS
+{
 
 JointData::
 JointData()
@@ -16,7 +15,7 @@ JointData::
 
 void
 JointData::
-Initialize(const dart::dynamics::SkeletonPtr& skel)
+Initialize(const SkeletonPtr& skel)
 {
     mOnCycle = false;
     mPhasePrev = -1;
@@ -275,4 +274,6 @@ GetReward()
     }
 
     return reward;
+}
+
 }

@@ -1,12 +1,8 @@
 #include <GL/glew.h>
 #include <GL/glut.h>
 #include "Environment.h"
-#include "DARTHelper.h"
-#include "Character.h"
-#include "BVH.h"
-#include "Muscle.h"
 #include "Window.h"
-#include "dart/gui/gui.hpp"
+
 int main(int argc,char** argv)
 {
 	MASS::Environment* env = new MASS::Environment();

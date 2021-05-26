@@ -1,11 +1,17 @@
 #ifndef __MASS_ENVIRONMENT_H__
 #define __MASS_ENVIRONMENT_H__
 #include "dart/dart.hpp"
+#include "dart/collision/bullet/bullet.hpp"
+#include "BVH.h"
 #include "Character.h"
 #include "Muscle.h"
+#include "Device.h"
+#include "DARTHelper.h"
 #include <map>
 #include <deque>
 
+using namespace dart::dynamics;
+using namespace dart::simulation;
 namespace MASS
 {
 
@@ -28,7 +34,6 @@ public:
 
 	Eigen::VectorXd GetState();
 	Eigen::VectorXd GetState_Device();
-	// std::vector<double> GetReward();
 	std::pair<double,double> GetReward();
 	std::map<std::string, std::deque<double>> GetRewards();
 	double GetAdaptiveTime();
@@ -66,8 +71,8 @@ public:
 	int GetNumSteps(){return mNumSteps;}
 	Character* GetCharacter(){return mCharacter;}
 	Device* GetDevice(){return mDevice;}
-	const dart::dynamics::SkeletonPtr& GetGround(){return mGround;}
-	const dart::simulation::WorldPtr& GetWorld(){return mWorld;}
+	const SkeletonPtr& GetGround(){return mGround;}
+	const WorldPtr& GetWorld(){return mWorld;}
 
 	void SetAdaptiveParamNums();
 	void SetAdaptiveParams();
@@ -79,8 +84,8 @@ public:
 	Eigen::VectorXd GetMaxV();
 
 private:
-	dart::simulation::WorldPtr mWorld;
-	dart::dynamics::SkeletonPtr mGround;
+	WorldPtr mWorld;
+	SkeletonPtr mGround;
 	Character* mCharacter;
 	Device* mDevice;
 
@@ -110,6 +115,6 @@ private:
 	std::map<std::string, std::pair<double, double>> mParam_Character;
 	std::map<std::string, std::pair<double, double>> mParam_Device;
 };
-};
+}
 
 #endif

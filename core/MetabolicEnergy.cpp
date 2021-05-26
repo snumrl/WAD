@@ -1,12 +1,10 @@
 #include "MetabolicEnergy.h"
-#include "Muscle.h"
 
-using namespace dart;
-using namespace dart::dynamics;
-using namespace MASS;
+namespace MASS
+{
 
 MetabolicEnergy::
-MetabolicEnergy(const dart::simulation::WorldPtr& wPtr)
+MetabolicEnergy(const WorldPtr& wPtr)
 {
 	mWorld = wPtr;
 	mLowerBody = false;
@@ -191,4 +189,6 @@ GetCoreName(std::string name)
 	}
 
 	return coreName;
+}
+
 }

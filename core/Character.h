@@ -1,22 +1,22 @@
 #ifndef __MASS_CHARACTER_H__
 #define __MASS_CHARACTER_H__
+
 #include "dart/dart.hpp"
+#include "BVH.h"
+#include "Muscle.h"
+#include "Utils.h"
+#include "DARTHelper.h"
+#include "Contact.h"
 #include "JointData.h"
 #include "MetabolicEnergy.h"
-#include "Contact.h"
+
 #include <deque>
 #include <map>
 
+using namespace dart::dynamics;
+using namespace dart::simulation;
 namespace MASS
 {
-
-class BVH;
-class Muscle;
-class Device;
-// class JointData;
-// class MetabolicEnergy;
-// class Contact;
-// class Torques;
 
 struct MuscleTuple
 {
@@ -26,10 +26,11 @@ struct MuscleTuple
 	Eigen::VectorXd tau_des;
 };
 
+class Device;
 class Character
 {
 public:
-	Character(dart::simulation::WorldPtr& wPtr);
+	Character(WorldPtr& wPtr);
 	~Character();
 
 	void LoadSkeleton(const std::string& path, bool load_obj);
@@ -39,9 +40,9 @@ public:
 
 	bool isLowerBody(std::string& body);
 
-	const dart::dynamics::SkeletonPtr& GetSkeleton(){return mSkeleton;}
+	const SkeletonPtr& GetSkeleton(){return mSkeleton;}
 	const std::vector<Muscle*>& GetMuscles() {return mMuscles;}
-	const std::vector<dart::dynamics::BodyNode*>& GetEndEffectors(){return mEndEffectors;}
+	const std::vector<BodyNode*>& GetEndEffectors(){return mEndEffectors;}
 	const Device* GetDevice(){return mDevice;}
 	BVH* GetBVH(){return mBVH;}
 	const std::map<std::string, std::vector<Muscle*>> GetMusclesMap(){return mMusclesMap;}
@@ -54,7 +55,7 @@ public:
 	void Initialize_Speed();
 	void Initialize_JointWeights();
 
-	void SetWorld(const dart::simulation::WorldPtr& wPtr){ mWorld = wPtr; }
+	void SetWorld(const WorldPtr& wPtr){ mWorld = wPtr; }
 	void SetDevice(Device* device);
 
 	void SetHz(int sHz, int cHz);
@@ -99,10 +100,7 @@ public:
 	std::pair<double,double> GetReward_Character();
 	std::pair<double,double> GetReward_Character_Imitation();
 	std::pair<double,double> GetReward_Character_Efficiency();
-	// std::vector<double> GetReward();
-	// std::vector<double> GetReward_Character();
-	// double GetReward_Character_Imitation();
-	// std::vector<double> GetReward_Character_Efficiency();
+
 	double GetReward_Energy();
 	double GetReward_ActionReg();
 	double GetReward_Vel();
@@ -190,6 +188,7 @@ public:
 	void SetCoT();
 	void SetCurVelocity();
 	void SetTrajectory();
+	void SetComHistory();
 
 	double GetCoT(){return mCurCoT;}
 	double GetCurVelocity(){return mCurVel;}
@@ -205,9 +204,9 @@ public:
 	const Eigen::VectorXd& GetParamState(){return mParamState;}
 
 private:
-	dart::simulation::WorldPtr mWorld;
-	dart::dynamics::SkeletonPtr mSkeleton;
-	std::vector<dart::dynamics::BodyNode*> mEndEffectors;
+	WorldPtr mWorld;
+	SkeletonPtr mSkeleton;
+	std::vector<BodyNode*> mEndEffectors;
 	std::vector<Muscle*> mMuscles;
 	std::vector<Muscle*> mMusclesFemur;
 	std::map<std::string, std::vector<Muscle*>> mMusclesMap;
@@ -278,6 +277,7 @@ private:
 	double mCurVel;
 	double mCurHeadVel;
 	Eigen::Vector3d mCurVel3d;
+	std::deque<Eigen::Vector4d> mComHistory;
 
 	Eigen::Isometry3d mTc;
 	Eigen::VectorXd mKp, mKv;

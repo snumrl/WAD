@@ -1,8 +1,5 @@
 #include "Muscle.h"
 
-using namespace MASS;
-using namespace dart::dynamics;
-
 std::vector<int> sort_indices(const std::vector<double>& val)
 {
 	std::vector<int> idx(val.size());
@@ -12,6 +9,9 @@ std::vector<int> sort_indices(const std::vector<double>& val)
 
 	return idx;
 }
+
+namespace MASS
+{
 
 Anchor::
 Anchor(std::vector<BodyNode*> bns,std::vector<Eigen::Vector3d> lps,std::vector<double> ws)
@@ -723,3 +723,4 @@ GetMetabolicEnergyRate_HOUD06()
 // 	E = h_ * l_CE_opt * f0 + w;
 
 // }
+}

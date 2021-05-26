@@ -1,31 +1,29 @@
 #ifndef __MASS_BVH_H__
 #define __MASS_BVH_H__
-#include <Eigen/Core>
-#include <string>
-#include <fstream>
-#include <vector>
-#include <map>
-#include <utility>
-#include <initializer_list>
+
 #include "dart/dart.hpp"
 #include "dart/gui/gui.hpp"
+#include "Utils.h"
+#include <map>
+#include <vector>
+#include <string>
+#include <fstream>
+#include <utility>
+#include <initializer_list>
 
+using namespace dart::dynamics;
 namespace MASS
 {
-
-Eigen::Matrix3d R_x(double x);
-Eigen::Matrix3d R_y(double y);
-Eigen::Matrix3d R_z(double z);
 
 class BVHNode
 {
 public:
-	enum CHANNEL
-	{
+	enum CHANNEL{
 		Xpos=0, Ypos=1, Zpos=2, Xrot=3, Yrot=4, Zrot=5
 	};
 
-	static std::map<std::string, MASS::BVHNode::CHANNEL> CHANNEL_NAME;
+public:
+	std::map<std::string, CHANNEL> CHANNEL_NAME;
 
 	BVHNode(const std::string& name,BVHNode* parent);
 	void SetChannel(int c_offset,std::vector<std::string>& c_name);
@@ -40,6 +38,7 @@ public:
 	int GetChannelOffset(){return mChannelOffset;}
 	int GetNumChannels(){return mNumChannels;}
 	Eigen::Vector3d GetOffset(){return mOffset;}
+
 private:
 	BVHNode* mParent;
 	std::vector<BVHNode*> mChildren;
@@ -56,19 +55,17 @@ private:
 class BVH
 {
 public:
-	BVH(const dart::dynamics::SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map);
+	BVH(const SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map);
 
 	BVHNode* ReadHierarchy(BVHNode* parent,const std::string& name,int& channel_offset,std::ifstream& is);
 	void Parse(const std::string& file, bool cyclic=true);
 
 	Eigen::Matrix3d Get(const std::string& bvh_node);
 	const Eigen::VectorXd& GetMotion(int k);
-	// const Eigen::VectorXd& GetMotionNonCyclic(int k);
 	Eigen::VectorXd GetMotionVel(int k);
-	// Eigen::VectorXd GetMotionVelNonCyclic(int k);
 	double GetSpeedRatio(){return mSpeedRatio;}
 
-	void SetSkeleton(const dart::dynamics::SkeletonPtr& skel){mSkeleton = skel;}
+	void SetSkeleton(const SkeletonPtr& skel){mSkeleton = skel;}
 	void SetBVHMap(const std::map<std::string,std::string>& bvh_map){mBVHMap = bvh_map;}
 	void SetSpeedRatio(double ratio){mSpeedRatio = ratio;}
 
@@ -86,7 +83,7 @@ public:
 	double GetMaxTime() {return (mNumTotalFrames)*mTimeStep;}
 	double GetTimeStep(){return mTimeStep;}
 
-	const dart::dynamics::SkeletonPtr& GetSkeleton(){return mSkeleton;}
+	const SkeletonPtr& GetSkeleton(){return mSkeleton;}
 	const std::map<std::string,std::string>& GetBVHMap(){return mBVHMap;}
 	const Eigen::Isometry3d& GetT0(){return T0;}
 	const Eigen::Isometry3d& GetT1(){return T1;}
@@ -94,11 +91,6 @@ public:
 	Eigen::VectorXd GetCycleOffset(){return mCycleOffset;}
 	bool IsParsed(){return mParse;}
 	void SetParsed(bool p){mParse = p;}
-
-	Eigen::Vector3d projectToXZ(Eigen::Vector3d v);
-	Eigen::Vector3d NearestOnGeodesicCurve3d(Eigen::Vector3d targetAxis, Eigen::Vector3d targetPosition, Eigen::Vector3d position);
-	Eigen::VectorXd BlendPosition(Eigen::VectorXd target_a, Eigen::VectorXd target_b, double weight, bool blend_rootpos);
-	Eigen::VectorXd solveMCIKRoot(dart::dynamics::SkeletonPtr skel, const std::vector<std::tuple<std::string, Eigen::Vector3d, Eigen::Vector3d>>& constraints);
 
 private:
 	bool mParse;
@@ -109,7 +101,7 @@ private:
 	double mSpeedRatio;
 
 	BVHNode* mRoot;
-	dart::dynamics::SkeletonPtr mSkeleton;
+	SkeletonPtr mSkeleton;
 
 	std::map<std::string, BVHNode*> mMap;
 	std::map<std::string,std::string> mBVHMap;
@@ -123,5 +115,5 @@ private:
 	Eigen::MatrixXd mMotionVelFramesNonCyclic;
 	Eigen::Vector3d mCycleOffset;
 };
-};
+}
 #endif

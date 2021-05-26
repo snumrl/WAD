@@ -1,6 +1,61 @@
 #include "DARTHelper.h"
 #include <tinyxml.h>
-using namespace dart::dynamics;
+
+std::vector<double> split_to_double(const std::string& input, int num)
+{
+    std::vector<double> result;
+    std::string::size_type sz = 0, nsz = 0;
+    for(int i = 0; i < num; i++){
+        result.push_back(std::stof(input.substr(sz), &nsz));
+        sz += nsz;
+    }
+    return result;
+}
+
+Eigen::Vector1d string_to_vector1d(const std::string& input){
+	std::vector<double> v = split_to_double(input, 1);
+	Eigen::Vector1d res;
+	res << v[0];
+
+	return res;
+}
+
+Eigen::Vector3d string_to_vector3d(const std::string& input){
+	std::vector<double> v = split_to_double(input, 3);
+	Eigen::Vector3d res;
+	res << v[0], v[1], v[2];
+
+	return res;
+}
+
+Eigen::Vector4d string_to_vector4d(const std::string& input)
+{
+	std::vector<double> v = split_to_double(input, 4);
+	Eigen::Vector4d res;
+	res << v[0], v[1], v[2],v[3];
+
+	return res;
+}
+
+Eigen::VectorXd string_to_vectorXd(const std::string& input, int n){
+	std::vector<double> v = split_to_double(input, n);
+	Eigen::VectorXd res(n);
+	for(int i = 0; i < n; i++){
+		res[i] = v[i];
+	}
+
+	return res;
+}
+
+Eigen::Matrix3d string_to_matrix3d(const std::string& input){
+	std::vector<double> v = split_to_double(input, 9);
+	Eigen::Matrix3d res;
+	res << v[0], v[1], v[2],
+			v[3], v[4], v[5],
+			v[6], v[7], v[8];
+
+	return res;
+}
 
 ShapePtr
 MASS::
@@ -8,12 +63,14 @@ MakeSphereShape(double radius)
 {
 	return std::shared_ptr<SphereShape>(new SphereShape(radius));
 }
+
 ShapePtr
 MASS::
 MakeBoxShape(const Eigen::Vector3d& size)
 {
 	return std::shared_ptr<BoxShape>(new BoxShape(size));
 }
+
 ShapePtr
 MASS::
 MakeCapsuleShape(double radius, double height)
@@ -21,11 +78,11 @@ MakeCapsuleShape(double radius, double height)
 	return std::shared_ptr<CapsuleShape>(new CapsuleShape(radius,height));
 }
 
-dart::dynamics::Inertia
+Inertia
 MASS::
-MakeInertia(const dart::dynamics::ShapePtr& shape,double mass)
+MakeInertia(const ShapePtr& shape,double mass)
 {
-	dart::dynamics::Inertia inertia;
+	Inertia inertia;
 
 	inertia.setMass(mass);
 	inertia.setMoment(shape->computeInertia(mass));
@@ -49,6 +106,7 @@ MakeFreeJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 
 	return props;
 }
+
 PlanarJoint::Properties*
 MASS::
 MakePlanarJointProperties(const std::string& name,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint)
@@ -66,6 +124,7 @@ MakePlanarJointProperties(const std::string& name,const Eigen::Isometry3d& paren
 
 	return props;
 }
+
 BallJoint::Properties*
 MASS::
 MakeBallJointProperties(const std::string& name,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint,const Eigen::Vector3d& lower,const Eigen::Vector3d& upper,const Eigen::Vector3d& force_lower,const Eigen::Vector3d& force_upper,const std::string& actuator_type)
@@ -89,6 +148,7 @@ MakeBallJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 
 	return props;
 }
+
 RevoluteJoint::Properties*
 MASS::
 MakeRevoluteJointProperties(const std::string& name,const Eigen::Vector3d& axis,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint,const Eigen::Vector1d& lower,const Eigen::Vector1d& upper,const Eigen::Vector1d& force_lower,const Eigen::Vector1d& force_upper,const std::string& actuator_type)
@@ -113,6 +173,7 @@ MakeRevoluteJointProperties(const std::string& name,const Eigen::Vector3d& axis,
 
 	return props;
 }
+
 WeldJoint::Properties*
 MASS::
 MakeWeldJointProperties(const std::string& name,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint)
@@ -125,9 +186,10 @@ MakeWeldJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 
 	return props;
 }
+
 BodyNode*
 MASS::
-MakeBodyNode(const SkeletonPtr& skeleton,BodyNode* parent,Joint::Properties* joint_properties,const std::string& joint_type,dart::dynamics::Inertia inertia)
+MakeBodyNode(const SkeletonPtr& skeleton,BodyNode* parent,Joint::Properties* joint_properties,const std::string& joint_type,Inertia inertia)
 {
 	BodyNode* bn;
 
@@ -196,58 +258,8 @@ Eigen::Isometry3d Orthonormalize(const Eigen::Isometry3d& T_old)
 	T.linear().col(2) = u2;
 	return T;
 }
-std::vector<double> split_to_double(const std::string& input, int num)
-{
-    std::vector<double> result;
-    std::string::size_type sz = 0, nsz = 0;
-    for(int i = 0; i < num; i++){
-        result.push_back(std::stof(input.substr(sz), &nsz));
-        sz += nsz;
-    }
-    return result;
-}
-Eigen::Vector1d string_to_vector1d(const std::string& input){
-	std::vector<double> v = split_to_double(input, 1);
-	Eigen::Vector1d res;
-	res << v[0];
 
-	return res;
-}
-Eigen::Vector3d string_to_vector3d(const std::string& input){
-	std::vector<double> v = split_to_double(input, 3);
-	Eigen::Vector3d res;
-	res << v[0], v[1], v[2];
-
-	return res;
-}
-Eigen::Vector4d string_to_vector4d(const std::string& input)
-{
-	std::vector<double> v = split_to_double(input, 4);
-	Eigen::Vector4d res;
-	res << v[0], v[1], v[2],v[3];
-
-	return res;
-}
-Eigen::VectorXd string_to_vectorXd(const std::string& input, int n){
-	std::vector<double> v = split_to_double(input, n);
-	Eigen::VectorXd res(n);
-	for(int i = 0; i < n; i++){
-		res[i] = v[i];
-	}
-
-	return res;
-}
-Eigen::Matrix3d string_to_matrix3d(const std::string& input){
-	std::vector<double> v = split_to_double(input, 9);
-	Eigen::Matrix3d res;
-	res << v[0], v[1], v[2],
-			v[3], v[4], v[5],
-			v[6], v[7], v[8];
-
-	return res;
-}
-
-dart::dynamics::SkeletonPtr
+SkeletonPtr
 MASS::
 BuildFromFile(const std::string& path, bool load_obj, double mass_ratio)
 {
@@ -308,7 +320,7 @@ BuildFromFile(const std::string& path, bool load_obj, double mass_ratio)
 		if(body->Attribute("color")!=nullptr)
 			color = string_to_vector4d(body->Attribute("color"));
 
-		dart::dynamics::Inertia inertia = MakeInertia(shape, mass);
+		Inertia inertia = MakeInertia(shape, mass);
 
 		Eigen::Isometry3d T_body = Eigen::Isometry3d::Identity();
 		T_body.linear() = string_to_matrix3d(body->FirstChildElement("Transformation")->Attribute("linear"));

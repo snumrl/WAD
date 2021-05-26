@@ -4,24 +4,22 @@
 #include "dart/dart.hpp"
 #include "dart/gui/gui.hpp"
 #include "ShapeRenderer.h"
-
-#include <iostream>
+#include "Environment.h"
+#include "Muscle.h"
+#include "JointData.h"
+#include "MetabolicEnergy.h"
+#include "Contact.h"
 #include <fstream>
+#include <deque>
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/embed.h>
 
+using namespace dart::dynamics;
 namespace py = pybind11;
 namespace MASS
 {
 
-class Environment;
-class Muscle;
-class BVH;
-class JointData;
-class MetabolicEnergy;
-class Contact;
-// class Torques;
 class Window : public dart::gui::Win3D
 {
 public:
@@ -52,11 +50,11 @@ public:
 
 	void DrawGround();
 	void DrawCharacter();
-	void DrawEntity(const dart::dynamics::Entity* entity);
-	void DrawBodyNode(const dart::dynamics::BodyNode* bn);
-	void DrawSkeleton(const dart::dynamics::SkeletonPtr& skel);
-	void DrawShapeFrame(const dart::dynamics::ShapeFrame* shapeFrame);
-	void DrawShape(const dart::dynamics::Shape* shape,const Eigen::Vector4d& color);
+	void DrawEntity(const Entity* entity);
+	void DrawBodyNode(const BodyNode* bn);
+	void DrawSkeleton(const SkeletonPtr& skel);
+	void DrawShapeFrame(const ShapeFrame* shapeFrame);
+	void DrawShape(const Shape* shape,const Eigen::Vector4d& color);
 	void DrawTarget();
 	void DrawReference();
 	void DrawMuscles(const std::vector<Muscle*>& muscles);
@@ -64,7 +62,6 @@ public:
 	void DrawAiMesh(const struct aiScene *sc, const struct aiNode* nd,const Eigen::Affine3d& M,double y);
 
 	void DrawReward();
-	// void DrawTorques();
 	void DrawJointTorques();
 	void DrawJointAngles();
 	// void DrawTorqueGraph(std::string name, int idx, double w, double h, double x, double y);
@@ -175,6 +172,6 @@ private:
 	std::ofstream mFile;
 
 };
-};
+}
 
 #endif

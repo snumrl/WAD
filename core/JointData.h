@@ -4,6 +4,7 @@
 #include <deque>
 #include <map>
 
+using namespace dart::dynamics;
 namespace MASS
 {
 
@@ -13,7 +14,7 @@ public:
     JointData();
     ~JointData();
 
-    void Initialize(const dart::dynamics::SkeletonPtr& skel);
+    void Initialize(const SkeletonPtr& skel);
     void Reset();
 
     void SetTorques(const Eigen::VectorXd& torques);
@@ -35,7 +36,7 @@ public:
 
     double GetReward();
 private:
-    dart::dynamics::SkeletonPtr mSkeleton;
+    SkeletonPtr mSkeleton;
 
     int mWindowSize;
     int mCycleStep;
@@ -53,5 +54,6 @@ private:
     std::map<std::string, std::deque<std::pair<double, double>>> mAnglesPhase;
 
 };
-};
+
+}
 #endif

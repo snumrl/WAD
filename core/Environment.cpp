@@ -1,17 +1,9 @@
 #include "Environment.h"
-#include "DARTHelper.h"
-#include "Character.h"
-#include "BVH.h"
-#include "Muscle.h"
-#include "Device.h"
-#include "dart/collision/bullet/bullet.hpp"
 #include <ctime>
 #include <regex>
-using namespace dart;
-using namespace dart::simulation;
-using namespace dart::dynamics;
-using namespace MASS;
-using namespace std;
+
+namespace MASS
+{
 
 Environment::
 Environment()
@@ -562,4 +554,6 @@ GetMaxV()
 		max_v << mCharacter->GetMaxV(), mDevice->GetMaxV();
 
 	return max_v;
+}
+
 }

@@ -2,21 +2,25 @@
 #define __MASS_DEVICE_H__
 #include "dart/dart.hpp"
 #include "Character.h"
+#include "DARTHelper.h"
 
+using namespace dart::dynamics;
+using namespace dart::simulation;
 namespace MASS
 {
+
 class Device
 {
 public:
-    Device(dart::simulation::WorldPtr& wPtr);
+    Device(WorldPtr& wPtr);
     ~Device();
 
     void LoadSkeleton(const std::string& path, bool load_obj);
-    const dart::dynamics::SkeletonPtr& GetSkeleton(){ return mSkeleton; }
+    const SkeletonPtr& GetSkeleton(){ return mSkeleton; }
 
     void Initialize();
 
-    void SetWorld(dart::simulation::WorldPtr& wPtr){ mWorld = wPtr; }
+    void SetWorld(WorldPtr& wPtr){ mWorld = wPtr; }
     void SetCharacter(Character* character){mCharacter = character;}
 
     void Reset();
@@ -72,8 +76,8 @@ public:
     const Eigen::VectorXd& GetMaxV(){return mMax_v;}
 
 private:
-    dart::dynamics::SkeletonPtr mSkeleton;
-    dart::simulation::WorldPtr mWorld;
+    SkeletonPtr mSkeleton;
+    WorldPtr mWorld;
     Character* mCharacter;
 
     int mNumState;

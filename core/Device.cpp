@@ -1,12 +1,11 @@
 #include "Device.h"
-#include "DARTHelper.h"
 #include <iostream>
 
-using namespace MASS;
-using namespace dart::dynamics;
+namespace MASS
+{
 
 Device::
-Device(dart::simulation::WorldPtr& wPtr)
+Device(WorldPtr& wPtr)
 :mUseDeviceNN(false),mNumParamState(0)
 {
 	mWorld = wPtr;
@@ -73,7 +72,7 @@ void
 Device::
 Reset()
 {
-	dart::dynamics::SkeletonPtr skel_char = mCharacter->GetSkeleton();
+	SkeletonPtr skel_char = mCharacter->GetSkeleton();
 
 	Eigen::VectorXd p(mNumDof);
 	Eigen::VectorXd v(mNumDof);
@@ -139,7 +138,7 @@ GetState() const
 	// Eigen::VectorXd positions = mSkeleton->getPositions();
 	// Eigen::VectorXd velocities = mSkeleton->getVelocities();
 
-	// dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
+	// BodyNode* root = mSkeleton->getBodyNode(0);
 	// Eigen::Quaterniond rotation(root->getWorldTransform().rotation());
 	// Eigen::Vector3d root_linvel = root->getCOMLinearVelocity();
 	// Eigen::Vector3d root_angvel = root->getAngularVelocity();
@@ -254,7 +253,7 @@ double
 Device::
 GetAngleQ(const std::string& name)
 {
-	dart::dynamics::SkeletonPtr skel_char = mCharacter->GetSkeleton();
+	SkeletonPtr skel_char = mCharacter->GetSkeleton();
 	Eigen::Vector3d dir = skel_char->getBodyNode(0)->getCOMLinearVelocity();
 	dir /= dir.norm();
 
@@ -399,4 +398,6 @@ SetAdaptiveParams(std::string name, double lower, double upper)
 		this->SetMinMaxV(1, lower, upper);
 		this->SetDelta_t(lower);
 	}
+}
+
 }

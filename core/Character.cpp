@@ -1,19 +1,13 @@
 #include "Character.h"
-#include "BVH.h"
-#include "DARTHelper.h"
-#include "Muscle.h"
 #include "Device.h"
-#include "Utils.h"
-#include "dart/gui/gui.hpp"
 #include <tinyxml.h>
 #include <ctime>
 
-using namespace dart;
-// using namespace dart::dynamics;
-using namespace MASS;
+namespace MASS
+{
 
 Character::
-Character(dart::simulation::WorldPtr& wPtr)
+Character(WorldPtr& wPtr)
 	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mNumParamState(0),mMass(0),mAdaptiveMotion(true)
 {
 	this->SetWorld(wPtr);
@@ -26,7 +20,7 @@ Character(dart::simulation::WorldPtr& wPtr)
 	mLowerMuscleRelatedDof = 30;
 	mUpperMuscleRelatedDof = 26;
 
-	mAdaptiveLowerBody = true;
+	mAdaptiveLowerBody = false;
 	mTimeOffset = 2.0;
 }
 
@@ -229,7 +223,7 @@ Initialize()
 	if(mAdaptiveMotion)
 	{
 		if(mAdaptiveLowerBody)
-			mNumAdaptiveSpatialDof = 24; // lower : 24, upper : 32
+			mNumAdaptiveSpatialDof = 24; // lower : 24
 		else
 			mNumAdaptiveSpatialDof = mDof; // lower : 24, upper : 32
 		mNumAdaptiveTemporalDof = 1;
@@ -274,6 +268,8 @@ Initialize()
 		mRootTrajectory.push_back(Eigen::Vector3d::Zero());
 	for(int i=0; i<32; i++)
 		mHeadTrajectory.push_back(Eigen::Vector3d::Zero());
+	for(int i=0; i<200; i++)
+		mComHistory.push_back(Eigen::Vector4d::Zero());
 
 	int frames = mBVH->GetNumTotalFrames();
 	double ratio = 1.0;
@@ -525,6 +521,10 @@ Reset()
 	for(int i=0; i<32; i++)
 		mHeadTrajectory.push_back(Eigen::Vector3d::Zero());
 
+	mComHistory.clear();
+	for(int i=0; i<200; i++)
+		mComHistory.push_back(Eigen::Vector4d::Zero());
+
 	mStepCnt = 0;
 	mCurCoT = 0.0;
 	mCurVel = 0.0;
@@ -636,12 +636,24 @@ SetMuscleTuple()
 
 void
 Character::
+SetComHistory()
+{
+	Eigen::Vector4d curCom;
+	curCom.segment(0,3) = mSkeleton->getCOM();
+	curCom(3) = mAdaptiveTime;
+	mComHistory.pop_back();
+	mComHistory.push_front(curCom);
+}
+
+void
+Character::
 SetMeasure(bool isRender)
 {
 	if(mStepCnt == mNumSteps-1){
 		this->SetTrajectory();
 		this->SetCurVelocity();
 	}
+	this->SetComHistory();
 
 	double phase = mPhase;
 	double frame = mFrame;
@@ -846,9 +858,15 @@ GetState_Character()
 	if(cur_time > 0.20)
 		cur_time = 0.21;
 
+	Eigen::VectorXd action;
+	if(mLowerBody)
+		action = mAction.segment(mNumActiveDof,24);
+	else
+		action = mAction.segment(mNumActiveDof,56);
+
 	Eigen::VectorXd state;
-	state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1+24);
-	state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time,mAction.segment(mNumActiveDof,24);
+	state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1+action.size());
+	state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time,action;
 
 	return state;
 }
@@ -1107,7 +1125,7 @@ GetReward_Character_Efficiency()
 	mReward["reg"] = r_Pose;
 	mReward["com"] = r_ActionReg;
 
-	double r_continuous = 0.10 * r_Width + 0.40 * r_Pose + 0.20 * r_Vel + 0.30 * r_ActionReg;
+	double r_continuous = 0.10 * r_Width + 0.30 * r_Pose + 0.30 * r_Vel + 0.30 * r_ActionReg;
 	double r_spike = 0.0 * r_EnergyMin;
 
 	return std::make_pair(r_continuous,r_spike);
@@ -1193,8 +1211,8 @@ GetReward_Pose()
 
 	double err_scale = 1.0;
 
-	double pose_scale = 10.0;
-	double head_scale = 5.0;
+	double pose_scale = 8.0;
+	double head_scale = 4.0;
 	double root_scale = 2.0;
 
 	double pose_err = (pose_cur-pose_ref).norm();
@@ -1287,8 +1305,19 @@ GetReward_Vel()
 	double vel_scale = 2.0;
 	double vel_err = 0.0;
 
-	vel_err = fabs(mCurVel - 1.5);
-	vel_err += fabs(mCurHeadVel - 1.5);
+	int last_idx = mComHistory.size()-1;
+	Eigen::Vector4d past = mComHistory[last_idx];
+	Eigen::Vector4d cur = mComHistory[0];
+
+	double diff_x = (cur[0]-past[0]);
+	double diff_z = (cur[2]-past[2]);
+	double diff = std::sqrt(diff_x*diff_x + diff_z*diff_z);
+	double vel = diff/(cur[3]-past[3]);
+
+	vel_err = fabs(vel-1.5);
+
+	// vel_err = fabs(mCurVel - 1.5);
+	// vel_err += fabs(mCurHeadVel - 1.5);
 
 	double reward = 0.0;
 	reward = exp(-1.0 * vel_scale * vel_err);
@@ -1305,8 +1334,8 @@ double
 Character::
 GetReward_ActionReg()
 {
-	Eigen::VectorXd prev = mAction_prev.segment(mNumActiveDof,24);
-	Eigen::VectorXd cur = mAction.segment(mNumActiveDof,24);
+	Eigen::VectorXd prev = mAction_prev.segment(mNumActiveDof,56);
+	Eigen::VectorXd cur = mAction.segment(mNumActiveDof,56);
 
 	double actionDiff = (prev-cur).norm();
 
@@ -1399,11 +1428,11 @@ SetAction(const Eigen::VectorXd& a)
 
 	int pd_dof = mNumActiveDof;
 	double pd_scale = 0.1;
-	double root_ori_scale = 0.001;
-	double root_pos_scale = 0.002;
-	double adap_lower_scale = 0.002;
-	double adap_upper_scale = 0.002;
-	double adap_temporal_scale = 0.1;
+	double root_ori_scale = 0.002;
+	double root_pos_scale = 0.004;
+	double adap_lower_scale = 0.004;
+	double adap_upper_scale = 0.004;
+	double adap_temporal_scale = 0.2;
 
 	mAction.segment(0,pd_dof) = a.segment(0,pd_dof) * pd_scale;
 	mAction.segment(pd_dof,3) = Eigen::VectorXd::Zero(3);
@@ -1432,14 +1461,14 @@ SetAction(const Eigen::VectorXd& a)
 
 		for(int i=pd_dof; i<mAction.size(); i++){
 			if(i < pd_dof+3)
-				mAction[i] = Utils::Clamp(mAction[i], -0.005, 0.005);
+				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);
 			else if(i >= pd_dof+3 && i < pd_dof+6)
-				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);
+				mAction[i] = Utils::Clamp(mAction[i], -0.02, 0.02);
 			else if(i >= pd_dof+6 && i < pd_dof+24)
-				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);
+				mAction[i] = Utils::Clamp(mAction[i], -0.02, 0.02);
 			else{
 				if(mAdaptiveLowerBody){
-					mAction[i] = Utils::Clamp(mAction[i], -0.5, 0.5);
+					mAction[i] = Utils::Clamp(mAction[i], -1.0, 1.0);
 				}
 				else{
 					if(i >= pd_dof+24 && i < pd_dof+56)
@@ -1937,4 +1966,6 @@ SetAdaptiveParams(std::map<std::string, std::pair<double, double>>& p)
 			this->SetSpeedRatio(upper);
 		}
 	}
+}
+
 }

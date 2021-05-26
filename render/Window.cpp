@@ -1,54 +1,6 @@
 #include "Window.h"
-#include "Environment.h"
-#include "Character.h"
-#include "Device.h"
-#include "BVH.h"
-#include "Utils.h"
-#include "Muscle.h"
 #include <iostream>
-#include <fstream>
-#include <deque>
 #include <ctime>
-using namespace MASS;
-using namespace dart;
-using namespace dart::dynamics;
-using namespace dart::simulation;
-using namespace dart::gui;
-using namespace std;
-
-Eigen::Matrix3d
-R_x(double x)
-{
-	double cosa = cos(x*3.141592/180.0);
-	double sina = sin(x*3.141592/180.0);
-	Eigen::Matrix3d R;
-	R<< 1,0     ,0    ,
-		0,cosa  ,-sina,
-		0,sina  ,cosa ;
-	return R;
-}
-
-Eigen::Matrix3d R_y(double y)
-{
-	double cosa = cos(y*3.141592/180.0);
-	double sina = sin(y*3.141592/180.0);
-	Eigen::Matrix3d R;
-	R <<cosa ,0,sina,
-		0    ,1,   0,
-		-sina,0,cosa;
-	return R;
-}
-
-Eigen::Matrix3d R_z(double z)
-{
-	double cosa = cos(z*3.141592/180.0);
-	double sina = sin(z*3.141592/180.0);
-	Eigen::Matrix3d R;
-	R<< cosa,-sina,0,
-		sina,cosa ,0,
-		0   ,0    ,1;
-	return R;
-}
 
 Eigen::Vector4d white(0.9, 0.9, 0.9, 1.0);
 Eigen::Vector4d black(0.1, 0.1, 0.1, 1.0);
@@ -67,6 +19,9 @@ Eigen::Vector4d green_trans(0.2, 0.8, 0.2, 0.2);
 Eigen::Vector4d blue_trans(0.2, 0.2, 0.8, 0.2);
 Eigen::Vector4d yellow_trans(0.8, 0.8, 0.2, 0.2);
 Eigen::Vector4d purple_trans(0.8, 0.2, 0.8, 0.2);
+
+namespace MASS
+{
 
 Window::
 Window(Environment* env)
@@ -935,7 +890,7 @@ DrawContactForce()
 			Eigen::Vector3d p = ((iter->second).at(i)).second;
 			double norm = f.norm();
 			if(norm != 0)
-				drawArrow3D(p, f/norm, norm, 0.005, 0.015);
+				dart::gui::drawArrow3D(p, f/norm, norm, 0.005, 0.015);
 		}
 	}
 
@@ -1913,9 +1868,9 @@ DrawArrow()
 	dir_L2[2] *= -1;
 
 	if(f[6] < 0)
-		drawArrow3D(p_L, dir_L2,-0.04*f[6], 0.01, 0.03);
+		dart::gui::drawArrow3D(p_L, dir_L2,-0.04*f[6], 0.01, 0.03);
 	else
-		drawArrow3D(p_L, dir_L1, 0.04*f[6], 0.01, 0.03);
+		dart::gui::drawArrow3D(p_L, dir_L1, 0.04*f[6], 0.01, 0.03);
 
 	Eigen::Isometry3d trans_R = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurR")->getTransform();
 	Eigen::Vector3d p_R = trans_R.translation();
@@ -1925,9 +1880,9 @@ DrawArrow()
 	dir_R2[2] *= -1;
 
 	if(f[7] < 0)
-		drawArrow3D(p_R, dir_R2,-0.04*f[7], 0.015, 0.03);
+		dart::gui::drawArrow3D(p_R, dir_R2,-0.04*f[7], 0.015, 0.03);
 	else
-		drawArrow3D(p_R, dir_R1, 0.04*f[7], 0.015, 0.03);
+		dart::gui::drawArrow3D(p_R, dir_R1, 0.04*f[7], 0.015, 0.03);
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_COLOR_MATERIAL);
@@ -2474,4 +2429,6 @@ GetActivationFromNN(const Eigen::VectorXd& mt)
 	}
 
 	return activation;
+}
+
 }

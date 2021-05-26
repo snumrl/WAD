@@ -1,5 +1,4 @@
 #include "EnvManager.h"
-#include "DARTHelper.h"
 #include <omp.h>
 
 EnvManager::

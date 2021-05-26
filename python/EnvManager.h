@@ -2,6 +2,7 @@
 #define __ENV_MANAGER_H__
 #include "Environment.h"
 #include "NumPyHelper.h"
+#include "DARTHelper.h"
 
 namespace py = pybind11;
 class EnvManager
