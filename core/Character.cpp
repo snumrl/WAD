@@ -22,6 +22,7 @@ Character(dart::simulation::WorldPtr& wPtr)
 	mSpeedRatio = 1.0;
 
 	mLowerBody = true;
+
 }
 
 Character::
