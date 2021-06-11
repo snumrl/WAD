@@ -20,8 +20,8 @@ Character(WorldPtr& wPtr)
 	mLowerMuscleRelatedDof = 30;
 	mUpperMuscleRelatedDof = 26;
 
-	mAdaptiveMotion = true;
-	mAdaptiveLowerBody = false;
+	// mAdaptiveMotion = true;
+	mAdaptiveLowerBody = true;
 	mAdaptiveLowerDof = 24;
 	mAdaptiveUpperDof = 32;
 
@@ -793,9 +793,9 @@ GetState()
 
 	Eigen::VectorXd state_character = this->GetState_Character();
 	state_dim += state_character.rows();
-
 	Eigen::VectorXd state(state_dim);
 	state << state_character;
+	
 	if(mUseDevice)
 	{
 		Eigen::VectorXd state_device = mDevice->GetState();
@@ -835,23 +835,33 @@ GetState_Character()
 	p *= 0.8;
 	v *= 0.2;
 
-	double curTime = this->GetCurTime();
-	double nextTime = curTime + this->GetControlTimeStep();
-
-	Eigen::VectorXd cur_ref_pos, cur_ref_vel;
-	Eigen::VectorXd next_ref_pos, next_ref_vel;
-	this->GetPosAndVel(curTime, cur_ref_pos, cur_ref_vel);
-	this->GetPosAndVel(nextTime, next_ref_pos, next_ref_vel);
-
-	Eigen::VectorXd delta_pos = next_ref_pos - cur_ref_pos;
-
 	Eigen::VectorXd p_next, p_cur;
-	p_cur = mTargetPositions - cur_p;
-	p_next = delta_pos;
+	if(mAdaptiveMotion){
+		double curTime = this->GetCurTime();
+		double nextTime = curTime + this->GetControlTimeStep();
 
-	p_cur *= 0.8;
-	p_next *= 0.8;
+		Eigen::VectorXd cur_ref_pos, cur_ref_vel;
+		Eigen::VectorXd next_ref_pos, next_ref_vel;
+		this->GetPosAndVel(curTime, cur_ref_pos, cur_ref_vel);
+		this->GetPosAndVel(nextTime, next_ref_pos, next_ref_vel);
 
+		Eigen::VectorXd delta_pos = next_ref_pos - cur_ref_pos;
+		
+		p_cur = mTargetPositions - cur_p;
+		p_next = delta_pos;
+
+		p_cur *= 0.8;
+		p_next *= 0.8;
+	}
+	else{
+		double nextTime = this->GetCurTime() + this->GetControlTimeStep();
+		
+		Eigen::VectorXd next_ref_pos, next_ref_vel;
+		this->GetPosAndVel(nextTime, next_ref_pos, next_ref_vel);
+		p_next = next_ref_pos - cur_p;
+		p_next *= 0.8;
+	}
+	
 	std::pair<double, double> phase;
 	if(mAdaptiveMotion)
 		phase = this->GetAdaptivePhases();
@@ -863,14 +873,24 @@ GetState_Character()
 		cur_time = 0.21;
 
 	Eigen::VectorXd action;
-	if(mAdaptiveLowerBody)
-		action = mAction.segment(mNumActiveDof,24);
-	else
-		action = mAction.segment(mNumActiveDof,56);
-
 	Eigen::VectorXd state;
-	state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1+action.size());
-	state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time,action;
+	if(mAdaptiveMotion){
+		if(mAdaptiveLowerBody)
+			action = mAction.segment(mNumActiveDof,mAdaptiveLowerDof);
+		else
+			action = mAction.segment(mNumActiveDof,mAdaptiveLowerDof+mAdaptiveUpperDof);
+	
+		state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1+action.size());
+		state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time,action;
+	}
+	else{
+		// state.resize(2+p.rows()+v.rows()+2);
+		// state << h,w,p,v,phase.first,phase.second;
+		state.resize(2+p.rows()+v.rows()+p_next.rows());
+		state << h,w,p,v,p_next;
+		// state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1+action.size());
+		// state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time,action;
+	}
 
 	return state;
 }
@@ -980,7 +1000,7 @@ GetReward_Character()
 
 	double r_continuous = r_imit.first + r_effi.first;
 	double r_spike = r_imit.second + r_effi.second;
-
+	
 	return std::make_pair(r_continuous,r_spike);
 }
 
@@ -990,10 +1010,11 @@ GetReward_Character_Imitation()
 {
 	std::vector<Eigen::Matrix3d> cur_ee_r, ref_ee_r;
 	std::vector<Eigen::Vector3d> cur_ee_p, ref_ee_p;
-
+	
 	Eigen::VectorXd cur_q = mSkeleton->getPositions();
 	Eigen::VectorXd cur_dq = mSkeleton->getVelocities();
 	dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
+	Eigen::Vector3d cur_root_com = root->getCOM();
 
 	// Current Position and Velocity
 	Eigen::VectorXd p_cur, v_cur;
@@ -1017,6 +1038,8 @@ GetReward_Character_Imitation()
 	mSkeleton->setVelocities(mTargetVelocities);
 	mSkeleton->computeForwardKinematics(true, true, false);
 
+	Eigen::Vector3d ref_root_com = root->getCOM();
+
 	Eigen::VectorXd p_ref, v_ref;
 	p_ref.resize((mNumBodyNodes-1)*3);
 	v_ref.resize((mNumBodyNodes-1)*3);
@@ -1038,12 +1061,14 @@ GetReward_Character_Imitation()
 	mSkeleton->computeForwardKinematics(true, true, false);
 
 	// Position and Velocity Difference
-	Eigen::VectorXd p_diff, v_diff;
+	Eigen::VectorXd p_diff, v_diff, com_diff;
 	p_diff.resize((mNumBodyNodes-1)*3);
 	v_diff.resize((mNumBodyNodes-1)*3);
 
 	p_diff = (p_cur - p_ref);
 	v_diff = (v_cur - v_ref);
+
+	com_diff = (cur_root_com - ref_root_com);
 
 	// p_diff[0] = root->getCOM()[0];
 	// v_diff = (v_cur - v_ref);
@@ -1074,15 +1099,18 @@ GetReward_Character_Imitation()
 
 	double sig_p = 4.0;
 	double sig_q = 0.4;
+	double sig_com = 0.2;
 	double sig_ee_rot = 20.0;
 	double sig_ee_pos = 40.0;
 
-	double r_p = Utils::exp_of_squared(p_diff, sig_p);
+	// double r_p = Utils::exp_of_squared(p_diff, sig_p);
+	double r_p = 1.0;
 	double r_q = Utils::exp_of_squared(q_diff, sig_q);
+	double r_com = Utils::exp_of_squared(com_diff, sig_com);
 	double r_ee_rot = Utils::exp_of_squared(ee_rot_diff, sig_ee_rot);
 	double r_ee_pos = Utils::exp_of_squared(ee_pos_diff, sig_ee_pos);
 
-	double r_total = r_p * r_q * r_ee_rot * r_ee_pos;
+	double r_total = r_p * r_q * r_ee_rot * r_ee_pos * r_com;
 
 	// std::cout << "p : " << r_p << std::endl;
 	// std::cout << "q : " << r_q << std::endl;
@@ -1101,6 +1129,9 @@ std::pair<double,double>
 Character::
 GetReward_Character_Efficiency()
 {
+	if(!mAdaptiveMotion)
+		return std::make_pair(0.0,0.0);
+
 	if(mWorld->getTime() < mTimeOffset)
 		return std::make_pair(0.0,0.0);
 
@@ -1130,7 +1161,7 @@ GetReward_Character_Efficiency()
 	mReward["com"] = r_ActionReg;
 
 	double r_continuous = 0.10 * r_Width + 0.30 * r_Pose + 0.30 * r_Vel + 0.30 * r_ActionReg;
-	double r_spike = 0.0 * r_EnergyMin;
+	double r_spike = 2.0 * r_EnergyMin;
 
 	return std::make_pair(r_continuous,r_spike);
 }
@@ -1185,7 +1216,7 @@ GetReward_Pose()
 			head_ref.segment<3>(0) << rot;
 	}
 
-	head_ref[3] = mSkeleton->getBodyNode("Head")->getCOM()[1];
+	head_ref[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] - root_ref->getCOM()[1]);
 
 	// restore
 	mSkeleton->setPositions(mTargetPositions);
@@ -1211,7 +1242,7 @@ GetReward_Pose()
 			head_cur.segment<3>(0) << rot;
 	}
 
-	head_cur[3] = mSkeleton->getBodyNode("Head")->getCOM()[1];
+	head_cur[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] -root_cur->getCOM()[1]);
 
 	double err_scale = 1.0;
 
@@ -1435,11 +1466,11 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 	int ad_dof = mNumAdaptiveDof;
 
 	double pd_scale = 0.1;
-	double root_ori_scale = 0.002;
-	double root_pos_scale = 0.004;
-	double lower_scale = 0.004; // adaptive lower body
-	double upper_scale = 0.004; // adaptive upper body
-	double temporal_scale = 0.2; // adaptive temporal displacement
+	double root_ori_scale = 0.001;
+	double root_pos_scale = 0.002;
+	double lower_scale = 0.002; // adaptive lower body
+	double upper_scale = 0.002; // adaptive upper body
+	double temporal_scale = 0.1; // adaptive temporal displacement
 
 	mAction.segment(0,pd_dof) = a.segment(0,pd_dof) * pd_scale;
 	mAction.segment(pd_dof,ad_dof) = Eigen::VectorXd::Zero(ad_dof);
@@ -1454,15 +1485,19 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 
 		for(int i=pd_dof; i<mAction.size(); i++){
 			if(i < pd_dof+3)
-				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);
+				mAction[i] = Utils::Clamp(mAction[i], -0.005, 0.005);
 			else if(i >= pd_dof+3 && i < pd_dof+6)
-				mAction[i] = Utils::Clamp(mAction[i], -0.02, 0.02);
+				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);
 			else if(i >= pd_dof+6 && i < pd_dof+l_dof)
-				mAction[i] = Utils::Clamp(mAction[i], -0.02, 0.02);
-			else if(i >= pd_dof+l_dof && i < pd_dof+sp_dof)
-				mAction[i] = Utils::Clamp(mAction[i], -0.02, 0.02);
+				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);
+			else if(i >= pd_dof+l_dof && i < pd_dof+sp_dof){
+				if(mAdaptiveLowerBody)
+					mAction[i] = Utils::Clamp(mAction[i], -1.0, 1.0);	
+				else
+					mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);	
+			}			
 			else
-				mAction[i] = Utils::Clamp(mAction[i], -1.0, 1.0);
+				mAction[i] = Utils::Clamp(mAction[i], -0.5, 0.5);
 		}
 	}
 
@@ -1496,6 +1531,7 @@ SetActionImitationLearning(const Eigen::VectorXd& a)
 	double t = mWorld->getTime();
 	double timeStep = (double)mNumSteps*mWorld->getTimeStep();
 	this->GetPosAndVel(t+timeStep, mTargetPositions, mTargetVelocities);
+	this->GetPosAndVel(t+timeStep, mReferencePositions, mReferenceVelocities);
 }
 
 void
@@ -1558,10 +1594,36 @@ GetSPDForces(const Eigen::VectorXd& p_desired)
 	Eigen::VectorXd qdqdt = q + dq*dt;
 	Eigen::VectorXd p_diff = -mKp.cwiseProduct(mSkeleton->getPositionDifferences(qdqdt,p_desired));
 	Eigen::VectorXd v_diff = -mKv.cwiseProduct(dq);
-	Eigen::VectorXd ddq = M_inv*(-mSkeleton->getCoriolisAndGravityForces() + p_diff + v_diff + mSkeleton->getConstraintForces());
+	Eigen::VectorXd ddq;
+	Eigen::VectorXd tmp;
+	double dev6,dev15;
+	if(mUseDevice)
+	{
+		mDevice->SetDesiredTorques2();
+		const Eigen::VectorXd& dev_torques = mDevice->GetDesiredTorques();
+		Eigen::VectorXd devExternalTorques = Eigen::VectorXd::Zero(mDof);
+		devExternalTorques[6] = dev_torques[6];
+		devExternalTorques[15] = dev_torques[9];
+		dev6 = dev_torques[6];
+		dev15 = dev_torques[9];
+		ddq = M_inv*(-mSkeleton->getCoriolisAndGravityForces() + p_diff + v_diff + mSkeleton->getConstraintForces() + devExternalTorques);
+		tmp = M_inv*(-mSkeleton->getCoriolisAndGravityForces() + p_diff + v_diff + mSkeleton->getConstraintForces());
+	}
+	else
+	{
+		ddq = M_inv*(-mSkeleton->getCoriolisAndGravityForces() + p_diff + v_diff + mSkeleton->getConstraintForces());	
+	}
+
+	// Eigen::VectorXd ddq = M_inv*(-mSkeleton->getCoriolisAndGravityForces() + p_diff + v_diff + mSkeleton->getConstraintForces());
 	Eigen::VectorXd tau = p_diff + v_diff - dt*mKv.cwiseProduct(ddq);
+	Eigen::VectorXd tau2 = p_diff + v_diff - dt*mKv.cwiseProduct(tmp);
 
 	tau.head<6>().setZero();
+	tau2.head<6>().setZero();
+
+	// std::cout << "06 : " << dev6 << " " << tau2[6] << " -> " << tau[6] << std::endl;
+	// std::cout << "15 : " << dev15 << " " << tau2[15] << " -> " << tau[15] << std::endl;
+	
 	return tau;
 }
 

@@ -125,7 +125,7 @@ Step(double t)
 	}
 	else
 	{
-		SetDesiredTorques2();
+		// SetDesiredTorques2();
 		mSkeleton->setForces(mDesiredTorque);
 	}
 }

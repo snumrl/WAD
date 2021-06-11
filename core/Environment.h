@@ -65,6 +65,7 @@ public:
 	bool GetUseMuscle(){return mUseMuscle;}
 	bool GetUseDevice(){return mUseDevice;}
 	bool GetUseDeviceNN(){return mUseDeviceNN;}
+	bool GetUseAdaptiveMotion(){return mUseAdaptiveMotion;}
 	bool GetUseAdaptiveSampling(){return mUseAdaptiveSampling;}
 	int GetControlHz(){return mControlHz;}
 	int GetSimulationHz(){return mSimulationHz;}

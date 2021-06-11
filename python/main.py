@@ -28,7 +28,8 @@ LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
-Episode = namedtuple('Episode',('s','a','r', 'value', 'logprob', 't'))
+EpisodeAdaptive = namedtuple('Episode',('s','a','r', 'value', 'logprob', 't'))
+Episode = namedtuple('Episode',('s','a','r', 'value', 'logprob'))
 class EpisodeBuffer(object):
 	def __init__(self):
 		self.data = []
@@ -86,6 +87,7 @@ class PPO(object):
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
 		self.use_device = self.env.UseDevice()
+		self.use_adaptive_motion = self.env.UseAdaptiveMotion()
 
 		# ========== Character setting ========== #
 		self.num_state = self.env.GetNumState()
@@ -319,8 +321,11 @@ class PPO(object):
 				elif self.env.IsEndOfEpisode(j) is False:
 					terminated_state = False
 					rewards[j] = self.env.GetReward(j)
-					adaptive_times[j] = self.env.GetAdaptiveTime(j)
-					self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j], adaptive_times[j])
+					if self.use_adaptive_motion:
+						adaptive_times[j] = self.env.GetAdaptiveTime(j)
+						self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j], adaptive_times[j])
+					else:
+						self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j])	
 					local_step += 1
 
 				if terminated_state or (nan_occur is True):
@@ -354,39 +359,43 @@ class PPO(object):
 			size = len(data)
 			if size == 0:
 				continue
-			# states, actions, rewards, values, logprobs = zip(*data)
-			states, actions, rewards, values, logprobs, adaptiveTimes = zip(*data)
-
+			
+			if self.use_adaptive_motion:
+				states, actions, rewards, values, logprobs, adaptiveTimes = zip(*data)
+			else:
+				states, actions, rewards, values, logprobs = zip(*data)
+			
 			values = np.concatenate((values, np.zeros(1)), axis=0)
 			advantages = np.zeros(size)
 			ad_t = 0
 
 			epi_return = 0.0
-			# for i in reversed(range(len(data))):
-			# 	epi_return += rewards[i]
-			# 	delta = rewards[i] + values[i+1] * self.gamma - values[i]
-			# 	ad_t = delta + self.gamma * self.lb * ad_t
-			# 	advantages[i] = ad_t
-			# 	if np.isnan(ad_t):
-			# 		print("reward : ", rewards[i])
 
-			time_step = 0.0
-			for i in reversed(range(len(data))):
-				if i == size -1:
-					time_step = 0
-				else:
-					time_step = adaptiveTimes[i+1] - adaptiveTimes[i]
-				time_step *= self.num_control_Hz
-				t = integrate.quad(lambda x: pow(self.gamma, x), 0, time_step)[0]
+			if self.use_adaptive_motion:
+				time_step = 0.0
+				for i in reversed(range(len(data))):
+					if i == size -1:
+						time_step = 0
+					else:
+						time_step = adaptiveTimes[i+1] - adaptiveTimes[i]
+					time_step *= self.num_control_Hz
+					t = integrate.quad(lambda x: pow(self.gamma, x), 0, time_step)[0]
 
-				epi_return += rewards[i][0] + rewards[i][1]
-				delta = t*rewards[i][0] + values[i+1] * pow(self.gamma, time_step) - values[i]
-				if rewards[i][1] != 0:
-					delta += rewards[i][1]
-				ad_t = delta + pow(self.gamma, time_step) * pow(self.lb, time_step) * ad_t
-				advantages[i] = ad_t
-				if np.isnan(ad_t):
-					print("reward : ", rewards[i])
+					epi_return += rewards[i][0] + rewards[i][1]
+					delta = t*rewards[i][0] + values[i+1] * pow(self.gamma, time_step) - values[i]
+					if rewards[i][1] != 0:
+						delta += rewards[i][1]
+					ad_t = delta + pow(self.gamma, time_step) * pow(self.lb, time_step) * ad_t
+					advantages[i] = ad_t	
+			else:
+				for i in reversed(range(len(data))):
+					epi_return += rewards[i][0] + rewards[i][1]
+					delta = rewards[i][0] + rewards[i][1] + values[i+1] * self.gamma - values[i]
+					ad_t = delta + self.gamma * self.lb * ad_t
+					advantages[i] = ad_t
+					
+			if np.isnan(ad_t):
+				continue
 
 			self.sum_return += epi_return
 			TD = values[:size] + advantages

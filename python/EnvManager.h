@@ -48,6 +48,7 @@ public:
 	bool UseMuscle();
 	bool UseDevice();
 	bool UseDeviceNN();
+	bool UseAdaptiveMotion();
 
 	void SetDesiredTorques();
 	py::array_t<float> GetDesiredTorques();

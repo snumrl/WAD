@@ -217,6 +217,7 @@ Initialize(const std::string& meta_file, bool load_obj)
 		character->SetUseMuscle(true);
 		character->LoadMuscles(mMuscleFile);
 	}
+	character->SetUseAdaptiveMotion(mUseAdaptiveMotion);
 	this->SetCharacter(character);
 
 	MASS::Device* device;

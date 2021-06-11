@@ -157,6 +157,9 @@ public:
 	void SetUseDevice(bool b){mUseDevice = b;}
 	bool GetUseDevice(){return mUseDevice;}
 
+	void SetUseAdaptiveMotion(bool b){mAdaptiveMotion = b;}
+	bool GetUseAdaptiveMotion(){return mAdaptiveMotion;}
+
 	void SetRewards();
 	std::map<std::string, std::deque<double>> GetRewards(){return mRewards;}
 

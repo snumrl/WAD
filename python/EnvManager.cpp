@@ -282,6 +282,13 @@ UseDeviceNN()
 	return mEnvs[0]->GetUseDeviceNN();
 }
 
+bool
+EnvManager::
+UseAdaptiveMotion()
+{
+	return mEnvs[0]->GetUseAdaptiveMotion();
+}
+
 void
 EnvManager::
 SetDesiredTorques()
@@ -440,6 +447,7 @@ PYBIND11_MODULE(pymss, m){
 		.def("UseMuscle",&EnvManager::UseMuscle)
 		.def("UseDevice",&EnvManager::UseDevice)
 		.def("UseDeviceNN",&EnvManager::UseDeviceNN)
+		.def("UseAdaptiveMotion",&EnvManager::UseAdaptiveMotion)
 		.def("SetDesiredTorques",&EnvManager::SetDesiredTorques)
 		.def("GetDesiredTorques",&EnvManager::GetDesiredTorques)
 		.def("GetNumTotalMuscleRelatedDofs",&EnvManager::GetNumTotalMuscleRelatedDofs)
