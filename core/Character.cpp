@@ -21,7 +21,7 @@ Character(WorldPtr& wPtr)
 	mUpperMuscleRelatedDof = 26;
 
 	// mAdaptiveMotion = true;
-	mAdaptiveLowerBody = true;
+	mAdaptiveLowerBody = false;
 	mAdaptiveLowerDof = 24;
 	mAdaptiveUpperDof = 32;
 
@@ -640,17 +640,6 @@ SetMuscleTuple()
 
 void
 Character::
-SetComHistory()
-{
-	Eigen::Vector4d curCom;
-	curCom.segment(0,3) = mSkeleton->getCOM();
-	curCom(3) = mAdaptiveTime;
-	mComHistory.pop_back();
-	mComHistory.push_front(curCom);
-}
-
-void
-Character::
 SetMeasure(bool isRender)
 {
 	if(mStepCnt == mNumSteps-1){
@@ -678,6 +667,23 @@ SetMeasure(bool isRender)
 		mContacts->Set();
 		// this->SetCoT();
 	}
+}
+
+void
+Character::
+SetComHistory()
+{
+	Eigen::VectorXd p_save = mSkeleton->getPositions();
+	mSkeleton->setPositions(mTargetPositions);
+	
+	Eigen::Vector4d curCom;
+	curCom.segment(0,3) = mSkeleton->getCOM();
+	// curCom(3) = mAdaptiveTime;
+	curCom(3) = mWorld->getTime();
+	mComHistory.pop_back();
+	mComHistory.push_front(curCom);
+
+	mSkeleton->setPositions(p_save);
 }
 
 void
@@ -836,31 +842,47 @@ GetState_Character()
 	v *= 0.2;
 
 	Eigen::VectorXd p_next, p_cur;
-	if(mAdaptiveMotion){
-		double curTime = this->GetCurTime();
-		double nextTime = curTime + this->GetControlTimeStep();
+	// if(mAdaptiveMotion){
+	// 	double curTime = this->GetCurTime();
+	// 	double nextTime = curTime + this->GetControlTimeStep();
 
-		Eigen::VectorXd cur_ref_pos, cur_ref_vel;
-		Eigen::VectorXd next_ref_pos, next_ref_vel;
-		this->GetPosAndVel(curTime, cur_ref_pos, cur_ref_vel);
-		this->GetPosAndVel(nextTime, next_ref_pos, next_ref_vel);
+	// 	Eigen::VectorXd cur_ref_pos, cur_ref_vel;
+	// 	Eigen::VectorXd next_ref_pos, next_ref_vel;
+	// 	this->GetPosAndVel(curTime, cur_ref_pos, cur_ref_vel);
+	// 	this->GetPosAndVel(nextTime, next_ref_pos, next_ref_vel);
 
-		Eigen::VectorXd delta_pos = next_ref_pos - cur_ref_pos;
+	// 	Eigen::VectorXd delta_pos = next_ref_pos - cur_ref_pos;
 		
-		p_cur = mTargetPositions - cur_p;
-		p_next = delta_pos;
+	// 	p_cur = mTargetPositions - cur_p;
+	// 	p_next = delta_pos;
 
-		p_cur *= 0.8;
-		p_next *= 0.8;
-	}
-	else{
-		double nextTime = this->GetCurTime() + this->GetControlTimeStep();
+	// 	p_cur *= 0.8;
+	// 	p_next *= 0.8;
+	// }
+	// else{
+	// 	double nextTime = this->GetCurTime() + this->GetControlTimeStep();
 		
-		Eigen::VectorXd next_ref_pos, next_ref_vel;
-		this->GetPosAndVel(nextTime, next_ref_pos, next_ref_vel);
-		p_next = next_ref_pos - cur_p;
-		p_next *= 0.8;
-	}
+	// 	Eigen::VectorXd next_ref_pos, next_ref_vel;
+	// 	this->GetPosAndVel(nextTime, next_ref_pos, next_ref_vel);
+	// 	p_next = next_ref_pos - cur_p;
+	// 	p_next *= 0.8;
+	// }
+
+	double curTime = this->GetCurTime();
+	double nextTime = curTime + this->GetControlTimeStep();
+
+	Eigen::VectorXd cur_ref_pos, cur_ref_vel;
+	Eigen::VectorXd next_ref_pos, next_ref_vel;
+	this->GetPosAndVel(curTime, cur_ref_pos, cur_ref_vel);
+	this->GetPosAndVel(nextTime, next_ref_pos, next_ref_vel);
+
+	Eigen::VectorXd delta_pos = next_ref_pos - cur_ref_pos;
+		
+	p_cur = mTargetPositions - cur_p;
+	p_next = delta_pos;
+
+	p_cur *= 0.8;
+	p_next *= 0.8;
 	
 	std::pair<double, double> phase;
 	if(mAdaptiveMotion)
@@ -882,12 +904,14 @@ GetState_Character()
 	
 		state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1+action.size());
 		state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time,action;
+		// state.resize(2+p.rows()+v.rows()+p_cur.rows()+p_next.rows()+1+action.size());
+		// state << h,w,p,v,p_cur,p_next,cur_time,action;
 	}
 	else{
 		// state.resize(2+p.rows()+v.rows()+2);
 		// state << h,w,p,v,phase.first,phase.second;
-		state.resize(2+p.rows()+v.rows()+p_next.rows());
-		state << h,w,p,v,p_next;
+		state.resize(2+p.rows()+v.rows()+p_cur.rows()+p_next.rows());
+		state << h,w,p,v,p_cur,p_next;
 		// state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1+action.size());
 		// state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time,action;
 	}
@@ -975,6 +999,10 @@ GetReward()
 	mReward["reward"] = r_total;
 	mCurReward = r_total;
 
+	// std::cout << "con : " << r_continuous << std::endl;
+	// std::cout << "spi : " << r_spike << std::endl;
+	// std::cout << std::endl;
+
 	this->SetRewards();
 	return std::make_pair(r_continuous, r_spike);
 }
@@ -984,8 +1012,7 @@ Character::
 GetReward_Character()
 {
 	std::pair<double,double> r_imit = GetReward_Character_Imitation();
-	std::pair<double,double> r_effi =
-		GetReward_Character_Efficiency();
+	std::pair<double,double> r_effi = GetReward_Character_Efficiency();
 
 	mReward["imit"] = r_imit.first + r_imit.second;
  	mReward["effi"] = r_effi.first + r_effi.second;
@@ -998,8 +1025,9 @@ GetReward_Character()
 	r_effi.first *= ratio_effi;
 	r_effi.second *= ratio_effi;
 
-	double r_continuous = r_imit.first + r_effi.first;
-	double r_spike = r_imit.second + r_effi.second;
+	double r_continuous = r_imit.first*r_effi.first;
+	// double r_spike = r_imit.second+r_effi.second;
+	double r_spike = r_imit.first*r_effi.second + r_imit.second;
 	
 	return std::make_pair(r_continuous,r_spike);
 }
@@ -1014,8 +1042,7 @@ GetReward_Character_Imitation()
 	Eigen::VectorXd cur_q = mSkeleton->getPositions();
 	Eigen::VectorXd cur_dq = mSkeleton->getVelocities();
 	dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
-	Eigen::Vector3d cur_root_com = root->getCOM();
-
+	
 	// Current Position and Velocity
 	Eigen::VectorXd p_cur, v_cur;
 	p_cur.resize((mNumBodyNodes-1)*3);
@@ -1061,14 +1088,12 @@ GetReward_Character_Imitation()
 	mSkeleton->computeForwardKinematics(true, true, false);
 
 	// Position and Velocity Difference
-	Eigen::VectorXd p_diff, v_diff, com_diff;
+	Eigen::VectorXd p_diff, v_diff;
 	p_diff.resize((mNumBodyNodes-1)*3);
 	v_diff.resize((mNumBodyNodes-1)*3);
 
 	p_diff = (p_cur - p_ref);
 	v_diff = (v_cur - v_ref);
-
-	com_diff = (cur_root_com - ref_root_com);
 
 	// p_diff[0] = root->getCOM()[0];
 	// v_diff = (v_cur - v_ref);
@@ -1097,32 +1122,26 @@ GetReward_Character_Imitation()
 
 	//=====================================
 
-	double sig_p = 4.0;
-	double sig_q = 0.4;
-	double sig_com = 0.2;
+	double sig_p = 10.0;
+	double sig_q = 0.5;
+	double sig_com = 20.0;
 	double sig_ee_rot = 20.0;
-	double sig_ee_pos = 40.0;
-
-	// double r_p = Utils::exp_of_squared(p_diff, sig_p);
-	double r_p = 1.0;
+	double sig_ee_pos = 20.0;
+	
+	double r_p = Utils::exp_of_squared(p_diff, sig_p);
 	double r_q = Utils::exp_of_squared(q_diff, sig_q);
-	double r_com = Utils::exp_of_squared(com_diff, sig_com);
 	double r_ee_rot = Utils::exp_of_squared(ee_rot_diff, sig_ee_rot);
 	double r_ee_pos = Utils::exp_of_squared(ee_pos_diff, sig_ee_pos);
-
-	double r_total = r_p * r_q * r_ee_rot * r_ee_pos * r_com;
-
-	// std::cout << "p : " << r_p << std::endl;
-	// std::cout << "q : " << r_q << std::endl;
-	// std::cout << "rot : " << r_ee_rot << std::endl;
-	// std::cout << "pos : " << r_ee_pos << std::endl;
+		
+	// double r_total = r_p * r_q * r_ee_rot * r_ee_pos * r_com;
+	double r_total = r_p * r_q * r_ee_rot *r_ee_pos;
 
 	mReward["pose"] = r_p;
 	mReward["ee"] = r_ee_rot;
 	mReward["smooth"] = r_ee_pos;
 	mReward["vel"] = r_q;
 
-	return std::make_pair(r_total,0.0);
+	return std::make_pair(r_total, 0.0);
 }
 
 std::pair<double,double>
@@ -1130,16 +1149,22 @@ Character::
 GetReward_Character_Efficiency()
 {
 	if(!mAdaptiveMotion)
-		return std::make_pair(0.0,0.0);
+		return std::make_pair(0.0, 0.0);
 
-	if(mWorld->getTime() < mTimeOffset)
-		return std::make_pair(0.0,0.0);
+	// if(mWorld->getTime() < mTimeOffset)
+	// 	return std::make_pair(1.0, 0.0);
 
 	double r_EnergyMin = 1.0;
 	r_EnergyMin = this->GetReward_Energy();
 
+	if(mWorld->getTime() < mTimeOffset)
+		return std::make_pair(1.0, 2.0 * r_EnergyMin);
+
 	double r_Pose = 1.0;
 	r_Pose = this->GetReward_Pose();
+
+	double r_Time = 1.0;
+	r_Time = this->GetReward_Time();
 
 	double r_ActionReg = 1.0;
 	r_ActionReg = this->GetReward_ActionReg();
@@ -1160,10 +1185,31 @@ GetReward_Character_Efficiency()
 	mReward["reg"] = r_Pose;
 	mReward["com"] = r_ActionReg;
 
-	double r_continuous = 0.10 * r_Width + 0.30 * r_Pose + 0.30 * r_Vel + 0.30 * r_ActionReg;
+	// double r_continuous = 0.10 * r_Width + 0.50 * r_Pose + 0.40 * r_Vel;
+	double r_continuous = r_Pose * r_Vel;
 	double r_spike = 2.0 * r_EnergyMin;
 
-	return std::make_pair(r_continuous,r_spike);
+	// std::cout << "effi : " << r_continuous << std::endl;
+	// std::cout << "pose : " << r_Pose << std::endl;
+	// std::cout << "vel : " << r_Vel << std::endl;
+
+	return std::make_pair(r_continuous, r_spike);
+}
+
+double
+Character::
+GetReward_Time()
+{
+	double err_scale = 1.0;
+	double time_scale = 5.0;
+	double time_err = 0.0;
+
+	time_err = fabs(mWorld->getTime() - mAdaptiveTime);
+
+	double reward = 0.0;
+	reward = exp(-1.0 * time_scale * time_err);
+
+	return reward;
 }
 
 double
@@ -1195,7 +1241,7 @@ GetReward_Pose()
 
 	mSkeleton->setPositions(p_reward);
 	mSkeleton->computeForwardKinematics(true, true, false);
-
+	
 	dart::dynamics::BodyNode* root_ref = mSkeleton->getRootBodyNode();
 	Eigen::Isometry3d cur_root_inv = root_ref->getWorldTransform().inverse();
 
@@ -1246,8 +1292,8 @@ GetReward_Pose()
 
 	double err_scale = 1.0;
 
-	double pose_scale = 8.0;
-	double head_scale = 4.0;
+	double pose_scale = 1.0;
+	double head_scale = 5.0;
 	double root_scale = 2.0;
 
 	double pose_err = (pose_cur-pose_ref).norm();
@@ -1264,7 +1310,9 @@ GetReward_Pose()
 	// std::cout << "r head : " << head_reward << std::endl;
 
 	// double reward = 0.4 * pose_reward + 0.4 * head_reward + 0.2 * root_reward;
-	double reward = 0.5 * pose_reward + 0.5 * head_reward;
+	// double reward = 0.5 * pose_reward + 0.5 * head_reward;
+	// double reward = pose_reward * head_reward;
+	double reward = pose_reward;
 
 	mSkeleton->setPositions(p_save);
 	mSkeleton->setVelocities(v_save);
@@ -1337,7 +1385,7 @@ Character::
 GetReward_Vel()
 {
 	double err_scale = 1.0;
-	double vel_scale = 2.0;
+	double vel_scale = 4.0;
 	double vel_err = 0.0;
 
 	int last_idx = mComHistory.size()-1;
@@ -1490,12 +1538,8 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);
 			else if(i >= pd_dof+6 && i < pd_dof+l_dof)
 				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);
-			else if(i >= pd_dof+l_dof && i < pd_dof+sp_dof){
-				if(mAdaptiveLowerBody)
-					mAction[i] = Utils::Clamp(mAction[i], -1.0, 1.0);	
-				else
-					mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);	
-			}			
+			else if(i >= pd_dof+l_dof && i < pd_dof+sp_dof)
+				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);	
 			else
 				mAction[i] = Utils::Clamp(mAction[i], -0.5, 0.5);
 		}

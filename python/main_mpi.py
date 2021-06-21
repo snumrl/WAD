@@ -22,6 +22,8 @@ from pymss import EnvManager
 from Model import *
 from RunningMeanStd import *
 
+from mpi4py import MPI
+
 use_cuda = torch.cuda.is_available()
 FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
@@ -35,7 +37,7 @@ class EpisodeBuffer(object):
 		self.data = []
 
 	def Push(self, *args):
-		self.data.append(EpisodeAdaptive(*args))
+		self.data.append(Episode(*args))
 	def Pop(self):
 		self.data.pop()
 	def GetData(self):
@@ -82,8 +84,11 @@ class MarginalBuffer(object):
 
 class PPO(object):
 	def __init__(self,meta_file):
+		self.comm = MPI.COMM_WORLD
+		self.rank = self.comm.Get_rank()
+		
 		np.random.seed(seed = int(time.time()))
-		self.num_slaves = 16
+		self.num_slaves = 1
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
 		self.use_device = self.env.UseDevice()
@@ -110,7 +115,7 @@ class PPO(object):
 		if use_cuda:
 			self.model.cuda()
 
-		self.buffer_size = 1024*8
+		self.buffer_size = 128*4
 		self.batch_size = 128*8
 		self.replay_buffer = ReplayBuffer(30000)
 
@@ -131,9 +136,9 @@ class PPO(object):
 		self.max_return = -1.0
 		self.max_return_epoch = 1
 
-		self.episodes = [None]*self.num_slaves
+		self.episode = []
 		for j in range(self.num_slaves):
-			self.episodes[j] = EpisodeBuffer()
+			self.episode[j] = EpisodeBuffer()
 
 		# ========== Muscle setting ========= #
 		if self.use_muscle:
@@ -230,6 +235,14 @@ class PPO(object):
 			self.GenerateInitialStates()
 		self.GenerateTransitions()
 
+		if self.rank > 0:
+			comm.send(self.total_episodes, dest=0, tag=11)
+		elif rank == 0:
+            data = []
+            data.append(self.total_episodes)
+			for i in range(1,self.EnvNum):
+				data.append(self.comm.recv(source=i, tag=11))
+
 		self.OptimizeModel()
 
 	def OptimizeModel(self):
@@ -275,15 +288,9 @@ class PPO(object):
 		self.InitialParamStates = mcmc_sampler.get_sample(self.InitialParamStates_num)
 
 	def GenerateTransitions(self):
-		self.total_episodes = []
-		actions = [None]*self.num_slaves
-		rewards = [None]*self.num_slaves
-		states = [None]*self.num_slaves
-		states_next = [None]*self.num_slaves
-		terminated = [False]*self.num_slaves
-		adaptive_times = [None]*self.num_slaves
 
-		states = self.env.GetStates()
+        self.total_episodes = []
+        state = self.env.GetState()
 
 		if self.use_adaptive_sampling:
 			for j in range(self.num_slaves):
@@ -297,44 +304,50 @@ class PPO(object):
 			if counter%10 == 0:
 				print('SIM : {}'.format(local_step),end='\r')
 
-			a_dist,v = self.model(Tensor(states))
-			actions = a_dist.sample().cpu().detach().numpy()
-			logprobs = a_dist.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
-			values = v.cpu().detach().numpy().reshape(-1)
-			self.env.SetActions(actions)
+			# a_dist,v = self.model(Tensor(states))
+			# actions = a_dist.sample().cpu().detach().numpy()
+			# logprobs = a_dist.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
+			# values = v.cpu().detach().numpy().reshape(-1)
+			# self.env.SetActions(actions)
+            a_dist,v = self.model(Tensor(state))
+			action = a_dist.sample().cpu().detach().numpy()
+			logprobs = a_dist.log_prob(Tensor(action)).cpu().detach().numpy().reshape(-1)
+			value = v.cpu().detach().numpy().reshape(-1)
+			self.env.SetAction(action)
 
 			if self.use_muscle:
 				mt = Tensor(self.env.GetMuscleTorques())
-				for i in range(self.num_simulation_per_control):
-					self.env.SetDesiredTorques()
-					dt = Tensor(self.env.GetDesiredTorques())
-					activations = self.muscle_model(mt,dt).cpu().detach().numpy()
-					self.env.SetActivationLevels(activations)
-					self.env.Steps(self.inference_per_sim, self.use_device)
+				# for i in range(self.num_simulation_per_control):
+				# 	self.env.SetDesiredTorques()
+				# 	dt = Tensor(self.env.GetDesiredTorques())
+				# 	activations = self.muscle_model(mt,dt).cpu().detach().numpy()
+				# 	self.env.SetActivationLevels(activations)
+				# 	self.env.Steps(self.inference_per_sim, self.use_device)
 			else:
-				self.env.StepsAtOnce(self.use_device)
+                #self.env.StepsAtOnce(self.use_device)
+                self.env.Step(16, self.use_device, 0)
 
 			for j in range(self.num_slaves):
 				nan_occur = False
 				terminated_state = True
-				if np.any(np.isnan(states[j])) or np.any(np.isnan(actions[j])) or np.any(np.isnan(values[j])) or np.any(np.isnan(logprobs[j])):
+				if np.isnan(state) or np.isnan(action[j])) or np.isnan(value[j]) or np.isnan(logprobs[j]):
 					nan_occur = True
 				elif self.env.IsEndOfEpisode(j) is False:
 					terminated_state = False
-					rewards[j] = self.env.GetReward(j)
+					reward[j] = self.env.GetReward(j)
 					if self.use_adaptive_motion:
-						adaptive_times[j] = self.env.GetAdaptiveTime(j)
-						self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j], adaptive_times[j])
+						adaptive_time[j] = self.env.GetAdaptiveTime(j)
+						self.episode[j].Push(state[j], action[j], reward[j], value[j], logprob[j], adaptive_time[j])
 					else:
-						self.episodes[j].Push(states[j], actions[j], rewards[j], values[j], logprobs[j])	
+						self.episode[j].Push(state[j], action[j], reward[j], value[j], logprob[j])	
 					local_step += 1
 
 				if terminated_state or (nan_occur is True):
 					if (nan_occur is True):
-						self.episodes[j].Pop()
+						self.episode[j].Pop()
 					else:
-						self.total_episodes.append(self.episodes[j])
-					self.episodes[j] = EpisodeBuffer()
+						self.total_episodes.append(self.episode[j])
+					self.episode[j] = EpisodeBuffer()
 
 					self.env.Reset(True,j)
 					if self.use_adaptive_sampling:
@@ -344,8 +357,8 @@ class PPO(object):
 			if local_step >= self.buffer_size:
 				break
 
-			states = self.env.GetStates()
-			states = self.rms.apply(states)
+			state = self.env.GetState(idx)
+            state = self.rms.apply(state)
 
 	def ComputeTDandGAE(self):
 		self.replay_buffer.Clear()
@@ -465,6 +478,12 @@ class PPO(object):
 
 			print('Optimizing sim nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
 		
+		if self.rank == 0:
+			for i in range(1,self.EnvNum):
+				comm.send(self.model.state_dict(), dest=i, tag=11)
+		elif self.rank == 0:
+			self.model.load_state_dict(self.comm.recv(source=0, tag=11))
+
 		print('')
 
 	def OptimizeMuscleNN(self):

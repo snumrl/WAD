@@ -40,10 +40,12 @@ private:
 
     int mWindowSize;
     int mCycleStep;
+    int mJointNum;
     double mPhasePrev;
     double mCycleTorqueSum;
     double mCycleTorqueErr;
     bool mOnCycle;
+    bool mOnlyLowerBody;
 
     std::map<std::string, std::deque<double>> mTorques;
     std::map<std::string, std::deque<double>> mTorquesNorm;

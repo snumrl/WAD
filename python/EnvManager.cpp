@@ -18,9 +18,10 @@ EnvManager(std::string meta_file,int num_envs)
 
 void
 EnvManager::
-Step(int id)
+Step(int num, bool onDevice, int id)
 {
-	mEnvs[id]->Step(false, false);
+	for(int i=0; i<num; i++)
+		mEnvs[id]->Step(onDevice, false);
 }
 
 void
@@ -163,6 +164,13 @@ SetActions_Device(py::array_t<float> np_array)
 	{
 		mEnvs[id]->SetAction_Device(action.row(id).transpose());
 	}
+}
+
+void
+EnvManager::
+SetActivationLevel(py::array_t<float> np_array, int id)
+{	
+	mEnvs[id]->GetCharacter()->SetActivationLevels(toEigenVector(np_array));
 }
 
 void
@@ -432,6 +440,7 @@ PYBIND11_MODULE(pymss, m){
 		.def("SetAction",&EnvManager::SetAction)
 		.def("SetActions",&EnvManager::SetActions)
 		.def("SetActions_Device",&EnvManager::SetActions_Device)
+		.def("SetActivationLevel",&EnvManager::SetActivationLevel)
 		.def("SetActivationLevels",&EnvManager::SetActivationLevels)
 		.def("IsEndOfEpisode",&EnvManager::IsEndOfEpisode)
 		.def("IsEndOfEpisodes",&EnvManager::IsEndOfEpisodes)

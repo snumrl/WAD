@@ -10,7 +10,7 @@ class EnvManager
 public:
 	EnvManager(std::string meta_file, int num_envs);
 
-	void Step(int id);
+	void Step(int num, bool onDevice, int id);
 	void Steps(int num, bool onDevice);
 	void StepsAtOnce(bool onDevice);
 
@@ -30,6 +30,7 @@ public:
 	void SetAction(py::array_t<float> np_array, int id);
 	void SetActions(py::array_t<float> np_array);
 	void SetActions_Device(py::array_t<float> np_array);
+	void SetActivationLevel(py::array_t<float> np_array, int id);
 	void SetActivationLevels(py::array_t<float> np_array);
 
 	bool IsEndOfEpisode(int id);

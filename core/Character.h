@@ -103,6 +103,7 @@ public:
 
 	double GetReward_Energy();
 	double GetReward_ActionReg();
+	double GetReward_Time();
 	double GetReward_Vel();
 	double GetReward_Width();
 	double GetReward_Height();
