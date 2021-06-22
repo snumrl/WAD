@@ -258,6 +258,7 @@ Initialize()
 	mCurVel = 0.0;
 	mCurCoT = 0.0;
 
+	this->SetJointPositionLimits();
 	this->Initialize_JointWeights();
 	this->Initialize_Rewards();
 	this->Initialize_Forces();
@@ -292,6 +293,33 @@ Initialize()
 	mContacts->SetContactObject("TalusR");
 
 	this->Reset();
+}
+
+void
+Character::
+SetJointPositionLimits()
+{
+	mJointPositionLowerLimits = Eigen::VectorXd::Zero(mDof);
+	mJointPositionUpperLimits = Eigen::VectorXd::Zero(mDof);
+	int idx = 6;
+	for(int i=1; i<mNumJoints; i++)
+	{
+		const auto* joint = mSkeleton->getJoint(i);
+		if(joint->getType() == "BallJoint"){
+			BallJoint* joint = dynamic_cast<BallJoint*>(mSkeleton->getJoint(i));
+			const BallJoint::Properties& prop = joint->getBallJointProperties();
+			mJointPositionLowerLimits.segment(idx,3) = prop.mPositionLowerLimits;
+			mJointPositionUpperLimits.segment(idx,3) = prop.mPositionUpperLimits;
+			idx += 3;			
+		}
+		else if(joint->getType() == "RevoluteJoint"){
+			RevoluteJoint* joint = dynamic_cast<RevoluteJoint*>(mSkeleton->getJoint(i));
+			const RevoluteJoint::Properties& prop = joint->getRevoluteJointProperties();
+			mJointPositionLowerLimits.segment(idx,1) = prop.mPositionLowerLimits;
+			mJointPositionUpperLimits.segment(idx,1) = prop.mPositionUpperLimits;
+			idx += 1;			
+		}		
+	}	
 }
 
 void
@@ -902,8 +930,11 @@ GetState_Character()
 		else
 			action = mAction.segment(mNumActiveDof,mAdaptiveLowerDof+mAdaptiveUpperDof);
 	
-		state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1+action.size());
-		state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time,action;
+		state.resize(2+p.rows()+v.rows()+p_cur.rows()+p_next.rows()+1+action.size());
+		state << h,w,p,v,p_cur,p_next,cur_time,action;	
+
+		// state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1+action.size());
+		// state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time,action;
 		// state.resize(2+p.rows()+v.rows()+p_cur.rows()+p_next.rows()+1+action.size());
 		// state << h,w,p,v,p_cur,p_next,cur_time,action;
 	}
@@ -912,8 +943,8 @@ GetState_Character()
 		// state << h,w,p,v,phase.first,phase.second;
 		state.resize(2+p.rows()+v.rows()+p_cur.rows()+p_next.rows());
 		state << h,w,p,v,p_cur,p_next;
-		// state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1+action.size());
-		// state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time,action;
+		// state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+action.size());
+		// state << h,w,p,v,phase.first,phase.second,p_cur,p_next,action;
 	}
 
 	return state;
@@ -1025,10 +1056,18 @@ GetReward_Character()
 	r_effi.first *= ratio_effi;
 	r_effi.second *= ratio_effi;
 
-	double r_continuous = r_imit.first*r_effi.first;
-	// double r_spike = r_imit.second+r_effi.second;
-	double r_spike = r_imit.first*r_effi.second + r_imit.second;
+	double r_continuous;
+	double r_spike;
 	
+	if(mAdaptiveMotion){
+		r_continuous = r_imit.first*r_effi.first;
+		r_spike = r_imit.first*r_effi.second + r_imit.second;	
+	}
+	else{
+		r_continuous = r_imit.first;
+		r_spike = r_imit.second;
+	}
+
 	return std::make_pair(r_continuous,r_spike);
 }
 
@@ -1125,7 +1164,7 @@ GetReward_Character_Imitation()
 	double sig_p = 10.0;
 	double sig_q = 0.5;
 	double sig_com = 20.0;
-	double sig_ee_rot = 20.0;
+	double sig_ee_rot = 10.0;
 	double sig_ee_pos = 20.0;
 	
 	double r_p = Utils::exp_of_squared(p_diff, sig_p);
@@ -1134,7 +1173,7 @@ GetReward_Character_Imitation()
 	double r_ee_pos = Utils::exp_of_squared(ee_pos_diff, sig_ee_pos);
 		
 	// double r_total = r_p * r_q * r_ee_rot * r_ee_pos * r_com;
-	double r_total = r_p * r_q * r_ee_rot *r_ee_pos;
+	double r_total = r_p * r_ee_rot;
 
 	mReward["pose"] = r_p;
 	mReward["ee"] = r_ee_rot;
@@ -1397,7 +1436,7 @@ GetReward_Vel()
 	double diff = std::sqrt(diff_x*diff_x + diff_z*diff_z);
 	double vel = diff/(cur[3]-past[3]);
 
-	vel_err = fabs(vel-1.5);
+	vel_err = fabs(vel-0.5);
 
 	// vel_err = fabs(mCurVel - 1.5);
 	// vel_err += fabs(mCurHeadVel - 1.5);
@@ -1514,11 +1553,11 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 	int ad_dof = mNumAdaptiveDof;
 
 	double pd_scale = 0.1;
-	double root_ori_scale = 0.001;
+	double root_ori_scale = 0.002;
 	double root_pos_scale = 0.002;
 	double lower_scale = 0.002; // adaptive lower body
 	double upper_scale = 0.002; // adaptive upper body
-	double temporal_scale = 0.1; // adaptive temporal displacement
+	double temporal_scale = 0.2; // adaptive temporal displacement
 
 	mAction.segment(0,pd_dof) = a.segment(0,pd_dof) * pd_scale;
 	mAction.segment(pd_dof,ad_dof) = Eigen::VectorXd::Zero(ad_dof);
@@ -1533,7 +1572,7 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 
 		for(int i=pd_dof; i<mAction.size(); i++){
 			if(i < pd_dof+3)
-				mAction[i] = Utils::Clamp(mAction[i], -0.005, 0.005);
+				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);
 			else if(i >= pd_dof+3 && i < pd_dof+6)
 				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);
 			else if(i >= pd_dof+6 && i < pd_dof+l_dof)
@@ -1541,8 +1580,8 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 			else if(i >= pd_dof+l_dof && i < pd_dof+sp_dof)
 				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);	
 			else
-				mAction[i] = Utils::Clamp(mAction[i], -0.5, 0.5);
-		}
+				mAction[i] = Utils::Clamp(mAction[i], -1.0, 1.0);
+		}		
 	}
 
 	double timeStep = (double)mNumSteps*mWorld->getTimeStep();
@@ -1557,9 +1596,12 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 
 	Eigen::VectorXd delta_pos = next_pos - cur_pos;
 	delta_pos.segment(0, sp_dof) += mAction.segment(pd_dof, sp_dof);
-
+	
 	mTargetPositions += delta_pos;
 	mTargetVelocities = next_vel;
+
+	for(int i=6; i<mTargetPositions.size(); i++)
+		mTargetPositions[i] = Utils::Clamp(mTargetPositions[i],mJointPositionLowerLimits[i],mJointPositionUpperLimits[i]);
 
 	this->GetPosAndVel(mWorld->getTime()+timeStep, mReferencePositions, mReferenceVelocities);
 }

@@ -54,6 +54,7 @@ public:
 	void Initialize_Mass();
 	void Initialize_Speed();
 	void Initialize_JointWeights();
+	void SetJointPositionLimits();
 
 	void SetWorld(const WorldPtr& wPtr){ mWorld = wPtr; }
 	void SetDevice(Device* device);
@@ -301,6 +302,8 @@ private:
 	Eigen::VectorXd mAction_prev;
 	Eigen::VectorXd mActivationLevels;
 
+	Eigen::VectorXd mJointPositionLowerLimits;
+	Eigen::VectorXd mJointPositionUpperLimits;
 	Eigen::VectorXd mJointWeights;
 	Eigen::VectorXd mDefaultMass;
 	Eigen::VectorXd mMaxForces;
