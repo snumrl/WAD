@@ -1173,7 +1173,7 @@ GetReward_Character_Imitation()
 	double r_ee_pos = Utils::exp_of_squared(ee_pos_diff, sig_ee_pos);
 		
 	// double r_total = r_p * r_q * r_ee_rot * r_ee_pos * r_com;
-	double r_total = r_p * r_ee_rot;
+	double r_total = r_p * r_q * r_ee_rot * r_ee_pos;
 
 	mReward["pose"] = r_p;
 	mReward["ee"] = r_ee_rot;
@@ -1197,7 +1197,7 @@ GetReward_Character_Efficiency()
 	r_EnergyMin = this->GetReward_Energy();
 
 	if(mWorld->getTime() < mTimeOffset)
-		return std::make_pair(1.0, 2.0 * r_EnergyMin);
+		return std::make_pair(1.0, 1.0 * r_EnergyMin);
 
 	double r_Pose = 1.0;
 	r_Pose = this->GetReward_Pose();
@@ -1226,7 +1226,7 @@ GetReward_Character_Efficiency()
 
 	// double r_continuous = 0.10 * r_Width + 0.50 * r_Pose + 0.40 * r_Vel;
 	double r_continuous = r_Pose * r_Vel;
-	double r_spike = 2.0 * r_EnergyMin;
+	double r_spike = 1.0 * r_EnergyMin;
 
 	// std::cout << "effi : " << r_continuous << std::endl;
 	// std::cout << "pose : " << r_Pose << std::endl;
@@ -1436,7 +1436,7 @@ GetReward_Vel()
 	double diff = std::sqrt(diff_x*diff_x + diff_z*diff_z);
 	double vel = diff/(cur[3]-past[3]);
 
-	vel_err = fabs(vel-0.5);
+	vel_err = fabs(vel-0.7);
 
 	// vel_err = fabs(mCurVel - 1.5);
 	// vel_err += fabs(mCurHeadVel - 1.5);
