@@ -328,15 +328,15 @@ Getl_mt()
 }
 
 
-double
-Muscle::
-g(double _l_m)
-{
-	double e_t = (l_mt-_l_m-l_t0)/l_t0;
-	_l_m = _l_m/l_m0;
-	double f = g_t(e_t) - (g_pl(_l_m) + activation*g_al(_l_m));
-	return f;
-}
+// double
+// Muscle::
+// g(double _l_m)
+// {
+// 	double e_t = (l_mt-_l_m-l_t0)/l_t0;
+// 	_l_m = _l_m/l_m0;
+// 	double f = g_t(e_t) - (g_pl(_l_m) + activation*g_al(_l_m));
+// 	return f;
+// }
 
 double
 Muscle::

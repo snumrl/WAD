@@ -62,7 +62,7 @@ private:
 
 public:
 	//Dynamics
-	double g(double _l_m);
+	// double g(double _l_m);
 	double g_t(double e_t);
 	double g_pl(double _l_m);
 	double g_al(double _l_m);

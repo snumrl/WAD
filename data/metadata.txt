@@ -1,5 +1,5 @@
 use_muscle false
-use_device false
+use_device true
 use_device_nn false
 use_adaptive_motion true
 use_adaptive_sampling false

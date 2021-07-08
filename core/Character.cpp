@@ -930,8 +930,9 @@ GetState_Character()
 		else
 			action = mAction.segment(mNumActiveDof,mAdaptiveLowerDof+mAdaptiveUpperDof);
 	
-		state.resize(2+p.rows()+v.rows()+p_cur.rows()+p_next.rows()+1+action.size());
-		state << h,w,p,v,p_cur,p_next,cur_time,action;	
+		double adapTime = exp(mAction[mAction.size()-1]);
+		state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+mTargetPositions.rows()+p_next.rows()+1+1);
+		state << h,w,p,v,phase.first,phase.second,p_cur,mTargetPositions,p_next,cur_time,adapTime;	
 
 		// state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1+action.size());
 		// state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time,action;
@@ -1144,11 +1145,11 @@ GetReward_Character_Imitation()
 	{
 		double w = 0.0;
 		if(ees[i]->getName() == "Head")
-			w = 0.3;
+			w = 0.4;
 		if(ees[i]->getName() == "Pelvis")
 			w = 0.3;
 		if(ees[i]->getName() == "TalusR" || ees[i]->getName() == "TalusL")
-			w = 0.3;
+			w = 0.2;
 		if(ees[i]->getName() == "HandR" || ees[i]->getName() == "HandL")
 			w = 0.1;
 
@@ -1164,7 +1165,7 @@ GetReward_Character_Imitation()
 	double sig_p = 10.0;
 	double sig_q = 0.5;
 	double sig_com = 20.0;
-	double sig_ee_rot = 10.0;
+	double sig_ee_rot = 20.0;
 	double sig_ee_pos = 20.0;
 	
 	double r_p = Utils::exp_of_squared(p_diff, sig_p);
@@ -1173,7 +1174,7 @@ GetReward_Character_Imitation()
 	double r_ee_pos = Utils::exp_of_squared(ee_pos_diff, sig_ee_pos);
 		
 	// double r_total = r_p * r_q * r_ee_rot * r_ee_pos * r_com;
-	double r_total = r_p * r_q * r_ee_rot * r_ee_pos;
+	double r_total = r_p * r_ee_rot * r_ee_pos;
 
 	mReward["pose"] = r_p;
 	mReward["ee"] = r_ee_rot;
@@ -1333,7 +1334,7 @@ GetReward_Pose()
 
 	double pose_scale = 1.0;
 	double head_scale = 5.0;
-	double root_scale = 2.0;
+	double root_scale = 1.0;
 
 	double pose_err = (pose_cur-pose_ref).norm();
 	double head_err = (head_cur-head_ref).norm();
@@ -1351,7 +1352,7 @@ GetReward_Pose()
 	// double reward = 0.4 * pose_reward + 0.4 * head_reward + 0.2 * root_reward;
 	// double reward = 0.5 * pose_reward + 0.5 * head_reward;
 	// double reward = pose_reward * head_reward;
-	double reward = pose_reward;
+	double reward = pose_reward * root_reward;
 
 	mSkeleton->setPositions(p_save);
 	mSkeleton->setVelocities(v_save);
@@ -1436,7 +1437,7 @@ GetReward_Vel()
 	double diff = std::sqrt(diff_x*diff_x + diff_z*diff_z);
 	double vel = diff/(cur[3]-past[3]);
 
-	vel_err = fabs(vel-0.7);
+	vel_err = fabs(vel-1.3);
 
 	// vel_err = fabs(mCurVel - 1.5);
 	// vel_err += fabs(mCurHeadVel - 1.5);
@@ -1556,8 +1557,8 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 	double root_ori_scale = 0.002;
 	double root_pos_scale = 0.002;
 	double lower_scale = 0.002; // adaptive lower body
-	double upper_scale = 0.002; // adaptive upper body
-	double temporal_scale = 0.2; // adaptive temporal displacement
+	double upper_scale = 0.001; // adaptive upper body
+	double temporal_scale = 0.5; // adaptive temporal displacement
 
 	mAction.segment(0,pd_dof) = a.segment(0,pd_dof) * pd_scale;
 	mAction.segment(pd_dof,ad_dof) = Eigen::VectorXd::Zero(ad_dof);
@@ -1580,7 +1581,7 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 			else if(i >= pd_dof+l_dof && i < pd_dof+sp_dof)
 				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);	
 			else
-				mAction[i] = Utils::Clamp(mAction[i], -1.0, 1.0);
+				mAction[i] = Utils::Clamp(mAction[i], -2.0, 2.0);
 		}		
 	}
 
