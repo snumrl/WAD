@@ -218,6 +218,7 @@ Initialize(const std::string& meta_file, bool load_obj)
 		character->LoadMuscles(mMuscleFile);
 	}
 	character->SetUseAdaptiveMotion(mUseAdaptiveMotion);
+	character->SetUseAdaptiveSampling(mUseAdaptiveSampling);
 	this->SetCharacter(character);
 
 	MASS::Device* device;

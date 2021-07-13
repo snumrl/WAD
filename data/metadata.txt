@@ -1,8 +1,8 @@
 use_muscle false
-use_device true
+use_device false
 use_device_nn false
 use_adaptive_motion true
-use_adaptive_sampling false
+use_adaptive_sampling true
 con_hz 30
 sim_hz 480
 skel_file /data/human_tmp.xml

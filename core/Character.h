@@ -36,7 +36,7 @@ public:
 	void LoadSkeleton(const std::string& path, bool load_obj);
 	void LoadMuscles(const std::string& path);
 	void LoadBVH(const std::string& path,bool cyclic=true);
-	void LoadBVHset(double lower, double upper);
+	// void LoadBVHset(double lower, double upper);
 
 	bool isLowerBody(std::string& body);
 
@@ -106,6 +106,7 @@ public:
 	double GetReward_ActionReg();
 	double GetReward_Time();
 	double GetReward_Vel();
+	double GetReward_Stride();
 	double GetReward_Width();
 	double GetReward_Height();
 	double GetReward_Pose();
@@ -159,6 +160,9 @@ public:
 	void SetUseDevice(bool b){mUseDevice = b;}
 	bool GetUseDevice(){return mUseDevice;}
 
+	void SetUseAdaptiveSampling(bool b){mAdaptiveSampling = b;}
+	bool GetUseAdaptiveSampling(){return mAdaptiveSampling;}
+
 	void SetUseAdaptiveMotion(bool b){mAdaptiveMotion = b;}
 	bool GetUseAdaptiveMotion(){return mAdaptiveMotion;}
 
@@ -196,6 +200,7 @@ public:
 	void SetCurVelocity();
 	void SetTrajectory();
 	void SetComHistory();
+	void SetFoot();
 
 	double GetCoT(){return mCurCoT;}
 	double GetCurVelocity(){return mCurVel;}
@@ -269,13 +274,19 @@ private:
 	std::pair<double,double> mAdaptivePhases;
 
 	double mTimeOffset;
-
+	double mStride;
+	double mStrideCurL;
+	double mStrideCurR;
+	
 	bool mUseDevice;
 	bool mUseMuscle;
 	bool mOnDevice;
 	bool mLowerBody;
+	bool mAdaptiveSampling;
 	bool mAdaptiveMotion;
+	bool mAdaptiveMotionSP;	
 	bool mAdaptiveLowerBody;
+	bool mIsFirstFoot;
 
 	double mMass;
 	double mMassRatio;
@@ -308,6 +319,9 @@ private:
 	Eigen::VectorXd mDefaultMass;
 	Eigen::VectorXd mMaxForces;
 	Eigen::VectorXd mDefaultForces;
+
+	Eigen::Vector3d mFootL;
+	Eigen::Vector3d mFootR;
 
 	std::vector<std::deque<double>> mFemurSignals;
 	std::deque<Eigen::Vector3d> mRootTrajectory;

@@ -173,7 +173,7 @@ ParamChange(bool b)
 			if(s_ratio > max_v[2])
 				s_ratio = max_v[2];
 			mEnv->GetCharacter()->SetSpeedRatio(s_ratio);
-			mEnv->GetCharacter()->SetBVHidx(s_ratio);
+			// mEnv->GetCharacter()->SetBVHidx(s_ratio);
 		}
 		else if(mParamMode == 4)
 		{
@@ -217,7 +217,7 @@ ParamChange(bool b)
 			if(s_ratio < min_v[2])
 				s_ratio = min_v[2];
 			mEnv->GetCharacter()->SetSpeedRatio(s_ratio);
-			mEnv->GetCharacter()->SetBVHidx(s_ratio);
+			// mEnv->GetCharacter()->SetBVHidx(s_ratio);
 		}
 		else if(mParamMode == 4)
 		{
@@ -989,9 +989,10 @@ DrawParameter()
 
 		double s_ratio = mEnv->GetCharacter()->GetSpeedRatio();
 		DrawQuads(x+0.09, y+0.01, 0.02, (s_ratio)*h_offset, green);
-		if(max_v[2] != min_v[2])
-			max_v[2] -= 0.0999;
 		DrawQuads(x+0.09, y+0.01+(s_ratio)*h_offset, 0.02, (max_v[2]-s_ratio)*h_offset, green_trans);
+		// if(max_v[2] != min_v[2])
+		// 	max_v[2] -= 0.0999;
+		// DrawQuads(x+0.09, y+0.01+(s_ratio)*h_offset, 0.02, (max_v[2]-s_ratio)*h_offset, green_trans);
 
 		DrawString(x+0.00, y+(m_ratio)*h_offset+0.02, std::to_string(m_ratio));
 		DrawString(x+0.00, y-0.02, "Mass");
@@ -1128,6 +1129,11 @@ DrawBodyNode(const BodyNode* bn)
 	mRI->transform(bn->getRelativeTransform());
 
 	auto sns = bn->getShapeNodesWith<VisualAspect>();
+	if(bn->getName() == "FemurL" || bn->getName() == "FemurR" || bn->getName() == "Pelvis")
+		mDrawCoordinate = true;
+	else
+		mDrawCoordinate = false;
+
 	for(const auto& sn : sns)
 		DrawShapeFrame(sn);
 
@@ -1156,8 +1162,13 @@ DrawShapeFrame(const ShapeFrame* sf)
 	mRI->transform(sf->getRelativeTransform());
 
 	mColor = va->getRGBA();
-	if(isDrawCharacter && mDrawOBJ)
-		mColor << 0.75, 0.75, 0.75, 1.0;
+	if(isDrawCharacter)
+	{
+		if(mDrawOBJ)
+			mColor << 0.75, 0.75, 0.75, 0.3;
+		else
+			mColor[3] = 0.3;
+	} 
 	if(isDrawTarget)
 		mColor << 1.0, 0.6, 0.6, 0.3;
 	if(isDrawReference)
@@ -1186,7 +1197,7 @@ DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 		if (shape->is<SphereShape>())
 		{
 			const auto* sphere = static_cast<const SphereShape*>(shape);
-			mRI->drawSphere(sphere->getRadius());
+			// mRI->drawSphere(sphere->getRadius());
 		}
 		else if (shape->is<BoxShape>())
 		{
@@ -1209,6 +1220,13 @@ DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 			mShapeRenderer.renderMesh(mesh, false, y, color);
 		}
 	}
+
+	if(mDrawCoordinate && shape->is<SphereShape>()){
+		DrawLine3D(0.0,0.0,0.0, 0.1, 0.0, 0.0, red, 3.0);
+		DrawLine3D(0.0,0.0,0.0, 0.0, 0.1, 0.0, green, 3.0);
+		DrawLine3D(0.0,0.0,0.0, 0.0, 0.0, 0.1, blue, 3.0);
+	}
+
 	glDisable(GL_COLOR_MATERIAL);
 	glDisable(GL_DEPTH_TEST);
 }
@@ -1960,6 +1978,19 @@ DrawLine(double p1_x, double p1_y, double p2_x, double p2_y, Eigen::Vector4d col
 	glBegin(GL_LINES);
 	glVertex2f(p1_x, p1_y);
 	glVertex2f(p2_x, p2_y);
+	glEnd();
+}
+
+void
+Window::
+DrawLine3D(double p1_x, double p1_y, double p1_z, double p2_x, double p2_y, double p2_z, Eigen::Vector4d color, double line_width)
+{
+	mRI->setPenColor(color);
+	mRI->setLineWidth(line_width);
+
+	glBegin(GL_LINES);
+	glVertex3f(p1_x, p1_y, p1_z);
+	glVertex3f(p2_x, p2_y, p2_z);
 	glEnd();
 }
 
