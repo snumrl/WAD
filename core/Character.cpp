@@ -977,7 +977,7 @@ GetState_Character()
 	// }
 
 	double curTime = this->GetCurTime();
-	double nextTime = curTime + this->GetControlTimeStep() * (1.0/mSpeedRatio);
+	double nextTime = curTime + this->GetControlTimeStep();
 
 	Eigen::VectorXd cur_ref_pos, cur_ref_vel;
 	Eigen::VectorXd next_ref_pos, next_ref_vel;
@@ -1010,8 +1010,7 @@ GetState_Character()
 		else
 			action = mAction.segment(mNumActiveDof,mAdaptiveLowerDof+mAdaptiveUpperDof);
 	
-		// double adapTimeStep = exp(mAction[mAction.size()-1]);
-		double adapTimeStep = timeStep * (1.0/mSpeedRatio) * exp(mAction[pd_dof+sp_dof]);
+		double adapTimeStep = exp(mAction[mAction.size()-1]);
 		if(mAdaptiveSampling){
 			state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1+1+mNumParamState);
 			state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time,adapTimeStep,mParamState;
