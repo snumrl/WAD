@@ -3,7 +3,7 @@ device_param 2
 
 mass 1.0 1.0
 force 1.0 1.0
-speed 0.9 1.4
+speed 0.7 1.3
 
 device_k 0.3 1.0
 delta_t 0.2 0.3

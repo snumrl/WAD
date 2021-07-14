@@ -25,7 +25,7 @@ Character(WorldPtr& wPtr)
 	// mAdaptiveUpperDof = 32;
 	mAdaptiveUpperDof = 12;
 
-	mAdaptiveMotionSP = true;
+	mAdaptiveMotionSP = false;
 	mTimeOffset = 2.0;
 }
 
@@ -691,7 +691,7 @@ SetMeasure(bool isRender)
 		this->SetCurVelocity();
 	}
 	this->SetComHistory();
-	// this->SetFoot();
+	this->SetFoot();
 
 	double phase = mPhase;
 	double frame = mFrame;
@@ -722,7 +722,7 @@ SetFoot()
 	{
 		Eigen::VectorXd p_save = mSkeleton->getPositions();
 		mSkeleton->setPositions(mTargetPositions);
-
+		
 		if(mIsFirstFoot){
 			mIsFirstFoot = false;			
 			mStride = 0;
@@ -755,7 +755,7 @@ SetFoot()
 		if(!mIsFirstFoot){
 			Eigen::VectorXd p_save = mSkeleton->getPositions();
 			mSkeleton->setPositions(mTargetPositions);
-
+			
 			Eigen::Vector3d curFootL = mSkeleton->getBodyNode("TalusL")->getCOM();
 			double x_diff = mFootL[0] - curFootL[0];
 			double z_diff = mFootL[2] - curFootL[2];
@@ -977,7 +977,7 @@ GetState_Character()
 	// }
 
 	double curTime = this->GetCurTime();
-	double nextTime = curTime + this->GetControlTimeStep();
+	double nextTime = curTime + this->GetControlTimeStep() * (1.0/mSpeedRatio);
 
 	Eigen::VectorXd cur_ref_pos, cur_ref_vel;
 	Eigen::VectorXd next_ref_pos, next_ref_vel;
@@ -1010,7 +1010,8 @@ GetState_Character()
 		else
 			action = mAction.segment(mNumActiveDof,mAdaptiveLowerDof+mAdaptiveUpperDof);
 	
-		double adapTimeStep = exp(mAction[mAction.size()-1]);
+		// double adapTimeStep = exp(mAction[mAction.size()-1]);
+		double adapTimeStep = timeStep * (1.0/mSpeedRatio) * exp(mAction[pd_dof+sp_dof]);
 		if(mAdaptiveSampling){
 			state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1+1+mNumParamState);
 			state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time,adapTimeStep,mParamState;
@@ -1318,8 +1319,8 @@ GetReward_Character_Efficiency()
 
 	// double r_continuous = 0.10 * r_Width + 0.50 * r_Pose + 0.40 * r_Vel;
 	double r_continuous = r_Pose * r_Vel;
-	double r_spike = 0.0 * r_EnergyMin;
-	// double r_spike = 50.0 * r_Stride;
+	// double r_spike = 0.0 * r_EnergyMin;
+	double r_spike = 50.0 * r_Stride;
 
 	// std::cout << r_continuous << " : " << r_spike << std::endl;
 	 
@@ -1529,7 +1530,7 @@ GetReward_Stride()
 
 		// std::cout << "stride : " << mStride << std::endl;
 		// std::cout << "speed : " << mSpeedRatio << std::endl;
-		stride_err = fabs(mStride - mSpeedRatio);
+		stride_err = fabs(mStride - 1.39562 * mSpeedRatio);
 		double reward = 0.0;
 		reward = exp(-1.0 * stride_scale * stride_err);
 
@@ -1560,8 +1561,8 @@ GetReward_Vel()
 	double diff = std::sqrt(diff_x*diff_x + diff_z*diff_z);
 	double vel = diff/(cur[3]-past[3]);
 
-	vel_err = fabs(vel-1.0*mSpeedRatio);
-	// vel_err = fabs(vel-1.2);
+	// vel_err = fabs(vel-1.0*mSpeedRatio);
+	vel_err = fabs(vel-1.2);
 
 	// vel_err = fabs(mCurVel - 1.5);
 	// vel_err += fabs(mCurHeadVel - 1.5);
@@ -1678,11 +1679,11 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 	int ad_dof = mNumAdaptiveDof;
 
 	double pd_scale = 0.1;
-	double root_ori_scale = 0.002;
-	double root_pos_scale = 0.002;
-	double lower_scale = 0.002; // adaptive lower body
-	double upper_scale = 0.002; // adaptive upper body
-	double temporal_scale = 0.5; // adaptive temporal displacement
+	double root_ori_scale = 0.004;
+	double root_pos_scale = 0.004;
+	double lower_scale = 0.004; // adaptive lower body
+	double upper_scale = 0.004; // adaptive upper body
+	double temporal_scale = 0.2; // adaptive temporal displacement
 
 	mAction.segment(0,pd_dof) = a.segment(0,pd_dof) * pd_scale;
 	mAction.segment(pd_dof,ad_dof) = Eigen::VectorXd::Zero(ad_dof);
@@ -1711,9 +1712,9 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 
 	double timeStep = (double)mNumSteps*mWorld->getTimeStep();
 	if(mAdaptiveMotionSP)
-		mTemporalDisplacement = timeStep;
+	 	mTemporalDisplacement = timeStep;
 	else
-		mTemporalDisplacement = timeStep * exp(mAction[pd_dof+sp_dof]);
+	 	mTemporalDisplacement = timeStep * (1.0/mSpeedRatio) * exp(mAction[pd_dof+sp_dof]);
 
 	double cur_time = mAdaptiveTime;
 	double next_time = mAdaptiveTime + mTemporalDisplacement;
@@ -1893,7 +1894,7 @@ GetPos(double t, double dt, int frame, int frameNext, double frameFraction, Eige
 	Eigen::VectorXd frameData, frameDataNext;
 	frameData = mBVH->GetMotion(frame);
 	frameDataNext = mBVH->GetMotion(frameNext);
-
+	
 	// Eigen::VectorXd p = Utils::GetPoseSlerp(mSkeleton, frameFraction, frameData, frameDataNext);
 	pos = (1-frameFraction)*frameData + (frameFraction)* frameDataNext;
 
