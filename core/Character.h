@@ -36,8 +36,7 @@ public:
 	void LoadSkeleton(const std::string& path, bool load_obj);
 	void LoadMuscles(const std::string& path);
 	void LoadBVH(const std::string& path,bool cyclic=true);
-	// void LoadBVHset(double lower, double upper);
-
+	
 	bool isLowerBody(std::string& body);
 
 	const SkeletonPtr& GetSkeleton(){return mSkeleton;}
@@ -103,13 +102,12 @@ public:
 	std::pair<double,double> GetReward_Character_Efficiency();
 
 	double GetReward_Energy();
-	double GetReward_ActionReg();
-	double GetReward_Time();
+	double GetReward_Pose();
 	double GetReward_Vel();
 	double GetReward_Stride();
+	double GetReward_Time();
 	double GetReward_Width();
-	double GetReward_Height();
-	double GetReward_Pose();
+	double GetReward_ActionReg();
 	double GetCurReward(){return mCurReward;}
 
 	void SetAction(const Eigen::VectorXd& a);
@@ -185,8 +183,6 @@ public:
 	double GetMass(){return mMass;}
 	double GetMassRatio(){return mMassRatio;}
 
-	double SetSpeedIdx(double s);
-	void SetBVHidx(double r);
 	void SetSpeedRatio(double r);
 	void SetForceRatio(double r);
 	void SetMaxForces();
@@ -204,6 +200,9 @@ public:
 
 	double GetCoT(){return mCurCoT;}
 	double GetCurVelocity(){return mCurVel;}
+	double GetStride(){return mStride;}
+	double GetStrideL(){return mStrideL;}
+	double GetStrideR(){return mStrideR;}
 
 	void SetMinMaxV(int idx, double lower, double upper);
 	const Eigen::VectorXd& GetMinV(){return mParamMin;}
@@ -224,7 +223,6 @@ private:
 	std::map<std::string, std::vector<Muscle*>> mMusclesMap;
 
 	BVH* mBVH;
-	BVH* mBVH_;
 	std::string mBVHpath;
 	std::vector<BVH*> mBVHset;
 	std::map<std::string,std::string> mBVHmap;
@@ -275,6 +273,7 @@ private:
 
 	double mTimeOffset;
 	double mStride;
+	double mStrideL,mStrideR;
 	double mStrideCurL;
 	double mStrideCurR;
 	
@@ -290,6 +289,7 @@ private:
 
 	double mMass;
 	double mMassRatio;
+	double mMassLower;
 	double mForceRatio;
 	double mSpeedRatio;
 

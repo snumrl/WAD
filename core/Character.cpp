@@ -8,7 +8,7 @@ namespace MASS
 
 Character::
 Character(WorldPtr& wPtr)
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mNumParamState(0),mMass(0)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mNumParamState(0),mMass(0),mMassLower(0)
 {
 	this->SetWorld(wPtr);
 
@@ -20,12 +20,12 @@ Character(WorldPtr& wPtr)
 	mLowerMuscleRelatedDof = 30;
 	mUpperMuscleRelatedDof = 26;
 
-	mAdaptiveLowerBody = false;
+	mAdaptiveLowerBody = true;
 	mAdaptiveLowerDof = 24;
-	// mAdaptiveUpperDof = 32;
-	mAdaptiveUpperDof = 12;
+	// mAdaptiveUpperDof = 32; //   with arms
+	mAdaptiveUpperDof = 12;    // without arms
 
-	mAdaptiveMotionSP = false;
+	mAdaptiveMotionSP = false; // only spatial displacement OR with temporal displacement
 	mTimeOffset = 2.0;
 }
 
@@ -88,19 +88,7 @@ LoadBVH(const std::string& path, bool cyclic)
 	mBVHpath = path;
 	mBVHcyclic = cyclic;
 	mBVH = new BVH(mSkeleton, mBVHmap);
-	// mBVH->SetSpeedRatio(mSpeedRatio);
-	mBVH->Parse(mBVHpath, mBVHcyclic);
-	// mBVH_ = mBVH;
-}
-
-bool
-Character::
-isLowerBody(std::string& body)
-{
-	if(body == "ShoulderL" || body == "ArmL" || body == "ForeArmL" || body == "HandL" || body == "ShoulderR" || body == "ArmR" || body == "ForeArmR" || body == "HandR" || body == "Head" || body == "Neck")
-		return false;
-	else
-		return true;
+	mBVH->Parse(mBVHpath, mBVHcyclic);	
 }
 
 void
@@ -207,6 +195,16 @@ LoadMuscles(const std::string& path)
 	mFile.close();
 }
 
+bool
+Character::
+isLowerBody(std::string& body)
+{
+	if(body == "ShoulderL" || body == "ArmL" || body == "ForeArmL" || body == "HandL" || body == "ShoulderR" || body == "ArmR" || body == "ForeArmR" || body == "HandR" || body == "Head" || body == "Neck")
+		return false;
+	else
+		return true;
+}
+
 void
 Character::
 Initialize()
@@ -231,10 +229,12 @@ Initialize()
 			mNumAdaptiveSpatialDof = mAdaptiveLowerDof;
 		else
 			mNumAdaptiveSpatialDof = mAdaptiveLowerDof+mAdaptiveUpperDof;
+		
 		if(mAdaptiveMotionSP)
 			mNumAdaptiveTemporalDof = 0;
 		else
 			mNumAdaptiveTemporalDof = 1;
+
 		mNumAdaptiveDof = mNumAdaptiveSpatialDof + mNumAdaptiveTemporalDof;
 		mNumAction += mNumAdaptiveDof;
 	}
@@ -274,11 +274,14 @@ Initialize()
 	mFemurSignals.push_back(std::deque<double>(1200));
 
 	mStride = 0;
+	mStrideL = 0;
+	mStrideR = 0;
 	mStrideCurL = 0.0;
 	mStrideCurR = 0.0;
 	mIsFirstFoot = true;
 	mFootL = Eigen::Vector3d::Zero();
 	mFootR = Eigen::Vector3d::Zero();
+	
 	for(int i=0; i<32; i++)
 		mRootTrajectory.push_back(Eigen::Vector3d::Zero());
 	for(int i=0; i<32; i++)
@@ -289,13 +292,14 @@ Initialize()
 	int frames = mBVH->GetNumTotalFrames();
 	double ratio = 1.0;
 	if(mLowerBody)
-		ratio = 52.8/74.2;
+		ratio = mMassLower/mMass;
 
 	mMetabolicEnergy = new MetabolicEnergy(mWorld);
 	mMetabolicEnergy->Initialize(this->GetMuscles(), mMass, mNumSteps, frames, ratio);
 
 	mJointDatas = new JointData();
 	mJointDatas->Initialize(mSkeleton);
+	mJointDatas->SetMaxForces(mMaxForces);
 
 	mContacts = new Contact(mWorld);
 	mContacts->Initialize(mSkeleton, mMass, mNumSteps);
@@ -341,9 +345,9 @@ Initialize_JointWeights()
 		0.5,                    //Pelvis
 		0.5, 0.3, 0.2, 0.2, 0.2,//Left Leg
 		0.5, 0.3, 0.2, 0.2, 0.2,//Right Leg
-		0.5, 0.3, 0.2, 0.2,     //Torso & Neck
-		0.5, 0.3, 0.2, 0.1,     //Left Arm
-		0.5, 0.3, 0.2, 0.1;     //Right Arm
+		0.5, 0.3, 0.2, 0.2;     //Torso & Neck
+		// 0.5, 0.3, 0.2, 0.1,     //Left Arm
+		// 0.5, 0.3, 0.2, 0.1;     //Right Arm
 
 	mJointWeights /= mJointWeights.sum();
 }
@@ -356,6 +360,18 @@ Initialize_Mass()
 	for(int i=0; i<mNumBodyNodes; i++){
 		mDefaultMass[i] = mSkeleton->getBodyNode(i)->getMass();
 		mMass += mDefaultMass[i];
+	}
+
+	if(mLowerBody)
+	{
+		std::string name;
+		double mass;
+		for(int i=0; i<mNumBodyNodes; i++){
+			name = mSkeleton->getBodyNode(i)->getName();
+			mass = mSkeleton->getBodyNode(i)->getMass();
+			if(this->isLowerBody(name))
+				mMassLower += mass;			
+		}
 	}
 }
 
@@ -378,15 +394,15 @@ Initialize_Forces()
 		 300, 300, 300,      //Spine
 		 300, 300, 300,      //Torso
 		 300, 300, 300,      //Neck
-		 300, 300, 300,      //Head
-		 300, 300, 300,      //Shoulder L
-		 300, 300, 300,      //Arm L
-		 300,                //ForeArm L
-		 300, 300, 300,      //Hand L
-		 300, 300, 300,      //Shoulder R
-		 300, 300, 300,      //Arm R
-		 300,                //ForeArm R
-		 300, 300, 300;      //Hand R
+		 300, 300, 300;      //Head
+		//  300, 300, 300,      //Shoulder L
+		//  300, 300, 300,      //Arm L
+		//  300,                //ForeArm L
+		//  300, 300, 300,      //Hand L
+		//  300, 300, 300,      //Shoulder R
+		//  300, 300, 300,      //Arm R
+		//  300,                //ForeArm R
+		//  300, 300, 300;      //Hand R
 
 	// mDefaultForces <<
 	//      0, 0, 0, 0, 0, 0,   //pelvis
@@ -493,15 +509,15 @@ SetPDParameters()
 		1000, 1000, 1000,
 		500, 500, 500,
 		100, 100, 100,
-		100, 100, 100,
-		400, 400, 400,
-		300, 300, 300,
-		300,
-		100, 100, 100,
-		400, 400, 400,
-		300, 300, 300,
-		300,
 		100, 100, 100;
+		// 400, 400, 400,
+		// 300, 300, 300,
+		// 300,
+		// 100, 100, 100,
+		// 400, 400, 400,
+		// 300, 300, 300,
+		// 300,
+		// 100, 100, 100;
 
 	mKv << 0, 0, 0, 0, 0, 0,
 		50, 50, 50,
@@ -515,15 +531,15 @@ SetPDParameters()
 		100, 100, 100,
 		50, 50, 50,
 		10, 10, 10,
-		10, 10, 10,
-		40, 40, 40,
-		30, 30, 30,
-		30,
-		10, 10, 10,
-		40, 40, 40,
-		30, 30, 30,
-		30,
 		10, 10, 10;
+		// 40, 40, 40,
+		// 30, 30, 30,
+		// 30,
+		// 10, 10, 10,
+		// 40, 40, 40,
+		// 30, 30, 30,
+		// 30,
+		// 10, 10, 10;
 }
 
 void
@@ -556,6 +572,8 @@ Reset()
 	}//Initialze L,R at the same time
 
 	mStride = 0;		
+	mStrideL = 0;
+	mStrideR = 0;
 	mStrideCurL = 0.0;
 	mStrideCurR = 0.0;
 	mIsFirstFoot = true;
@@ -726,6 +744,8 @@ SetFoot()
 		if(mIsFirstFoot){
 			mIsFirstFoot = false;			
 			mStride = 0;
+			mStrideL = 0;
+			mStrideR = 0;			
 		}
 		else{
 			Eigen::Vector3d curFootL = mSkeleton->getBodyNode("TalusL")->getCOM();
@@ -741,6 +761,8 @@ SetFoot()
 			double stride = (strideL + strideR)/2.0;
 			if(stride != 0){
 				mStride = stride;		
+				mStrideL = strideL;
+				mStrideR = strideR;
 				// std::cout << "stride : " << mStride << std::endl;		
 			}		
 		}	
@@ -854,25 +876,35 @@ void
 Character::
 SetCurVelocity()
 {
-	double time_step = 1.0/(double)(mControlHz);
 
-	double x_diff = (mRootTrajectory[0][0] - mRootTrajectory[mRootTrajectory.size()-1][0]);
-	double z_diff = (mRootTrajectory[0][2]-mRootTrajectory[mRootTrajectory.size()-1][2]);
+	int last_idx = mComHistory.size()-1;
+	Eigen::Vector4d past = mComHistory[last_idx];
+	Eigen::Vector4d cur = mComHistory[0];
 
-	x_diff /= time_step*mRootTrajectory.size();
-	z_diff /= time_step*mRootTrajectory.size();
+	double diff_x = (cur[0]-past[0]);
+	double diff_z = (cur[2]-past[2]);
+	double diff = std::sqrt(diff_x*diff_x + diff_z*diff_z);
+	mCurVel = diff/(cur[3]-past[3]);
 
-	mCurVel = std::sqrt(x_diff*x_diff + z_diff*z_diff);
+	// double time_step = 1.0/(double)(mControlHz);
 
-	x_diff = (mHeadTrajectory[0][0] - mHeadTrajectory[mHeadTrajectory.size()-1][0]);
-	z_diff = (mHeadTrajectory[0][2]-mHeadTrajectory[mHeadTrajectory.size()-1][2]);
+	// double x_diff = (mRootTrajectory[0][0] - mRootTrajectory[mRootTrajectory.size()-1][0]);
+	// double z_diff = (mRootTrajectory[0][2]-mRootTrajectory[mRootTrajectory.size()-1][2]);
 
-	x_diff /= time_step*mHeadTrajectory.size();
-	z_diff /= time_step*mHeadTrajectory.size();
+	// x_diff /= time_step*mRootTrajectory.size();
+	// z_diff /= time_step*mRootTrajectory.size();
 
-	mCurHeadVel = std::sqrt(x_diff*x_diff + z_diff*z_diff);
+	// mCurVel = std::sqrt(x_diff*x_diff + z_diff*z_diff);
 
-		// mCurVel = (mRootTrajectory[0] - mRootTrajectory[mRootTrajectory.size()-1]).norm();
+	// x_diff = (mHeadTrajectory[0][0] - mHeadTrajectory[mHeadTrajectory.size()-1][0]);
+	// z_diff = (mHeadTrajectory[0][2]-mHeadTrajectory[mHeadTrajectory.size()-1][2]);
+
+	// x_diff /= time_step*mHeadTrajectory.size();
+	// z_diff /= time_step*mHeadTrajectory.size();
+
+	// mCurHeadVel = std::sqrt(x_diff*x_diff + z_diff*z_diff);
+
+	// mCurVel = (mRootTrajectory[0] - mRootTrajectory[mRootTrajectory.size()-1]).norm();
 
 	mCurVel3d = mSkeleton->getCOMLinearVelocity();
 	// mCurVel = mCurVel3d.norm();
@@ -977,7 +1009,7 @@ GetState_Character()
 	// }
 
 	double curTime = this->GetCurTime();
-	double nextTime = curTime + this->GetControlTimeStep();
+	double nextTime = curTime + this->GetControlTimeStep() * (1.0/mSpeedRatio);
 
 	Eigen::VectorXd cur_ref_pos, cur_ref_vel;
 	Eigen::VectorXd next_ref_pos, next_ref_vel;
@@ -1000,7 +1032,7 @@ GetState_Character()
 
 	double cur_time = mWorld->getTime() * 0.1;
 	if(cur_time > mTimeOffset * 0.1)
-		cur_time = mTimeOffset * 0.1 + 0.1;
+		cur_time = mTimeOffset * 0.1 + 0.01;
 
 	Eigen::VectorXd action;
 	Eigen::VectorXd state;
@@ -1020,12 +1052,7 @@ GetState_Character()
 		else{
 			state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+mTargetPositions.rows()+p_next.rows()+1+1);
 			state << h,w,p,v,phase.first,phase.second,p_cur,mTargetPositions,p_next,cur_time,adapTimeStep;
-		}
-			
-		// state.resize(2+p.rows()+v.rows()+2+p_cur.rows()+p_next.rows()+1+action.size());
-		// state << h,w,p,v,phase.first,phase.second,p_cur,p_next,cur_time,action;
-		// state.resize(2+p.rows()+v.rows()+p_cur.rows()+p_next.rows()+1+action.size());
-		// state << h,w,p,v,p_cur,p_next,cur_time,action;
+		}		
 	}
 	else{
 		// state.resize(2+p.rows()+v.rows()+2);
@@ -1133,6 +1160,7 @@ GetReward_Character()
 {
 	std::pair<double,double> r_imit = GetReward_Character_Imitation();
 	std::pair<double,double> r_effi = GetReward_Character_Efficiency();
+
 
 	mReward["imit"] = r_imit.first + r_imit.second;
  	mReward["effi"] = r_effi.first + r_effi.second;
@@ -1291,59 +1319,34 @@ GetReward_Character_Efficiency()
 	double r_Pose = 1.0;
 	r_Pose = this->GetReward_Pose();
 
-	double r_Time = 1.0;
-	r_Time = this->GetReward_Time();
-
-	double r_ActionReg = 1.0;
-	r_ActionReg = this->GetReward_ActionReg();
-
 	double r_Vel = 1.0;
 	r_Vel = this->GetReward_Vel();
-
+	
 	double r_Stride = 1.0;
 	r_Stride = this->GetReward_Stride();
 	
-	double r_Width = 1.0;
-	r_Width = this->GetReward_Width();
+	// double r_Time = 1.0;
+	// r_Time = this->GetReward_Time();
+
+	// double r_ActionReg = 1.0;
+	// r_ActionReg = this->GetReward_ActionReg();
+	
+	// double r_Width = 1.0;
+	// r_Width = this->GetReward_Width();
 
 	// double r_ContactForce = 1.0;
 	// double r_ContactForce = mContacts->GetReward();
 
-	// double r_Height = 1.0;
-	// r_Height = this->GetReward_Height();
+	mReward["min"] = 0.0;
+	mReward["reg"] = 0.0;
+	mReward["com"] = 0.0;
 
-	mReward["min"] = r_Vel;
-	mReward["reg"] = r_Pose;
-	mReward["com"] = r_ActionReg;
-
-	// double r_continuous = 0.10 * r_Width + 0.50 * r_Pose + 0.40 * r_Vel;
-	double r_continuous = r_Pose * r_Vel;
+	// double r_continuous = r_Pose * r_Vel;
 	// double r_spike = 0.0 * r_EnergyMin;
-	double r_spike = 50.0 * r_Stride;
-
-	// std::cout << r_continuous << " : " << r_spike << std::endl;
-	 
-	// std::cout << "effi : " << r_continuous << std::endl;
-	// std::cout << "pose : " << r_Pose << std::endl;
-	// std::cout << "vel : " << r_Vel << std::endl;
+	double r_continuous = r_Vel;
+	double r_spike = 50.0 * r_Stride * r_Vel;
 
 	return std::make_pair(r_continuous, r_spike);
-}
-
-double
-Character::
-GetReward_Time()
-{
-	double err_scale = 1.0;
-	double time_scale = 5.0;
-	double time_err = 0.0;
-
-	time_err = fabs(mWorld->getTime() - mAdaptiveTime);
-
-	double reward = 0.0;
-	reward = exp(-1.0 * time_scale * time_err);
-
-	return reward;
 }
 
 double
@@ -1372,7 +1375,7 @@ GetReward_Pose()
 	Eigen::VectorXd p_reward;
 	Eigen::VectorXd v_reward;
 	this->GetPosAndVel(mAdaptiveTime, p_reward, v_reward);
-
+	
 	mSkeleton->setPositions(p_reward);
 	mSkeleton->computeForwardKinematics(true, true, false);
 	
@@ -1389,11 +1392,10 @@ GetReward_Pose()
 		Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
 		Eigen::Vector3d rot = Utils::QuaternionToAxisAngle(Eigen::Quaterniond(transform.linear()));
 
-		// pose_ref.segment<3>(3*i) << rot;
-		// pose_ref.segment<3>(3*i) << transform.translation();
-		pose_ref.segment<6>(6*i) << rot, transform.translation();
 		if(i==2)
 			head_ref.segment<3>(0) << rot;
+		else
+			pose_ref.segment<6>(6*i) << rot, transform.translation();		
 	}
 
 	head_ref[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] - root_ref->getCOM()[1]);
@@ -1415,19 +1417,20 @@ GetReward_Pose()
 	{
 		Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
 		Eigen::Vector3d rot = Utils::QuaternionToAxisAngle(Eigen::Quaterniond(transform.linear()));
-		// pose_cur.segment<3>(3*i) << rot;
-		// pose_cur.segment<3>(3*i) << transform.translation();
-		pose_cur.segment<6>(6*i) << rot, transform.translation();
+		
 		if(i==2)
 			head_cur.segment<3>(0) << rot;
+		else
+			pose_cur.segment<6>(6*i) << rot, transform.translation();
+		
 	}
 
-	head_cur[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] -root_cur->getCOM()[1]);
+	head_cur[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] - root_cur->getCOM()[1]);
 
 	double err_scale = 1.0;
 
-	double pose_scale = 2.0;
-	double head_scale = 4.0;
+	double pose_scale = 0.05;
+	double head_scale = 5.0;
 	double root_scale = 1.0;
 
 	double pose_err = (pose_cur-pose_ref).norm();
@@ -1438,16 +1441,15 @@ GetReward_Pose()
 	double head_reward = exp(-1.0 * head_scale * head_err);
 	double root_reward = exp(-1.0 * root_scale * root_err);
 
-	// std::cout << "pose : " << pose_err*pose_scale << std::endl;
-	// std::cout << "head : " << head_err*head_scale << std::endl;
-	// std::cout << "r pose : " << pose_reward << std::endl;
-	// std::cout << "r head : " << head_reward << std::endl;
+	// std::cout << "pose err : " << pose_err << std::endl;
+	// std::cout << "pose rew : " << pose_reward << std::endl;
+	// std::cout << "head err : " << head_err << std::endl;
+	// std::cout << "head rew : " << head_reward << std::endl;
+	std::cout << std::endl;
 
-	// double reward = 0.4 * pose_reward + 0.4 * head_reward + 0.2 * root_reward;
-	// double reward = 0.5 * pose_reward + 0.5 * head_reward;
 	// double reward = pose_reward * head_reward;
-	double reward = pose_reward * root_reward;
-
+	double reward = pose_reward;
+	
 	mSkeleton->setPositions(p_save);
 	mSkeleton->setVelocities(v_save);
 	mSkeleton->computeForwardKinematics(true, true, false);
@@ -1457,27 +1459,71 @@ GetReward_Pose()
 
 double
 Character::
-GetReward_Height()
+GetReward_Vel()
 {
 	double err_scale = 1.0;
-	double height_scale = 1.0;
-	double height_err = 0.0;
+	double vel_scale = 5.0;
+	double vel_err = 0.0;
 
-	dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
-	Eigen::Vector3d root_com = root->getCOM();
-	double h = root_com[1];
-	double h_tar = mTargetPositions[5];
-	double h_ref = mReferencePositions[5];
+	int last_idx = mComHistory.size()-1;
+	Eigen::Vector4d past = mComHistory[last_idx];
+	Eigen::Vector4d cur = mComHistory[0];
 
-	// if(h > 0.98)
-	// 	height_err = fabs(h-0.98);
-	// else if(h < 0.94)
-	// 	height_err = fabs(h-0.94);
+	double diff_x = (cur[0]-past[0]);
+	double diff_z = (cur[2]-past[2]);
+	double diff = std::sqrt(diff_x*diff_x + diff_z*diff_z);
+	double vel = diff/(cur[3]-past[3]);
 
-	height_err = fabs(h_tar-h_ref);
+	// vel_err = fabs(vel-1.0*mSpeedRatio);
+	vel_err = fabs(vel-1.2);
 
 	double reward = 0.0;
-	reward = exp(-1.0 * height_scale * height_err);
+	reward = exp(-1.0 * vel_scale * vel_err);
+
+	return reward;
+}
+
+double
+Character::
+GetReward_Stride()
+{
+	if(mAdaptivePhasePrev > mAdaptivePhase)
+	{
+		if(mStride == 0)
+			return 0.0;
+
+		double err_scale = 1.0;
+		double stride_scale = 2.0;
+		double strideL_err = 0.0;
+		double strideR_err = 0.0;
+
+		strideL_err = fabs(mStrideL - 1.39562 * mSpeedRatio); 
+		strideR_err = fabs(mStrideR - 1.39562 * mSpeedRatio);
+		
+		double reward = 0.0;
+		reward = exp(-1.0 * stride_scale * strideL_err);
+		reward *= exp(-1.0 * stride_scale * strideR_err);
+
+		mStride = 0;
+
+		return reward;
+	}
+	else
+		return 0.0;
+}
+
+double
+Character::
+GetReward_Time()
+{
+	double err_scale = 1.0;
+	double time_scale = 5.0;
+	double time_err = 0.0;
+
+	time_err = fabs(mWorld->getTime() - mAdaptiveTime);
+
+	double reward = 0.0;
+	reward = exp(-1.0 * time_scale * time_err);
 
 	return reward;
 }
@@ -1505,74 +1551,6 @@ GetReward_Width()
 
 	double reward = 0.0;
 	reward = exp(-1.0 * width_scale * width_err);
-
-	// std::cout << "cur vel : " << mCurVel << std::endl;
-	// std::cout << "vel err : " << vel_err << std::endl;
-	// std::cout << "reward : " << reward << std::endl;
-	// std::cout << std::endl;
-
-	return reward;
-}
-
-double
-Character::
-GetReward_Stride()
-{
-	if(mAdaptivePhasePrev > mAdaptivePhase)
-	{
-		if(mStride == 0)
-			return 0.0;
-
-		double err_scale = 1.0;
-		double stride_scale = 4.0;
-		double stride_err = 0.0;
-
-		// std::cout << "stride : " << mStride << std::endl;
-		// std::cout << "speed : " << mSpeedRatio << std::endl;
-		stride_err = fabs(mStride - 1.39562 * mSpeedRatio);
-		double reward = 0.0;
-		reward = exp(-1.0 * stride_scale * stride_err);
-
-		mStride = 0;
-		// std::cout << "stride : " << mStride << std::endl;
-		// std::cout << "reward : " << reward << std::endl;
-
-		return reward;
-	}
-	else
-		return 0.0;
-}
-
-double
-Character::
-GetReward_Vel()
-{
-	double err_scale = 1.0;
-	double vel_scale = 4.0;
-	double vel_err = 0.0;
-
-	int last_idx = mComHistory.size()-1;
-	Eigen::Vector4d past = mComHistory[last_idx];
-	Eigen::Vector4d cur = mComHistory[0];
-
-	double diff_x = (cur[0]-past[0]);
-	double diff_z = (cur[2]-past[2]);
-	double diff = std::sqrt(diff_x*diff_x + diff_z*diff_z);
-	double vel = diff/(cur[3]-past[3]);
-
-	// vel_err = fabs(vel-1.0*mSpeedRatio);
-	vel_err = fabs(vel-1.2);
-
-	// vel_err = fabs(mCurVel - 1.5);
-	// vel_err += fabs(mCurHeadVel - 1.5);
-
-	double reward = 0.0;
-	reward = exp(-1.0 * vel_scale * vel_err);
-
-	// std::cout << "cur vel : " << mCurVel << std::endl;
-	// std::cout << "vel err : " << vel_err << std::endl;
-	// std::cout << "reward : " << reward << std::endl;
-	// std::cout << std::endl;
 
 	return reward;
 }
@@ -1669,6 +1647,20 @@ SetFrame()
 
 void
 Character::
+SetAction(const Eigen::VectorXd& a)
+{
+	mAction_prev = mAction;
+
+	if(mAdaptiveMotion)
+		this->SetActionAdaptiveMotion(a);
+	else
+		this->SetActionImitationLearning(a);
+
+	mStepCnt = 0;
+}
+
+void
+Character::
 SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 {
 	int pd_dof = mNumActiveDof;
@@ -1678,11 +1670,11 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 	int ad_dof = mNumAdaptiveDof;
 
 	double pd_scale = 0.1;
-	double root_ori_scale = 0.004;
-	double root_pos_scale = 0.004;
-	double lower_scale = 0.004; // adaptive lower body
-	double upper_scale = 0.004; // adaptive upper body
-	double temporal_scale = 0.2; // adaptive temporal displacement
+	double root_ori_scale = 0.001;
+	double root_pos_scale = 0.001;
+	double lower_scale = 0.005; // adaptive lower body
+	double upper_scale = 0.005; // adaptive upper body
+	double temporal_scale = 0.5; // adaptive temporal displacement
 
 	mAction.segment(0,pd_dof) = a.segment(0,pd_dof) * pd_scale;
 	mAction.segment(pd_dof,ad_dof) = Eigen::VectorXd::Zero(ad_dof);
@@ -1697,13 +1689,13 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 
 		for(int i=pd_dof; i<mAction.size(); i++){
 			if(i < pd_dof+3)
-				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);
+				mAction[i] = Utils::Clamp(mAction[i], -0.02, 0.02);
 			else if(i >= pd_dof+3 && i < pd_dof+6)
-				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);
+				mAction[i] = Utils::Clamp(mAction[i], -0.02, 0.02);
 			else if(i >= pd_dof+6 && i < pd_dof+l_dof)
-				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);
+				mAction[i] = Utils::Clamp(mAction[i], -0.02, 0.02);
 			else if(i >= pd_dof+l_dof && i < pd_dof+sp_dof)
-				mAction[i] = Utils::Clamp(mAction[i], -0.01, 0.01);	
+				mAction[i] = Utils::Clamp(mAction[i], -0.02, 0.02);	
 			else
 				mAction[i] = Utils::Clamp(mAction[i], -2.0, 2.0);			
 		}		
@@ -1731,7 +1723,7 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 	for(int i=6; i<mTargetPositions.size(); i++)
 		mTargetPositions[i] = Utils::Clamp(mTargetPositions[i],mJointPositionLowerLimits[i],mJointPositionUpperLimits[i]);
 
-	this->GetPosAndVel(mWorld->getTime()+timeStep, mReferencePositions, mReferenceVelocities);
+	this->GetPosAndVel(mWorld->getTime()+timeStep, mReferencePositions, mReferenceVelocities);	
 }
 
 void
@@ -1746,20 +1738,6 @@ SetActionImitationLearning(const Eigen::VectorXd& a)
 	double timeStep = (double)mNumSteps*mWorld->getTimeStep();
 	this->GetPosAndVel(t+timeStep, mTargetPositions, mTargetVelocities);
 	this->GetPosAndVel(t+timeStep, mReferencePositions, mReferenceVelocities);
-}
-
-void
-Character::
-SetAction(const Eigen::VectorXd& a)
-{
-	mAction_prev = mAction;
-
-	if(mAdaptiveMotion)
-		this->SetActionAdaptiveMotion(a);
-	else
-		this->SetActionImitationLearning(a);
-
-	mStepCnt = 0;
 }
 
 void
@@ -2114,56 +2092,7 @@ SetSpeedRatio(double r)
 		double ratio = (r-mParamMin[2])/(mParamMax[2]-mParamMin[2]);
 		param = ratio*2.0 - 1.0;
 		mParamState[2] = param;
-	}
-
-	// std::cout << "speedratio : " << mSpeedRatio << std::endl;
-	// std::cout << "param : " << mParamState[2] << std::endl;
-}
-
-// void
-// Character::
-// LoadBVHset(double lower, double upper)
-// {
-// 	if(lower == upper)
-// 	{
-// 		if(!mBVH->IsParsed()){
-// 			mBVH->SetSpeedRatio(lower);
-// 			mBVH->Parse(mBVHpath, mBVHcyclic);
-// 		}
-// 		mBVHset.push_back(mBVH);
-// 		return;
-// 	}
-
-// 	double sr = lower;
-// 	while(sr <= upper)
-// 	{
-// 		if(sr == mSpeedRatio){
-// 			mBVHset.push_back(mBVH_);
-// 		}
-// 		else{
-// 			BVH* newBVH = new BVH(mSkeleton, mBVHmap);
-// 			newBVH->SetSpeedRatio(sr);
-// 			newBVH->Parse(mBVHpath, mBVHcyclic);
-// 			mBVHset.push_back(newBVH);
-// 		}
-// 		sr += 0.1;
-// 	}
-
-// 	mBVH = mBVHset.at(mBVHset.size()-1);
-// }
-
-void
-Character::
-SetBVHidx(double r)
-{
-	double speed_min = mParamMin[2];
-	double tmp = r-speed_min;
-	int idx = (int)(tmp/0.1);
-	mBVH = mBVHset.at(idx);
-
-	this->Reset();
-	if(mUseDevice)
-		mDevice->Reset();
+	}	
 }
 
 void
@@ -2196,17 +2125,6 @@ SetParamState(Eigen::VectorXd paramState)
 	}
 }
 
-double
-Character::
-SetSpeedIdx(double s)
-{
-	double speed_min = mParamMin[2];
-	double diff = s-speed_min;
-	int idx = (int)(diff/0.1);
-
-	return idx * 0.1;
-}
-
 void
 Character::
 SetMinMaxV(int idx, double lower, double upper)
@@ -2235,13 +2153,7 @@ SetAdaptiveParams(std::map<std::string, std::pair<double, double>>& p)
 		}
 		else if(name == "speed"){
 			this->SetMinMaxV(2, lower, upper);
-			this->SetSpeedRatio(upper);
-			// if(lower!=upper)
-			// 	this->SetMinMaxV(2, lower, upper+0.0999);
-			// else
-			// 	this->SetMinMaxV(2, lower, upper);
-			// this->LoadBVHset(lower, upper);
-			// this->SetSpeedRatio(upper);
+			this->SetSpeedRatio(upper);			
 		}
 	}
 }

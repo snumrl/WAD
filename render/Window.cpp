@@ -806,6 +806,7 @@ SetFocus()
 	if(mFocus)
 	{
 		mTrans = -mEnv->GetWorld()->getSkeleton("Human")->getRootBodyNode()->getCOM();
+		mTrans[1] = -0.931252;
 		mTrans *= 1000.0;
 		Eigen::Quaterniond origin_r = mTrackBall.getCurrQuat();
 		if (mViewMode == 0)
@@ -934,6 +935,22 @@ DrawVelocity()
 	bool big = true;
 
 	DrawString(0.70, 0.50, big, "Velocity : " + std::to_string(vel_h) + " m/s");
+
+	DrawGLEnd();
+}
+
+void
+Window::
+DrawStride()
+{
+	DrawGLBegin();
+
+	double strideL = mEnv->GetCharacter()->GetStrideL();
+	double strideR = mEnv->GetCharacter()->GetStrideR();
+	bool big = true;
+
+	DrawString(0.70, 0.47, big, "Stride L : " + std::to_string(strideL) + " m");
+	DrawString(0.70, 0.44, big, "Stride R : " + std::to_string(strideR) + " m");
 
 	DrawGLEnd();
 }
@@ -1101,6 +1118,7 @@ DrawCharacter()
 	}
 	else{
 		this->DrawVelocity();
+		this->DrawStride();
 
 		// this->DrawCoT();
 		// this->DrawContactForce();
@@ -1708,27 +1726,27 @@ DrawTorqueGraph(std::string name, std::deque<double> data, double w, double h, d
 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data, red);
 }
 
-void
-Window::
-DrawStride()
-{
-	DrawGLBegin();
+// void
+// Window::
+// DrawStride()
+// {
+// 	DrawGLBegin();
 
-	double w = 0.15, h = 0.11, x = 0.69, y = 0.47;
+// 	double w = 0.15, h = 0.11, x = 0.69, y = 0.47;
 
-	double offset_x = 0.003;
-	double offset_y = 1.0;
-	double offset = 0.005;
-	double ratio_y = 0.0;
+// 	double offset_x = 0.003;
+// 	double offset_y = 1.0;
+// 	double offset = 0.005;
+// 	double ratio_y = 0.0;
 
-	y = 0.49;
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "stride");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, mFootinterval, 0.7, 0.8);
-	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, mFootinterval, green, 0.7, 0.8);
-	// DrawStringMean(x, y, w, h, ratio_y, offset_x, offset_y, offset, mFootinterval, green);
+// 	y = 0.49;
+// 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "stride");
+// 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, mFootinterval, 0.7, 0.8);
+// 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, mFootinterval, green, 0.7, 0.8);
+// 	// DrawStringMean(x, y, w, h, ratio_y, offset_x, offset_y, offset, mFootinterval, green);
 
-	DrawGLEnd();
-}
+// 	DrawGLEnd();
+// }
 
 void
 Window::
