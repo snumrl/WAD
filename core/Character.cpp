@@ -1009,7 +1009,13 @@ GetState_Character()
 	// }
 
 	double curTime = this->GetCurTime();
-	double nextTime = curTime + this->GetControlTimeStep() * (1.0/mSpeedRatio);
+	double nextTime;
+	if(mAdaptiveMotion){
+		if(curTime <= mTimeOffset)
+			nextTime = curTime + this->GetControlTimeStep();
+		else
+			nextTime = curTime + this->GetControlTimeStep() * (1.0/mSpeedRatio);
+	}
 
 	Eigen::VectorXd cur_ref_pos, cur_ref_vel;
 	Eigen::VectorXd next_ref_pos, next_ref_vel;
@@ -1261,11 +1267,11 @@ GetReward_Character_Imitation()
 	{
 		double w = 0.0;
 		if(ees[i]->getName() == "Head")
-			w = 0.4;
+			w = 0.3;
 		if(ees[i]->getName() == "Pelvis")
 			w = 0.3;
 		if(ees[i]->getName() == "TalusR" || ees[i]->getName() == "TalusL")
-			w = 0.2;
+			w = 0.3;
 		if(ees[i]->getName() == "HandR" || ees[i]->getName() == "HandL")
 			w = 0.1;
 
@@ -1282,7 +1288,7 @@ GetReward_Character_Imitation()
 	double sig_q = 0.5;
 	double sig_com = 20.0;
 	double sig_ee_rot = 20.0;
-	double sig_ee_pos = 20.0;
+	double sig_ee_pos = 40.0;
 	
 	double r_p = Utils::exp_of_squared(p_diff, sig_p);
 	double r_q = Utils::exp_of_squared(q_diff, sig_q);
@@ -1343,8 +1349,8 @@ GetReward_Character_Efficiency()
 
 	// double r_continuous = r_Pose * r_Vel;
 	// double r_spike = 0.0 * r_EnergyMin;
-	double r_continuous = r_Vel;
-	double r_spike = 50.0 * r_Stride * r_Vel;
+	double r_continuous = r_Pose * r_Vel;
+	double r_spike = 100.0 * r_Stride * r_Vel;
 
 	return std::make_pair(r_continuous, r_spike);
 }
@@ -1445,7 +1451,7 @@ GetReward_Pose()
 	// std::cout << "pose rew : " << pose_reward << std::endl;
 	// std::cout << "head err : " << head_err << std::endl;
 	// std::cout << "head rew : " << head_reward << std::endl;
-	std::cout << std::endl;
+	// std::cout << std::endl;
 
 	// double reward = pose_reward * head_reward;
 	double reward = pose_reward;
@@ -1670,10 +1676,10 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 	int ad_dof = mNumAdaptiveDof;
 
 	double pd_scale = 0.1;
-	double root_ori_scale = 0.001;
-	double root_pos_scale = 0.001;
-	double lower_scale = 0.005; // adaptive lower body
-	double upper_scale = 0.005; // adaptive upper body
+	double root_ori_scale = 0.002;
+	double root_pos_scale = 0.002;
+	double lower_scale = 0.004; // adaptive lower body
+	double upper_scale = 0.004; // adaptive upper body
 	double temporal_scale = 0.5; // adaptive temporal displacement
 
 	mAction.segment(0,pd_dof) = a.segment(0,pd_dof) * pd_scale;

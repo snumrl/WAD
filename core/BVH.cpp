@@ -139,8 +139,7 @@ GetNode(const std::string& name)
 BVH::
 BVH(const SkeletonPtr& skel,const std::map<std::string,std::string>& bvh_map)
 	:mSkeleton(skel),mBVHMap(bvh_map),mCyclic(true),mParse(false)
-{
-	mSpeedRatio = 1.0;
+{	
 }
 
 BVHNode*
@@ -290,19 +289,17 @@ SetMotionTransform()
 	std::string root_bvh_name = mBVHMap[root->getName()];
 	Eigen::VectorXd mData = mMotions[0];
 
-	mData.segment<3>(3) *= mSpeedRatio;
 	mMap[root_bvh_name]->Set(mData);
 	T0.linear() = this->Get(root_bvh_name);
 	T0.translation() = 0.01*mData.segment<3>(0);
 
 	Eigen::VectorXd mDataLast = mMotions[mNumTotalFrames-1];
 
-	mDataLast.segment<3>(3) *= mSpeedRatio;
 	mMap[root_bvh_name]->Set(mDataLast);
 	T1.linear() = this->Get(root_bvh_name);
-	T1.translation() = 0.01*(mSpeedRatio*mDataLast.segment<3>(0) + (1.0-mSpeedRatio)*mData.segment<3>(0));
+	T1.translation() = 0.01*(mDataLast.segment<3>(0));
 
-	mCycleOffset = T1.translation() + 0.01*(mSpeedRatio)*(mMotions[1]-mMotions[0]).segment<3>(0) - T0.translation();
+	mCycleOffset = T1.translation() + 0.01*(mMotions[1]-mMotions[0]).segment<3>(0) - T0.translation();
 }
 
 void
@@ -335,12 +332,6 @@ SetMotionFrames()
 				p.segment<6>(idx) = FreeJoint::convertToPositions(T);
 
 				if(jointName == "Pelvis"){
-					p[idx]   *= mSpeedRatio;
-					p[idx+1] *= mSpeedRatio;
-					p[idx+2] *= mSpeedRatio;
-					p[idx+3] *= mSpeedRatio;
-					p[idx+4] *= 1.0;
-					p[idx+5] *= mSpeedRatio;
 					if(p[idx+2] > 0)
 						p[idx+2]   *= 0.8;
 					else
@@ -371,18 +362,9 @@ SetMotionFrames()
 					p[idx+2] += 0.05;
 
 				if(jointName == "FemurL" || jointName == "FemurR"){
-					p[idx]   *= mSpeedRatio;
-					p[idx+1] *= mSpeedRatio;
-					p[idx+2] *= mSpeedRatio;
 					if(p[idx+2] > 0)
 						p[idx+2] *= 0.5;
-				}
-
-				if(jointName == "TalusL" || jointName == "TalusR"){
-					p[idx]   *= mSpeedRatio;
-					p[idx+1] *= mSpeedRatio;
-					p[idx+2] *= mSpeedRatio;
-				}
+				}				
 			}
 			else if(jn->getType()=="RevoluteJoint")
 			{
@@ -401,8 +383,7 @@ SetMotionFrames()
 				else if(val<-M_PI)
 					val += 2*M_PI;
 
-				p[idx] = val;
-				p[idx] *= mSpeedRatio;
+				p[idx] = val;				
 			}
 		}
 		mMotionFrames[i] = p;

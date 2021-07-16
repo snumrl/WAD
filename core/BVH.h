@@ -63,12 +63,10 @@ public:
 	Eigen::Matrix3d Get(const std::string& bvh_node);
 	const Eigen::VectorXd& GetMotion(int k);
 	Eigen::VectorXd GetMotionVel(int k);
-	double GetSpeedRatio(){return mSpeedRatio;}
-
+	
 	void SetSkeleton(const SkeletonPtr& skel){mSkeleton = skel;}
 	void SetBVHMap(const std::map<std::string,std::string>& bvh_map){mBVHMap = bvh_map;}
-	void SetSpeedRatio(double ratio){mSpeedRatio = ratio;}
-
+	
 	void SetMotionTransform();
 	void SetMotionFrames();
 	void SetMotionVelFrames();
@@ -98,8 +96,7 @@ private:
 	int mNumTotalChannels;
 	int mNumTotalFrames;
 	double mTimeStep;
-	double mSpeedRatio;
-
+	
 	BVHNode* mRoot;
 	SkeletonPtr mSkeleton;
 
