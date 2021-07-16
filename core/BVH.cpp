@@ -260,15 +260,13 @@ Parse(const std::string& file, bool cyclic)
 	}
 	is.close();
 
+	this->SetMotionTransform();
+	this->SetMotionFrames();
 	if(mCyclic)
 	{
-		this->SetMotionTransform();
-		this->SetMotionFrames();
 		this->SetMotionVelFrames();
 	}
 	else{
-		this->SetMotionTransform();
-		this->SetMotionFrames();
 		this->SetMotionFramesNonCyclic(1000, true);
 		this->SetMotionVelFramesNonCyclic(1000, true);
 	}
@@ -573,13 +571,6 @@ GetMotion(int k)
 	else
 		return mMotionFramesNonCyclicTmp[k];
 }
-
-// const Eigen::VectorXd&
-// BVH::
-// GetMotionNonCyclic(int k)
-// {
-// 	return mMotionFramesNonCyclicTmp[k];
-// }
 
 void
 BVH::

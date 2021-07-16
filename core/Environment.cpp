@@ -234,10 +234,7 @@ Initialize(const std::string& meta_file, bool load_obj)
 
 	if(mUseAdaptiveSampling)
 		this->SetAdaptiveParamNums();
-
-	if(mUseAdaptiveMotion)
-		mCharacter->SetAdaptiveMotion(mUseAdaptiveMotion);
-
+	
 	mCharacter->Initialize();
 
 	if(mUseDevice){
@@ -287,7 +284,7 @@ Reset(bool RSI)
 {
 	double t = 0.0;
 
-	if (RSI)
+	if(RSI)
 	{
 		// t = 1.0/(double)mControlHz * (rand()%16 + 8);
 		t = 0.1 + 0.01 * (rand()%90);
@@ -342,9 +339,6 @@ IsEndOfEpisode()
 
 	double root_y = char_skel->getBodyNode(0)->getTransform().translation()[1] - mGround->getRootBodyNode()->getCOM()[1];
 
-	Eigen::VectorXd p_tar = mCharacter->GetTargetPositions();
-	double dist = (p.segment<3>(3) - p_tar.segment<3>(3)).norm();
-
 	Eigen::Isometry3d cur_root_inv = char_skel->getRootBodyNode()->getWorldTransform().inverse();
 
 	char_skel->setPositions(mCharacter->GetTargetPositions());
@@ -355,6 +349,7 @@ IsEndOfEpisode()
 	Eigen::AngleAxisd root_diff_aa(root_diff.linear());
 	double angle = std::fmod(root_diff_aa.angle()+M_PI, 2*M_PI)-M_PI;
 	Eigen::Vector3d root_pos_diff = root_diff.translation();
+	double dist = root_pos_diff.norm();
 
 	char_skel->setPositions(p);
 	char_skel->setVelocities(v);
@@ -363,7 +358,7 @@ IsEndOfEpisode()
 		isTerminal = true;
 	else if(dist > 0.5)
 		isTerminal = true;
-	else if(std::abs(angle) > 0.4*M_PI)
+	else if(std::abs(angle) > 0.4*M_PI || dist > 0.5)
 		isTerminal = true;
 	else if (dart::math::isNan(p) || dart::math::isNan(v))
 		isTerminal = true;
@@ -411,13 +406,6 @@ GetReward()
 	return mCharacter->GetReward();
 }
 
-// std::vector<double>
-// Environment::
-// GetReward()
-// {
-// 	return mCharacter->GetReward();
-// }
-
 std::map<std::string, std::deque<double>>
 Environment::
 GetRewards()
@@ -431,7 +419,6 @@ GetAdaptiveTime()
 {
 	return mCharacter->GetAdaptiveTime();
 }
-
 
 int
 Environment::

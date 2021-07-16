@@ -1764,68 +1764,73 @@ DrawReward()
 	std::map<std::string, std::deque<double>> map = mEnv->GetRewards();
 
 	y = 0.49;
-	std::deque<double> reward = map["reward"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "reward");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, reward);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
-	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, reward, green);
+	std::deque<double> reward_c = map["reward_c"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "reward_c");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, reward_c);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, reward_c, green);
 
 	y = 0.37;
-	std::deque<double> imit = map["imit"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "imit");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, imit);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
-	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, imit, green);
+	std::deque<double> imit_c = map["imit_c"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "imit_c");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, imit_c);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, imit_c, green);
 
 	y = 0.25;
-	std::deque<double> effi = map["effi"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "effi");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, effi);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
-	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, effi, green);
+	std::deque<double> effi_c = map["effi_c"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "effi_c");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, effi_c);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, effi_c, green);
 
 	y = 0.13;
-	std::deque<double> min = map["min"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "min");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, min);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	std::deque<double> effi_vel = map["effi_vel"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "effi_vel");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, effi_vel);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, effi_vel, green);
 
 	y = 0.01;
-	std::deque<double> reg = map["reg"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "reg");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, reg);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	std::deque<double> effi_pose = map["effi_pose"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "effi_pose");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, effi_pose);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, effi_pose, green);
 
 	x = 0.85;
 	y = 0.49;
-	std::deque<double> pose = map["pose"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "pose");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, pose);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	std::deque<double> reward_s = map["reward_s"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "reward_s");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, 0.01*offset_y, offset, green, 1.5, reward_s);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, reward_s, green);
 
-	y = 0.37;
-	std::deque<double> vel = map["vel"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "vel");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, vel);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	// y = 0.37;
+	// std::deque<double> vel = map["vel"];
+	// DrawBaseGraph(x, y, w, h, ratio_y, offset, "vel");
+	// DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, vel);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	y = 0.25;
-	std::deque<double> ee = map["ee"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "ee");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, ee);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	std::deque<double> effi_s = map["effi_s"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "effi_s");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, 0.01*offset_y, offset, green, 1.5, effi_s);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, effi_s, green);
 
-	y = 0.13;
-	std::deque<double> root = map["root"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "root");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, root);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	// y = 0.13;
+	// std::deque<double> root = map["root"];
+	// DrawBaseGraph(x, y, w, h, ratio_y, offset, "root");
+	// DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, root);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	y = 0.01;
-	std::deque<double> com = map["com"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "com");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, com);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	std::deque<double> effi_stride = map["effi_stride"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "effi_stride");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, effi_stride);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, effi_stride, green);
 
 	// std::deque<double> contact = map["contact"];
 	// DrawBaseGraph(x, y, w, h, ratio_y, offset, "contact");

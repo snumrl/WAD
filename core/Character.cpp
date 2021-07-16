@@ -41,9 +41,6 @@ Character::
 	for(int i=0; i<mMusclesFemur.size(); i++)
 		delete(mMusclesFemur[i]);
 
-	for(int i=0; i<mBVHset.size(); i++)
-		delete(mBVHset[i]);
-
 	delete mBVH;
 	delete mDevice;
 	delete mContacts;
@@ -85,10 +82,8 @@ LoadBVH(const std::string& path, bool cyclic)
 		return;
 	}
 
-	mBVHpath = path;
-	mBVHcyclic = cyclic;
 	mBVH = new BVH(mSkeleton, mBVHmap);
-	mBVH->Parse(mBVHpath, mBVHcyclic);	
+	mBVH->Parse(path, cyclic);	
 }
 
 void
@@ -286,7 +281,7 @@ Initialize()
 		mRootTrajectory.push_back(Eigen::Vector3d::Zero());
 	for(int i=0; i<32; i++)
 		mHeadTrajectory.push_back(Eigen::Vector3d::Zero());
-	for(int i=0; i<200; i++)
+	for(int i=0; i<800; i++)
 		mComHistory.push_back(Eigen::Vector4d::Zero());
 
 	int frames = mBVH->GetNumTotalFrames();
@@ -451,18 +446,27 @@ void
 Character::
 Initialize_Rewards()
 {
-	mRewardTags.push_back("reward");
-	mRewardTags.push_back("pose");
-	mRewardTags.push_back("vel");
-	mRewardTags.push_back("root");
-	mRewardTags.push_back("ee");
-	mRewardTags.push_back("com");
-	mRewardTags.push_back("smooth");
-	mRewardTags.push_back("min");
-	mRewardTags.push_back("contact");
-	mRewardTags.push_back("reg");
-	mRewardTags.push_back("imit");
-	mRewardTags.push_back("effi");
+	// mRewardTags.push_back("reward");
+	// mRewardTags.push_back("pose");
+	// mRewardTags.push_back("vel");
+	// mRewardTags.push_back("root");
+	// mRewardTags.push_back("ee");
+	// mRewardTags.push_back("com");
+	// mRewardTags.push_back("smooth");
+	// mRewardTags.push_back("min");
+	// mRewardTags.push_back("contact");
+	// mRewardTags.push_back("reg");
+	// mRewardTags.push_back("imit");
+	// mRewardTags.push_back("effi");
+	mRewardTags.push_back("reward_c");
+	mRewardTags.push_back("reward_s");
+	mRewardTags.push_back("imit_c");
+	mRewardTags.push_back("effi_c");
+	mRewardTags.push_back("effi_s");
+	mRewardTags.push_back("effi_vel");
+	mRewardTags.push_back("effi_pose");
+	mRewardTags.push_back("effi_stride");
+
 
 	int reward_window = 70;
 	for(auto tag : mRewardTags){
@@ -588,7 +592,7 @@ Reset()
 		mHeadTrajectory.push_back(Eigen::Vector3d::Zero());
 
 	mComHistory.clear();
-	for(int i=0; i<200; i++)
+	for(int i=0; i<800; i++)
 		mComHistory.push_back(Eigen::Vector4d::Zero());
 
 	mStepCnt = 0;
@@ -1148,8 +1152,10 @@ GetReward()
 	r_continuous += rewards_character.first;
 	r_spike += rewards_character.second;
 
+	mReward["reward_c"] = r_continuous;
+	mReward["reward_s"] = r_spike;
 	double r_total = r_continuous + r_spike;
-	mReward["reward"] = r_total;
+	// mReward["reward"] = r_total;
 	mCurReward = r_total;
 
 	// std::cout << "con : " << r_continuous << std::endl;
@@ -1168,8 +1174,10 @@ GetReward_Character()
 	std::pair<double,double> r_effi = GetReward_Character_Efficiency();
 
 
-	mReward["imit"] = r_imit.first + r_imit.second;
- 	mReward["effi"] = r_effi.first + r_effi.second;
+	mReward["imit_c"] = r_imit.first;
+	mReward["imit_s"] = r_imit.second;
+ 	mReward["effi_c"] = r_effi.first;
+	mReward["effi_s"] = r_effi.second;
 
 	double ratio_imit = 1.0;
 	double ratio_effi = 1.0;
@@ -1298,10 +1306,10 @@ GetReward_Character_Imitation()
 	// double r_total = r_p * r_q * r_ee_rot * r_ee_pos * r_com;
 	double r_total = r_p * r_ee_rot * r_ee_pos;
 
-	mReward["pose"] = r_p;
-	mReward["ee"] = r_ee_rot;
-	mReward["smooth"] = r_ee_pos;
-	mReward["vel"] = r_q;
+	// mReward["pose"] = r_p;
+	// mReward["ee"] = r_ee_rot;
+	// mReward["smooth"] = r_ee_pos;
+	// mReward["vel"] = r_q;
 
 	return std::make_pair(r_total, 0.0);
 }
@@ -1343,9 +1351,9 @@ GetReward_Character_Efficiency()
 	// double r_ContactForce = 1.0;
 	// double r_ContactForce = mContacts->GetReward();
 
-	mReward["min"] = 0.0;
-	mReward["reg"] = 0.0;
-	mReward["com"] = 0.0;
+	mReward["effi_vel"] = r_Vel;
+	mReward["effi_pose"] = r_Pose;
+	mReward["effi_stride"] = r_Stride;
 
 	// double r_continuous = r_Pose * r_Vel;
 	// double r_spike = 0.0 * r_EnergyMin;
@@ -1676,11 +1684,11 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 	int ad_dof = mNumAdaptiveDof;
 
 	double pd_scale = 0.1;
-	double root_ori_scale = 0.002;
-	double root_pos_scale = 0.002;
-	double lower_scale = 0.004; // adaptive lower body
-	double upper_scale = 0.004; // adaptive upper body
-	double temporal_scale = 0.5; // adaptive temporal displacement
+	double root_ori_scale = 0.001;
+	double root_pos_scale = 0.001;
+	double lower_scale = 0.005; // adaptive lower body
+	double upper_scale = 0.005; // adaptive upper body
+	double temporal_scale = 0.2; // adaptive temporal displacement
 
 	mAction.segment(0,pd_dof) = a.segment(0,pd_dof) * pd_scale;
 	mAction.segment(pd_dof,ad_dof) = Eigen::VectorXd::Zero(ad_dof);

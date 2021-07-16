@@ -176,8 +176,6 @@ public:
 	MetabolicEnergy* GetMetabolicEnergy(){return mMetabolicEnergy;}
 	Contact* GetContacts(){return mContacts;}
 
-	void SetAdaptiveMotion(bool b){ mAdaptiveMotion = b;}
-
 	void SetMass();
 	void SetMassRatio(double r);
 	double GetMass(){return mMass;}
@@ -223,11 +221,8 @@ private:
 	std::map<std::string, std::vector<Muscle*>> mMusclesMap;
 
 	BVH* mBVH;
-	std::string mBVHpath;
-	std::vector<BVH*> mBVHset;
 	std::map<std::string,std::string> mBVHmap;
-	bool mBVHcyclic;
-
+	
 	Device* mDevice;
 	MASS::Contact* mContacts;
 	JointData* mJointDatas;
