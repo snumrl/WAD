@@ -107,7 +107,7 @@ public:
 
 private:
 	double mSimTimeStep;
-	double mConTimeStep
+	double mConTimeStep;
 	double h_A, h_M, h_SL, w;
 
 	double l_mt,l_mt_max;

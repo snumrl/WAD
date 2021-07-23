@@ -103,7 +103,7 @@ LoadMuscles(const std::string& path)
 
 	bool isExist = false;
 	double simTimeStep = 1.0/mSimulationHz;
-	double comTimeStep = 1.0/mControlHz;
+	double conTimeStep = 1.0/mControlHz;
 	TiXmlElement *muscledoc = doc.FirstChildElement("Muscle");
 	for(TiXmlElement* unit = muscledoc->FirstChildElement("Unit");unit!=nullptr;unit = unit->NextSiblingElement("Unit"))
 	{
