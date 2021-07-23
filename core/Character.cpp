@@ -101,7 +101,8 @@ LoadMuscles(const std::string& path)
 	mFile.open(mFileName);
 
 	bool isExist = false;
-	double time_step = 1.0/mSimulationHz;
+	double simTimeStep = 1.0/mSimulationHz;
+	double comTimeStep = 1.0/mControlHz;
 	TiXmlElement *muscledoc = doc.FirstChildElement("Muscle");
 	for(TiXmlElement* unit = muscledoc->FirstChildElement("Unit");unit!=nullptr;unit = unit->NextSiblingElement("Unit"))
 	{
@@ -154,7 +155,8 @@ LoadMuscles(const std::string& path)
 				i++;
 			}
 			muscle_elem->SetMt0Default();
-			muscle_elem->SetTimeStep(time_step);
+			muscle_elem->SetSimTimeStep(simTimeStep);
+			muscle_elem->SetConTimeStep(conTimeStep);
 			muscle_elem->SetMass();
 
 			std::string muscle_name = muscle_elem->GetName();

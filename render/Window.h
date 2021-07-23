@@ -20,7 +20,7 @@ namespace py = pybind11;
 namespace MASS
 {
 
-class Window : public dart::gui::Win3D
+class Window : public dart::gui::glut::Win3D
 {
 public:
 	Window(Environment* env);

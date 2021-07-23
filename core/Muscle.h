@@ -71,7 +71,9 @@ public:
 	double GetActivation(){ return activation;}
 	double GetActivationPrev(){ return activation_prev;}
 
-	void SetTimeStep(double t){mTimeStep = t;}
+	void SetConTimeStep(double t){mConTimeStep = t;}
+	void SetSimTimeStep(double t){mSimTimeStep = t;}
+	
 	double GetExcitation();
 
 	void SetF0(double f){ f0 = f;}
@@ -104,7 +106,8 @@ public:
 	double GetW(){return w;}
 
 private:
-	double mTimeStep;
+	double mSimTimeStep;
+	double mConTimeStep
 	double h_A, h_M, h_SL, w;
 
 	double l_mt,l_mt_max;

@@ -40,15 +40,15 @@ Window(Environment* env)
 
 	mm = py::module::import("__main__");
 	mns = mm.attr("__dict__");
-
+	
 	py::str module_dir = (std::string(MASS_ROOT_DIR)+"/python").c_str();
 	sys_module = py::module::import("sys");
 	sys_module.attr("path").attr("insert")(1, module_dir);
+	
 	py::exec("import torch",mns);
 	py::exec("import torch.nn as nn",mns);
 	py::exec("import torch.optim as optim",mns);
 	py::exec("import torch.nn.functional as F",mns);
-	py::exec("import torchvision.transforms as T",mns);
 	py::exec("import numpy as np",mns);
 	py::exec("from Model import *",mns);
 	py::exec("from RunningMeanStd import *",mns);
@@ -890,8 +890,8 @@ DrawContactForce()
 			Eigen::Vector3d f = force_scaler*((iter->second).at(i)).first;
 			Eigen::Vector3d p = ((iter->second).at(i)).second;
 			double norm = f.norm();
-			if(norm != 0)
-				dart::gui::drawArrow3D(p, f/norm, norm, 0.005, 0.015);
+			// if(norm != 0)
+			// 	dart::gui::drawArrow3D(p, f/norm, norm, 0.005, 0.015);
 		}
 	}
 
@@ -1909,10 +1909,10 @@ DrawArrow()
 	Eigen::Vector3d dir_L2 = rot_L.col(2);
 	dir_L2[2] *= -1;
 
-	if(f[6] < 0)
-		dart::gui::drawArrow3D(p_L, dir_L2,-0.04*f[6], 0.01, 0.03);
-	else
-		dart::gui::drawArrow3D(p_L, dir_L1, 0.04*f[6], 0.01, 0.03);
+	// if(f[6] < 0)
+	// 	dart::gui::drawArrow3D(p_L, dir_L2,-0.04*f[6], 0.01, 0.03);
+	// else
+	// 	dart::gui::drawArrow3D(p_L, dir_L1, 0.04*f[6], 0.01, 0.03);
 
 	Eigen::Isometry3d trans_R = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurR")->getTransform();
 	Eigen::Vector3d p_R = trans_R.translation();
@@ -1921,10 +1921,10 @@ DrawArrow()
 	Eigen::Vector3d dir_R2 = rot_R.col(2);
 	dir_R2[2] *= -1;
 
-	if(f[7] < 0)
-		dart::gui::drawArrow3D(p_R, dir_R2,-0.04*f[7], 0.015, 0.03);
-	else
-		dart::gui::drawArrow3D(p_R, dir_R1, 0.04*f[7], 0.015, 0.03);
+	// if(f[7] < 0)
+	// 	dart::gui::drawArrow3D(p_R, dir_R2,-0.04*f[7], 0.015, 0.03);
+	// else
+	// 	dart::gui::drawArrow3D(p_R, dir_R1, 0.04*f[7], 0.015, 0.03);
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_COLOR_MATERIAL);

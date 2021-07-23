@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5.1)
 project(pymss)
 
 add_compile_options(-fPIC)
-add_compile_options(-std=gnu++11)
+add_compile_options(-std=gnu++14)
 add_compile_options(-Wdeprecated-declarations)
 add_compile_options(-fvisibility=hidden)
 
