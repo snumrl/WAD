@@ -40,15 +40,15 @@ Window(Environment* env)
 
 	mm = py::module::import("__main__");
 	mns = mm.attr("__dict__");
-
+	
 	py::str module_dir = (std::string(MASS_ROOT_DIR)+"/python").c_str();
 	sys_module = py::module::import("sys");
 	sys_module.attr("path").attr("insert")(1, module_dir);
+	
 	py::exec("import torch",mns);
 	py::exec("import torch.nn as nn",mns);
 	py::exec("import torch.optim as optim",mns);
 	py::exec("import torch.nn.functional as F",mns);
-	py::exec("import torchvision.transforms as T",mns);
 	py::exec("import numpy as np",mns);
 	py::exec("from Model import *",mns);
 	py::exec("from RunningMeanStd import *",mns);
@@ -173,7 +173,7 @@ ParamChange(bool b)
 			if(s_ratio > max_v[2])
 				s_ratio = max_v[2];
 			mEnv->GetCharacter()->SetSpeedRatio(s_ratio);
-			mEnv->GetCharacter()->SetBVHidx(s_ratio);
+			// mEnv->GetCharacter()->SetBVHidx(s_ratio);
 		}
 		else if(mParamMode == 4)
 		{
@@ -217,7 +217,7 @@ ParamChange(bool b)
 			if(s_ratio < min_v[2])
 				s_ratio = min_v[2];
 			mEnv->GetCharacter()->SetSpeedRatio(s_ratio);
-			mEnv->GetCharacter()->SetBVHidx(s_ratio);
+			// mEnv->GetCharacter()->SetBVHidx(s_ratio);
 		}
 		else if(mParamMode == 4)
 		{
@@ -806,6 +806,7 @@ SetFocus()
 	if(mFocus)
 	{
 		mTrans = -mEnv->GetWorld()->getSkeleton("Human")->getRootBodyNode()->getCOM();
+		mTrans[1] = -0.931252;
 		mTrans *= 1000.0;
 		Eigen::Quaterniond origin_r = mTrackBall.getCurrQuat();
 		if (mViewMode == 0)
@@ -889,8 +890,8 @@ DrawContactForce()
 			Eigen::Vector3d f = force_scaler*((iter->second).at(i)).first;
 			Eigen::Vector3d p = ((iter->second).at(i)).second;
 			double norm = f.norm();
-			if(norm != 0)
-				dart::gui::drawArrow3D(p, f/norm, norm, 0.005, 0.015);
+			// if(norm != 0)
+			// 	dart::gui::drawArrow3D(p, f/norm, norm, 0.005, 0.015);
 		}
 	}
 
@@ -934,6 +935,22 @@ DrawVelocity()
 	bool big = true;
 
 	DrawString(0.70, 0.50, big, "Velocity : " + std::to_string(vel_h) + " m/s");
+
+	DrawGLEnd();
+}
+
+void
+Window::
+DrawStride()
+{
+	DrawGLBegin();
+
+	double strideL = mEnv->GetCharacter()->GetStrideL();
+	double strideR = mEnv->GetCharacter()->GetStrideR();
+	bool big = true;
+
+	DrawString(0.70, 0.47, big, "Stride L : " + std::to_string(strideL) + " m");
+	DrawString(0.70, 0.44, big, "Stride R : " + std::to_string(strideR) + " m");
 
 	DrawGLEnd();
 }
@@ -989,9 +1006,10 @@ DrawParameter()
 
 		double s_ratio = mEnv->GetCharacter()->GetSpeedRatio();
 		DrawQuads(x+0.09, y+0.01, 0.02, (s_ratio)*h_offset, green);
-		if(max_v[2] != min_v[2])
-			max_v[2] -= 0.0999;
 		DrawQuads(x+0.09, y+0.01+(s_ratio)*h_offset, 0.02, (max_v[2]-s_ratio)*h_offset, green_trans);
+		// if(max_v[2] != min_v[2])
+		// 	max_v[2] -= 0.0999;
+		// DrawQuads(x+0.09, y+0.01+(s_ratio)*h_offset, 0.02, (max_v[2]-s_ratio)*h_offset, green_trans);
 
 		DrawString(x+0.00, y+(m_ratio)*h_offset+0.02, std::to_string(m_ratio));
 		DrawString(x+0.00, y-0.02, "Mass");
@@ -1100,6 +1118,7 @@ DrawCharacter()
 	}
 	else{
 		this->DrawVelocity();
+		this->DrawStride();
 
 		// this->DrawCoT();
 		// this->DrawContactForce();
@@ -1128,6 +1147,11 @@ DrawBodyNode(const BodyNode* bn)
 	mRI->transform(bn->getRelativeTransform());
 
 	auto sns = bn->getShapeNodesWith<VisualAspect>();
+	if(bn->getName() == "FemurL" || bn->getName() == "FemurR" || bn->getName() == "Pelvis")
+		mDrawCoordinate = true;
+	else
+		mDrawCoordinate = false;
+
 	for(const auto& sn : sns)
 		DrawShapeFrame(sn);
 
@@ -1156,8 +1180,13 @@ DrawShapeFrame(const ShapeFrame* sf)
 	mRI->transform(sf->getRelativeTransform());
 
 	mColor = va->getRGBA();
-	if(isDrawCharacter && mDrawOBJ)
-		mColor << 0.75, 0.75, 0.75, 1.0;
+	if(isDrawCharacter)
+	{
+		if(mDrawOBJ)
+			mColor << 0.75, 0.75, 0.75, 0.3;
+		else
+			mColor[3] = 0.3;
+	} 
 	if(isDrawTarget)
 		mColor << 1.0, 0.6, 0.6, 0.3;
 	if(isDrawReference)
@@ -1186,7 +1215,7 @@ DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 		if (shape->is<SphereShape>())
 		{
 			const auto* sphere = static_cast<const SphereShape*>(shape);
-			mRI->drawSphere(sphere->getRadius());
+			// mRI->drawSphere(sphere->getRadius());
 		}
 		else if (shape->is<BoxShape>())
 		{
@@ -1209,6 +1238,13 @@ DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 			mShapeRenderer.renderMesh(mesh, false, y, color);
 		}
 	}
+
+	if(mDrawCoordinate && shape->is<SphereShape>()){
+		DrawLine3D(0.0,0.0,0.0, 0.1, 0.0, 0.0, red, 3.0);
+		DrawLine3D(0.0,0.0,0.0, 0.0, 0.1, 0.0, green, 3.0);
+		DrawLine3D(0.0,0.0,0.0, 0.0, 0.0, 0.1, blue, 3.0);
+	}
+
 	glDisable(GL_COLOR_MATERIAL);
 	glDisable(GL_DEPTH_TEST);
 }
@@ -1690,27 +1726,27 @@ DrawTorqueGraph(std::string name, std::deque<double> data, double w, double h, d
 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, data, red);
 }
 
-void
-Window::
-DrawStride()
-{
-	DrawGLBegin();
+// void
+// Window::
+// DrawStride()
+// {
+// 	DrawGLBegin();
 
-	double w = 0.15, h = 0.11, x = 0.69, y = 0.47;
+// 	double w = 0.15, h = 0.11, x = 0.69, y = 0.47;
 
-	double offset_x = 0.003;
-	double offset_y = 1.0;
-	double offset = 0.005;
-	double ratio_y = 0.0;
+// 	double offset_x = 0.003;
+// 	double offset_y = 1.0;
+// 	double offset = 0.005;
+// 	double ratio_y = 0.0;
 
-	y = 0.49;
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "stride");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, mFootinterval, 0.7, 0.8);
-	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, mFootinterval, green, 0.7, 0.8);
-	// DrawStringMean(x, y, w, h, ratio_y, offset_x, offset_y, offset, mFootinterval, green);
+// 	y = 0.49;
+// 	DrawBaseGraph(x, y, w, h, ratio_y, offset, "stride");
+// 	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, red, 1.5, mFootinterval, 0.7, 0.8);
+// 	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, mFootinterval, green, 0.7, 0.8);
+// 	// DrawStringMean(x, y, w, h, ratio_y, offset_x, offset_y, offset, mFootinterval, green);
 
-	DrawGLEnd();
-}
+// 	DrawGLEnd();
+// }
 
 void
 Window::
@@ -1728,68 +1764,73 @@ DrawReward()
 	std::map<std::string, std::deque<double>> map = mEnv->GetRewards();
 
 	y = 0.49;
-	std::deque<double> reward = map["reward"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "reward");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, reward);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
-	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, reward, green);
+	std::deque<double> reward_c = map["reward_c"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "reward_c");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, reward_c);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, reward_c, green);
 
 	y = 0.37;
-	std::deque<double> imit = map["imit"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "imit");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, imit);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
-	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, imit, green);
+	std::deque<double> imit_c = map["imit_c"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "imit_c");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, imit_c);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, imit_c, green);
 
 	y = 0.25;
-	std::deque<double> effi = map["effi"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "effi");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, effi);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
-	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, effi, green);
+	std::deque<double> effi_c = map["effi_c"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "effi_c");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, effi_c);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, effi_c, green);
 
 	y = 0.13;
-	std::deque<double> min = map["min"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "min");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, min);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	std::deque<double> effi_vel = map["effi_vel"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "effi_vel");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, effi_vel);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, effi_vel, green);
 
 	y = 0.01;
-	std::deque<double> reg = map["reg"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "reg");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, reg);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	std::deque<double> effi_pose = map["effi_pose"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "effi_pose");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, effi_pose);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, effi_pose, green);
 
 	x = 0.85;
 	y = 0.49;
-	std::deque<double> pose = map["pose"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "pose");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, pose);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	std::deque<double> reward_s = map["reward_s"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "reward_s");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, 0.01*offset_y, offset, green, 1.5, reward_s);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, reward_s, green);
 
-	y = 0.37;
-	std::deque<double> vel = map["vel"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "vel");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, vel);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	// y = 0.37;
+	// std::deque<double> vel = map["vel"];
+	// DrawBaseGraph(x, y, w, h, ratio_y, offset, "vel");
+	// DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, vel);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	y = 0.25;
-	std::deque<double> ee = map["ee"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "ee");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, ee);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	std::deque<double> effi_s = map["effi_s"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "effi_s");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, 0.01*offset_y, offset, green, 1.5, effi_s);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, effi_s, green);
 
-	y = 0.13;
-	std::deque<double> root = map["root"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "root");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, root);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	// y = 0.13;
+	// std::deque<double> root = map["root"];
+	// DrawBaseGraph(x, y, w, h, ratio_y, offset, "root");
+	// DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, root);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
 
 	y = 0.01;
-	std::deque<double> com = map["com"];
-	DrawBaseGraph(x, y, w, h, ratio_y, offset, "com");
-	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, com);
-	DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	std::deque<double> effi_stride = map["effi_stride"];
+	DrawBaseGraph(x, y, w, h, ratio_y, offset, "effi_stride");
+	DrawLineStrip(x, y, h, ratio_y, offset_x, offset_y, offset, green, 1.5, effi_stride);
+	// DrawLine(x, y+0.5*h, x+w, y+0.5*h, red_trans, 1.0);
+	DrawStringMax(x, y, h, ratio_y, offset_x, offset_y, offset, effi_stride, green);
 
 	// std::deque<double> contact = map["contact"];
 	// DrawBaseGraph(x, y, w, h, ratio_y, offset, "contact");
@@ -1868,10 +1909,10 @@ DrawArrow()
 	Eigen::Vector3d dir_L2 = rot_L.col(2);
 	dir_L2[2] *= -1;
 
-	if(f[6] < 0)
-		dart::gui::drawArrow3D(p_L, dir_L2,-0.04*f[6], 0.01, 0.03);
-	else
-		dart::gui::drawArrow3D(p_L, dir_L1, 0.04*f[6], 0.01, 0.03);
+	// if(f[6] < 0)
+	// 	dart::gui::drawArrow3D(p_L, dir_L2,-0.04*f[6], 0.01, 0.03);
+	// else
+	// 	dart::gui::drawArrow3D(p_L, dir_L1, 0.04*f[6], 0.01, 0.03);
 
 	Eigen::Isometry3d trans_R = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurR")->getTransform();
 	Eigen::Vector3d p_R = trans_R.translation();
@@ -1880,10 +1921,10 @@ DrawArrow()
 	Eigen::Vector3d dir_R2 = rot_R.col(2);
 	dir_R2[2] *= -1;
 
-	if(f[7] < 0)
-		dart::gui::drawArrow3D(p_R, dir_R2,-0.04*f[7], 0.015, 0.03);
-	else
-		dart::gui::drawArrow3D(p_R, dir_R1, 0.04*f[7], 0.015, 0.03);
+	// if(f[7] < 0)
+	// 	dart::gui::drawArrow3D(p_R, dir_R2,-0.04*f[7], 0.015, 0.03);
+	// else
+	// 	dart::gui::drawArrow3D(p_R, dir_R1, 0.04*f[7], 0.015, 0.03);
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_COLOR_MATERIAL);
@@ -1960,6 +2001,19 @@ DrawLine(double p1_x, double p1_y, double p2_x, double p2_y, Eigen::Vector4d col
 	glBegin(GL_LINES);
 	glVertex2f(p1_x, p1_y);
 	glVertex2f(p2_x, p2_y);
+	glEnd();
+}
+
+void
+Window::
+DrawLine3D(double p1_x, double p1_y, double p1_z, double p2_x, double p2_y, double p2_z, Eigen::Vector4d color, double line_width)
+{
+	mRI->setPenColor(color);
+	mRI->setLineWidth(line_width);
+
+	glBegin(GL_LINES);
+	glVertex3f(p1_x, p1_y, p1_z);
+	glVertex3f(p2_x, p2_y, p2_z);
 	glEnd();
 }
 

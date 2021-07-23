@@ -36,8 +36,7 @@ public:
 	void LoadSkeleton(const std::string& path, bool load_obj);
 	void LoadMuscles(const std::string& path);
 	void LoadBVH(const std::string& path,bool cyclic=true);
-	void LoadBVHset(double lower, double upper);
-
+	
 	bool isLowerBody(std::string& body);
 
 	const SkeletonPtr& GetSkeleton(){return mSkeleton;}
@@ -54,6 +53,7 @@ public:
 	void Initialize_Mass();
 	void Initialize_Speed();
 	void Initialize_JointWeights();
+	void SetJointPositionLimits();
 
 	void SetWorld(const WorldPtr& wPtr){ mWorld = wPtr; }
 	void SetDevice(Device* device);
@@ -102,14 +102,17 @@ public:
 	std::pair<double,double> GetReward_Character_Efficiency();
 
 	double GetReward_Energy();
-	double GetReward_ActionReg();
-	double GetReward_Vel();
-	double GetReward_Width();
-	double GetReward_Height();
 	double GetReward_Pose();
+	double GetReward_Vel();
+	double GetReward_Stride();
+	double GetReward_Time();
+	double GetReward_Width();
+	double GetReward_ActionReg();
 	double GetCurReward(){return mCurReward;}
 
 	void SetAction(const Eigen::VectorXd& a);
+	void SetActionAdaptiveMotion(const Eigen::VectorXd& a);
+	void SetActionImitationLearning(const Eigen::VectorXd& a);
 	void SetActivationLevels(const Eigen::VectorXd& a){mActivationLevels = a;}
 	void SetDesiredTorques();
 
@@ -155,6 +158,12 @@ public:
 	void SetUseDevice(bool b){mUseDevice = b;}
 	bool GetUseDevice(){return mUseDevice;}
 
+	void SetUseAdaptiveSampling(bool b){mAdaptiveSampling = b;}
+	bool GetUseAdaptiveSampling(){return mAdaptiveSampling;}
+
+	void SetUseAdaptiveMotion(bool b){mAdaptiveMotion = b;}
+	bool GetUseAdaptiveMotion(){return mAdaptiveMotion;}
+
 	void SetRewards();
 	std::map<std::string, std::deque<double>> GetRewards(){return mRewards;}
 
@@ -167,15 +176,11 @@ public:
 	MetabolicEnergy* GetMetabolicEnergy(){return mMetabolicEnergy;}
 	Contact* GetContacts(){return mContacts;}
 
-	void SetAdaptiveMotion(bool b){ mAdaptiveMotion = b;}
-
 	void SetMass();
 	void SetMassRatio(double r);
 	double GetMass(){return mMass;}
 	double GetMassRatio(){return mMassRatio;}
 
-	double SetSpeedIdx(double s);
-	void SetBVHidx(double r);
 	void SetSpeedRatio(double r);
 	void SetForceRatio(double r);
 	void SetMaxForces();
@@ -189,9 +194,13 @@ public:
 	void SetCurVelocity();
 	void SetTrajectory();
 	void SetComHistory();
+	void SetFoot();
 
 	double GetCoT(){return mCurCoT;}
 	double GetCurVelocity(){return mCurVel;}
+	double GetStride(){return mStride;}
+	double GetStrideL(){return mStrideL;}
+	double GetStrideR(){return mStrideR;}
 
 	void SetMinMaxV(int idx, double lower, double upper);
 	const Eigen::VectorXd& GetMinV(){return mParamMin;}
@@ -212,12 +221,8 @@ private:
 	std::map<std::string, std::vector<Muscle*>> mMusclesMap;
 
 	BVH* mBVH;
-	BVH* mBVH_;
-	std::string mBVHpath;
-	std::vector<BVH*> mBVHset;
 	std::map<std::string,std::string> mBVHmap;
-	bool mBVHcyclic;
-
+	
 	Device* mDevice;
 	MASS::Contact* mContacts;
 	JointData* mJointDatas;
@@ -229,6 +234,8 @@ private:
 	int mNumAdaptiveDof;
 	int mNumAdaptiveSpatialDof;
 	int mNumAdaptiveTemporalDof;
+	int mAdaptiveLowerDof;
+	int mAdaptiveUpperDof;
 	int mNumTotalRelatedDof;
 	int mLowerMuscleRelatedDof;
 	int mUpperMuscleRelatedDof;
@@ -260,16 +267,24 @@ private:
 	std::pair<double,double> mAdaptivePhases;
 
 	double mTimeOffset;
-
+	double mStride;
+	double mStrideL,mStrideR;
+	double mStrideCurL;
+	double mStrideCurR;
+	
 	bool mUseDevice;
 	bool mUseMuscle;
 	bool mOnDevice;
 	bool mLowerBody;
+	bool mAdaptiveSampling;
 	bool mAdaptiveMotion;
+	bool mAdaptiveMotionSP;	
 	bool mAdaptiveLowerBody;
+	bool mIsFirstFoot;
 
 	double mMass;
 	double mMassRatio;
+	double mMassLower;
 	double mForceRatio;
 	double mSpeedRatio;
 
@@ -293,10 +308,15 @@ private:
 	Eigen::VectorXd mAction_prev;
 	Eigen::VectorXd mActivationLevels;
 
+	Eigen::VectorXd mJointPositionLowerLimits;
+	Eigen::VectorXd mJointPositionUpperLimits;
 	Eigen::VectorXd mJointWeights;
 	Eigen::VectorXd mDefaultMass;
 	Eigen::VectorXd mMaxForces;
 	Eigen::VectorXd mDefaultForces;
+
+	Eigen::Vector3d mFootL;
+	Eigen::Vector3d mFootR;
 
 	std::vector<std::deque<double>> mFemurSignals;
 	std::deque<Eigen::Vector3d> mRootTrajectory;
@@ -320,7 +340,6 @@ private:
     Eigen::VectorXd mParamMax;
 };
 
-
-};
+}
 
 #endif

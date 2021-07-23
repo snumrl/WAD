@@ -17,6 +17,15 @@ void
 JointData::
 Initialize(const SkeletonPtr& skel)
 {
+    mSkeleton = skel;
+    mOnlyLowerBody = true;
+    if(mOnlyLowerBody)
+        mJointNum = 11;
+    else 
+        mJointNum = mSkeleton->getNumJoints();
+
+    mDof = mSkeleton->getNumDofs();
+
     mOnCycle = false;
     mPhasePrev = -1;
     mCycleStep = 0;
@@ -24,14 +33,14 @@ Initialize(const SkeletonPtr& skel)
     mCycleTorqueSum = 0.0;
 
     mWindowSize = 300;
-
-    mSkeleton = skel;
+   
     int jointNum = mSkeleton->getNumJoints();
     for(int i=0; i<jointNum; i++)
     {
         const auto& joint = mSkeleton->getJoint(i);
         int idx = joint->getIndexInSkeleton(0);
         std::string name = joint->getName();
+        // std::cout << i << " :" << name << std::endl;
 
         if(joint->getType() == "FreeJoint")
         {
@@ -42,7 +51,7 @@ Initialize(const SkeletonPtr& skel)
             mTorques[name+"_b"] = std::deque<double>(mWindowSize);
             mTorques[name+"_c"] = std::deque<double>(mWindowSize);
 
-            mTorquesNorm[name] = std::deque<double>(mWindowSize);
+            // mTorquesNorm[name] = std::deque<double>(mWindowSize);
 
             mTorquesPhase[name+"_x"] = std::deque<std::pair<double, double>>(mWindowSize);
             mTorquesPhase[name+"_y"] = std::deque<std::pair<double, double>>(mWindowSize);
@@ -58,7 +67,7 @@ Initialize(const SkeletonPtr& skel)
             mTorques[name+"_x"] = std::deque<double>(mWindowSize);
             mTorques[name+"_y"] = std::deque<double>(mWindowSize);
             mTorques[name+"_z"] = std::deque<double>(mWindowSize);
-            mTorquesNorm[name] = std::deque<double>(mWindowSize);
+            // mTorquesNorm[name] = std::deque<double>(mWindowSize);
 
             mTorquesPhase[name+"_x"] = std::deque<std::pair<double, double>>(mWindowSize);
             mTorquesPhase[name+"_y"] = std::deque<std::pair<double, double>>(mWindowSize);
@@ -68,7 +77,7 @@ Initialize(const SkeletonPtr& skel)
         else if(joint->getType() == "RevoluteJoint")
         {
             mTorques[name]  = std::deque<double>(mWindowSize);
-            mTorquesNorm[name] = std::deque<double>(mWindowSize);
+            // mTorquesNorm[name] = std::deque<double>(mWindowSize);
 
             mTorquesPhase[name] = std::deque<std::pair<double, double>>(mWindowSize);
             mTorquesNormPhase[name] = std::deque<std::pair<double, double>>(mWindowSize);
@@ -143,8 +152,8 @@ SetTorques(const Eigen::VectorXd& torques, double phase, double frame)
     {
         if(mOnCycle){
             mCycleTorqueErr = mCycleTorqueSum;
-            mCycleTorqueErr /= (double)(mSkeleton->getNumJoints());
-            mCycleTorqueErr /= (double)(mCycleStep);
+            mCycleTorqueErr /= (double)(mDof-6);
+            mCycleTorqueErr /= (double)(mCycleStep);            
         }
         else{
             mOnCycle = true;
@@ -166,9 +175,10 @@ SetTorques(const Eigen::VectorXd& torques, double phase, double frame)
             double norm;
             if(type == "FreeJoint")
             {
-                norm = (torques.segment(idx, 6)).norm();
-                mCycleTorqueSum += norm;
-                this->SetTorquesNorm(name, norm, phase);
+                // norm = (torques.segment(idx, 6)).norm();
+                // if(i < mJointNum)
+                //     mCycleTorqueSum += norm;
+                // this->SetTorquesNorm(name, norm, phase);
 
                 this->SetTorques(name+"_x", torques[idx+0], phase);
                 this->SetTorques(name+"_y", torques[idx+1], phase);
@@ -179,19 +189,27 @@ SetTorques(const Eigen::VectorXd& torques, double phase, double frame)
             }
             else if(type == "BallJoint")
             {
-                norm = (torques.segment(idx, 3)).norm();
-                mCycleTorqueSum += norm;
-                this->SetTorquesNorm(name, norm, phase);
+                // norm = (torques.segment(idx, 3)).norm();
+                // if(i < mJointNum)
+                //     mCycleTorqueSum += norm;
+                // this->SetTorquesNorm(name, norm, phase);
 
+                mCycleTorqueSum += fabs(torques[idx])/(double)mMaxForces[idx];
+                mCycleTorqueSum += fabs(torques[idx+1])/(double)mMaxForces[idx+1];
+                mCycleTorqueSum += fabs(torques[idx+2])/(double)mMaxForces[idx+2];
+                
                 this->SetTorques(name+"_x", torques[idx+0], phase);
                 this->SetTorques(name+"_y", torques[idx+1], phase);
                 this->SetTorques(name+"_z", torques[idx+2], phase);
             }
             else if(type == "RevoluteJoint")
             {
-                norm = fabs(torques[idx]);
-                mCycleTorqueSum += norm;
-                this->SetTorquesNorm(name, norm, phase);
+                // norm = fabs(torques[idx]);
+                // if(i < mJointNum)
+                //     mCycleTorqueSum += norm;
+                // this->SetTorquesNorm(name, norm, phase);
+
+                mCycleTorqueSum += fabs(torques[idx])/(double)mMaxForces[idx];
 
                 this->SetTorques(name, torques[idx+0], phase);
             }
@@ -261,12 +279,12 @@ JointData::
 GetReward()
 {
     double err_scale = 1.0;
-    double torque_scale = 0.2;
+    double torque_scale = 10.0;
     double torque_err = 0.0;
 
     double reward = 0.0;
     if(mCycleTorqueErr != 0.0){
-        torque_err = mCycleTorqueErr-10.0;
+        torque_err = mCycleTorqueErr;
         reward = exp(-err_scale * torque_scale * torque_err);
         // std::cout << "err : " << torque_err << std::endl;
         // std::cout << "rew : " << reward << std::endl;

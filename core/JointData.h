@@ -23,6 +23,8 @@ public:
     void SetTorques(std::string name, double torque, double phase);
     void SetTorquesNorm(std::string name, double norm, double phase);
 
+    void SetMaxForces(const Eigen::VectorXd& forces){mMaxForces = forces;}
+
     void SetAngles(double phase);
     void SetAngles(std::string name, double angle, double phase);
 
@@ -40,10 +42,15 @@ private:
 
     int mWindowSize;
     int mCycleStep;
+    int mJointNum;
+    int mDof;
     double mPhasePrev;
     double mCycleTorqueSum;
     double mCycleTorqueErr;
     bool mOnCycle;
+    bool mOnlyLowerBody;
+
+    Eigen::VectorXd mMaxForces;
 
     std::map<std::string, std::deque<double>> mTorques;
     std::map<std::string, std::deque<double>> mTorquesNorm;

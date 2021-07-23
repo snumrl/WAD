@@ -189,7 +189,7 @@ MakeWeldJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 
 BodyNode*
 MASS::
-MakeBodyNode(const SkeletonPtr& skeleton,BodyNode* parent,Joint::Properties* joint_properties,const std::string& joint_type,Inertia inertia)
+MakeBodyNode(const SkeletonPtr& skeleton,BodyNode* parent, Joint::Properties* joint_properties,const std::string& joint_type,Inertia inertia)
 {
 	BodyNode* bn;
 

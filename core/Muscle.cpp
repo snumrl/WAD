@@ -254,7 +254,7 @@ double
 Muscle::
 GetExcitation()
 {
-	double da_dt = (activation - activation_prev) / mTimeStep;
+	double da_dt = (activation - activation_prev) / mConTimeStep;
 	double excitation = 0.0;
 	double tau_act = 0.015;
 	double tau_deact = 0.050;
@@ -281,7 +281,7 @@ Update()
 	l_mt = this->Getl_mt();
 	l_m = l_mt - l_t0;
 
-	dl_m = (l_m - l_m_prev) / mTimeStep;
+	dl_m = (l_m - l_m_prev) / mSimTimeStep;
 	// std::cout << "update!" << std::endl;
 	// std::cout << "cur : " << l_m << " prev : " << l_m_prev << std::endl;
 	// std::cout << "dl_m : " << dl_m << std::endl;
@@ -328,15 +328,15 @@ Getl_mt()
 }
 
 
-double
-Muscle::
-g(double _l_m)
-{
-	double e_t = (l_mt-_l_m-l_t0)/l_t0;
-	_l_m = _l_m/l_m0;
-	double f = g_t(e_t) - (g_pl(_l_m) + activation*g_al(_l_m));
-	return f;
-}
+// double
+// Muscle::
+// g(double _l_m)
+// {
+// 	double e_t = (l_mt-_l_m-l_t0)/l_t0;
+// 	_l_m = _l_m/l_m0;
+// 	double f = g_t(e_t) - (g_pl(_l_m) + activation*g_al(_l_m));
+// 	return f;
+// }
 
 double
 Muscle::

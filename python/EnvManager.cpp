@@ -18,9 +18,10 @@ EnvManager(std::string meta_file,int num_envs)
 
 void
 EnvManager::
-Step(int id)
+Step(int num, bool onDevice, int id)
 {
-	mEnvs[id]->Step(false, false);
+	for(int i=0; i<num; i++)
+		mEnvs[id]->Step(onDevice, false);
 }
 
 void
@@ -167,6 +168,13 @@ SetActions_Device(py::array_t<float> np_array)
 
 void
 EnvManager::
+SetActivationLevel(py::array_t<float> np_array, int id)
+{	
+	mEnvs[id]->GetCharacter()->SetActivationLevels(toEigenVector(np_array));
+}
+
+void
+EnvManager::
 SetActivationLevels(py::array_t<float> np_array)
 {
 	std::vector<Eigen::VectorXd> activations = toEigenVectorVector(np_array);
@@ -280,6 +288,13 @@ EnvManager::
 UseDeviceNN()
 {
 	return mEnvs[0]->GetUseDeviceNN();
+}
+
+bool
+EnvManager::
+UseAdaptiveMotion()
+{
+	return mEnvs[0]->GetUseAdaptiveMotion();
 }
 
 void
@@ -425,6 +440,7 @@ PYBIND11_MODULE(pymss, m){
 		.def("SetAction",&EnvManager::SetAction)
 		.def("SetActions",&EnvManager::SetActions)
 		.def("SetActions_Device",&EnvManager::SetActions_Device)
+		.def("SetActivationLevel",&EnvManager::SetActivationLevel)
 		.def("SetActivationLevels",&EnvManager::SetActivationLevels)
 		.def("IsEndOfEpisode",&EnvManager::IsEndOfEpisode)
 		.def("IsEndOfEpisodes",&EnvManager::IsEndOfEpisodes)
@@ -440,6 +456,7 @@ PYBIND11_MODULE(pymss, m){
 		.def("UseMuscle",&EnvManager::UseMuscle)
 		.def("UseDevice",&EnvManager::UseDevice)
 		.def("UseDeviceNN",&EnvManager::UseDeviceNN)
+		.def("UseAdaptiveMotion",&EnvManager::UseAdaptiveMotion)
 		.def("SetDesiredTorques",&EnvManager::SetDesiredTorques)
 		.def("GetDesiredTorques",&EnvManager::GetDesiredTorques)
 		.def("GetNumTotalMuscleRelatedDofs",&EnvManager::GetNumTotalMuscleRelatedDofs)

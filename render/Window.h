@@ -20,7 +20,7 @@ namespace py = pybind11;
 namespace MASS
 {
 
-class Window : public dart::gui::Win3D
+class Window : public dart::gui::glut::Win3D
 {
 public:
 	Window(Environment* env);
@@ -98,6 +98,7 @@ public:
     void DrawStringMax(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, std::deque<double> data, Eigen::Vector4d color, double lower, double upper);
     void DrawStringMinMax(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, std::deque<double> data, Eigen::Vector4d color);
     void DrawLine(double p1_x, double p1_y, double p2_x, double p2_y, Eigen::Vector4d color, double line_width);
+	void DrawLine3D(double p1_x, double p1_y, double p1_z, double p2_x, double p2_y, double p2_z, Eigen::Vector4d color, double line_width);
     void DrawLineStipple(double p1_x, double p1_y, double p2_x, double p2_y, Eigen::Vector4d color, double line_width);
     void DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::vector<double>& data);
     void DrawLineStrip(double x, double y, double h, double ratio, double offset_x, double offset_y, double offset, Eigen::Vector4d color, double line_width, std::vector<double>& data, Eigen::Vector4d color1, double line_width1, std::vector<double>& data1);
@@ -137,6 +138,7 @@ private:
 	bool mMuscleNNLoaded;
 	bool mDeviceNNLoaded;
 	bool mDevice_On;
+	bool mDrawCoordinate;
 	bool isDrawCharacter;
 	bool isDrawTarget;
 	bool isDrawReference;
