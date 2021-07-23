@@ -22,6 +22,7 @@ Character(WorldPtr& wPtr)
 
 	mAdaptiveLowerBody = false;
 	mTimeOffset = 2.0;
+	
 }
 
 Character::
