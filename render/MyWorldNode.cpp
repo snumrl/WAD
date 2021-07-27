@@ -122,19 +122,63 @@ void
 MyWorldNode::
 refresh()
 {
-//   customPreRefresh();
+    customPreRefresh();
+    clearChildUtilizationFlags();
 
-    // clearChildUtilizationFlags();
-
-    if (mSimulating)
+    if (mNumStepsPerCycle != 1)
     {
-        this->Step();
+        dtwarn << "[RealTimeWorldNode] The number of steps per cycle has been set "
+            << "to [" << mNumStepsPerCycle << "], but this value is ignored by "
+            << "the RealTimeWorldNode::refresh() function. Use the function "
+            << "RealTimeWorldNode::setTargetRealTimeFactor(double) to change "
+            << "the simulation speed.\n";
+        mNumStepsPerCycle = 1;
+    }
+
+    if (mWorld && mSimulating)
+    {
+        if (mFirstRefresh)
+        {
+        mRefreshTimer.setStartTick();
+        mFirstRefresh = false;
+        }
+
+        const double startSimTime = mWorld->getTime();
+        const double simTimeStep = mWorld->getTimeStep();
+
+        while (mRefreshTimer.time_s() < mTargetRealTimeLapse)
+        {
+        const double nextSimTimeLapse
+            = mWorld->getTime() - startSimTime + simTimeStep;
+
+        if (nextSimTimeLapse <= mTargetSimTimeLapse)
+        {
+            customPreStep();
+            this->Step();
+            customPostStep();
+        }
+        }
+
+        mLastRealTimeFactor
+            = (mWorld->getTime() - startSimTime) / mTargetRealTimeLapse;
+        mLowestRealTimeFactor
+            = std::min(mLastRealTimeFactor, mLowestRealTimeFactor);
+        mHighestRealTimeFactor
+            = std::max(mLastRealTimeFactor, mHighestRealTimeFactor);
+
+        mRefreshTimer.setStartTick();
+    }
+    else
+    {
+        mFirstRefresh = true;
     }
 
     refreshSkeletons();
     refreshSimpleFrames();
 
-    // clearUnusedNodes();
+    clearUnusedNodes();
+
+    customPostRefresh();
 }
 
 // void

@@ -1,20 +1,7 @@
-cmake_minimum_required(VERSION 3.5.1)
-project(render)
-
-link_directories(../core/)
-include_directories(../core/)
-
-add_compile_options(-fvisibility=hidden)
-
-if (POLICY CMP0072)
-    cmake_policy (SET CMP0072 OLD)
-endif(POLICY CMP0072)
-
 find_package(DART REQUIRED COMPONENTS gui gui-osg utils-urdf collision-bullet CONFIG)
 find_package(OpenGL REQUIRED)
 find_package(GLUT REQUIRED)
 find_package(GLEW REQUIRED)
-
 find_package(PythonLibs REQUIRED)
 find_package(pybind11 REQUIRED)
 
@@ -24,6 +11,17 @@ include_directories(${GLUT_INCLUDE_DIR})
 include_directories(${GLEW_INCLUDE_DIR})
 include_directories(${PYTHON_INCLUDE_DIR})
 
-file(GLOB srcs "*.h" "*.cpp")
-add_executable(render ${srcs})
-target_link_libraries(render dart dart-utils-urdf dart-gui-osg ${PYTHON_LIBRARIES} GL GLU glut GLEW::GLEW mss pybind11::embed)
+add_compile_options(-fvisibility=hidden)
+
+set(srcs_render ShapeRenderer.cpp Window.cpp main.cpp)
+add_executable(render ${srcs_render})
+target_include_directories(render PRIVATE ../core/)
+target_link_libraries(render 
+            mss dart dart-gui imgui GL GLEW glad glfw pybind11::embed)
+
+set(srcs_viewer ShapeRenderer.cpp GLFWApp.cpp GLFunctions.cpp main2.cpp)
+add_executable(viewer ${srcs_viewer})
+target_include_directories(viewer PRIVATE ../core/)
+target_link_libraries(viewer
+            mss dart dart-gui imgui GL glad glfw pybind11::embed)
+

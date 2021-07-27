@@ -27,14 +27,14 @@ public:
 	void LoadDeviceNN(const std::string& device_nn_path);
   
 	void refresh() override;
-	void displayTimer(int _val);
+	// void displayTimer(int _val);
 	void Reset();
 	void Step();
 
 	Eigen::VectorXd GetActionFromNN();
 	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt);
 
-  // Documentation inherited
+	// Documentation inherited
 //   void customPreStep() override;
 
 //   void reset();
