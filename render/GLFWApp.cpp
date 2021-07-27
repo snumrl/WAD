@@ -1,83 +1,106 @@
 #include "GLFWApp.h"
-
-#include <glad/glad.h>
-#include <GL/glu.h>
-#include <GLFW/glfw3.h>
-
-#include <imgui.h>
-#include <implot.h>
-#include <examples/imgui_impl_glfw.h>
-#include <examples/imgui_impl_opengl3.h>
-// #include <../imgui/imgui.h>
-// #include <../implot/implot.h>
-// #include <../imgui/backends/imgui_impl_glfw.h>
-// #include <../imgui/backends/imgui_impl_opengl3.h>
-
 #include <iostream>
 
-#include <pybind11/embed.h>
-#include <pybind11/numpy.h>
-#include <pybind11/eigen.h>
+namespace MASS
+{
 
-#include "dart/gui/Trackball.hpp"
+GLFWApp::
+GLFWApp(Environment* env)
+    : mEnv(env), mFocus(true), mSimulating(false), mDrawOBJ(true), mDrawShadow(false), mMuscleNNLoaded(false),
+      mNoise(false), mKinematic(false), mPhysics(true), mTrans(0.0, 0.0, 0.0), mEye(0.0, 0.0, 1.0), mUp(0.0, 1.0, 0.0), 
+          mZoom(1.0), mPersp(45.0), mRotate(false), mTranslate(false), mZooming(false) 
+{
+    this->InitViewer();
+    
+    mDevice_On = env->GetCharacter()->GetDevice_OnOff();
+    mNNLoaded = false;
+    //mDisplayTimeout = 1000 / 60.0;
 
-#include "Environment.h"
-#include "BVH.h"
-#include "Muscle.h"
-#include "GLFunctions.h"
-// #include "GLfunctions.h"
+	mm = py::module::import("__main__");
+	mns = mm.attr("__dict__");
+    py::str module_dir = (std::string(MASS_ROOT_DIR)+"/python").c_str();
+	sys_module = py::module::import("sys");
+	sys_module.attr("path").attr("insert")(1, module_dir);
+    py::exec("import torch",mns);
+	py::exec("import torch.nn as nn",mns);
+	py::exec("import torch.optim as optim",mns);
+	py::exec("import torch.nn.functional as F",mns);
+	py::exec("import numpy as np",mns);
+	py::exec("from Model import *",mns);
+	py::exec("from RunningMeanStd import *",mns);           
+}
 
-// #include "Init.h"
+GLFWApp::
+GLFWApp(Environment* env, const std::string& nn_path)
+    :GLFWApp(env)
+{
+	mNNLoaded = true;
 
-using namespace MASS;
-using namespace dart;
-using namespace dart::dynamics;
-using namespace dart::simulation;
-using namespace dart::gui;
+	py::str str;
+	str = ("num_state = "+std::to_string(mEnv->GetCharacter()->GetNumState())).c_str();
+	py::exec(str, mns);
+	str = ("num_action = "+std::to_string(mEnv->GetCharacter()->GetNumAction())).c_str();
+	py::exec(str, mns);
+    
+	nn_module = py::eval("SimulationNN(num_state,num_action)", mns);
+    py::object load = nn_module.attr("load");
+    load(nn_path);
+    
+    rms_module = py::eval("RunningMeanStd()", mns);
+	py::object load_rms = rms_module.attr("load2");
+	load_rms(nn_path);    
+}
 
-static const double PI = acos(-1);
+GLFWApp::
+GLFWApp(Environment* env, const std::string& nn_path, const std::string& muscle_nn_path )
+    :GLFWApp(env, nn_path)
+{
+    this->LoadMuscleNN(muscle_nn_path);
+}
 
-GLFWApp::GLFWApp(int argc, char** argv)
-        : mFocus(true), mSimulating(false), mDrawOBJ(true), mDrawShadow(false), mMuscleNNLoaded(false),
-          mNoise(false), mKinematic(false), mPhysics(true),
-          mTrans(0.0, 0.0, 0.0),
-          mEye(0.0, 0.0, 1.0),
-          mUp(0.0, 1.0, 0.0),
-          mZoom(1.0),
-          mPersp(45.0),
-          mRotate(false),
-          mTranslate(false),
-          mZooming(false) {
+GLFWApp::
+~GLFWApp() 
+{
+    ImPlot::DestroyContext();
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
+}
+
+void
+GLFWApp::
+LoadMuscleNN(const std::string& muscle_nn_path)
+{
+	mMuscleNNLoaded = true;
+
+	py::str str;
+	str = ("num_total_muscle_related_dofs = "+std::to_string(mEnv->GetCharacter()->GetNumTotalRelatedDofs())).c_str();
+	py::exec(str,mns);
+	str = ("num_actions = "+std::to_string(mEnv->GetCharacter()->GetNumActiveDof())).c_str();
+	py::exec(str,mns);
+	str = ("num_muscles = "+std::to_string(mEnv->GetCharacter()->GetNumMuscles())).c_str();
+	py::exec(str,mns);
+
+	mMuscleNum = mEnv->GetCharacter()->GetNumMuscles();
+	mMuscleMapNum = mEnv->GetCharacter()->GetNumMusclesMap();
+
+	muscle_nn_module = py::eval("MuscleNN(num_total_muscle_related_dofs,num_actions,num_muscles)",mns);
+
+	py::object load = muscle_nn_module.attr("load");
+	load(muscle_nn_path);
+}
 
 
-///////////////////////////////////////////////////////////////////
-    MASS::Environment* env = new MASS::Environment();
-
-	if(argc==1)
-	{
-		std::cout<<"Provide Metadata.txt"<<std::endl;		
-	}
-	env->Initialize(std::string(argv[1]), true);
-
-	// mm = py::module::import("__main__");
-	// mns = mm.attr("__dict__");
-	
-	// py::str module_dir = (std::string(MASS_ROOT_DIR)+"/python").c_str();
-	// sys_module = py::module::import("sys");
-	// sys_module.attr("path").attr("insert")(1, module_dir);
-	
-	// py::exec("import torch",mns);
-	// py::exec("import torch.nn as nn",mns);
-	// py::exec("import torch.optim as optim",mns);
-	// py::exec("import torch.nn.functional as F",mns);
-	// py::exec("import numpy as np",mns);
-	// py::exec("from Model import *",mns);
-	// py::exec("from RunningMeanStd import *",mns);
-
-  
- 	width = 1920; height = 1080;
-
-	viewportWidth = 1500;
+void
+GLFWApp::
+InitViewer()
+{
+    width = 1920; height = 1080;
+    viewportWidth = 1500;
 	imguiWidth = width - viewportWidth;
 
 	defaultTrackball = std::make_unique<Trackball>();
@@ -88,25 +111,17 @@ GLFWApp::GLFWApp(int argc, char** argv)
     for(int i = 0; i < 3; i++){
         splitTrackballs[i].setTrackball(Eigen::Vector2d(viewportWidth / 3 * (i + 0.5), height * 0.5),
                                         viewportWidth / 3 * 0.5);
-        splitTrackballs[i].setQuaternion(Eigen::Quaterniond(Eigen::AngleAxisd(i * PI / 2, Eigen::Vector3d::UnitY())));
+        splitTrackballs[i].setQuaternion(Eigen::Quaterniond(Eigen::AngleAxisd(i * M_PI / 2, Eigen::Vector3d::UnitY())));
     }
 
 	mZoom = 0.25;
-	mFocus = false;
-	mNNLoaded = false;
-
-	// scope = py::module::import("__main__").attr("__dict__");
-
-	// py::str module_dir = (std::string(MASS_ROOT_DIR)+"/python").c_str();
-	// py::module::import("sys").attr("path").attr("insert")(1, module_dir);
+	mFocus = true;
+	// mNNLoaded = false;
 
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
-#ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
 
     window = glfwCreateWindow(width, height, "render", nullptr, nullptr);
 	if (window == NULL) {
@@ -122,9 +137,9 @@ GLFWApp::GLFWApp(int argc, char** argv)
 	}
 
 	glViewport(0, 0, width, height);
-
 	glfwSetWindowUserPointer(window, this);
 
+    //CallBack
 	auto framebufferSizeCallback = [](GLFWwindow* window, int width, int height) {
 	    GLFWApp* app = static_cast<GLFWApp*>(glfwGetWindowUserPointer(window));
 	    app->width = width;
@@ -177,57 +192,22 @@ GLFWApp::GLFWApp(int argc, char** argv)
 
 	ImPlot::CreateContext();
 
-//////////////////////////////////////////////////////////////////
-
-
-
-    /*
-    auto res = InitEnv(argc, argv);
-    mEnv = res.env;
-    checkpoint_path = res.checkpoint_path;
-    config = res.config;
-    load_checkpoint_directory = res.load_checkpoint_directory;
-
-    std::string checkpoint_file;
-    if (load_checkpoint_directory) {
-        auto cpath = fs::path(checkpoint_path);
-        for (auto& p : fs::directory_iterator(cpath)) {
-            if (fs::is_directory(p.path()) && p.path().stem().string().rfind("checkpoint", 0) == 0) {
-                std::string cstr = p.path().stem().string();
-                int checkpoint_num = std::stoi(cstr.substr(cstr.find('_') + 1));
-                checkpoints.insert(checkpoint_num);
-            }
-        }
-        int idx = *checkpoints.rbegin();
-        checkpoint_file = cpath /
-                (std::string("checkpoint_") + std::to_string(idx)) /
-                (std::string("checkpoint-") + std::to_string(idx));
-    }
-    else {
-        checkpoint_file = checkpoint_path;
-    }
-
-    if (!checkpoint_file.empty()) {
-        loadCheckpoint(checkpoint_file);
-	}
-*/
-
     SetFocusing();
 }
 
-GLFWApp::~GLFWApp() {
-    ImPlot::DestroyContext();
-
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
+void
+GLFWApp::
+Reset()
+{
+	// mFootprint.clear();
+	// mFootinterval.clear();
+	// mFootinterval.resize(20);
+	mEnv->Reset();
+	// mDisplayIter = 0;
 }
 
 void GLFWApp::startLoop() {
-#if 0
+#if 1
     const double frameTime = 1.0 / 30.0;
     double previous = glfwGetTime();
     double lag = 0;
@@ -256,13 +236,11 @@ void GLFWApp::startLoop() {
 #else
     // bool performUpdate = false;
     while (!glfwWindowShouldClose(window)) {
-
         glfwPollEvents();
 
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
             glfwSetWindowShouldClose(window, true);
-        }
-
+        }   
         // performUpdate = !performUpdate;
         // if (performUpdate) {
         //     update();
@@ -271,15 +249,15 @@ void GLFWApp::startLoop() {
         lastTime = glfwGetTime();
         update();
         perfStats["update"] = std::ceil((glfwGetTime() - lastTime) * 100000) / 100;
-
+        
         lastTime = glfwGetTime();
         drawSimFrame();
         perfStats["render_sim"] = std::ceil((glfwGetTime() - lastTime) * 100000) / 100;
-
+        
         lastTime = glfwGetTime();
         drawUiFrame();
         perfStats["render_ui"] = std::ceil((glfwGetTime() - lastTime) * 100000) / 100;
-
+        
         glfwSwapBuffers(window);
     }
 #endif
@@ -531,14 +509,14 @@ void GLFWApp::draw(int cameraIdx)
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-
+    
     if (cameraIdx == -1) {
         defaultTrackball->applyGLRotation();
     }
     else {
         splitTrackballs[cameraIdx].applyGLRotation();
     }
-
+    
     // Draw world origin indicator
     if (!mCapture)
     {
@@ -567,12 +545,10 @@ void GLFWApp::draw(int cameraIdx)
             glEnd();
         }
     }
-
+    
     // TODO: Apply camera transform based on idx
-
     glScalef(mZoom, mZoom, mZoom);
     glTranslatef(mTrans[0] * 0.001, mTrans[1] * 0.001, mTrans[2] * 0.001);
-
     initLights();
 
     GLfloat matrix[16];
@@ -590,10 +566,9 @@ void GLFWApp::draw(int cameraIdx)
     float y = ground->getBodyNode(0)->getTransform().translation()[1] +
               dynamic_cast<const BoxShape *>(ground->getBodyNode(
                       0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1] * 0.5;
-
     DrawGround(y);
     if (mPhysics) {
-        DrawMuscles(mEnv->GetCharacter()->GetMuscles());
+        // DrawMuscles(mEnv->GetCharacter()->GetMuscles());
         DrawSkeleton(mEnv->GetCharacter()->GetSkeleton());
     }
 
@@ -605,7 +580,7 @@ void GLFWApp::draw(int cameraIdx)
 }
 
 void GLFWApp::initGL() {
-    glClearColor(1.0, 1.0, 1.0, 1.0);
+    glClearColor(0.96, 0.96, 0.97, 0.7);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -657,7 +632,7 @@ void GLFWApp::update()
     if (!mSimulating) return;
 
     // This app updates in Hz
-    int num = mEnv->GetSimulationHz() / 60;
+    int num = mEnv->GetSimulationHz() / mEnv->GetControlHz();
 
     static bool shouldUpdateAction = false;
 
@@ -752,20 +727,20 @@ void GLFWApp::update()
 //     }
 // }
 
-void GLFWApp::Reset()
-{
-	mEnv->Reset();
+// void GLFWApp::Reset()
+// {
+// 	mEnv->Reset();
 
-    // if (mEnv->getIsRender()) {
-    //     // TODO
-    // }
-}
+//     // if (mEnv->getIsRender()) {
+//     //     // TODO
+//     // }
+// }
 
 void GLFWApp::SetFocusing()
 {
     if (mFocus) {
         if (mPhysics) {
-            mTrans = -mEnv->GetWorld()->getSkeleton("Skeleton")->getRootBodyNode()->getCOM();
+            mTrans = -mEnv->GetWorld()->getSkeleton("Human")->getRootBodyNode()->getCOM();
             mTrans[1] -= 0.3;
         } else {
             mTrans = -mEnv->GetCharacter()->GetTargetPositions().segment<3>(3);
@@ -777,35 +752,108 @@ void GLFWApp::SetFocusing()
     }
 }
 
-Eigen::VectorXd
-GLFWApp::
-GetActionFromNN()
-{
-    using namespace pybind11::literals;
+// Eigen::VectorXd
+// GLFWApp::
+// GetActionFromNN()
+// {
+//     using namespace pybind11::literals;
 
-	Eigen::VectorXf state = mEnv->GetState().cast<float>();
-    py::array_t<float> py_action = policy_nn.attr("get_action")(state);
-    Eigen::VectorXf action = py_action.cast<Eigen::VectorXf>();
-    return action.cast<double>();
+// 	Eigen::VectorXf state = mEnv->GetState().cast<float>();
+//     py::array_t<float> py_action = policy_nn.attr("get_action")(state);
+//     Eigen::VectorXf action = py_action.cast<Eigen::VectorXf>();
+//     return action.cast<double>();
+// }
+
+// Eigen::VectorXd
+// GLFWApp::
+// GetActivationFromNN(const Eigen::VectorXd& mt) //, const Eigen::VectorXd& pmt)
+// {
+// 	if(!mMuscleNNLoaded)
+// 	{
+// 		mEnv->GetCharacter()->GetDesiredTorques();
+// 		return Eigen::VectorXd::Zero(mEnv->GetCharacter()->GetMuscles().size());
+// 	}
+// 	Eigen::VectorXd dt = mEnv->GetCharacter()->GetDesiredTorques();
+
+// //	py::object temp = get_activation(mt_np,pmt_np,dt_np);
+// 	py::array_t<float> activation_np = muscle_nn.attr("get_activation")(mt.cast<float>(), dt.cast<float>());
+// 	Eigen::VectorXf activation = activation_np.cast<Eigen::VectorXf>();
+
+// 	return activation.cast<double>();
+// }
+
+py::array_t<float> toNumPyArray(const Eigen::VectorXd& vec)
+{
+	int n = vec.rows();
+	py::array_t<float> array = py::array_t<float>(n);
+
+	auto array_buf = array.request(true);
+	float* dest = reinterpret_cast<float*>(array_buf.ptr);
+	for(int i =0;i<n;i++)
+	{
+		dest[i] = vec[i];
+	}
+
+	return array;
 }
 
 Eigen::VectorXd
 GLFWApp::
-GetActivationFromNN(const Eigen::VectorXd& mt) //, const Eigen::VectorXd& pmt)
+GetActionFromNN()
+{
+	Eigen::VectorXd state = mEnv->GetCharacter()->GetState();
+	py::array_t<float> state_np = py::array_t<float>(state.rows());
+	py::buffer_info state_buf = state_np.request(true);
+	float* dest = reinterpret_cast<float*>(state_buf.ptr);
+
+	for(int i =0;i<state.rows();i++)
+		dest[i] = state[i];
+
+	py::object apply = rms_module.attr("apply_no_update");
+	py::object state_np_tmp = apply(state_np);
+	py::array_t<float> state_np_ = py::array_t<float>(state_np_tmp);
+
+	py::object get_action = nn_module.attr("get_action");
+	py::object temp = get_action(state_np_);
+	py::array_t<float> action_np = py::array_t<float>(temp);
+
+	py::buffer_info action_buf = action_np.request(true);
+	float* srcs = reinterpret_cast<float*>(action_buf.ptr);
+
+	Eigen::VectorXd action(mEnv->GetCharacter()->GetNumAction());
+	for(int i=0;i<action.rows();i++)
+		action[i] = srcs[i];
+
+	return action;
+}
+
+Eigen::VectorXd
+GLFWApp::
+GetActivationFromNN(const Eigen::VectorXd& mt)
 {
 	if(!mMuscleNNLoaded)
 	{
 		mEnv->GetCharacter()->GetDesiredTorques();
 		return Eigen::VectorXd::Zero(mEnv->GetCharacter()->GetMuscles().size());
 	}
+
+	py::object get_activation = muscle_nn_module.attr("get_activation");
+	mEnv->GetCharacter()->SetDesiredTorques();
 	Eigen::VectorXd dt = mEnv->GetCharacter()->GetDesiredTorques();
+	py::array_t<float> mt_np = toNumPyArray(mt);
+	py::array_t<float> dt_np = toNumPyArray(dt);
+	py::array_t<float> activation_np = get_activation(mt_np,dt_np);
+	py::buffer_info activation_np_buf = activation_np.request(false);
+	float* srcs = reinterpret_cast<float*>(activation_np_buf.ptr);
 
-//	py::object temp = get_activation(mt_np,pmt_np,dt_np);
-	py::array_t<float> activation_np = muscle_nn.attr("get_activation")(mt.cast<float>(), dt.cast<float>());
-	Eigen::VectorXf activation = activation_np.cast<Eigen::VectorXf>();
+	Eigen::VectorXd activation(mEnv->GetCharacter()->GetMuscles().size());
+	for(int i=0; i<activation.rows(); i++){
+		activation[i] = srcs[i];
+	}
 
-	return activation.cast<double>();
+	return activation;
 }
+
 
 void GLFWApp::DrawEntity(const Entity* entity)
 {
@@ -979,4 +1027,6 @@ void GLFWApp::ClearSkeleton(const SkeletonPtr& skel)
             mShapeRenderer.clearMesh(dynamic_cast<const MeshShape*>(shape));
         }
     }
+}
+
 }

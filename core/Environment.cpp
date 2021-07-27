@@ -195,9 +195,9 @@ SetWorld()
 	mWorld->setGravity(Eigen::Vector3d(0,-9.8,0.0));
 	mWorld->setTimeStep(1.0/mSimulationHz);
 	mWorld->getConstraintSolver()->setCollisionDetector(dart::collision::BulletCollisionDetector::create());
-
+	
 	mGround = MASS::BuildFromFile(std::string(MASS_ROOT_DIR)+std::string("/data/ground.xml"));
-	mWorld->addSkeleton(mGround);
+	mWorld->addSkeleton(mGround);	
 }
 
 void

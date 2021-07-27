@@ -69,7 +69,7 @@ Window(Environment* env, const std::string& nn_path)
 	nn_module = py::eval("SimulationNN(num_state,num_action)", mns);
 	py::object load = nn_module.attr("load");
 	load(nn_path);
-
+	
 	rms_module = py::eval("RunningMeanStd()", mns);
 	py::object load_rms = rms_module.attr("load2");
 	load_rms(nn_path);

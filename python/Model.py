@@ -131,8 +131,8 @@ class SimulationNN(nn.Module):
 
 	def load(self,path):
 		print('load simulation nn {}'.format(path))
-		self.load_state_dict(torch.load(path))
-
+		self.load_state_dict(torch.load(path, map_location=lambda storage, loc: storage))
+				
 	def save(self,path):
 		print('save simulation nn {}'.format(path))
 		torch.save(self.state_dict(),path)

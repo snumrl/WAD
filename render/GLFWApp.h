@@ -3,33 +3,56 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <pybind11/embed.h>
+#include <pybind11/eigen.h>
 
+#include <examples/imgui_impl_glfw.h>
+#include <examples/imgui_impl_opengl3.h>
+#include <imgui.h>
+#include <implot.h>
+
+#include <glad/glad.h>
+#include <GL/glu.h>
+#include <GLFW/glfw3.h>
+
+#include "Environment.h"
+#include "Muscle.h"
+#include "BVH.h"
 #include "ShapeRenderer.h"
+#include "GLFunctions.h"
 
-namespace py = pybind11;
+#include "dart/gui/Trackball.hpp"
+
+// namespace dart {
+//     namespace gui {
+//         class Trackball;
+//     }
+// }
 
 struct GLFWwindow;
 
-namespace dart {
-    namespace gui {
-        class Trackball;
-    }
-}
+using namespace dart::gui;
+using namespace dart::dynamics;
+using namespace dart::simulation;
+namespace py = pybind11;
+namespace MASS 
+{
 
-namespace MASS {
-class Environment;
-class Muscle;
 class GLFWApp
 {
 public:
-
-	GLFWApp(int argc, char** argv);
+	GLFWApp(Environment* env);
+	GLFWApp(Environment* env, const std::string& nn_path);
+	GLFWApp(Environment* env, const std::string& nn_path, const std::string& muscle_nn_path );
 	~GLFWApp();
 
     void startLoop();
 
-private:
-    void drawSimFrame();
+	void InitViewer();
+
+	void LoadMuscleNN(const std::string& muscle_nn_path);
+
+	void drawSimFrame();
     void drawUiFrame();
     void update();
 
@@ -64,11 +87,18 @@ private:
 //	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt, const Eigen::VectorXd& pmt);
 	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt);
 
+private:
+	py::object mm, mns, sys_module, nn_module, muscle_nn_module, rms_module;
+
+	
+	bool mDevice_On;
+	int mMuscleNum;
+	int mMuscleMapNum;
+
     GLFWwindow* window;
 
-    py::object scope;
-    py::object policy_nn, muscle_nn, marginal_nn;
-    py::object mm,mns,sys_module,nn_module,muscle_nn_module,device_nn_module,rms_module;
+    
+    
 
     std::string checkpoint_path;
     py::object config;
@@ -111,6 +141,6 @@ private:
 
 	ShapeRenderer mShapeRenderer;
 };
-};
+}
 
 #endif
