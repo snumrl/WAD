@@ -1,7 +1,6 @@
 #include "ShapeRenderer.h"
 #include "GLFunctions.h"
-#include <GL/glew.h>
-#include <assimp/cimport.h>
+#include <glad/glad.h>
 
 namespace MASS
 {

@@ -72,7 +72,7 @@ class MuscleNN(nn.Module):
 
 	def load(self,path):
 		print('load muscle nn {}'.format(path))
-		self.load_state_dict(torch.load(path))
+		self.load_state_dict(torch.load(path, map_location=lambda storage, loc: storage))		
 
 	def save(self,path):
 		print('save muscle nn {}'.format(path))

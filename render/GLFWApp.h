@@ -4,7 +4,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/embed.h>
-#include <pybind11/eigen.h>
+// #include <pybind11/eigen.h>
 
 #include <examples/imgui_impl_glfw.h>
 #include <examples/imgui_impl_opengl3.h>
@@ -15,19 +15,14 @@
 #include <GL/glu.h>
 #include <GLFW/glfw3.h>
 
+#include "dart/gui/Trackball.hpp"
+
 #include "Environment.h"
+#include "Character.h"
 #include "Muscle.h"
 #include "BVH.h"
 #include "ShapeRenderer.h"
 #include "GLFunctions.h"
-
-#include "dart/gui/Trackball.hpp"
-
-// namespace dart {
-//     namespace gui {
-//         class Trackball;
-//     }
-// }
 
 struct GLFWwindow;
 
@@ -46,30 +41,31 @@ public:
 	GLFWApp(Environment* env, const std::string& nn_path, const std::string& muscle_nn_path );
 	~GLFWApp();
 
-    void startLoop();
-
+	void Initialize();
 	void InitViewer();
+	void InitCamera(int idx);
+	void InitLights();
+	void InitGLFW();
+	void InitGL();
 
-	void LoadMuscleNN(const std::string& muscle_nn_path);
+	void StartLoop();
+	void Reset();
+	void Update();
+	void SetFocus();	
 
-	void drawSimFrame();
-    void drawUiFrame();
-    void update();
+	void Draw();
+	void DrawSimFrame();
+    void DrawUiFrame();
+	void DrawUiFrame_SimState(double x, double y, double w, double h);
+    void DrawUiFrame_Learning(double x, double y, double w, double h);
+    void DrawUiFrame_Analysis(double x, double y, double w, double h);
 
-    void keyboardPress(int key, int scancode, int action, int mods);
-    void mouseMove(double xpos, double ypos);
-    void mousePress(int button, int action, int mods);
-    void mouseScroll(double xoffset, double yoffset);
-
-    void initGL();
-	void initLights();
-
-	void draw(int cameraIdx = -1);
-
-	void loadCheckpoint(const std::string& checkpoint_path);
-	void calculateMarginalValues();
-
-    void SetFocusing();
+	void DrawGround();
+	void DrawCharacter();
+	void DrawCharacter_();
+	void DrawTarget();
+	void DrawReference();
+	void DrawDevice();
 
 	void DrawEntity(const dart::dynamics::Entity* entity);
 	void DrawBodyNode(const dart::dynamics::BodyNode* bn);
@@ -77,69 +73,60 @@ public:
 	void DrawShapeFrame(const dart::dynamics::ShapeFrame* shapeFrame);
 	void DrawShape(const dart::dynamics::Shape* shape,const Eigen::Vector4d& color);
 	void DrawMuscles(const std::vector<Muscle*>& muscles);
-	void DrawGround(double y);
 
-	void ClearSkeleton(const dart::dynamics::SkeletonPtr& skel);
+	void DrawOriginCoord();
 
-	void Reset();
+	void SetWindowWidth(double w){mWindowWidth=w;}
+	void SetWindowHeight(double h){mWindowHeight=h;}
+
+	void keyboardPress(int key, int scancode, int action, int mods);
+    void mouseMove(double xpos, double ypos);
+    void mousePress(int button, int action, int mods);
+    void mouseScroll(double xoffset, double yoffset);
 
 	Eigen::VectorXd GetActionFromNN();
-//	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt, const Eigen::VectorXd& pmt);
 	Eigen::VectorXd GetActivationFromNN(const Eigen::VectorXd& mt);
+
 
 private:
 	py::object mm, mns, sys_module, nn_module, muscle_nn_module, rms_module;
 
-	
-	bool mDevice_On;
-	int mMuscleNum;
-	int mMuscleMapNum;
-
-    GLFWwindow* window;
-
-    
-    
-
-    std::string checkpoint_path;
-    py::object config;
-    std::set<int> checkpoints;
-    bool load_checkpoint_directory;
-    int selected_checkpoint;
-
-    float marginalValueAvg;
-    Eigen::MatrixXf valueFunction;
-    Eigen::MatrixXf probDistFunction;
-
 	Environment* mEnv;
-	bool mFocus;
-	bool mSimulating;
-	bool mDrawOBJ;
-	bool mDrawShadow;
-	bool mNNLoaded, mMuscleNNLoaded, mMarginalNNLoaded;
-	bool mNoise, mKinematic, mPhysics;
-	Eigen::Affine3d mViewMatrix;
-
-	std::unique_ptr<dart::gui::Trackball> defaultTrackball;
-	std::vector<dart::gui::Trackball> splitTrackballs;
-	int selectedTrackballIdx = 0;
+	GLFWwindow* mWindow;
+	ShapeRenderer mShapeRenderer;
+	
+	dart::gui::Trackball mTrackball;
+	std::vector<dart::gui::Trackball> mSplitTrackballs;
 
 	Eigen::Vector3d mTrans;
-	Eigen::Vector3d mEye;
-	Eigen::Vector3d mUp;
-	float mZoom;
-	float mPersp;
+	float mZoom, mPersp;
 	float mMouseX, mMouseY;
-	bool mMouseDown, mMouseDrag, mCapture = false;
+	
+	bool mMouseDown, mMouseDrag;
+	bool mCapture, mRotate, mTranslate;
 
-	bool mRotate = false, mTranslate = false, mZooming = false;
+	bool mFocus;
+	bool mSimulating;
 
-	double width, height;
-	double viewportWidth, imguiWidth;
-	bool mSplitViewport = false;
+	double mWindowWidth, mWindowHeight;
+	double mViewerWidth, mViewerHeight;
+	double mImguiWidth, mImguiHeight; 
+
+	int mMuscleNum;
+	int mMuscleMapNum;
+	int mDisplayIter;
+
+	int mViewMode;
+	int mSplitIdx;
+	int mSplitViewNum;
+	bool mNNLoaded, mMuscleNNLoaded;
+	bool mDevice_On;
+	bool mDrawOBJ, mDrawCharacter, mDrawDevice, mDrawTarget, mDrawReference;
+	bool isDrawCharacter, isDrawDevice, isDrawTarget, isDrawReference;
 
 	std::map<std::string, double> perfStats;
 
-	ShapeRenderer mShapeRenderer;
+	
 };
 }
 

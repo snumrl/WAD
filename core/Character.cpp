@@ -16,7 +16,7 @@ Character(WorldPtr& wPtr)
 	mForceRatio = 1.0;
 	mSpeedRatio = 1.0;
 
-	mLowerBody = false;
+	mLowerBody = true;
 	mLowerMuscleRelatedDof = 30;
 	mUpperMuscleRelatedDof = 26;
 
@@ -120,7 +120,7 @@ LoadMuscles(const std::string& path)
 			for(TiXmlElement* waypoint = unit->FirstChildElement("Waypoint");waypoint!=nullptr;waypoint = waypoint->NextSiblingElement("Waypoint"))
 			{
 				std::string body = waypoint->Attribute("body");
-				isExist = this->isLowerBody(body);
+				isExist *= this->isLowerBody(body);
 			}
 		}
 
@@ -196,9 +196,9 @@ LoadMuscles(const std::string& path)
 bool
 Character::
 isLowerBody(std::string& body)
-{
-	if(body == "ShoulderL" || body == "ArmL" || body == "ForeArmL" || body == "HandL" || body == "ShoulderR" || body == "ArmR" || body == "ForeArmR" || body == "HandR" || body == "Head" || body == "Neck")
-		return false;
+{	
+	if(body == "ShoulderL" || body == "ArmL" || body == "ForeArmL" || body == "HandL" || body == "ShoulderR" || body == "ArmR" || body == "ForeArmR" || body == "HandR")
+		return false;	
 	else
 		return true;
 }
@@ -379,51 +379,51 @@ Initialize_Forces()
 {
 	mMaxForces.resize(mDof);
 	mDefaultForces.resize(mDof);
-	mDefaultForces <<
-		 0, 0, 0, 0, 0, 0,   //pelvis
-		 300, 300, 300,      //Femur L
-		 300,                //Tibia L
-		 300, 300, 300,      //Talus L
-		 300, 300,           //Thumb, Pinky L
-		 300, 300, 300,      //Femur R
-		 300,                //Tibia R
-		 300, 300, 300,      //Talus R
-		 300, 300,           //Thumb, Pinky R
-		 300, 300, 300,      //Spine
-		 300, 300, 300,      //Torso
-		 300, 300, 300,      //Neck
-		 300, 300, 300;      //Head
-		//  300, 300, 300,      //Shoulder L
-		//  300, 300, 300,      //Arm L
-		//  300,                //ForeArm L
-		//  300, 300, 300,      //Hand L
-		//  300, 300, 300,      //Shoulder R
-		//  300, 300, 300,      //Arm R
-		//  300,                //ForeArm R
-		//  300, 300, 300;      //Hand R
-
 	// mDefaultForces <<
-	//      0, 0, 0, 0, 0, 0,   //pelvis
-	//      200, 100, 150,      //Femur L
-	//      100,                //Tibia L
-	//      150, 50, 50,        //Talus L
-	//      30, 30,             //Thumb, Pinky L
-	//      200, 100, 150,      //Femur R
-	//      100,                //Tibia R
-	//      150, 50, 50,        //Talus R
-	//      30, 30,             //Thumb, Pinky R
-	//      80, 80, 80,         //Spine
-	//      80, 80, 80,         //Torso
-	//      30, 30, 30,         //Neck
-	//      30, 30, 30,         //Head
-	//      50, 50, 50,         //Shoulder L
-	//      50, 50, 50,         //Arm L
-	//      30,                 //ForeArm L
-	//      30, 30, 30,         //Hand L
-	//      50, 50, 50,         //Shoulder R
-	//      50, 50, 50,         //Arm R
-	//      30,                 //ForeArm R
-	//      30, 30, 30;         //Hand R
+	// 	 0, 0, 0, 0, 0, 0,   //pelvis
+	// 	 300, 300, 300,      //Femur L
+	// 	 300,                //Tibia L
+	// 	 300, 300, 300,      //Talus L
+	// 	 300, 300,           //Thumb, Pinky L
+	// 	 300, 300, 300,      //Femur R
+	// 	 300,                //Tibia R
+	// 	 300, 300, 300,      //Talus R
+	// 	 300, 300,           //Thumb, Pinky R
+	// 	 300, 300, 300,      //Spine
+	// 	 300, 300, 300,      //Torso
+	// 	 300, 300, 300,      //Neck
+	// 	 300, 300, 300;      //Head
+	// 	//  300, 300, 300,      //Shoulder L
+	// 	//  300, 300, 300,      //Arm L
+	// 	//  300,                //ForeArm L
+	// 	//  300, 300, 300,      //Hand L
+	// 	//  300, 300, 300,      //Shoulder R
+	// 	//  300, 300, 300,      //Arm R
+	// 	//  300,                //ForeArm R
+	// 	//  300, 300, 300;      //Hand R
+
+	mDefaultForces <<
+	     0, 0, 0, 0, 0, 0,   //pelvis
+	     200, 100, 150,      //Femur L
+	     100,                //Tibia L
+	     150, 50, 50,        //Talus L
+	     30, 30,             //Thumb, Pinky L
+	     200, 100, 150,      //Femur R
+	     100,                //Tibia R
+	     150, 50, 50,        //Talus R
+	     30, 30,             //Thumb, Pinky R
+	     80, 80, 80,         //Spine
+	     80, 80, 80,         //Torso
+	     30, 30, 30,         //Neck
+	     30, 30, 30;         //Head
+	    //  50, 50, 50,         //Shoulder L
+	    //  50, 50, 50,         //Arm L
+	    //  30,                 //ForeArm L
+	    //  30, 30, 30,         //Hand L
+	    //  50, 50, 50,         //Shoulder R
+	    //  50, 50, 50,         //Arm R
+	    //  30,                 //ForeArm R
+	    //  30, 30, 30;         //Hand R
 
 	mMaxForces = mForceRatio * mDefaultForces;
 }
@@ -657,10 +657,10 @@ Step_Muscles(int simCount, int randomSampleIndex, bool isRender)
 	if(simCount == randomSampleIndex)
 		this->SetMuscleTuple();
 
-	if(mLowerBody){
-		mDesiredTorque.head<30>().setZero();
-		mSkeleton->setForces(mDesiredTorque); // upper body torque control
-	}
+	// if(mLowerBody){
+	// 	mDesiredTorque.head<30>().setZero();
+	// 	mSkeleton->setForces(mDesiredTorque); // upper body torque control
+	// }
 
 	this->SetMeasure(isRender);
 
@@ -693,16 +693,16 @@ SetMuscleTuple()
 	mCurrentMuscleTuple.L =JtA.block(mRootJointDof,0,mDof-mRootJointDof,m);
 	mCurrentMuscleTuple.b =Jtp.segment(mRootJointDof,mDof-mRootJointDof);
 
-	if(mLowerBody)
-	{
-		Eigen::VectorXd lbTorque = mDesiredTorque; // lower body related torque
-		lbTorque.tail<26>().setZero();
-		mCurrentMuscleTuple.tau_des = lbTorque.tail(mNumActiveDof);
-	}
-	else
-	{
-		mCurrentMuscleTuple.tau_des = mDesiredTorque.tail(mNumActiveDof);
-	}
+	// if(mLowerBody)
+	// {
+	// 	Eigen::VectorXd lbTorque = mDesiredTorque; // lower body related torque
+	// 	lbTorque.tail<26>().setZero();
+	// 	mCurrentMuscleTuple.tau_des = lbTorque.tail(mNumActiveDof);
+	// }
+	// else
+	// {
+	mCurrentMuscleTuple.tau_des = mDesiredTorque.tail(mNumActiveDof);
+	// }
 
 	mMuscleTuples.push_back(mCurrentMuscleTuple);
 }
@@ -1157,8 +1157,10 @@ GetReward()
 
 	mReward["reward_c"] = r_continuous;
 	mReward["reward_s"] = r_spike;
+	
 	double r_total = r_continuous + r_spike;
 	// mReward["reward"] = r_total;
+	
 	mCurReward = r_total;
 
 	// std::cout << "con : " << r_continuous << std::endl;
@@ -1278,11 +1280,11 @@ GetReward_Character_Imitation()
 	{
 		double w = 0.0;
 		if(ees[i]->getName() == "Head")
-			w = 0.3;
+			w = 0.4;
 		if(ees[i]->getName() == "Pelvis")
 			w = 0.3;
 		if(ees[i]->getName() == "TalusR" || ees[i]->getName() == "TalusL")
-			w = 0.3;
+			w = 0.2;
 		if(ees[i]->getName() == "HandR" || ees[i]->getName() == "HandL")
 			w = 0.1;
 
@@ -1295,11 +1297,11 @@ GetReward_Character_Imitation()
 
 	//=====================================
 
-	double sig_p = 10.0;
+	double sig_p = 5.0;
 	double sig_q = 0.5;
 	double sig_com = 20.0;
-	double sig_ee_rot = 20.0;
-	double sig_ee_pos = 40.0;
+	double sig_ee_rot = 10.0;
+	double sig_ee_pos = 20.0;
 	
 	double r_p = Utils::exp_of_squared(p_diff, sig_p);
 	double r_q = Utils::exp_of_squared(q_diff, sig_q);
@@ -1780,12 +1782,12 @@ Eigen::VectorXd
 Character::
 GetDesiredTorques()
 {
-	if(mLowerBody){
-		Eigen::VectorXd tmp = mDesiredTorque;
-		tmp.tail<26>().setZero();
-		return tmp.tail(mNumActiveDof);
-	}
-	else
+	// if(mLowerBody){
+	// 	Eigen::VectorXd tmp = mDesiredTorque;
+	// 	tmp.tail<26>().setZero();
+	// 	return tmp.tail(mNumActiveDof);
+	// }
+	// else
 		return mDesiredTorque.tail(mNumActiveDof);
 }
 

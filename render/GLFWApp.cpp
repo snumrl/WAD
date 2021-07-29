@@ -4,19 +4,18 @@
 namespace MASS
 {
 
+#define WindowWidth 2160;
+#define WinodwHeight 1080;
+
 GLFWApp::
 GLFWApp(Environment* env)
-    : mEnv(env), mFocus(true), mSimulating(false), mDrawOBJ(true), mDrawShadow(false), mMuscleNNLoaded(false),
-      mNoise(false), mKinematic(false), mPhysics(true), mTrans(0.0, 0.0, 0.0), mEye(0.0, 0.0, 1.0), mUp(0.0, 1.0, 0.0), 
-          mZoom(1.0), mPersp(45.0), mRotate(false), mTranslate(false), mZooming(false) 
+    : mEnv(env),mFocus(true),mSimulating(false),mNNLoaded(false),mMuscleNNLoaded(false),
+      mMouseDown(false), mMouseDrag(false),mCapture(false),mRotate(false),mTranslate(false),mDisplayIter(0),
+      isDrawCharacter(false),isDrawDevice(false),isDrawTarget(false),isDrawReference(false),
+      mDrawOBJ(false),mDrawCharacter(true),mDrawDevice(true),mDrawTarget(false),mDrawReference(false),
+      mSplitViewNum(2),mSplitIdx(0),mViewMode(0)
 {
-    this->InitViewer();
-    
-    mDevice_On = env->GetCharacter()->GetDevice_OnOff();
-    mNNLoaded = false;
-    //mDisplayTimeout = 1000 / 60.0;
-
-	mm = py::module::import("__main__");
+  	mm = py::module::import("__main__");
 	mns = mm.attr("__dict__");
     py::str module_dir = (std::string(MASS_ROOT_DIR)+"/python").c_str();
 	sys_module = py::module::import("sys");
@@ -53,29 +52,9 @@ GLFWApp(Environment* env, const std::string& nn_path)
 
 GLFWApp::
 GLFWApp(Environment* env, const std::string& nn_path, const std::string& muscle_nn_path )
-    :GLFWApp(env, nn_path)
+    :GLFWApp(env, nn_path)/*  */
 {
-    this->LoadMuscleNN(muscle_nn_path);
-}
-
-GLFWApp::
-~GLFWApp() 
-{
-    ImPlot::DestroyContext();
-
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
-}
-
-void
-GLFWApp::
-LoadMuscleNN(const std::string& muscle_nn_path)
-{
-	mMuscleNNLoaded = true;
+    mMuscleNNLoaded = true;
 
 	py::str str;
 	str = ("num_total_muscle_related_dofs = "+std::to_string(mEnv->GetCharacter()->GetNumTotalRelatedDofs())).c_str();
@@ -94,59 +73,97 @@ LoadMuscleNN(const std::string& muscle_nn_path)
 	load(muscle_nn_path);
 }
 
+GLFWApp::
+~GLFWApp() 
+{
+    ImPlot::DestroyContext();
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    glfwDestroyWindow(mWindow);
+    glfwTerminate();
+}
+
+void
+GLFWApp::
+Initialize()
+{
+    this->InitGLFW();
+
+    mDevice_On = mEnv->GetCharacter()->GetDevice_OnOff();
+}
 
 void
 GLFWApp::
 InitViewer()
 {
-    width = 1920; height = 1080;
-    viewportWidth = 1500;
-	imguiWidth = width - viewportWidth;
+    mZoom = 0.25;
+    mPersp = 45.0;
+	
+    //window size
+    mWindowWidth = WindowWidth; 
+    mWindowHeight = WinodwHeight;
+    
+    mViewerWidth = mWindowWidth*3.0/5.0;
+    mViewerHeight = mWindowHeight;
 
-	defaultTrackball = std::make_unique<Trackball>();
-    defaultTrackball->setTrackball(Eigen::Vector2d(viewportWidth * 0.5, height * 0.5), viewportWidth * 0.5);
-    defaultTrackball->setQuaternion(Eigen::Quaterniond(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY())));
+	mImguiWidth = mWindowWidth - mViewerWidth;
+    mImguiHeight = mWindowHeight;
+    
+	// mTrackball = std::make_unique<Trackball>();
+    double smaller = mWindowWidth < mWindowHeight ? mWindowWidth : mWindowHeight;
+    mTrackball.setTrackball(Eigen::Vector2d(mViewerWidth*0.5, mViewerHeight*0.5), smaller*0.5);
+    mTrackball.setQuaternion(Eigen::Quaterniond(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY())));
+    
+    mSplitTrackballs.resize(mSplitViewNum);
+    for(int i = 0; i < mSplitViewNum; i++){
+        double w = mViewerWidth/mSplitViewNum;
+        double h = mViewerHeight;
+        double x = w*(i+0.5);
+        double y = h*0.5;
+        double radius = w < h ? w*0.5 : h*0.5;
+        mSplitTrackballs[i].setTrackball(Eigen::Vector2d(x,y), radius);
+        mSplitTrackballs[i].setQuaternion(Eigen::Quaterniond(Eigen::AngleAxisd(i*M_PI/2, Eigen::Vector3d::UnitY())));
+    }    
+}
 
-    splitTrackballs.resize(3);
-    for(int i = 0; i < 3; i++){
-        splitTrackballs[i].setTrackball(Eigen::Vector2d(viewportWidth / 3 * (i + 0.5), height * 0.5),
-                                        viewportWidth / 3 * 0.5);
-        splitTrackballs[i].setQuaternion(Eigen::Quaterniond(Eigen::AngleAxisd(i * M_PI / 2, Eigen::Vector3d::UnitY())));
-    }
+void
+GLFWApp::
+InitGLFW()
+{
+    this->InitViewer();
 
-	mZoom = 0.25;
-	mFocus = true;
-	// mNNLoaded = false;
-
-	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
-
-    window = glfwCreateWindow(width, height, "render", nullptr, nullptr);
-	if (window == NULL) {
+    
+    mWindow = glfwCreateWindow(mWindowWidth, mWindowHeight, "render", nullptr, nullptr);
+	if (mWindow == NULL) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
 	    glfwTerminate();
 	    exit(EXIT_FAILURE);
 	}
-	glfwMakeContextCurrent(window);
+	glfwMakeContextCurrent(mWindow);
 
    	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 	    std::cerr << "Failed to initialize GLAD" << std::endl;
 	    exit(EXIT_FAILURE);
 	}
 
-	glViewport(0, 0, width, height);
-	glfwSetWindowUserPointer(window, this);
+	glViewport(0, 0, mWindowWidth, mWindowHeight);
+	glfwSetWindowUserPointer(mWindow, this);
 
     //CallBack
 	auto framebufferSizeCallback = [](GLFWwindow* window, int width, int height) {
 	    GLFWApp* app = static_cast<GLFWApp*>(glfwGetWindowUserPointer(window));
-	    app->width = width;
-	    app->height = height;
+	    app->SetWindowWidth(width);
+	    app->SetWindowHeight(height);
 	    glViewport(0, 0, width, height);
 	};
-	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+	glfwSetFramebufferSizeCallback(mWindow, framebufferSizeCallback);
 
 	auto keyCallback = [](GLFWwindow* window, int key, int scancode, int action, int mods) {
 	    auto& io = ImGui::GetIO();
@@ -155,7 +172,7 @@ InitViewer()
             app->keyboardPress(key, scancode, action, mods);
         }
 	};
-	glfwSetKeyCallback(window, keyCallback);
+	glfwSetKeyCallback(mWindow, keyCallback);
 
 	auto cursorPosCallback = [](GLFWwindow* window, double xpos, double ypos) {
         auto& io = ImGui::GetIO();
@@ -164,7 +181,7 @@ InitViewer()
             app->mouseMove(xpos, ypos);
         }
 	};
-	glfwSetCursorPosCallback(window, cursorPosCallback);
+	glfwSetCursorPosCallback(mWindow, cursorPosCallback);
 
 	auto mouseButtonCallback = [](GLFWwindow* window, int button, int action, int mods) {
         auto& io = ImGui::GetIO();
@@ -173,7 +190,7 @@ InitViewer()
             app->mousePress(button, action, mods);
         }
 	};
-	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+	glfwSetMouseButtonCallback(mWindow, mouseButtonCallback);
 
 	auto scrollCallback = [](GLFWwindow* window, double xoffset, double yoffset) {
 	    auto& io = ImGui::GetIO();
@@ -182,404 +199,21 @@ InitViewer()
             app->mouseScroll(xoffset, yoffset);
 	    }
 	};
-	glfwSetScrollCallback(window, scrollCallback);
+	glfwSetScrollCallback(mWindow, scrollCallback);
 
 	ImGui::CreateContext();
-	ImGui::StyleColorsDark();
+    ImGui::StyleColorsDark();
 
-	ImGui_ImplGlfw_InitForOpenGL(window, true);
-	ImGui_ImplOpenGL3_Init("#version 150");
+	ImGui_ImplGlfw_InitForOpenGL(mWindow, true);
+	// ImGui_ImplOpenGL3_Init("#version 150");
 
 	ImPlot::CreateContext();
-
-    SetFocusing();
 }
 
-void
+void 
 GLFWApp::
-Reset()
+InitGL() 
 {
-	// mFootprint.clear();
-	// mFootinterval.clear();
-	// mFootinterval.resize(20);
-	mEnv->Reset();
-	// mDisplayIter = 0;
-}
-
-void GLFWApp::startLoop() {
-#if 1
-    const double frameTime = 1.0 / 30.0;
-    double previous = glfwGetTime();
-    double lag = 0;
-
-    while (!glfwWindowShouldClose(window)) {
-        double current = glfwGetTime();
-        double elapsed = current - previous;
-        previous = current;
-        lag += elapsed;
-
-        glfwPollEvents();
-
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-            glfwSetWindowShouldClose(window, true);
-        }
-
-        while (lag >= frameTime) {
-            update();
-            lag -= frameTime;
-        }
-
-        drawSimFrame();
-        drawUiFrame();
-        glfwSwapBuffers(window);
-    }
-#else
-    // bool performUpdate = false;
-    while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-            glfwSetWindowShouldClose(window, true);
-        }   
-        // performUpdate = !performUpdate;
-        // if (performUpdate) {
-        //     update();
-        // }
-        double lastTime;
-        lastTime = glfwGetTime();
-        update();
-        perfStats["update"] = std::ceil((glfwGetTime() - lastTime) * 100000) / 100;
-        
-        lastTime = glfwGetTime();
-        drawSimFrame();
-        perfStats["render_sim"] = std::ceil((glfwGetTime() - lastTime) * 100000) / 100;
-        
-        lastTime = glfwGetTime();
-        drawUiFrame();
-        perfStats["render_ui"] = std::ceil((glfwGetTime() - lastTime) * 100000) / 100;
-        
-        glfwSwapBuffers(window);
-    }
-#endif
-}
-
-void GLFWApp::drawSimFrame() {
-    glViewport(0, 0, width, height);
-    initGL();
-    if (mSplitViewport) {
-        for (int i = 0; i < 3; i++) {
-            glViewport(viewportWidth / 3 * i, 0, viewportWidth / 3, height);
-            draw(i);
-        }
-    }
-    else {
-        glViewport(0, 0, viewportWidth, height);
-        draw();
-    }
-    glViewport(0, 0, width, height);
-}
-
-void GLFWApp::drawUiFrame() {
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-
-    ImGui::SetNextWindowPos(ImVec2(viewportWidth, 0));
-    ImGui::SetNextWindowSize(ImVec2(imguiWidth, height));
-
-    ImGui::Begin("Inspector");
-    if (ImGui::BeginMenuBar()) {
-        if (ImGui::BeginMenu("File"))
-        {
-
-        }
-        ImGui::EndMenuBar();
-    }
-
-    if (ImGui::CollapsingHeader("Performance")) {
-        for (auto& [name, value] : perfStats) {
-            ImGui::Text("%15s: %3f ms", name.c_str(), value);
-        }
-    }
-
-    // if (ImGui::CollapsingHeader("Checkpoints")) {
-    //     if (load_checkpoint_directory) {
-    //         if (ImGui::ListBoxHeader("##Select checkpoint")) {
-    //             for (int checkpoint_idx : checkpoints) {
-    //                 std::string label = std::string("checkpoint-") + std::to_string(checkpoint_idx);
-    //                 if (ImGui::Selectable(label.c_str(), selected_checkpoint == checkpoint_idx)) {
-    //                     selected_checkpoint = checkpoint_idx;
-    //                     std::string checkpoint_file = fs::path(checkpoint_path) /
-    //                                                   (std::string("checkpoint_") + std::to_string(checkpoint_idx)) /
-    //                                                   (std::string("checkpoint-") + std::to_string(checkpoint_idx));
-    //                     loadCheckpoint(checkpoint_file);
-    //                 }
-    //             }
-    //             ImGui::ListBoxFooter();
-    //         }
-    //     }
-    //     else {
-    //         ImGui::Text("Checkpoint: %s", checkpoint_path.c_str());
-    //     }
-    // }
-
-    // static bool showValueGraph = false;
-    // static bool showProbGraph = false;
-    // if (ImGui::CollapsingHeader("Parameters")) {
-    //     bool edited = false;
-    //     auto& config = mEnv->GetConfig();
-    //     auto& params = config.params;
-    //     auto categoryNames = params.getCategoryNames();
-    //     if (config.use_marginal_value_learning) {
-    //         ImGui::Checkbox("Show value graph", &showValueGraph);
-    //         if (config.use_adaptive_sampling) {
-    //             ImGui::Checkbox("Show prob graph", &showProbGraph);
-    //         }
-    //     }
-    //     for (auto& categoryName : categoryNames) {
-    //         if (ImGui::TreeNode(categoryName.c_str())) {
-    //             auto& indexMap = params.paramNameMap.at(categoryName).indexMap;
-    //             auto paramMap = params.getValuesInCategoryAsMap(categoryName);
-    //             for (auto& [name, value] : paramMap) {
-    //                 std::string label = name;
-    //                 if (categoryName == "length_ratio" && config.symmetry.count(name)) {
-    //                     label += " / ";
-    //                     label += config.symmetry.at(name);
-    //                 }
-    //                 float imguiValue = (float)value;
-    //                 auto bounds = params.getBounds(categoryName, name);
-    //                 ImGui::Text("%s", name.c_str());
-    //                 std::string sliderLabel = "##";
-    //                 sliderLabel += categoryName; sliderLabel += "_"; sliderLabel += name;
-    //                 ImGui::SetNextItemWidth(300);
-    //                 if (ImGui::SliderFloat(sliderLabel.c_str(), &imguiValue, bounds.first, bounds.second)) {
-    //                     params.getValue(categoryName, name) = value = (double)imguiValue;
-    //                     edited = true;
-    //                     if (config.use_marginal_value_learning) calculateMarginalValues();
-    //                 }
-    //                 if (config.use_marginal_value_learning) {
-    //                     int N = valueFunction.cols();
-    //                     std::vector<float> pValues(N);
-    //                     for (int k = 0; k < N; k++) {
-    //                         pValues[k] = bounds.first + (bounds.second - bounds.first) * float(k) / float(N-1);
-    //                     }
-    //                     uint32_t idx = indexMap.at(name);
-    //                     if (showValueGraph) {
-    //                         Eigen::VectorXf values = valueFunction.row(idx);
-    //                         ImPlot::SetNextPlotLimits(bounds.first, bounds.second,
-    //                                                   -0.01, values.maxCoeff()+0.01);
-    //                         auto lineLabel = categoryName + "_" + name + "_values";
-    //                         if (ImPlot::BeginPlot(lineLabel.c_str(), nullptr, nullptr, ImVec2(300, 200))) {
-    //                             ImPlot::PlotLine<float>(lineLabel.c_str(), pValues.data(), values.data(), pValues.size());
-    //                             ImPlot::EndPlot();
-    //                         }
-    //                     }
-    //                     if (showProbGraph) {
-    //                         Eigen::VectorXf probs = probDistFunction.row(idx);
-    //                         ImPlot::SetNextPlotLimits(bounds.first, bounds.second,
-    //                                                   -0.01, probs.maxCoeff()+0.01);
-    //                         auto lineLabel = categoryName + "_" + name + "_probs";
-    //                         if (ImPlot::BeginPlot(lineLabel.c_str(), nullptr, nullptr, ImVec2(300, 200))) {
-    //                             ImPlot::PlotLine<float>(lineLabel.c_str(), pValues.data(), probs.data(), pValues.size());
-    //                             ImPlot::EndPlot();
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //             ImGui::TreePop();
-    //         }
-    //     }
-    //     if (edited) {
-    //         mEnv->ResetWithCurrentParams();
-    //     }
-    // }
-
-    // if (ImGui::CollapsingHeader("Marginal Values")) {
-
-    // }
-    // ImGui::End();
-
-    // ImPlot::ShowDemoWindow();
-
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-}
-
-void GLFWApp::keyboardPress(int key, int scancode, int action, int mods) {
-    if (action == GLFW_PRESS) {
-        switch (key) {
-            case GLFW_KEY_SPACE: mSimulating = !mSimulating; break;
-            case GLFW_KEY_R: Reset(); break;
-            case GLFW_KEY_O: mDrawOBJ = !mDrawOBJ; break;
-            case GLFW_KEY_F: mFocus = !mFocus; break;
-            case GLFW_KEY_V: mSplitViewport = !mSplitViewport; break;
-            case GLFW_KEY_K: mKinematic = !mKinematic; break;
-            case GLFW_KEY_P: mPhysics = !mPhysics; break;
-            default: break;
-        }
-    }
-}
-
-void GLFWApp::mouseMove(double xpos, double ypos) {
-    double deltaX = xpos - mMouseX;
-    double deltaY = ypos - mMouseY;
-
-    mMouseX = xpos;
-    mMouseY = ypos;
-
-    if (mRotate)
-    {
-        if (deltaX != 0 || deltaY != 0) {
-            if (mSplitViewport) {
-                splitTrackballs[selectedTrackballIdx].updateBall(xpos, height - ypos);
-            }
-            else {
-                defaultTrackball->updateBall(xpos, height - ypos);
-            }
-        }
-    }
-    if (mTranslate)
-    {
-        Eigen::Matrix3d rot;
-        if (mSplitViewport) {
-            rot = splitTrackballs[selectedTrackballIdx].getRotationMatrix();
-        }
-        else {
-            rot = defaultTrackball->getRotationMatrix();
-        }
-        mTrans += (1 / mZoom) * rot.transpose()
-                  * Eigen::Vector3d(deltaX, -deltaY, 0.0);
-    }
-    if (mZooming)
-    {
-        mZoom = std::max(0.01, mZoom + deltaY * 0.01);
-    }
-}
-
-void GLFWApp::mousePress(int button, int action, int mods) {
-    mMouseDown = true;
-    if (action == GLFW_PRESS) {
-        if (mSplitViewport) {
-            for (int i = 0; i < 3; i++) {
-                if (width / 3 * i <= mMouseX && mMouseX < width / 3 * (i+1)) {
-                    selectedTrackballIdx = i;
-                }
-            }
-        }
-        if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            mRotate = true;
-            if (mSplitViewport) {
-                splitTrackballs[selectedTrackballIdx].startBall(mMouseX, height - mMouseY);
-            }
-            else {
-                defaultTrackball->startBall(mMouseX, height - mMouseY);
-            }
-        }
-        else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-            mTranslate = true;
-        }
-    }
-    else if (action == GLFW_RELEASE) {
-        if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            mRotate = false;
-        }
-        else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-            mTranslate = false;
-        }
-    }
-
-}
-
-void GLFWApp::mouseScroll(double xoffset, double yoffset) {
-    mZoom += yoffset * 0.01;
-}
-
-void GLFWApp::draw(int cameraIdx)
-{
-    /* Preprocessing */
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    if (cameraIdx == -1) {
-        gluPerspective(mPersp, viewportWidth / height, 0.1, 10.0);
-    }
-    else {
-        gluPerspective(mPersp, viewportWidth / 3 / height, 0.1, 10.0);
-    }
-    gluLookAt(mEye[0], mEye[1], mEye[2], 0.0, 0.0, -1.0, mUp[0], mUp[1], mUp[2]);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    
-    if (cameraIdx == -1) {
-        defaultTrackball->applyGLRotation();
-    }
-    else {
-        splitTrackballs[cameraIdx].applyGLRotation();
-    }
-    
-    // Draw world origin indicator
-    if (!mCapture)
-    {
-        glEnable(GL_DEPTH_TEST);
-        glDisable(GL_TEXTURE_2D);
-        glDisable(GL_LIGHTING);
-        glLineWidth(2.0);
-        if (mRotate || mTranslate || mZooming)
-        {
-            glColor3f(1.0f, 0.0f, 0.0f);
-            glBegin(GL_LINES);
-            glVertex3f(-0.1f, 0.0f, -0.0f);
-            glVertex3f(0.15f, 0.0f, -0.0f);
-            glEnd();
-
-            glColor3f(0.0f, 1.0f, 0.0f);
-            glBegin(GL_LINES);
-            glVertex3f(0.0f, -0.1f, 0.0f);
-            glVertex3f(0.0f, 0.15f, 0.0f);
-            glEnd();
-
-            glColor3f(0.0f, 0.0f, 1.0f);
-            glBegin(GL_LINES);
-            glVertex3f(0.0f, 0.0f, -0.1f);
-            glVertex3f(0.0f, 0.0f, 0.15f);
-            glEnd();
-        }
-    }
-    
-    // TODO: Apply camera transform based on idx
-    glScalef(mZoom, mZoom, mZoom);
-    glTranslatef(mTrans[0] * 0.001, mTrans[1] * 0.001, mTrans[2] * 0.001);
-    initLights();
-
-    GLfloat matrix[16];
-    glGetFloatv(GL_MODELVIEW_MATRIX, matrix);
-    Eigen::Matrix3d A;
-    Eigen::Vector3d b;
-    A << matrix[0], matrix[4], matrix[8],
-            matrix[1], matrix[5], matrix[9],
-            matrix[2], matrix[6], matrix[10];
-    b << matrix[12], matrix[13], matrix[14];
-    mViewMatrix.linear() = A;
-    mViewMatrix.translation() = b;
-
-    auto ground = mEnv->GetGround();
-    float y = ground->getBodyNode(0)->getTransform().translation()[1] +
-              dynamic_cast<const BoxShape *>(ground->getBodyNode(
-                      0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1] * 0.5;
-    DrawGround(y);
-    if (mPhysics) {
-        // DrawMuscles(mEnv->GetCharacter()->GetMuscles());
-        DrawSkeleton(mEnv->GetCharacter()->GetSkeleton());
-    }
-
-    // if (mKinematic) {
-    //     auto skel = mEnv->GetCharacter()->GetSkeleton()->cloneSkeleton();
-    //     skel->setPosition(mEnv->GetCharacter()->GetTargetPositions())
-    //     DrawSkeleton(skel);
-    // }
-}
-
-void GLFWApp::initGL() {
     glClearColor(0.96, 0.96, 0.97, 0.7);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_BLEND);
@@ -589,7 +223,42 @@ void GLFWApp::initGL() {
     glPolygonMode(GL_FRONT, GL_FILL);
 }
 
-void GLFWApp::initLights() {
+void
+GLFWApp::
+InitCamera(int idx)
+{
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    if (idx == -1)
+        gluPerspective(mPersp, mViewerWidth/mViewerHeight, 0.1, 10.0);
+    else 
+        gluPerspective(mPersp, (mViewerWidth/mSplitViewNum)/mViewerHeight, 0.1, 10.0);
+
+    gluLookAt(0.0, 0.0, 1.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0); // eye, at, up
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    
+    if (idx == -1)
+        mTrackball.applyGLRotation();
+    else 
+        mSplitTrackballs[idx].applyGLRotation();
+
+    if (!mCapture)
+    {
+        if (mRotate || mTranslate)
+            this->DrawOriginCoord();       
+    }
+    
+    // TODO: Apply camera transform based on idx
+    glScalef(mZoom, mZoom, mZoom);
+    glTranslatef(mTrans[0] * 0.001, mTrans[1] * 0.001, mTrans[2] * 0.001);
+
+}
+void 
+
+GLFWApp::
+InitLights() 
+{
     static float ambient[] = {0.2, 0.2, 0.2, 1.0};
     static float diffuse[] = {0.6, 0.6, 0.6, 1.0};
     static float front_mat_shininess[] = {60.0};
@@ -621,166 +290,944 @@ void GLFWApp::initLights() {
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
-    glDisable(GL_CULL_FACE);
+    glDisable(GL_CULL_FACE);    
     glEnable(GL_NORMALIZE);
 }
 
-void GLFWApp::update()
+void
+GLFWApp::
+Reset()
 {
-    SetFocusing();
+	mEnv->Reset();
+	mDisplayIter = 0;
+}
 
-    if (!mSimulating) return;
+void 
+GLFWApp::
+StartLoop() 
+{
+#if 1
+    const double frameTime = 1.0 / 60.0;
+    double previous = glfwGetTime();
+    double lag = 0;
+    while (!glfwWindowShouldClose(mWindow)) {
+        double current = glfwGetTime();
+        double elapsed = current - previous;
+        previous = current;
+        lag += elapsed; 
+    
+        glfwPollEvents();
+        
+        while (lag >= frameTime) {
+            if(mSimulating)
+                this->Update();
+            lag -= frameTime;
+        }
+        this->Draw();
+    
+        glfwSwapBuffers(mWindow);        
+    }
+#else
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
 
-    // This app updates in Hz
-    int num = mEnv->GetSimulationHz() / mEnv->GetControlHz();
+        double lastTime;
+        lastTime = glfwGetTime();
+        update();
+        perfStats["update"] = std::ceil((glfwGetTime() - lastTime) * 100000) / 100;
+        
+        lastTime = glfwGetTime();
+        drawSimFrame();
+        perfStats["render_sim"] = std::ceil((glfwGetTime() - lastTime) * 100000) / 100;
+        
+        lastTime = glfwGetTime();
+        drawUiFrame();
+        perfStats["render_ui"] = std::ceil((glfwGetTime() - lastTime) * 100000) / 100;
+        
+        glfwSwapBuffers(window);
+    }
+#endif
+}
 
-    static bool shouldUpdateAction = false;
-
-    shouldUpdateAction = !shouldUpdateAction;
-    if (shouldUpdateAction) {
+void GLFWApp::Update()
+{
+    if(mDisplayIter%2 == 0)
+    {
         Eigen::VectorXd action;
         if (mNNLoaded)
             action = GetActionFromNN();
         else
             action = Eigen::VectorXd::Zero(mEnv->GetNumAction());
+
         mEnv->SetAction(action);
     }
-
+    
+    int num = mEnv->GetNumSteps()/2.0;
     if (mEnv->GetUseMuscle()) {
         int inference_per_sim = 2;
-        for (int i = 0; i < num; i += inference_per_sim) {
+        for (int i=0; i<num; i+=inference_per_sim) {
             Eigen::VectorXd mt = mEnv->GetCharacter()->GetMuscleTorques();
-//			Eigen::VectorXd pmt = mEnv->GetPassiveMuscleTorques();
-//			mEnv->SetActivationLevels(GetActivationFromNN(mt, pmt));
             mEnv->GetCharacter()->SetActivationLevels(GetActivationFromNN(mt));
             for (int j = 0; j < inference_per_sim; j++)
-                mEnv->Step(false, true);
+                mEnv->Step(mDevice_On, true);
         }
-    } else {
-        for (int i = 0; i < num; i++)
-            mEnv->Step(false, true);
+    } 
+    else 
+    {
+        for (int i=0; i<num; i++)
+            mEnv->Step(mDevice_On, true);
     }
-
-    // if (mEnv->getIsRender()) {
-
-    // }
-    // TODO
+    
+    // mEnv->GetReward();
+    mDisplayIter++;    
 }
 
-// void GLFWApp::loadCheckpoint(const std::string& checkpoint_path) {
-//     auto model_res = InitModel(checkpoint_path, config, "cpu");
-//     policy_nn = model_res.policy_nn;
-//     muscle_nn = model_res.muscle_nn;
-//     marginal_nn = model_res.marginal_nn;
-
-//     mNNLoaded = true;
-//     auto& config = mEnv->GetConfig();
-//     if (config.use_muscle) {
-//         mMuscleNNLoaded = true;
-//     }
-//     if (config.use_marginal_value_learning) {
-//         mMarginalNNLoaded = true;
-//         marginalValueAvg = model_res.marginalValueAvg;
-//     }
-
-//     std::cout << "Loaded " << checkpoint_path << "!" << std::endl;
-
-//     if (config.use_marginal_value_learning) {
-//         calculateMarginalValues();
-//     }
-// }
-
-// void GLFWApp::calculateMarginalValues() {
-//     assert(mEnv->GetUseAdaptiveSampling());
-//     auto get_value = marginal_nn.attr("get_value");
-
-//     const auto& config = mEnv->GetConfig();
-//     const auto& params = config.params;
-
-//     auto numParams = params.values.size();
-//     int N = 101;
-//     valueFunction.resize(numParams, N);
-//     probDistFunction.resize(numParams, N);
-
-//     for (const auto& category : params.getCategoryNames()) {
-//         auto& indexMap = params.paramNameMap.at(category).indexMap;
-//         for (const auto& [name, value] : params.getValuesInCategoryAsMap(category)) {
-//             int i = indexMap.at(name);
-//             auto [pmin, pmax] = params.bounds[i];
-//             Eigen::MatrixXf paramCandidates(N, numParams);
-//             for (int j = 0; j < N; j++) {
-//                 float p = pmin + (pmax - pmin)/float(N-1) * j;
-//                 for (int k = 0; k < numParams; k++) {
-//                     paramCandidates(j, k) = k == i? p : params.values[k];
-//                 }
-//             }
-//             Eigen::VectorXf values = get_value(paramCandidates).cast<Eigen::VectorXf>();
-//             for (int j = 0; j < N; j++) {
-//                 valueFunction(i, j) = values(j);
-//                 probDistFunction(i, j) = exp(config.marginal_k * (1.0 - values(j) / marginalValueAvg));
-//             }
-//             float meanProbValue = probDistFunction.row(i).mean();
-//             for (int j = 0; j < N; j++) {
-//                 probDistFunction(i, j) /= (meanProbValue * (pmax - pmin));
-//             }
-//         }
-//     }
-// }
-
-// void GLFWApp::Reset()
-// {
-// 	mEnv->Reset();
-
-//     // if (mEnv->getIsRender()) {
-//     //     // TODO
-//     // }
-// }
-
-void GLFWApp::SetFocusing()
+void 
+GLFWApp::
+SetFocus()
 {
-    if (mFocus) {
-        if (mPhysics) {
-            mTrans = -mEnv->GetWorld()->getSkeleton("Human")->getRootBodyNode()->getCOM();
-            mTrans[1] -= 0.3;
-        } else {
-            mTrans = -mEnv->GetCharacter()->GetTargetPositions().segment<3>(3);
-            mTrans[0] -= 1.0;
-            mTrans[1] -= 1.0;
-        }
+    if(mFocus) 
+    {       
+        mTrans = -mEnv->GetWorld()->getSkeleton("Human")->getRootBodyNode()->getCOM();
+		mTrans[1] -= 0.3;
+		mTrans *= 1000.0;
 
-        mTrans *= 1000.0;
+        double focusAngle = 0.05*M_PI;
+        Eigen::Quaterniond focusQuat = Eigen::Quaterniond(Eigen::AngleAxisd(focusAngle, Eigen::Vector3d::UnitX()));
+        Eigen::Quaterniond curQuat = mTrackball.getCurrQuat();
+        if(mViewMode == 1)
+        {
+            mTrackball.setQuaternion(Eigen::Quaterniond::Identity());
+		    Eigen::Quaterniond r = focusQuat;
+		    mTrackball.setQuaternion(r);            
+        }
+        else if(mViewMode == 2 && Eigen::AngleAxisd(curQuat).angle() < 0.5 * M_PI)
+        {
+            mTrackball.setQuaternion(Eigen::Quaterniond::Identity());
+		    Eigen::Vector3d axis(0.0, cos(focusAngle), sin(focusAngle));               
+            Eigen::Quaterniond r = Eigen::Quaterniond(Eigen::AngleAxisd(0.01*M_PI, axis)) * curQuat;
+            mTrackball.setQuaternion(r);
+        }
+        else if(mViewMode == 3)
+        {
+            for(int i=0; i<mSplitViewNum; i++)
+            {      
+                mSplitTrackballs[i].setQuaternion(Eigen::Quaterniond::Identity());
+		        Eigen::Quaterniond r = focusQuat;
+                if(i==1){
+                    Eigen::Vector3d axis(0.0, cos(focusAngle), sin(focusAngle));               
+                    r = Eigen::Quaterniond(Eigen::AngleAxisd(0.5*M_PI, axis)) * focusQuat;
+                }                    
+		        mSplitTrackballs[i].setQuaternion(r);
+            }
+        }
     }
 }
 
-// Eigen::VectorXd
-// GLFWApp::
-// GetActionFromNN()
-// {
-//     using namespace pybind11::literals;
+void 
+GLFWApp::
+Draw() 
+{   
+    this->InitGL();
+    this->SetFocus();    
+    
+    this->DrawSimFrame();
+    this->DrawUiFrame();
+}
 
-// 	Eigen::VectorXf state = mEnv->GetState().cast<float>();
-//     py::array_t<float> py_action = policy_nn.attr("get_action")(state);
-//     Eigen::VectorXf action = py_action.cast<Eigen::VectorXf>();
-//     return action.cast<double>();
+void 
+GLFWApp::
+DrawSimFrame()
+{
+    int st = -1, ed = 0;
+    int x = 0, y = 0;
+    int w = mViewerWidth, h = mViewerHeight;
+    
+    if(mViewMode == 3)
+    {
+        st = 0, ed = mSplitViewNum;
+        w /= mSplitViewNum, x = w;
+    }
+
+    for(int i=st; i<ed; i++)
+    {
+        glViewport(x*i, y, w, h);
+        this->InitCamera(i);   
+        this->InitLights();
+        
+        this->DrawGround();
+        this->DrawCharacter();    
+        if(mEnv->GetUseDevice())
+            this->DrawDevice();    
+    }       
+}
+
+void
+GLFWApp::
+DrawUiFrame() 
+{
+    double widthRatio = 0.4;
+    double heightRatio = 0.3;
+
+    double x1 = mViewerWidth;
+    double x2 = mViewerWidth + widthRatio * mImguiWidth;
+    double y1 = 0;
+    double y2 = heightRatio * mImguiHeight;
+
+    double w1 = widthRatio * mImguiWidth;
+    double w2 = (1-widthRatio) * mImguiWidth;
+    double h1 = heightRatio * mImguiHeight;
+    double h2 = (1-heightRatio) * mImguiHeight;
+
+    this->DrawUiFrame_SimState(x1, y1, w1, h1);
+    // this->DrawUiFrame_Learning(x2, y1, w2, h1);
+    // this->DrawUiFrame_Analysis(x1, y2, w1+w2, h2);
+}
+
+void
+GLFWApp::
+DrawUiFrame_SimState(double x, double y, double w, double h)
+{
+    bool show_demo_window = true;
+    bool show_another_window = false;
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+    // ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    
+
+     if (show_demo_window)
+        ImGui::ShowDemoWindow(&show_demo_window);
+
+    // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+    {
+        static float f = 0.0f;
+        static int counter = 0;
+
+
+        ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+        // ImGui::SetNextWindowPos(ImVec2(x, y));
+        // ImGui::SetNextWindowSize(ImVec2(w, h));        
+
+        ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+        ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+        ImGui::Checkbox("Another Window", &show_another_window);
+
+        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+        ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+        if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+            counter++;
+        ImGui::SameLine();
+        ImGui::Text("counter = %d", counter);
+
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::End();
+    }
+   
+    // 3. Show another simple window.
+    if (show_another_window)
+    {
+        ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+        ImGui::Text("Hello from another window!");
+        if (ImGui::Button("Close Me"))
+            show_another_window = false;
+        ImGui::End();
+    }
+
+    // ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+   
+    //     static float f = 0.0f;
+    //     static int counter = 0;
+
+    //     ImGui::Begin("Simulation");                   
+
+    //     ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+        
+    //     ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+    //     ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+    //     if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+    //         counter++;
+    //     ImGui::SameLine();
+    //     ImGui::Text("counter = %d", counter);
+
+
+    //     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    //     ImGui::End();
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void
+GLFWApp::
+DrawUiFrame_Learning(double x, double y, double w, double h)
+{
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::SetNextWindowPos(ImVec2(x, y));
+    ImGui::SetNextWindowSize(ImVec2(w, h));
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+        static float f = 0.0f;
+        static int counter = 0;
+
+        ImGui::Begin("Learning");                          // Create a window called "Hello, world!" and append into it.
+
+        ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+        
+        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+        ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+        if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+            counter++;
+        ImGui::SameLine();
+        ImGui::Text("counter = %d", counter);
+
+
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::End();
+  
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void
+GLFWApp::
+DrawUiFrame_Analysis(double x, double y, double w, double h)
+{
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::SetNextWindowPos(ImVec2(x, y));
+    ImGui::SetNextWindowSize(ImVec2(w, h));
+    ImVec4 clear_color = ImVec4(0.65f, 0.75f, 0.80f, 1.00f);
+
+    static float f = 0.0f;
+    static int counter = 0;
+
+        ImGui::Begin("Analysis");                          // Create a window called "Hello, world!" and append into it.
+
+        ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+        
+        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+        ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+        if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+            counter++;
+        ImGui::SameLine();
+        ImGui::Text("counter = %d", counter);
+
+
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::End();
+   
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+// void 
+// GLFWApp::
+// DrawUiFrame() 
+// {
+//     ImGui_ImplOpenGL3_NewFrame();
+//     ImGui_ImplGlfw_NewFrame();
+//     ImGui::NewFrame();
+
+//     ImGui::SetNextWindowPos(ImVec2(mViewerWidth, 0));
+//     ImGui::SetNextWindowSize(ImVec2(mImguiWidth, mImguiHeight*0.5));
+
+//     bool show_demo_window = false;
+//     bool show_another_window = false;
+//     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+//     // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+//     if (show_demo_window)
+//         ImGui::ShowDemoWindow(&show_demo_window);
+
+//     // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+//     {
+//         static float f = 0.0f;
+//         static int counter = 0;
+
+//         ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+//         ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+//         ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+//         ImGui::Checkbox("Another Window", &show_another_window);
+
+//         ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+//         ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+//         if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+//             counter++;
+//         ImGui::SameLine();
+//         ImGui::Text("counter = %d", counter);
+
+//         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+//         ImGui::End();
+//     }
+
+//     // 3. Show another simple window.
+//     if (show_another_window)
+//     {
+//         ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+//         ImGui::Text("Hello from another window!");
+//         if (ImGui::Button("Close Me"))
+//             show_another_window = false;
+//         ImGui::End();
+//     }
+
+//     // Rendering
+//     ImGui::Render();
+//     // int display_w, display_h;
+//     // glfwGetFramebufferSize(window, &display_w, &display_h);
+//     // glViewport(mViewerWidth, 0, imguiWidth, height);
+//     // glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+//     // glClear(GL_COLOR_BUFFER_BIT);
+//     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+//     // ImGui::Begin("Inspector");
+//     // if (ImGui::BeginMenuBar()) {
+//     //     if (ImGui::BeginMenu("File"))
+//     //     {
+//     //         ImGui::EndMenu();
+
+//     //     }
+//     //     ImGui::EndMenuBar();
+//     // }
+
+//     // if (ImGui::CollapsingHeader("Performance")) {
+//     //     for (auto& [name, value] : perfStats) {
+//     //         ImGui::Text("%15s: %3f ms", name.c_str(), value);
+//     //     }
+//     // }
+
+//     // if (ImGui::CollapsingHeader("Checkpoints")) {
+//     //     if (load_checkpoint_directory) {
+//     //         if (ImGui::ListBoxHeader("##Select checkpoint")) {
+//     //             for (int checkpoint_idx : checkpoints) {
+//     //                 std::string label = std::string("checkpoint-") + std::to_string(checkpoint_idx);
+//     //                 if (ImGui::Selectable(label.c_str(), selected_checkpoint == checkpoint_idx)) {
+//     //                     selected_checkpoint = checkpoint_idx;
+//     //                     std::string checkpoint_file = fs::path(checkpoint_path) /
+//     //                                                   (std::string("checkpoint_") + std::to_string(checkpoint_idx)) /
+//     //                                                   (std::string("checkpoint-") + std::to_string(checkpoint_idx));
+//     //                     loadCheckpoint(checkpoint_file);
+//     //                 }
+//     //             }
+//     //             ImGui::ListBoxFooter();
+//     //         }
+//     //     }
+//     //     else {
+//     //         ImGui::Text("Checkpoint: %s", checkpoint_path.c_str());
+//     //     }
+//     // }
+
+//     // static bool showValueGraph = false;
+//     // static bool showProbGraph = false;
+//     // if (ImGui::CollapsingHeader("Parameters")) {
+//     //     bool edited = false;
+//     //     auto& config = mEnv->GetConfig();
+//     //     auto& params = config.params;
+//     //     auto categoryNames = params.getCategoryNames();
+//     //     if (config.use_marginal_value_learning) {
+//     //         ImGui::Checkbox("Show value graph", &showValueGraph);
+//     //         if (config.use_adaptive_sampling) {
+//     //             ImGui::Checkbox("Show prob graph", &showProbGraph);
+//     //         }
+//     //     }
+//     //     for (auto& categoryName : categoryNames) {
+//     //         if (ImGui::TreeNode(categoryName.c_str())) {
+//     //             auto& indexMap = params.paramNameMap.at(categoryName).indexMap;
+//     //             auto paramMap = params.getValuesInCategoryAsMap(categoryName);
+//     //             for (auto& [name, value] : paramMap) {
+//     //                 std::string label = name;
+//     //                 if (categoryName == "length_ratio" && config.symmetry.count(name)) {
+//     //                     label += " / ";
+//     //                     label += config.symmetry.at(name);
+//     //                 }
+//     //                 float imguiValue = (float)value;
+//     //                 auto bounds = params.getBounds(categoryName, name);
+//     //                 ImGui::Text("%s", name.c_str());
+//     //                 std::string sliderLabel = "##";
+//     //                 sliderLabel += categoryName; sliderLabel += "_"; sliderLabel += name;
+//     //                 ImGui::SetNextItemWidth(300);
+//     //                 if (ImGui::SliderFloat(sliderLabel.c_str(), &imguiValue, bounds.first, bounds.second)) {
+//     //                     params.getValue(categoryName, name) = value = (double)imguiValue;
+//     //                     edited = true;
+//     //                     if (config.use_marginal_value_learning) calculateMarginalValues();
+//     //                 }
+//     //                 if (config.use_marginal_value_learning) {
+//     //                     int N = valueFunction.cols();
+//     //                     std::vector<float> pValues(N);
+//     //                     for (int k = 0; k < N; k++) {
+//     //                         pValues[k] = bounds.first + (bounds.second - bounds.first) * float(k) / float(N-1);
+//     //                     }
+//     //                     uint32_t idx = indexMap.at(name);
+//     //                     if (showValueGraph) {
+//     //                         Eigen::VectorXf values = valueFunction.row(idx);
+//     //                         ImPlot::SetNextPlotLimits(bounds.first, bounds.second,
+//     //                                                   -0.01, values.maxCoeff()+0.01);
+//     //                         auto lineLabel = categoryName + "_" + name + "_values";
+//     //                         if (ImPlot::BeginPlot(lineLabel.c_str(), nullptr, nullptr, ImVec2(300, 200))) {
+//     //                             ImPlot::PlotLine<float>(lineLabel.c_str(), pValues.data(), values.data(), pValues.size());
+//     //                             ImPlot::EndPlot();
+//     //                         }
+//     //                     }
+//     //                     if (showProbGraph) {
+//     //                         Eigen::VectorXf probs = probDistFunction.row(idx);
+//     //                         ImPlot::SetNextPlotLimits(bounds.first, bounds.second,
+//     //                                                   -0.01, probs.maxCoeff()+0.01);
+//     //                         auto lineLabel = categoryName + "_" + name + "_probs";
+//     //                         if (ImPlot::BeginPlot(lineLabel.c_str(), nullptr, nullptr, ImVec2(300, 200))) {
+//     //                             ImPlot::PlotLine<float>(lineLabel.c_str(), pValues.data(), probs.data(), pValues.size());
+//     //                             ImPlot::EndPlot();
+//     //                         }
+//     //                     }
+//     //                 }
+//     //             }
+//     //             ImGui::TreePop();
+//     //         }
+//     //     }
+//     //     if (edited) {
+//     //         mEnv->ResetWithCurrentParams();
+//     //     }
+//     // }
+
+//     // if (ImGui::CollapsingHeader("Marginal Values")) {
+
+//     // }
+//     // ImGui::End();
+
+//     // ImPlot::ShowDemoWindow();
+
+//     // ImGui::End();
+//     // ImGui::Render();
+//     // ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 // }
 
-// Eigen::VectorXd
-// GLFWApp::
-// GetActivationFromNN(const Eigen::VectorXd& mt) //, const Eigen::VectorXd& pmt)
-// {
-// 	if(!mMuscleNNLoaded)
-// 	{
-// 		mEnv->GetCharacter()->GetDesiredTorques();
-// 		return Eigen::VectorXd::Zero(mEnv->GetCharacter()->GetMuscles().size());
-// 	}
-// 	Eigen::VectorXd dt = mEnv->GetCharacter()->GetDesiredTorques();
+void
+GLFWApp::
+DrawDevice()
+{
+    if(mEnv->GetCharacter()->GetDevice_OnOff() && mDrawDevice)
+	{
+		isDrawDevice = true;
+		DrawSkeleton(mEnv->GetDevice()->GetSkeleton());
+		isDrawDevice = false;
+        // if(mDrawGraph)
+		// 	DrawDeviceSignals();
+		// if(mDrawArrow)
+		// 	DrawArrow();
+	}
+}
 
-// //	py::object temp = get_activation(mt_np,pmt_np,dt_np);
-// 	py::array_t<float> activation_np = muscle_nn.attr("get_activation")(mt.cast<float>(), dt.cast<float>());
-// 	Eigen::VectorXf activation = activation_np.cast<Eigen::VectorXf>();
+void 
+GLFWApp::
+DrawCharacter_()
+{
+    isDrawCharacter = true;
+    this->DrawSkeleton(mEnv->GetCharacter()->GetSkeleton());
+    if(mEnv->GetUseMuscle())
+        DrawMuscles(mEnv->GetCharacter()->GetMuscles());
+    isDrawCharacter = false;
+}
 
-// 	return activation.cast<double>();
-// }
+void
+GLFWApp::
+DrawTarget()
+{
+    isDrawTarget = true;
+
+	Character* character = mEnv->GetCharacter();
+	SkeletonPtr skeleton = character->GetSkeleton();
+
+	Eigen::VectorXd cur_pos = skeleton->getPositions();
+
+	skeleton->setPositions(character->GetTargetPositions());
+	DrawBodyNode(skeleton->getRootBodyNode());
+
+	skeleton->setPositions(cur_pos);
+
+	isDrawTarget = false;
+}
+
+void
+GLFWApp::
+DrawReference()
+{
+    isDrawReference = true;
+
+	Character* character = mEnv->GetCharacter();
+	SkeletonPtr skeleton = character->GetSkeleton();
+
+	Eigen::VectorXd cur_pos = skeleton->getPositions();
+
+	skeleton->setPositions(character->GetReferencePositions());
+	DrawBodyNode(skeleton->getRootBodyNode());
+
+	skeleton->setPositions(cur_pos);
+
+	isDrawReference = false;
+}
+
+void
+GLFWApp::
+DrawCharacter()
+{
+    if(mDrawCharacter)
+        this->DrawCharacter_();
+
+    if(mDrawTarget)
+		this->DrawTarget();
+
+	if(mDrawReference)
+		this->DrawReference();
+}
+
+
+void 
+GLFWApp::
+DrawGround()
+{
+    auto ground = mEnv->GetGround();
+    float y = ground->getBodyNode(0)->getTransform().translation()[1] +
+              dynamic_cast<const BoxShape *>(ground->getBodyNode(
+                      0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1] * 0.5;
+
+    constexpr int N = 64;
+    GLubyte imageData[N][N];
+    for (int i = 0; i < N; i++)  {
+        for (int j = 0; j < N; j++) {
+            if ((i/(N/2) + j/(N/2)) % 2 == 0) {
+                imageData[i][j] = (GLubyte)(256*0.8);
+            }
+            else {
+                imageData[i][j] = (GLubyte)(256*0.7);
+            }
+        }
+    }
+
+    glTexImage2D(GL_TEXTURE_2D, 0, 1, N, N, 0, GL_RED, GL_UNSIGNED_BYTE, imageData);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+    glDisable(GL_LIGHTING);
+    glEnable(GL_TEXTURE_2D);
+    glColor4f(1, 1, 1, 1);
+    // glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+
+    glBegin(GL_QUADS);
+    glTexCoord2f(-50, -50); glVertex3f(-100, y, -100);
+    glTexCoord2f(50, -50); glVertex3f(100, y, -100);
+    glTexCoord2f(50, 50); glVertex3f(100, y, 100);
+    glTexCoord2f(-50, 50); glVertex3f(-100, y, 100);
+    glEnd();
+
+    glDisable(GL_TEXTURE_2D);
+    glEnable(GL_LIGHTING);    
+}
+
+
+void 
+GLFWApp::
+DrawEntity(const Entity* entity)
+{
+	if (!entity)
+		return;
+	const auto& bn = dynamic_cast<const BodyNode*>(entity);
+	if(bn)
+	{
+		DrawBodyNode(bn);
+		return;
+	}
+
+	const auto& sf = dynamic_cast<const ShapeFrame*>(entity);
+	if(sf)
+	{
+		DrawShapeFrame(sf);
+		return;
+	}
+}
+
+void 
+GLFWApp::
+DrawBodyNode(const BodyNode* bn)
+{	
+	if(!bn)
+		return;
+
+	glPushMatrix();
+	Eigen::Affine3d tmp = bn->getRelativeTransform();
+	glMultMatrixd(tmp.data());
+
+	auto sns = bn->getShapeNodesWith<VisualAspect>();
+	for(const auto& sn : sns)
+		DrawShapeFrame(sn);
+
+	for(const auto& et : bn->getChildEntities())
+		DrawEntity(et);
+
+	glPopMatrix();
+}
+
+void 
+GLFWApp::
+DrawSkeleton(const SkeletonPtr& skel)
+{
+	DrawBodyNode(skel->getRootBodyNode());
+}
+
+void 
+GLFWApp::
+DrawShapeFrame(const ShapeFrame* sf)
+{
+	if(!sf)
+		return;
+
+	const auto& va = sf->getVisualAspect();
+
+	if(!va || va->isHidden())
+		return;
+
+	glPushMatrix();
+	Eigen::Affine3d tmp = sf->getRelativeTransform();
+	glMultMatrixd(tmp.data());
+
+    Eigen::Vector4d color = va->getRGBA();
+    if(isDrawCharacter)
+    {
+        if(mDrawOBJ)
+            color << 0.75, 0.75, 0.75, 0.3;
+        else
+            color[3] = 0.8;
+    }
+    if(isDrawTarget)
+		color << 0.6, 1.0, 0.6, 0.3;
+	if(isDrawReference)
+		color << 1.0, 0.6, 0.6, 0.3;
+	if(isDrawDevice)
+		color << 0.3, 0.3, 0.3, 1.0;
+
+	DrawShape(sf->getShape().get(), color);
+	glPopMatrix();
+}
+
+void 
+GLFWApp::
+DrawShape(const Shape* shape, const Eigen::Vector4d& color)
+{
+	if(!shape)
+		return;
+	
+    glEnable(GL_DEPTH_TEST);
+	glEnable(GL_COLOR_MATERIAL);
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+    glColor4dv(color.data());
+    if(mDrawOBJ == false)
+	{
+     	if (shape->is<SphereShape>())
+		{
+			const auto* sphere = dynamic_cast<const SphereShape*>(shape);
+            GUI::DrawSphere(sphere->getRadius());
+		}
+		else if (shape->is<BoxShape>())
+		{
+			const auto* box = dynamic_cast<const BoxShape*>(shape);
+			GUI::DrawCube(box->getSize());
+		}
+		else if (shape->is<CapsuleShape>())
+		{
+			const auto* capsule = dynamic_cast<const CapsuleShape*>(shape);
+			GUI::DrawCapsule(capsule->getRadius(), capsule->getHeight());
+		}	
+	}
+	else
+	{
+		if (shape->is<MeshShape>())
+		{
+			const auto& mesh = dynamic_cast<const MeshShape*>(shape);
+			float y = mEnv->GetGround()->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(mEnv->GetGround()->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
+			mShapeRenderer.renderMesh(mesh, false, y, color);
+		}
+	}
+	glDisable(GL_COLOR_MATERIAL);
+    glDisable(GL_DEPTH_TEST);    
+}
+
+void 
+GLFWApp::
+DrawMuscles(const std::vector<Muscle*>& muscles)
+{
+    glEnable(GL_DEPTH_TEST);
+	glEnable(GL_COLOR_MATERIAL);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	for (auto muscle : muscles)
+	{
+        double a = muscle->GetActivation();
+        Eigen::Vector4d color(1.0+(3.0*a), 1.0, 1.0, 1.0);
+        glColor4dv(color.data());
+
+	    mShapeRenderer.renderMuscle(muscle);
+	}
+	glDisable(GL_COLOR_MATERIAL);
+	glDisable(GL_DEPTH_TEST);
+}
+
+void
+GLFWApp::
+DrawOriginCoord()
+{
+    glDisable(GL_LIGHTING);
+    glEnable(GL_DEPTH_TEST);
+    glLineWidth(2.0);
+
+    glColor3f(1.0f, 0.0f, 0.0f);
+    glBegin(GL_LINES);
+    glVertex3f(-0.1f, 0.0f, -0.0f);
+    glVertex3f(0.15f, 0.0f, -0.0f);
+    glEnd();
+
+    glColor3f(0.0f, 1.0f, 0.0f);
+    glBegin(GL_LINES);
+    glVertex3f(0.0f, -0.1f, 0.0f);
+    glVertex3f(0.0f, 0.15f, 0.0f);
+    glEnd();
+
+    glColor3f(0.0f, 0.0f, 1.0f);
+    glBegin(GL_LINES);
+    glVertex3f(0.0f, 0.0f, -0.1f);
+    glVertex3f(0.0f, 0.0f, 0.15f);
+    glEnd();
+       
+    glDisable(GL_DEPTH_TEST);    
+    glEnable(GL_LIGHTING);    
+}
+
+void 
+GLFWApp::
+keyboardPress(int key, int scancode, int action, int mods) 
+{
+    if (action == GLFW_PRESS) {
+        switch (key) {
+            case GLFW_KEY_ESCAPE: exit(0); break;
+            case GLFW_KEY_SPACE: mSimulating = !mSimulating; break;
+            case GLFW_KEY_R: this->Reset(); break;
+            case GLFW_KEY_S: this->Update(); break;
+            case GLFW_KEY_O: mDrawOBJ = !mDrawOBJ; break;
+            case GLFW_KEY_F: mFocus = !mFocus; break;
+            case GLFW_KEY_V: mViewMode = (mViewMode+1)%4; break;
+            case GLFW_KEY_T: mDrawTarget = !mDrawTarget; break;
+            case GLFW_KEY_C: mDrawCharacter = !mDrawCharacter; break;
+            case GLFW_KEY_D: mDrawDevice = !mDrawDevice; break;
+            default: break;
+        }
+    }
+}
+
+void 
+GLFWApp::
+mouseMove(double xpos, double ypos) 
+{
+    double deltaX = xpos - mMouseX;
+    double deltaY = ypos - mMouseY;
+
+    mMouseX = xpos;
+    mMouseY = ypos;
+
+    // if(mMouseX < mViewerWidth && mMouseY < mViewerHeight)
+    if(true)
+    {
+        if(mRotate)
+        {
+            if (deltaX != 0 || deltaY != 0) 
+            {
+                if (mViewMode == 3)
+                    mSplitTrackballs[mSplitIdx].updateBall(xpos, mViewerHeight - ypos);
+                else 
+                    mTrackball.updateBall(xpos, mViewerHeight - ypos);
+            }
+        }
+
+        if(mTranslate)
+        {
+            Eigen::Matrix3d rot;
+            if (mViewMode == 3) 
+                rot = mSplitTrackballs[mSplitIdx].getRotationMatrix();
+            else 
+                rot = mTrackball.getRotationMatrix();
+
+            mTrans += (1/mZoom) * rot.transpose() * Eigen::Vector3d(deltaX, -deltaY, 0.0);
+        }    
+    }
+}
+
+void 
+GLFWApp::
+mousePress(int button, int action, int mods) 
+{
+    if(action == GLFW_PRESS) 
+    {
+        mMouseDown = true;
+
+        if(mViewMode == 3) 
+        {
+            for (int i=0; i<mSplitViewNum; i++) {
+                double splitViewWidth = mViewerWidth/mSplitViewNum;
+                if (mMouseX >= splitViewWidth*i && mMouseX < splitViewWidth*(i+1)) 
+                    mSplitIdx = i;
+            }
+        }
+
+        // if(mMouseX < mViewerWidth && mMouseY < mViewerHeight)
+        if(true)
+        {
+            if(button == GLFW_MOUSE_BUTTON_LEFT) 
+            {
+                mRotate = true;
+                if (mViewMode == 3) 
+                    mSplitTrackballs[mSplitIdx].startBall(mMouseX, mViewerHeight - mMouseY);
+                else 
+                    mTrackball.startBall(mMouseX, mViewerHeight - mMouseY);                        
+            }
+            else if(button == GLFW_MOUSE_BUTTON_RIGHT) 
+            {
+                mTranslate = true;
+            }
+        }
+    }
+    else if(action == GLFW_RELEASE) 
+    {
+        mMouseDown = false;
+        // if(mMouseX < mViewerWidth && mMouseY < mViewerHeight)
+        if(true)
+        {
+            if (button == GLFW_MOUSE_BUTTON_LEFT)
+                mRotate = false;
+            else if (button == GLFW_MOUSE_BUTTON_RIGHT)
+                mTranslate = false;
+        }
+        
+    }
+}
+
+void 
+GLFWApp::
+mouseScroll(double xoffset, double yoffset) 
+{
+    mZoom += yoffset * 0.01;
+}
 
 py::array_t<float> toNumPyArray(const Eigen::VectorXd& vec)
 {
@@ -852,181 +1299,6 @@ GetActivationFromNN(const Eigen::VectorXd& mt)
 	}
 
 	return activation;
-}
-
-
-void GLFWApp::DrawEntity(const Entity* entity)
-{
-	if (!entity)
-		return;
-	const auto& bn = dynamic_cast<const BodyNode*>(entity);
-	if(bn)
-	{
-		DrawBodyNode(bn);
-		return;
-	}
-
-	const auto& sf = dynamic_cast<const ShapeFrame*>(entity);
-	if(sf)
-	{
-		DrawShapeFrame(sf);
-		return;
-	}
-}
-
-void GLFWApp::DrawBodyNode(const BodyNode* bn)
-{	
-	if(!bn)
-		return;
-
-	glPushMatrix();
-	Eigen::Affine3d tmp = bn->getRelativeTransform();
-	glMultMatrixd(tmp.data());
-
-	auto sns = bn->getShapeNodesWith<VisualAspect>();
-	for(const auto& sn : sns)
-		DrawShapeFrame(sn);
-
-	for(const auto& et : bn->getChildEntities())
-		DrawEntity(et);
-
-	glPopMatrix();
-}
-
-void GLFWApp::DrawSkeleton(const SkeletonPtr& skel)
-{
-	DrawBodyNode(skel->getRootBodyNode());
-}
-
-void GLFWApp::DrawShapeFrame(const ShapeFrame* sf)
-{
-	if(!sf)
-		return;
-
-	const auto& va = sf->getVisualAspect();
-
-	if(!va || va->isHidden())
-		return;
-
-	glPushMatrix();
-	Eigen::Affine3d tmp = sf->getRelativeTransform();
-	glMultMatrixd(tmp.data());
-
-	DrawShape(sf->getShape().get(),va->getRGBA());
-
-	glPopMatrix();
-}
-
-void GLFWApp::DrawShape(const Shape* shape, const Eigen::Vector4d& color)
-{
-	if(!shape)
-		return;
-
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
-	glEnable(GL_DEPTH_TEST);
-	if(mDrawOBJ == false)
-	{
-        glColor4dv(color.data());
-		if (shape->is<SphereShape>())
-		{
-			const auto* sphere = dynamic_cast<const SphereShape*>(shape);
-            GUI::DrawSphere(sphere->getRadius());
-		}
-		else if (shape->is<BoxShape>())
-		{
-			const auto* box = dynamic_cast<const BoxShape*>(shape);
-			GUI::DrawCube(box->getSize());
-		}
-		else if (shape->is<CapsuleShape>())
-		{
-			const auto* capsule = dynamic_cast<const CapsuleShape*>(shape);
-			GUI::DrawCapsule(capsule->getRadius(), capsule->getHeight());
-		}	
-	}
-	else
-	{
-		if (shape->is<MeshShape>())
-		{
-			const auto& mesh = dynamic_cast<const MeshShape*>(shape);
-			glDisable(GL_COLOR_MATERIAL);
-            float y = mEnv->GetGround()->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(mEnv->GetGround()->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
-			// GUI::DrawMesh(mesh->getScale(), mesh->getMesh());
-			// this->DrawShadow(mesh->getScale(), mesh->getMesh(),y);
-            mShapeRenderer.renderMesh(mesh, false, y, color);
-		}
-
-	}
-	
-	glDisable(GL_COLOR_MATERIAL);
-}
-void GLFWApp::DrawMuscles(const std::vector<Muscle*>& muscles)
-{
-	int count = 0;
-	glEnable(GL_LIGHTING);
-	glEnable(GL_DEPTH_TEST);
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
-	
-	for (auto muscle : muscles)
-	{
-        double a = muscle->GetActivation();
-        Eigen::Vector4d color(0.4+(2.0*a),0.4,0.4,1.0);//0.7*(1.0-3.0*a));
-        glColor4dv(color.data());
-
-	    mShapeRenderer.renderMuscle(muscle);
-	}
-	glEnable(GL_LIGHTING);
-	glDisable(GL_DEPTH_TEST);
-}
-
-void GLFWApp::DrawGround(double y)
-{
-    constexpr int N = 64;
-    GLubyte imageData[N][N];
-    for (int i = 0; i < N; i++)  {
-        for (int j = 0; j < N; j++) {
-            if ((i/(N/2) + j/(N/2)) % 2 == 0) {
-                imageData[i][j] = (GLubyte)216;
-            }
-            else {
-                imageData[i][j] = (GLubyte)196;
-            }
-        }
-    }
-
-    glTexImage2D(GL_TEXTURE_2D, 0, 1, N, N, 0, GL_RED, GL_UNSIGNED_BYTE, imageData);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
-    glDisable(GL_LIGHTING);
-    glEnable(GL_TEXTURE_2D);
-    glColor4f(1, 1, 1, 1);
-    // glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-
-    glBegin(GL_QUADS);
-    glTexCoord2f(-50, -50); glVertex3f(-100, y, -100);
-    glTexCoord2f(50, -50); glVertex3f(100, y, -100);
-    glTexCoord2f(50, 50); glVertex3f(100, y, 100);
-    glTexCoord2f(-50, 50); glVertex3f(-100, y, 100);
-    glEnd();
-
-    glEnable(GL_LIGHTING);
-    glDisable(GL_TEXTURE_2D);
-}
-
-void GLFWApp::ClearSkeleton(const SkeletonPtr& skel)
-{
-    auto sns = skel->getRootBodyNode()->getShapeNodesWith<VisualAspect>();
-    for (const auto& sn : sns) {
-        auto shape = sn->getShape().get();
-        if (shape->is<MeshShape>()) {
-            mShapeRenderer.clearMesh(dynamic_cast<const MeshShape*>(shape));
-        }
-    }
 }
 
 }

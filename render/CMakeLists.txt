@@ -17,9 +17,9 @@ set(srcs_render ShapeRenderer.cpp Window.cpp main.cpp)
 add_executable(render ${srcs_render})
 target_include_directories(render PRIVATE ../core/)
 target_link_libraries(render 
-            mss dart dart-gui imgui GL GLEW glad glfw pybind11::embed) 
+            mss dart dart-gui imgui GL GLEW pybind11::embed) 
 
-set(srcs_viewer ShapeRenderer.cpp GLFWApp.cpp GLFunctions.cpp main_imgui.cpp)
+set(srcs_viewer ShapeRenderer_imgui.cpp GLFWApp.cpp GLFunctions.cpp main_imgui.cpp)
 add_executable(viewer ${srcs_viewer})
 target_include_directories(viewer PRIVATE ../core/)
 target_link_libraries(viewer

@@ -753,7 +753,7 @@ Step()
 	mEnv->GetReward();
 	// this->SetTrajectory();
 	mDisplayIter++;
-	glutPostRedisplay();
+	// glutPostRedisplay();
 }
 
 void
@@ -1234,8 +1234,7 @@ DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 		{
 			const auto& mesh = static_cast<const MeshShape*>(shape);
 			float y = mEnv->GetGround()->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(mEnv->GetGround()->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
-
-			mShapeRenderer.renderMesh(mesh, false, y, color);
+			mShapeRenderer.renderMesh(mesh, false, y, color);			
 		}
 	}
 

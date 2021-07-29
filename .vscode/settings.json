@@ -182,6 +182,9 @@
         "fast_back_stack": "cpp",
         "observer_ptr": "cpp",
         "ref_ptr": "cpp",
-        "core": "cpp"
+        "core": "cpp",
+        "strstream": "cpp",
+        "cfenv": "cpp",
+        "variant": "cpp"
     }
 }

@@ -31,7 +31,8 @@ int main(int argc, char** argv) {
 		return 0;
     }
 
-    app->startLoop();
+    app->Initialize();
+    app->StartLoop();
 
     return 0;
 }

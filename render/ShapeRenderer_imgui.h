@@ -33,4 +33,3 @@ private:
 
 }
 #endif //MSS_SHAPERENDERER_H
-
