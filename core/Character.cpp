@@ -379,20 +379,20 @@ Initialize_Forces()
 {
 	mMaxForces.resize(mDof);
 	mDefaultForces.resize(mDof);
-	// mDefaultForces <<
-	// 	 0, 0, 0, 0, 0, 0,   //pelvis
-	// 	 300, 300, 300,      //Femur L
-	// 	 300,                //Tibia L
-	// 	 300, 300, 300,      //Talus L
-	// 	 300, 300,           //Thumb, Pinky L
-	// 	 300, 300, 300,      //Femur R
-	// 	 300,                //Tibia R
-	// 	 300, 300, 300,      //Talus R
-	// 	 300, 300,           //Thumb, Pinky R
-	// 	 300, 300, 300,      //Spine
-	// 	 300, 300, 300,      //Torso
-	// 	 300, 300, 300,      //Neck
-	// 	 300, 300, 300;      //Head
+	mDefaultForces <<
+		 0, 0, 0, 0, 0, 0,   //pelvis
+		 300, 300, 300,      //Femur L
+		 300,                //Tibia L
+		 300, 300, 300,      //Talus L
+		 300, 300,           //Thumb, Pinky L
+		 300, 300, 300,      //Femur R
+		 300,                //Tibia R
+		 300, 300, 300,      //Talus R
+		 300, 300,           //Thumb, Pinky R
+		 300, 300, 300,      //Spine
+		 300, 300, 300,      //Torso
+		 300, 300, 300,      //Neck
+		 300, 300, 300;      //Head
 	// 	//  300, 300, 300,      //Shoulder L
 	// 	//  300, 300, 300,      //Arm L
 	// 	//  300,                //ForeArm L
@@ -402,20 +402,20 @@ Initialize_Forces()
 	// 	//  300,                //ForeArm R
 	// 	//  300, 300, 300;      //Hand R
 
-	mDefaultForces <<
-	     0, 0, 0, 0, 0, 0,   //pelvis
-	     200, 100, 150,      //Femur L
-	     100,                //Tibia L
-	     150, 50, 50,        //Talus L
-	     30, 30,             //Thumb, Pinky L
-	     200, 100, 150,      //Femur R
-	     100,                //Tibia R
-	     150, 50, 50,        //Talus R
-	     30, 30,             //Thumb, Pinky R
-	     80, 80, 80,         //Spine
-	     80, 80, 80,         //Torso
-	     30, 30, 30,         //Neck
-	     30, 30, 30;         //Head
+	// mDefaultForces <<
+	//      0, 0, 0, 0, 0, 0,   //pelvis
+	//      200, 100, 150,      //Femur L
+	//      100,                //Tibia L
+	//      150, 50, 50,        //Talus L
+	//      30, 30,             //Thumb, Pinky L
+	//      200, 100, 150,      //Femur R
+	//      100,                //Tibia R
+	//      150, 50, 50,        //Talus R
+	//      30, 30,             //Thumb, Pinky R
+	//      80, 80, 80,         //Spine
+	//      80, 80, 80,         //Torso
+	//      30, 30, 30,         //Neck
+	//      30, 30, 30;         //Head
 	    //  50, 50, 50,         //Shoulder L
 	    //  50, 50, 50,         //Arm L
 	    //  30,                 //ForeArm L

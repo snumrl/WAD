@@ -32,7 +32,7 @@ Initialize(const SkeletonPtr& skel)
     mCycleTorqueErr = 0.0;
     mCycleTorqueSum = 0.0;
 
-    mWindowSize = 300;
+    mWindowSize = 540;
    
     int jointNum = mSkeleton->getNumJoints();
     for(int i=0; i<jointNum; i++)

@@ -4,8 +4,19 @@
 namespace MASS
 {
 
+#define IM_MIN(A, B)            (((A) < (B)) ? (A) : (B))
+#define IM_MAX(A, B)            (((A) >= (B)) ? (A) : (B))
+#define IM_CLAMP(V, MN, MX)     ((V) < (MN) ? (MN) : (V) > (MX) ? (MX) : (V))
+
 #define WindowWidth 2160;
 #define WinodwHeight 1080;
+
+
+template <typename T>
+inline T RandomRange(T min, T max) {
+    T scale = rand() / (T) RAND_MAX;
+    return min + scale * ( max - min );
+}
 
 GLFWApp::
 GLFWApp(Environment* env)
@@ -13,7 +24,7 @@ GLFWApp(Environment* env)
       mMouseDown(false), mMouseDrag(false),mCapture(false),mRotate(false),mTranslate(false),mDisplayIter(0),
       isDrawCharacter(false),isDrawDevice(false),isDrawTarget(false),isDrawReference(false),
       mDrawOBJ(false),mDrawCharacter(true),mDrawDevice(true),mDrawTarget(false),mDrawReference(false),
-      mSplitViewNum(2),mSplitIdx(0),mViewMode(0)
+      mSplitViewNum(2),mSplitIdx(0),mViewMode(0),isFirstUImanager(true)
 {
   	mm = py::module::import("__main__");
 	mns = mm.attr("__dict__");
@@ -81,7 +92,7 @@ GLFWApp::
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
-
+    
     glfwDestroyWindow(mWindow);
     glfwTerminate();
 }
@@ -90,9 +101,9 @@ void
 GLFWApp::
 Initialize()
 {
-    this->InitGLFW();
-
     mDevice_On = mEnv->GetCharacter()->GetDevice_OnOff();
+    this->InitGLFW();    
+    this->InitAnalysis();
 }
 
 void
@@ -102,18 +113,22 @@ InitViewer()
     mZoom = 0.25;
     mPersp = 45.0;
 	
+    mUiWidthRatio = 0.5;
+    mUiHeightRatio = 0.2;
+    mUiViewerRatio = 0.4;
+
     //window size
     mWindowWidth = WindowWidth; 
     mWindowHeight = WinodwHeight;
     
-    mViewerWidth = mWindowWidth*3.0/5.0;
+    mViewerWidth = mWindowWidth*(mUiViewerRatio);
     mViewerHeight = mWindowHeight;
 
 	mImguiWidth = mWindowWidth - mViewerWidth;
     mImguiHeight = mWindowHeight;
     
-	// mTrackball = std::make_unique<Trackball>();
-    double smaller = mWindowWidth < mWindowHeight ? mWindowWidth : mWindowHeight;
+    // mTrackball = std::make_unique<Trackball>();
+    double smaller = mViewerWidth < mViewerHeight ? mViewerWidth : mViewerHeight;
     mTrackball.setTrackball(Eigen::Vector2d(mViewerWidth*0.5, mViewerHeight*0.5), smaller*0.5);
     mTrackball.setQuaternion(Eigen::Quaterniond(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY())));
     
@@ -202,12 +217,24 @@ InitGLFW()
 	glfwSetScrollCallback(mWindow, scrollCallback);
 
 	ImGui::CreateContext();
-    ImGui::StyleColorsDark();
-
-	ImGui_ImplGlfw_InitForOpenGL(mWindow, true);
-	// ImGui_ImplOpenGL3_Init("#version 150");
+    ImGui::StyleColorsClassic();
+    
+    ImGui_ImplGlfw_InitForOpenGL(mWindow, true);
+	ImGui_ImplOpenGL3_Init("#version 150");
 
 	ImPlot::CreateContext();
+    ImPlot::StyleColorsDark();
+    ImPlot::SetColormap(ImPlotColormap_Default);
+    ImPlot::GetStyle().AntiAliasedLines = true;
+    
+    this->InitUI();
+}
+
+void
+GLFWApp::
+InitUI()
+{
+    mUiBackground = ImVec4(0.0f, 0.0f, 0.0f, 0.8f);        
 }
 
 void 
@@ -292,6 +319,23 @@ InitLights()
     glDepthFunc(GL_LEQUAL);
     glDisable(GL_CULL_FACE);    
     glEnable(GL_NORMALIZE);
+}
+
+void
+GLFWApp::
+InitAnalysis()
+{
+    mJointAngleMinMax["Hip_sagittal"] = std::pair(-40.0, 40.0);
+    mJointAngleMinMax["Hip_frontal"] = std::pair(-20.0, 20.0);
+    mJointAngleMinMax["Hip_transverse"] = std::pair(-20.0, 20.0);
+
+    mJointAngleMinMax["Knee_sagittal"] = std::pair(-15.0, 75.0);
+    mJointAngleMinMax["Knee_frontal"] = std::pair(-20.0, 20.0);
+    mJointAngleMinMax["Knee_transverse"] = std::pair(-20.0, 20.0);
+
+    mJointAngleMinMax["Ankle_sagittal"] = std::pair(-40.0, 40.0);
+    mJointAngleMinMax["Ankle_frontal"] = std::pair(-20.0, 20.0);
+    mJointAngleMinMax["Ankle_transverse"] = std::pair(-40.0, 0.0);
 }
 
 void
@@ -466,353 +510,450 @@ void
 GLFWApp::
 DrawUiFrame() 
 {
-    double widthRatio = 0.4;
-    double heightRatio = 0.3;
-
     double x1 = mViewerWidth;
-    double x2 = mViewerWidth + widthRatio * mImguiWidth;
+    double x2 = mViewerWidth + mUiWidthRatio * mImguiWidth;
     double y1 = 0;
-    double y2 = heightRatio * mImguiHeight;
+    double y2 = mUiHeightRatio * mImguiHeight;
 
-    double w1 = widthRatio * mImguiWidth;
-    double w2 = (1-widthRatio) * mImguiWidth;
-    double h1 = heightRatio * mImguiHeight;
-    double h2 = (1-heightRatio) * mImguiHeight;
+    double w1 = mUiWidthRatio * mImguiWidth;
+    double w2 = (1-mUiWidthRatio) * mImguiWidth;
+    double h1 = mUiHeightRatio * mImguiHeight;
+    double h2 = (1-mUiHeightRatio) * mImguiHeight;
 
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();    
+
+    // bool show_demo_window = true;
+    // if (show_demo_window)
+    //     ImGui::ShowDemoWindow(&show_demo_window);
+
+    this->DrawUiFrame_Manager();
     this->DrawUiFrame_SimState(x1, y1, w1, h1);
-    // this->DrawUiFrame_Learning(x2, y1, w2, h1);
-    // this->DrawUiFrame_Analysis(x1, y2, w1+w2, h2);
+    this->DrawUiFrame_Learning(x2, y1, w2, h1);
+    this->DrawUiFrame_Analysis(x1, y2, w1+w2, h2);
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+bool ShowStyleSelector(const char* label)
+{
+    static int style_idx = 0;
+    if (ImGui::Combo(label, &style_idx, "Classic\0Dark\0Light\0"))
+    {
+        switch (style_idx)
+        {
+        case 0: ImGui::StyleColorsClassic(); break;
+        case 1: ImGui::StyleColorsDark(); break;
+        case 2: ImGui::StyleColorsLight(); break;
+        }
+        return true;
+    }
+    return false;
+}
+
+void
+GLFWApp::
+DrawUiFrame_Manager()
+{
+    // You can pass in a reference ImGuiStyle structure to compare to, revert to and save to
+    // (without a reference style pointer, we will use one compared locally as a reference)
+    ImGuiStyle& style = ImGui::GetStyle();
+    ImGuiStyle ref_saved_style;
+    ref_saved_style = style;
+    ImGuiStyle* ref = &ref_saved_style;
+    
+    ImGui::Begin("UI Manager");   
+    if(isFirstUImanager){
+        ImGui::SetWindowPos("UI Manager", ImVec2(0, 0));
+        isFirstUImanager = false;
+    }
+    ImGui::SetWindowSize("UI Manager", ImVec2(400, 240));
+
+    if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_None))
+    {
+        if (ImGui::BeginTabItem("Basic"))
+        {
+            style.FrameBorderSize  = 1.0f;
+            style.WindowPadding = ImVec2(12,12);
+            style.FramePadding = ImVec2(10,4);
+            style.ItemSpacing = ImVec2(5,5);
+         
+            ImGui::Text("Style");
+            if (ShowStyleSelector("Styles##Selector"))
+                ref_saved_style = style;
+
+            ImGui::Text("Frame");
+            ImGui::SliderFloat("Width Ratio", &mUiWidthRatio, 0.1f, 1.0f);
+            ImGui::SliderFloat("Height Ratio", &mUiHeightRatio, 0.1f, 1.0f);
+            if(ImGui::SliderFloat("Viewer Ratio", &mUiViewerRatio, 0.1f, 1.0f))
+            {
+                mViewerWidth = mWindowWidth*(mUiViewerRatio);
+                mViewerHeight = mWindowHeight;
+                
+                mImguiWidth = mWindowWidth - mViewerWidth;
+                mImguiHeight = mWindowHeight;
+
+                double smaller = mViewerWidth < mViewerHeight ? mViewerWidth : mViewerHeight;
+                mTrackball.setTrackball(Eigen::Vector2d(mViewerWidth*0.5, mViewerHeight*0.5), smaller*0.5);
+                mTrackball.setQuaternion(Eigen::Quaterniond(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY())));
+                
+                for(int i = 0; i < mSplitViewNum; i++){
+                    double w = mViewerWidth/mSplitViewNum;
+                    double h = mViewerHeight;
+                    double x = w*(i+0.5);
+                    double y = h*0.5;
+                    double radius = w < h ? w*0.5 : h*0.5;
+                    mSplitTrackballs[i].setTrackball(Eigen::Vector2d(x,y), radius);
+                    mSplitTrackballs[i].setQuaternion(Eigen::Quaterniond(Eigen::AngleAxisd(i*M_PI/2, Eigen::Vector3d::UnitY())));
+                }    
+            }
+
+            // if(ImGui::ColorEdit4("Background", (float*)&mUiBackground))
+            //     ImGui::PushStyleColor(ImGuiCol_WindowBg, mUiBackground);        
+
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Colors"))
+        {
+            static ImGuiColorEditFlags alpha_flags = 0;
+            if (ImGui::RadioButton("Opaque", alpha_flags == ImGuiColorEditFlags_None))             { alpha_flags = ImGuiColorEditFlags_None; } ImGui::SameLine();
+            if (ImGui::RadioButton("Alpha",  alpha_flags == ImGuiColorEditFlags_AlphaPreview))     { alpha_flags = ImGuiColorEditFlags_AlphaPreview; } ImGui::SameLine();
+            if (ImGui::RadioButton("Both",   alpha_flags == ImGuiColorEditFlags_AlphaPreviewHalf)) { alpha_flags = ImGuiColorEditFlags_AlphaPreviewHalf; } ImGui::SameLine();
+            ImGui::Spacing();
+
+            ImGui::BeginChild("##colors", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar | ImGuiWindowFlags_NavFlattened);
+            ImGui::PushItemWidth(-160);
+            for (int i = 0; i < ImGuiCol_COUNT; i++)
+            {
+                const char* name = ImGui::GetStyleColorName(i);
+                ImGui::PushID(i);
+                ImGui::ColorEdit4("##color", (float*)&style.Colors[i], ImGuiColorEditFlags_AlphaBar | alpha_flags);
+                if (memcmp(&style.Colors[i], &ref->Colors[i], sizeof(ImVec4)) != 0)
+                {
+                    ImGui::SameLine(0.0f, style.ItemInnerSpacing.x); if (ImGui::Button("Save")) { ref->Colors[i] = style.Colors[i]; }
+                    ImGui::SameLine(0.0f, style.ItemInnerSpacing.x); if (ImGui::Button("Revert")) { style.Colors[i] = ref->Colors[i]; }
+                }
+                ImGui::SameLine(0.0f, style.ItemInnerSpacing.x);
+                ImGui::TextUnformatted(name);
+                ImGui::PopID();
+            }
+            ImGui::PopItemWidth();
+            ImGui::EndChild();
+
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Fonts"))
+        {
+            ImGuiIO& io = ImGui::GetIO();
+            // ImFontAtlas* atlas = io.Fonts;
+            // ShowFontAtlas(atlas);
+
+            // Post-baking font scaling. Note that this is NOT the nice way of scaling fonts, read below.
+            // (we enforce hard clamping manually as by default DragFloat/SliderFloat allows CTRL+Click text to get out of bounds).
+            const float MIN_SCALE = 0.3f;
+            const float MAX_SCALE = 2.0f;
+            static float window_scale = 1.0f;
+            ImGui::PushItemWidth(ImGui::GetFontSize() * 8);
+            if (ImGui::DragFloat("window scale", &window_scale, 0.005f, MIN_SCALE, MAX_SCALE, "%.2f", ImGuiSliderFlags_AlwaysClamp)) // Scale only this window
+                ImGui::SetWindowFontScale(window_scale);
+            ImGui::DragFloat("global scale", &io.FontGlobalScale, 0.005f, MIN_SCALE, MAX_SCALE, "%.2f", ImGuiSliderFlags_AlwaysClamp); // Scale everything
+            ImGui::PopItemWidth();
+
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Plot"))
+        {
+            ImPlot::ShowStyleSelector("ImPlot Style");
+            ImPlot::ShowColormapSelector("ImPlot Colormap");
+            float indent = ImGui::CalcItemWidth() - ImGui::GetFrameHeight();
+            ImGui::Indent(ImGui::CalcItemWidth() - ImGui::GetFrameHeight());
+            ImGui::Checkbox("Anti-Aliased Lines", &ImPlot::GetStyle().AntiAliasedLines);
+            ImGui::Unindent(indent);
+
+            ImGui::EndTabItem();
+        }   
+
+         
+
+        // if (ImGui::BeginTabItem("Rendering"))
+        // {
+        //     ImGui::Checkbox("Anti-aliased lines", &style.AntiAliasedLines);
+        //     ImGui::SameLine();
+            
+        //     ImGui::Checkbox("Anti-aliased lines use texture", &style.AntiAliasedLinesUseTex);
+        //     ImGui::SameLine();
+            
+        //     ImGui::Checkbox("Anti-aliased fill", &style.AntiAliasedFill);
+        //     ImGui::PushItemWidth(ImGui::GetFontSize() * 8);
+        //     ImGui::DragFloat("Curve Tessellation Tolerance", &style.CurveTessellationTol, 0.02f, 0.10f, 10.0f, "%.2f");
+        //     if (style.CurveTessellationTol < 0.10f) style.CurveTessellationTol = 0.10f;
+
+        //     // When editing the "Circle Segment Max Error" value, draw a preview of its effect on auto-tessellated circles.
+        //     // ImGui::DragFloat("Circle Tessellation Max Error", &style.CircleTessellationMaxError , 0.005f, 0.10f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        //     if (ImGui::IsItemActive())
+        //     {
+        //         ImGui::SetNextWindowPos(ImGui::GetCursorScreenPos());
+        //         ImGui::BeginTooltip();
+        //         ImGui::TextUnformatted("(R = radius, N = number of segments)");
+        //         ImGui::Spacing();
+        //         ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        //         const float min_widget_width = ImGui::CalcTextSize("N: MMM\nR: MMM").x;
+        //         for (int n = 0; n < 8; n++)
+        //         {
+        //             const float RAD_MIN = 5.0f;
+        //             const float RAD_MAX = 70.0f;
+        //             const float rad = RAD_MIN + (RAD_MAX - RAD_MIN) * (float)n / (8.0f - 1.0f);
+
+        //             ImGui::BeginGroup();
+
+        //             // ImGui::Text("R: %.f\nN: %d", rad, draw_list->_CalcCircleAutoSegmentCount(rad));
+
+        //             const float canvas_width = IM_MAX(min_widget_width, rad * 2.0f);
+        //             const float offset_x     = floorf(canvas_width * 0.5f);
+        //             const float offset_y     = floorf(RAD_MAX);
+
+        //             const ImVec2 p1 = ImGui::GetCursorScreenPos();
+        //             draw_list->AddCircle(ImVec2(p1.x + offset_x, p1.y + offset_y), rad, ImGui::GetColorU32(ImGuiCol_Text));
+        //             ImGui::Dummy(ImVec2(canvas_width, RAD_MAX * 2));
+
+        //             /*
+        //             const ImVec2 p2 = ImGui::GetCursorScreenPos();
+        //             draw_list->AddCircleFilled(ImVec2(p2.x + offset_x, p2.y + offset_y), rad, ImGui::GetColorU32(ImGuiCol_Text));
+        //             ImGui::Dummy(ImVec2(canvas_width, RAD_MAX * 2));
+        //             */
+
+        //             ImGui::EndGroup();
+        //             ImGui::SameLine();
+        //         }
+        //         ImGui::EndTooltip();
+        //     }
+        //     ImGui::SameLine();
+            
+        //     ImGui::DragFloat("Global Alpha", &style.Alpha, 0.005f, 0.20f, 1.0f, "%.2f"); // Not exposing zero here so user doesn't "lose" the UI (zero alpha clips all widgets). But application code could have a toggle to switch between zero and non-zero.
+        //     ImGui::PopItemWidth();
+
+        //     ImGui::EndTabItem();
+        // }
+
+        ImGui::EndTabBar();
+    }
+   
+    ImGui::End();
 }
 
 void
 GLFWApp::
 DrawUiFrame_SimState(double x, double y, double w, double h)
 {
-    bool show_demo_window = true;
-    bool show_another_window = false;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    ImGui::Begin("Simulation");                          // Create a window called "Hello, world!" and append into it.
+    ImGui::SetWindowPos("Simulation", ImVec2(x, y));    
+    ImGui::SetWindowSize("Simulation", ImVec2(w, h));
 
-    // ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-
-    
-
-     if (show_demo_window)
-        ImGui::ShowDemoWindow(&show_demo_window);
-
-    // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-    {
-        static float f = 0.0f;
-        static int counter = 0;
-
-
-        ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-        // ImGui::SetNextWindowPos(ImVec2(x, y));
-        // ImGui::SetNextWindowSize(ImVec2(w, h));        
-
-        ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-        ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-        ImGui::Checkbox("Another Window", &show_another_window);
-
-        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-        ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-        if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-            counter++;
-        ImGui::SameLine();
-        ImGui::Text("counter = %d", counter);
-
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::End();
-    }
-   
-    // 3. Show another simple window.
-    if (show_another_window)
-    {
-        ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-        ImGui::Text("Hello from another window!");
-        if (ImGui::Button("Close Me"))
-            show_another_window = false;
-        ImGui::End();
-    }
-
-    // ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-   
-    //     static float f = 0.0f;
-    //     static int counter = 0;
-
-    //     ImGui::Begin("Simulation");                   
-
-    //     ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-        
-    //     ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-    //     ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-    //     if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-    //         counter++;
-    //     ImGui::SameLine();
-    //     ImGui::Text("counter = %d", counter);
-
-
-    //     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-    //     ImGui::End();
-
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    ImGui::Text("Simulation FPS %.1f FPS (%.3f ms/frame)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+    ImGui::End();
 }
 
 void
 GLFWApp::
 DrawUiFrame_Learning(double x, double y, double w, double h)
 {
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
+    ImGui::Begin("Learning");                          // Create a window called "Hello, world!" and append into it.
+    ImGui::SetWindowPos("Learning", ImVec2(x, y));    
+    ImGui::SetWindowSize("Learning", ImVec2(w, h));
 
-    ImGui::SetNextWindowPos(ImVec2(x, y));
-    ImGui::SetNextWindowSize(ImVec2(w, h));
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    ImGui::End();
+}
 
-        static float f = 0.0f;
-        static int counter = 0;
+void
+GLFWApp::
+DrawJointAngle(std::string name, std::deque<double> data, double yMin, double yMax, double w, double h)
+{
+    int size = data.size();
+    float x[size]; 
+    float data_[size];
+    for(int i=0; i<size; i++)
+    {
+        x[i] = i*(1.0/(size-1.0));
+        data_[i] = data[i]*180.0/M_PI;
+    }
 
-        ImGui::Begin("Learning");                          // Create a window called "Hello, world!" and append into it.
-
-        ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-        
-        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-        ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-        if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-            counter++;
-        ImGui::SameLine();
-        ImGui::Text("counter = %d", counter);
-
-
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::End();
-  
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
+    if (ImPlot::BeginPlot(name.c_str(), "%", "deg", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+        ImPlot::PlotLine("deg",x,data_,size);                
+        ImPlot::EndPlot();
+    }
 }
 
 void
 GLFWApp::
 DrawUiFrame_Analysis(double x, double y, double w, double h)
 {
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
+    ImGui::Begin("Analysis");                         
+    ImGui::SetWindowPos("Analysis", ImVec2(x, y));    
+    ImGui::SetWindowSize("Analysis", ImVec2(w, h));
+    
+    if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_None))
+    {
+        JointData* data = mEnv->GetCharacter()->GetJointDatas(); 
+        auto angles = data->GetAngles();
 
-    ImGui::SetNextWindowPos(ImVec2(x, y));
-    ImGui::SetNextWindowSize(ImVec2(w, h));
-    ImVec4 clear_color = ImVec4(0.65f, 0.75f, 0.80f, 1.00f);
+        if (ImGui::BeginTabItem("Joint Angle"))
+        {
+            double w = mImguiWidth/3.0 - 10.0;
+            double h = (mImguiHeight*(1.0 - mUiHeightRatio))/3.0 - 30.0;
 
-    static float f = 0.0f;
-    static int counter = 0;
+            std::deque<double> angleData;
+            double yMin, yMax;
+            std::string plotName, dataName;
+            std::string plotNamePre, dataNamePre;
+            
+            for(int i=0; i<3; i++)
+            {
+                if(i==0)
+                {
+                    plotNamePre = "Hip";
+                    dataNamePre = "FemurL";
+                }
+                else if(i==1)
+                {
+                    plotNamePre = "Knee";
+                    dataNamePre = "TibiaL";
+                }
+                else if(i==2)
+                {
+                    plotNamePre = "Ankle";
+                    dataNamePre = "TalusL";
+                }
+             
+                plotName = plotNamePre + "_sagittal";
+                dataName = dataNamePre + "_sagittal";
+                angleData = angles[dataName];
+                yMin = mJointAngleMinMax[plotName].first;
+                yMax = mJointAngleMinMax[plotName].second;
+                this->DrawJointAngle(plotName, angleData, yMin, yMax, w, h);
 
-        ImGui::Begin("Analysis");                          // Create a window called "Hello, world!" and append into it.
-
-        ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-        
-        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-        ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-        if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-            counter++;
-        ImGui::SameLine();
-        ImGui::Text("counter = %d", counter);
+                ImGui::SameLine();
+                plotName = plotNamePre + "_frontal";
+                dataName = dataNamePre + "_frontal";
+                angleData = angles[dataName];
+                yMin = mJointAngleMinMax[plotName].first;
+                yMax = mJointAngleMinMax[plotName].second;
+                this->DrawJointAngle(plotName, angleData, yMin, yMax, w, h);
 
 
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::End();
-   
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+                ImGui::SameLine();
+                plotName = plotNamePre + "_transverse";
+                dataName = dataNamePre + "_transverse";
+                angleData = angles[dataName];
+                yMin = mJointAngleMinMax[plotName].first;
+                yMax = mJointAngleMinMax[plotName].second;
+                this->DrawJointAngle(plotName, angleData, yMin, yMax, w, h);
+            }
+            
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Metabolic Energy"))
+        {
+
+            ImGui::EndTabItem();
+        }
+
+        // if (ImGui::BeginTabItem("Configuration"))
+        // {
+        //     ImPlot::ShowStyleSelector("ImPlot Style");
+        //     ImPlot::ShowColormapSelector("ImPlot Colormap");
+        //     float indent = ImGui::CalcItemWidth() - ImGui::GetFrameHeight();
+        //     ImGui::Indent(ImGui::CalcItemWidth() - ImGui::GetFrameHeight());
+        //     ImGui::Checkbox("Anti-Aliased Lines", &ImPlot::GetStyle().AntiAliasedLines);
+        //     ImGui::Unindent(indent);
+
+        //     ImGui::EndTabItem();
+        // }
+    }
+
+
+    // if (ImGui::CollapsingHeader("Configuration")) {
+        // ImPlot::ShowStyleSelector("ImPlot Style");
+        // ImPlot::ShowColormapSelector("ImPlot Colormap");
+        // float indent = ImGui::CalcItemWidth() - ImGui::GetFrameHeight();
+        // ImGui::Indent(ImGui::CalcItemWidth() - ImGui::GetFrameHeight());
+        // ImGui::Checkbox("Anti-Aliased Lines", &ImPlot::GetStyle().AntiAliasedLines);
+        // ImGui::Unindent(indent);
+    // }
+
+    // if (ImGui::CollapsingHeader("Joint Angle")) {
+    //     int dNumL = 101; 
+    //     int dNumR = 101;
+    //     float xL[dNumL], xR[dNumR];
+    //     float yL[dNumL], yR[dNumR]; 
+    //     for (int i = 0; i < dNumL; ++i) {
+    //         xL[i] = i * 1.0f;
+    //         yL[i] = 10.0f + 10.0f * sinf(1.0f* xL[i]);             
+    //     }
+    //     for (int i = 0; i < dNumR; ++i) {
+    //         xR[i] = i * 1.0f;
+    //         yR[i] = 11.0f + 14.0f * sinf(1.0f* xR[i]);             
+    //     }
+      
+    //     double w = mImguiWidth / 3.0 - 10.0;
+    //     double h = (mImguiHeight * (1.0 - mUiHeightRatio)) / 3.0 - 30.0;
+
+    //     for(int i=0; i<3; i++)
+    //     {
+    //         std::string plotNamePre, plotName;
+    //         float x_min, x_max, y_min, y_max;
+    //         x_min = 0.0; x_max = 100.0;
+    //         if(i==0){
+    //             plotNamePre = "Hip";
+    //             y_min = -20.0; y_max = 40.0; 
+    //         }
+    //         else if(i==1){
+    //             plotNamePre = "Knee";
+    //             y_min = 0.0; y_max = 80.0;                 
+    //         }
+    //         else if(i==2){
+    //             plotNamePre = "Ankle";
+    //             y_min = -40.0; y_max = 20.0;                 
+    //         }
+            
+    //         plotName = plotNamePre + "-Flexion-Extension";            
+    //         ImPlot::SetNextPlotLimits(x_min, x_max, y_min, y_max, ImGuiCond_Always);                
+    //         if (ImPlot::BeginPlot(plotName.c_str(), "%", "deg", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+    //             ImPlot::PlotLine("left",xL,yL,dNumL);
+    //             ImPlot::PlotLine("right",xR,yR,dNumR);                
+    //             ImPlot::EndPlot();
+    //         }
+
+    //         ImGui::SameLine();
+    //         plotName = plotNamePre + "-Aduction-Abduction";            
+    //         ImPlot::SetNextPlotLimits(x_min, x_max, y_min, y_max, ImGuiCond_Always);                
+    //         if (ImPlot::BeginPlot(plotName.c_str(), "%", "deg", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+    //             // ImPlot::PushColormap(ImPlotColormap_Jet);
+    //             ImPlot::PlotLine("left",xL,yL,dNumL);
+    //             ImPlot::PlotLine("right",xR,yR,dNumR);
+    //             ImPlot::EndPlot();
+    //             // ImPlot::PopColormap(ImPlotColormap_Jet);
+    //         }
+            
+    //         ImGui::SameLine();
+    //         plotName = plotNamePre + "-Internal-External";            
+    //         ImPlot::SetNextPlotLimits(x_min, x_max, y_min, y_max, ImGuiCond_Always);                
+    //         if (ImPlot::BeginPlot(plotName.c_str(), "%", "deg", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+    //             ImPlot::PlotLine("left",xL,yL,dNumL);
+    //             ImPlot::PlotLine("right",xR,yR,dNumR);
+    //             ImPlot::EndPlot();
+    //         }
+    //     }        
+    // }
+
+    ImGui::End();
 }
-
-// void 
-// GLFWApp::
-// DrawUiFrame() 
-// {
-//     ImGui_ImplOpenGL3_NewFrame();
-//     ImGui_ImplGlfw_NewFrame();
-//     ImGui::NewFrame();
-
-//     ImGui::SetNextWindowPos(ImVec2(mViewerWidth, 0));
-//     ImGui::SetNextWindowSize(ImVec2(mImguiWidth, mImguiHeight*0.5));
-
-//     bool show_demo_window = false;
-//     bool show_another_window = false;
-//     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-//     // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-//     if (show_demo_window)
-//         ImGui::ShowDemoWindow(&show_demo_window);
-
-//     // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-//     {
-//         static float f = 0.0f;
-//         static int counter = 0;
-
-//         ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-//         ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-//         ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-//         ImGui::Checkbox("Another Window", &show_another_window);
-
-//         ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-//         ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-//         if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-//             counter++;
-//         ImGui::SameLine();
-//         ImGui::Text("counter = %d", counter);
-
-//         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-//         ImGui::End();
-//     }
-
-//     // 3. Show another simple window.
-//     if (show_another_window)
-//     {
-//         ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-//         ImGui::Text("Hello from another window!");
-//         if (ImGui::Button("Close Me"))
-//             show_another_window = false;
-//         ImGui::End();
-//     }
-
-//     // Rendering
-//     ImGui::Render();
-//     // int display_w, display_h;
-//     // glfwGetFramebufferSize(window, &display_w, &display_h);
-//     // glViewport(mViewerWidth, 0, imguiWidth, height);
-//     // glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-//     // glClear(GL_COLOR_BUFFER_BIT);
-//     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-//     // ImGui::Begin("Inspector");
-//     // if (ImGui::BeginMenuBar()) {
-//     //     if (ImGui::BeginMenu("File"))
-//     //     {
-//     //         ImGui::EndMenu();
-
-//     //     }
-//     //     ImGui::EndMenuBar();
-//     // }
-
-//     // if (ImGui::CollapsingHeader("Performance")) {
-//     //     for (auto& [name, value] : perfStats) {
-//     //         ImGui::Text("%15s: %3f ms", name.c_str(), value);
-//     //     }
-//     // }
-
-//     // if (ImGui::CollapsingHeader("Checkpoints")) {
-//     //     if (load_checkpoint_directory) {
-//     //         if (ImGui::ListBoxHeader("##Select checkpoint")) {
-//     //             for (int checkpoint_idx : checkpoints) {
-//     //                 std::string label = std::string("checkpoint-") + std::to_string(checkpoint_idx);
-//     //                 if (ImGui::Selectable(label.c_str(), selected_checkpoint == checkpoint_idx)) {
-//     //                     selected_checkpoint = checkpoint_idx;
-//     //                     std::string checkpoint_file = fs::path(checkpoint_path) /
-//     //                                                   (std::string("checkpoint_") + std::to_string(checkpoint_idx)) /
-//     //                                                   (std::string("checkpoint-") + std::to_string(checkpoint_idx));
-//     //                     loadCheckpoint(checkpoint_file);
-//     //                 }
-//     //             }
-//     //             ImGui::ListBoxFooter();
-//     //         }
-//     //     }
-//     //     else {
-//     //         ImGui::Text("Checkpoint: %s", checkpoint_path.c_str());
-//     //     }
-//     // }
-
-//     // static bool showValueGraph = false;
-//     // static bool showProbGraph = false;
-//     // if (ImGui::CollapsingHeader("Parameters")) {
-//     //     bool edited = false;
-//     //     auto& config = mEnv->GetConfig();
-//     //     auto& params = config.params;
-//     //     auto categoryNames = params.getCategoryNames();
-//     //     if (config.use_marginal_value_learning) {
-//     //         ImGui::Checkbox("Show value graph", &showValueGraph);
-//     //         if (config.use_adaptive_sampling) {
-//     //             ImGui::Checkbox("Show prob graph", &showProbGraph);
-//     //         }
-//     //     }
-//     //     for (auto& categoryName : categoryNames) {
-//     //         if (ImGui::TreeNode(categoryName.c_str())) {
-//     //             auto& indexMap = params.paramNameMap.at(categoryName).indexMap;
-//     //             auto paramMap = params.getValuesInCategoryAsMap(categoryName);
-//     //             for (auto& [name, value] : paramMap) {
-//     //                 std::string label = name;
-//     //                 if (categoryName == "length_ratio" && config.symmetry.count(name)) {
-//     //                     label += " / ";
-//     //                     label += config.symmetry.at(name);
-//     //                 }
-//     //                 float imguiValue = (float)value;
-//     //                 auto bounds = params.getBounds(categoryName, name);
-//     //                 ImGui::Text("%s", name.c_str());
-//     //                 std::string sliderLabel = "##";
-//     //                 sliderLabel += categoryName; sliderLabel += "_"; sliderLabel += name;
-//     //                 ImGui::SetNextItemWidth(300);
-//     //                 if (ImGui::SliderFloat(sliderLabel.c_str(), &imguiValue, bounds.first, bounds.second)) {
-//     //                     params.getValue(categoryName, name) = value = (double)imguiValue;
-//     //                     edited = true;
-//     //                     if (config.use_marginal_value_learning) calculateMarginalValues();
-//     //                 }
-//     //                 if (config.use_marginal_value_learning) {
-//     //                     int N = valueFunction.cols();
-//     //                     std::vector<float> pValues(N);
-//     //                     for (int k = 0; k < N; k++) {
-//     //                         pValues[k] = bounds.first + (bounds.second - bounds.first) * float(k) / float(N-1);
-//     //                     }
-//     //                     uint32_t idx = indexMap.at(name);
-//     //                     if (showValueGraph) {
-//     //                         Eigen::VectorXf values = valueFunction.row(idx);
-//     //                         ImPlot::SetNextPlotLimits(bounds.first, bounds.second,
-//     //                                                   -0.01, values.maxCoeff()+0.01);
-//     //                         auto lineLabel = categoryName + "_" + name + "_values";
-//     //                         if (ImPlot::BeginPlot(lineLabel.c_str(), nullptr, nullptr, ImVec2(300, 200))) {
-//     //                             ImPlot::PlotLine<float>(lineLabel.c_str(), pValues.data(), values.data(), pValues.size());
-//     //                             ImPlot::EndPlot();
-//     //                         }
-//     //                     }
-//     //                     if (showProbGraph) {
-//     //                         Eigen::VectorXf probs = probDistFunction.row(idx);
-//     //                         ImPlot::SetNextPlotLimits(bounds.first, bounds.second,
-//     //                                                   -0.01, probs.maxCoeff()+0.01);
-//     //                         auto lineLabel = categoryName + "_" + name + "_probs";
-//     //                         if (ImPlot::BeginPlot(lineLabel.c_str(), nullptr, nullptr, ImVec2(300, 200))) {
-//     //                             ImPlot::PlotLine<float>(lineLabel.c_str(), pValues.data(), probs.data(), pValues.size());
-//     //                             ImPlot::EndPlot();
-//     //                         }
-//     //                     }
-//     //                 }
-//     //             }
-//     //             ImGui::TreePop();
-//     //         }
-//     //     }
-//     //     if (edited) {
-//     //         mEnv->ResetWithCurrentParams();
-//     //     }
-//     // }
-
-//     // if (ImGui::CollapsingHeader("Marginal Values")) {
-
-//     // }
-//     // ImGui::End();
-
-//     // ImPlot::ShowDemoWindow();
-
-//     // ImGui::End();
-//     // ImGui::Render();
-//     // ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-// }
 
 void
 GLFWApp::
@@ -1032,7 +1173,7 @@ DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 		return;
 	
     glEnable(GL_DEPTH_TEST);
-	glEnable(GL_COLOR_MATERIAL);
+	glEnable(GL_COLOR_MATERIAL);   
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
     glColor4dv(color.data());
     if(mDrawOBJ == false)
@@ -1061,7 +1202,7 @@ DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 			float y = mEnv->GetGround()->getBodyNode(0)->getTransform().translation()[1] + dynamic_cast<const BoxShape*>(mEnv->GetGround()->getBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>()[0]->getShape().get())->getSize()[1]*0.5;
 			mShapeRenderer.renderMesh(mesh, false, y, color);
 		}
-	}
+	}   
 	glDisable(GL_COLOR_MATERIAL);
     glDisable(GL_DEPTH_TEST);    
 }

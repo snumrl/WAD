@@ -9,6 +9,7 @@
 #include <examples/imgui_impl_glfw.h>
 #include <examples/imgui_impl_opengl3.h>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <implot.h>
 
 #include <glad/glad.h>
@@ -19,6 +20,7 @@
 
 #include "Environment.h"
 #include "Character.h"
+#include "JointData.h"
 #include "Muscle.h"
 #include "BVH.h"
 #include "ShapeRenderer.h"
@@ -47,6 +49,8 @@ public:
 	void InitLights();
 	void InitGLFW();
 	void InitGL();
+	void InitUI();
+	void InitAnalysis();
 
 	void StartLoop();
 	void Reset();
@@ -56,9 +60,12 @@ public:
 	void Draw();
 	void DrawSimFrame();
     void DrawUiFrame();
+	void DrawUiFrame_Manager();
 	void DrawUiFrame_SimState(double x, double y, double w, double h);
     void DrawUiFrame_Learning(double x, double y, double w, double h);
     void DrawUiFrame_Analysis(double x, double y, double w, double h);
+
+	void DrawJointAngle(std::string name, std::deque<double> data, double yMin, double yMax, double w, double h);
 
 	void DrawGround();
 	void DrawCharacter();
@@ -91,6 +98,9 @@ public:
 private:
 	py::object mm, mns, sys_module, nn_module, muscle_nn_module, rms_module;
 
+	ImGuiContext* context1;
+	ImGuiContext* context2;
+
 	Environment* mEnv;
 	GLFWwindow* mWindow;
 	ShapeRenderer mShapeRenderer;
@@ -111,6 +121,7 @@ private:
 	double mWindowWidth, mWindowHeight;
 	double mViewerWidth, mViewerHeight;
 	double mImguiWidth, mImguiHeight; 
+	float mUiWidthRatio, mUiHeightRatio, mUiViewerRatio;
 
 	int mMuscleNum;
 	int mMuscleMapNum;
@@ -123,10 +134,12 @@ private:
 	bool mDevice_On;
 	bool mDrawOBJ, mDrawCharacter, mDrawDevice, mDrawTarget, mDrawReference;
 	bool isDrawCharacter, isDrawDevice, isDrawTarget, isDrawReference;
+	bool isFirstUImanager;
 
 	std::map<std::string, double> perfStats;
+	std::map<std::string, std::pair<double,double>> mJointAngleMinMax;
 
-	
+	ImVec4 mUiBackground;	 	
 };
 }
 
