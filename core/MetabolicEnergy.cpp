@@ -1,6 +1,6 @@
 #include "MetabolicEnergy.h"
 
-namespace MASS
+namespace WAD
 {
 
 MetabolicEnergy::

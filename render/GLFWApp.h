@@ -32,7 +32,7 @@ using namespace dart::gui;
 using namespace dart::dynamics;
 using namespace dart::simulation;
 namespace py = pybind11;
-namespace MASS 
+namespace WAD 
 {
 
 class GLFWApp
@@ -65,7 +65,16 @@ public:
     void DrawUiFrame_Learning(double x, double y, double w, double h);
     void DrawUiFrame_Analysis(double x, double y, double w, double h);
 
+	void DrawDequeGraph(std::string name, std::string xAxis, std::string yAxis, std::deque<double> data, double w, double h);
+	void DrawDequeGraph(std::string name, std::string xAxis, std::string yAxis, std::deque<double> data, double yMin, double yMax, double w, double h);
 	void DrawJointAngle(std::string name, std::deque<double> data, double yMin, double yMax, double w, double h);
+	void DrawJointAngle(std::string name, std::deque<double> data1, std::deque<double> data2, double yMin, double yMax, double w, double h);
+	void DrawJointTorque(std::string name, std::deque<double> data, double yMin, double yMax, double w, double h);
+	void DrawJointTorque(std::string name, std::deque<double> data1, std::deque<double> data2, double yMin, double yMax, double w, double h);
+	
+	void DrawLine(Eigen::Vector3d v0, Eigen::Vector3d v1, Eigen::Vector4d color, double lineWidth);
+	
+	bool ShowCompareDataSelecter();
 
 	void DrawGround();
 	void DrawCharacter();
@@ -99,7 +108,7 @@ private:
 	py::object mm, mns, sys_module, nn_module, muscle_nn_module, rms_module;
 
 	ImGuiContext* context1;
-	ImGuiContext* context2;
+	std::map<std::string, ImPlotContext*> mPlotContexts;
 
 	Environment* mEnv;
 	GLFWwindow* mWindow;
@@ -135,11 +144,17 @@ private:
 	bool mDrawOBJ, mDrawCharacter, mDrawDevice, mDrawTarget, mDrawReference;
 	bool isDrawCharacter, isDrawDevice, isDrawTarget, isDrawReference;
 	bool isFirstUImanager;
+	bool mDrawCoordinate;
+
+	int mComparePersonIdx;
 
 	std::map<std::string, double> perfStats;
 	std::map<std::string, std::pair<double,double>> mJointAngleMinMax;
+	std::map<std::string, std::pair<double,double>> mJointTorqueMinMax;
+	std::map<std::string, std::pair<double,double>> mAdaptiveParams;
 
 	ImVec4 mUiBackground;	 	
+
 };
 }
 

@@ -1,5 +1,5 @@
-#ifndef __MASS_WINDOW_H__
-#define __MASS_WINDOW_H__
+#ifndef __WINDOW_H__
+#define __WINDOW_H__
 
 #include "dart/dart.hpp"
 #include "dart/gui/gui.hpp"
@@ -17,7 +17,7 @@
 
 using namespace dart::dynamics;
 namespace py = pybind11;
-namespace MASS
+namespace WAD
 {
 
 class Window : public dart::gui::glut::Win3D

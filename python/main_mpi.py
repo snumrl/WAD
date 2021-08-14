@@ -18,7 +18,7 @@ from collections import namedtuple
 from collections import deque
 from IPython import embed
 
-from pymss import EnvManager
+from pywad import EnvManager
 from Model import *
 from RunningMeanStd import *
 

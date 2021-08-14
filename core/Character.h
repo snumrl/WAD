@@ -1,5 +1,5 @@
-#ifndef __MASS_CHARACTER_H__
-#define __MASS_CHARACTER_H__
+#ifndef __CHARACTER_H__
+#define __CHARACTER_H__
 
 #include "dart/dart.hpp"
 #include "BVH.h"
@@ -15,7 +15,7 @@
 
 using namespace dart::dynamics;
 using namespace dart::simulation;
-namespace MASS
+namespace WAD
 {
 
 struct MuscleTuple
@@ -211,7 +211,7 @@ public:
 	void SetAdaptiveParams(std::map<std::string, std::pair<double, double>>& p);
 	void SetParamState(Eigen::VectorXd paramState);
 	const Eigen::VectorXd& GetParamState(){return mParamState;}
-
+	const std::map<std::string, std::pair<double,double>>& GetAdaptiveParams(){return mAdaptiveParams;}
 private:
 	WorldPtr mWorld;
 	SkeletonPtr mSkeleton;
@@ -224,7 +224,7 @@ private:
 	std::map<std::string,std::string> mBVHmap;
 	
 	Device* mDevice;
-	MASS::Contact* mContacts;
+	Contact* mContacts;
 	JointData* mJointDatas;
 	MetabolicEnergy* mMetabolicEnergy;
 
@@ -265,6 +265,9 @@ private:
 	double mAdaptivePhasePrev;
 	std::pair<double,double> mPhases;
 	std::pair<double,double> mAdaptivePhases;
+	int mPhaseStateRight;
+	double mPhaseChangeTimeRight;
+	std::deque<std::pair<double, int>> mGaitPhaseRight;
 
 	double mTimeOffset;
 	double mStride;
@@ -338,6 +341,7 @@ private:
     Eigen::VectorXd mParamState;
     Eigen::VectorXd mParamMin;
     Eigen::VectorXd mParamMax;
+	std::map<std::string, std::pair<double, double>> mAdaptiveParams;
 };
 
 }

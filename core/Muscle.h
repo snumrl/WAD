@@ -1,9 +1,9 @@
-#ifndef __MASS_MUSCLE_H__
-#define __MASS_MUSCLE_H__
+#ifndef __MUSCLE_H__
+#define __MUSCLE_H__
 #include "dart/dart.hpp"
 
 using namespace dart::dynamics;
-namespace MASS
+namespace WAD
 {
 
 struct Anchor

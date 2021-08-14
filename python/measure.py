@@ -18,7 +18,7 @@ import torchvision.transforms as T
 
 import numpy as np
 import mcmc
-from pymss import EnvManager
+from pywad import EnvManager
 from IPython import embed
 from Model import *
 from RunningMeanStd import *

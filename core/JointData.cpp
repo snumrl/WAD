@@ -1,6 +1,6 @@
 #include "JointData.h"
 
-namespace MASS
+namespace WAD
 {
 
 JointData::
@@ -76,10 +76,13 @@ Initialize(const SkeletonPtr& skel)
         }
         else if(joint->getType() == "RevoluteJoint")
         {
-            mTorques[name]  = std::deque<double>(mWindowSize);
-            // mTorquesNorm[name] = std::deque<double>(mWindowSize);
+           mTorques[name+"_x"] = std::deque<double>(mWindowSize);
+            mTorques[name+"_y"] = std::deque<double>(mWindowSize);
+            mTorques[name+"_z"] = std::deque<double>(mWindowSize);
 
-            mTorquesPhase[name] = std::deque<std::pair<double, double>>(mWindowSize);
+            mTorquesPhase[name+"_x"] = std::deque<std::pair<double, double>>(mWindowSize);
+            mTorquesPhase[name+"_y"] = std::deque<std::pair<double, double>>(mWindowSize);
+            mTorquesPhase[name+"_z"] = std::deque<std::pair<double, double>>(mWindowSize);
             mTorquesNormPhase[name] = std::deque<std::pair<double, double>>(mWindowSize);
         }
 
@@ -211,7 +214,9 @@ SetTorques(const Eigen::VectorXd& torques, double phase, double frame)
 
                 mCycleTorqueSum += fabs(torques[idx])/(double)mMaxForces[idx];
 
-                this->SetTorques(name, torques[idx+0], phase);
+                this->SetTorques(name+"_x", torques[idx+0], phase);
+                this->SetTorques(name+"_y", 0.0, phase);
+                this->SetTorques(name+"_z", 0.0, phase);
             }
             else
             {

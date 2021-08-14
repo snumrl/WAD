@@ -1,5 +1,5 @@
-#ifndef __MASS_BVH_H__
-#define __MASS_BVH_H__
+#ifndef __BVH_H__
+#define __BVH_H__
 
 #include "dart/dart.hpp"
 #include "dart/gui/gui.hpp"
@@ -12,7 +12,7 @@
 #include <initializer_list>
 
 using namespace dart::dynamics;
-namespace MASS
+namespace WAD
 {
 
 class BVHNode

@@ -20,7 +20,7 @@ Eigen::Vector4d blue_trans(0.2, 0.2, 0.8, 0.2);
 Eigen::Vector4d yellow_trans(0.8, 0.8, 0.2, 0.2);
 Eigen::Vector4d purple_trans(0.8, 0.2, 0.8, 0.2);
 
-namespace MASS
+namespace WAD
 {
 
 Window::
@@ -41,7 +41,7 @@ Window(Environment* env)
 	mm = py::module::import("__main__");
 	mns = mm.attr("__dict__");
 	
-	py::str module_dir = (std::string(MASS_ROOT_DIR)+"/python").c_str();
+	py::str module_dir = (std::string(WAD_ROOT_DIR)+"/python").c_str();
 	sys_module = py::module::import("sys");
 	sys_module.attr("path").attr("insert")(1, module_dir);
 	

@@ -58,28 +58,28 @@ Eigen::Matrix3d string_to_matrix3d(const std::string& input){
 }
 
 ShapePtr
-MASS::
+WAD::
 MakeSphereShape(double radius)
 {
 	return std::shared_ptr<SphereShape>(new SphereShape(radius));
 }
 
 ShapePtr
-MASS::
+WAD::
 MakeBoxShape(const Eigen::Vector3d& size)
 {
 	return std::shared_ptr<BoxShape>(new BoxShape(size));
 }
 
 ShapePtr
-MASS::
+WAD::
 MakeCapsuleShape(double radius, double height)
 {
 	return std::shared_ptr<CapsuleShape>(new CapsuleShape(radius,height));
 }
 
 Inertia
-MASS::
+WAD::
 MakeInertia(const ShapePtr& shape,double mass)
 {
 	Inertia inertia;
@@ -90,7 +90,7 @@ MakeInertia(const ShapePtr& shape,double mass)
 }
 
 FreeJoint::Properties*
-MASS::
+WAD::
 MakeFreeJointProperties(const std::string& name,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint)
 {
 	FreeJoint::Properties* props = new FreeJoint::Properties();
@@ -108,7 +108,7 @@ MakeFreeJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 }
 
 PlanarJoint::Properties*
-MASS::
+WAD::
 MakePlanarJointProperties(const std::string& name,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint)
 {
 	PlanarJoint::Properties* props = new PlanarJoint::Properties();
@@ -126,7 +126,7 @@ MakePlanarJointProperties(const std::string& name,const Eigen::Isometry3d& paren
 }
 
 BallJoint::Properties*
-MASS::
+WAD::
 MakeBallJointProperties(const std::string& name,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint,const Eigen::Vector3d& lower,const Eigen::Vector3d& upper,const Eigen::Vector3d& force_lower,const Eigen::Vector3d& force_upper,const std::string& actuator_type)
 {
 	BallJoint::Properties* props = new BallJoint::Properties();
@@ -150,7 +150,7 @@ MakeBallJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 }
 
 RevoluteJoint::Properties*
-MASS::
+WAD::
 MakeRevoluteJointProperties(const std::string& name,const Eigen::Vector3d& axis,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint,const Eigen::Vector1d& lower,const Eigen::Vector1d& upper,const Eigen::Vector1d& force_lower,const Eigen::Vector1d& force_upper,const std::string& actuator_type)
 {
 	RevoluteJoint::Properties* props = new RevoluteJoint::Properties();
@@ -175,7 +175,7 @@ MakeRevoluteJointProperties(const std::string& name,const Eigen::Vector3d& axis,
 }
 
 WeldJoint::Properties*
-MASS::
+WAD::
 MakeWeldJointProperties(const std::string& name,const Eigen::Isometry3d& parent_to_joint,const Eigen::Isometry3d& child_to_joint)
 {
 	WeldJoint::Properties* props = new WeldJoint::Properties();
@@ -188,7 +188,7 @@ MakeWeldJointProperties(const std::string& name,const Eigen::Isometry3d& parent_
 }
 
 BodyNode*
-MASS::
+WAD::
 MakeBodyNode(const SkeletonPtr& skeleton,BodyNode* parent, Joint::Properties* joint_properties,const std::string& joint_type,Inertia inertia)
 {
 	BodyNode* bn;
@@ -260,7 +260,7 @@ Eigen::Isometry3d Orthonormalize(const Eigen::Isometry3d& T_old)
 }
 
 SkeletonPtr
-MASS::
+WAD::
 BuildFromFile(const std::string& path, bool load_obj, double mass_ratio)
 {
 	TiXmlDocument doc;
@@ -295,18 +295,18 @@ BuildFromFile(const std::string& path, bool load_obj, double mass_ratio)
 		if(type == "Box")
 		{
 			Eigen::Vector3d size = string_to_vector3d(body->Attribute("size"));
-			shape = MASS::MakeBoxShape(size);
+			shape = WAD::MakeBoxShape(size);
 		}
 		else if(type=="Sphere")
 		{
 			double radius = std::stod(body->Attribute("radius"));
-			shape = MASS::MakeSphereShape(radius);
+			shape = WAD::MakeSphereShape(radius);
 		}
 		else if(type=="Capsule")
 		{
 			double radius = std::stod(body->Attribute("radius"));
 			double height = std::stod(body->Attribute("height"));
-			shape = MASS::MakeCapsuleShape(radius,height);
+			shape = WAD::MakeCapsuleShape(radius,height);
 		}
 
 		bool contact = false;
@@ -345,11 +345,11 @@ BuildFromFile(const std::string& path, bool load_obj, double mass_ratio)
 
 		if(type == "Free")
 		{
-			props = MASS::MakeFreeJointProperties(name,parent_to_joint,child_to_joint);
+			props = WAD::MakeFreeJointProperties(name,parent_to_joint,child_to_joint);
 		}
 		else if(type == "Planar")
 		{
-			props = MASS::MakePlanarJointProperties(name,parent_to_joint,child_to_joint);
+			props = WAD::MakePlanarJointProperties(name,parent_to_joint,child_to_joint);
 		}
 		else if(type == "Ball")
 		{
@@ -357,7 +357,7 @@ BuildFromFile(const std::string& path, bool load_obj, double mass_ratio)
 			Eigen::Vector3d upper = string_to_vector3d(joint->Attribute("upper"));
 			Eigen::Vector3d force_lower = string_to_vector3d(joint->Attribute("force_lower"));
 			Eigen::Vector3d force_upper = string_to_vector3d(joint->Attribute("force_upper"));
-			props = MASS::MakeBallJointProperties(name,parent_to_joint,child_to_joint,lower,upper,force_lower,force_upper);
+			props = WAD::MakeBallJointProperties(name,parent_to_joint,child_to_joint,lower,upper,force_lower,force_upper);
 		}
 		else if(type == "Revolute")
 		{
@@ -366,16 +366,16 @@ BuildFromFile(const std::string& path, bool load_obj, double mass_ratio)
 			Eigen::Vector1d force_lower = string_to_vector1d(joint->Attribute("force_lower"));
 			Eigen::Vector1d force_upper = string_to_vector1d(joint->Attribute("force_upper"));
 			Eigen::Vector3d axis = string_to_vector3d(joint->Attribute("axis"));
-			props = MASS::MakeRevoluteJointProperties(name,axis,parent_to_joint,child_to_joint,lower,upper,force_lower,force_upper);
+			props = WAD::MakeRevoluteJointProperties(name,axis,parent_to_joint,child_to_joint,lower,upper,force_lower,force_upper);
 		}
 		else if(type == "Weld")
 		{
-			props = MASS::MakeWeldJointProperties(name,parent_to_joint,child_to_joint);
+			props = WAD::MakeWeldJointProperties(name,parent_to_joint,child_to_joint);
 		}
 
 		ShapePtr shape_joint;
 		double radius = 0.03;
-		shape_joint = MASS::MakeSphereShape(radius);
+		shape_joint = WAD::MakeSphereShape(radius);
 
 		auto bn = MakeBodyNode(skel,parent,props,type,inertia);
 		if(contact)
@@ -393,7 +393,7 @@ BuildFromFile(const std::string& path, bool load_obj, double mass_ratio)
 
 		if(obj_file!="None" && load_obj)
 		{
-			std::string obj_path = std::string(MASS_ROOT_DIR)+"/data/OBJ/"+obj_file;
+			std::string obj_path = std::string(WAD_ROOT_DIR)+"/data/OBJ/"+obj_file;
 			const aiScene* scene = MeshShape::loadMesh(std::string(obj_path));
 
 			MeshShapePtr visual_shape = std::shared_ptr<MeshShape>(new MeshShape(Eigen::Vector3d(0.01,0.01,0.01),scene));

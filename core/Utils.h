@@ -1,9 +1,9 @@
-#ifndef __MASS_UTILS_H__
-#define __MASS_UTILS_H__
+#ifndef __UTILS_H__
+#define __UTILS_H__
 #include "dart/dart.hpp"
 
 using namespace dart::dynamics;
-namespace MASS
+namespace WAD
 {
 
 namespace Utils

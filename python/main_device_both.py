@@ -17,7 +17,7 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 
 import numpy as np
-from pymss import EnvManager
+from pywad import EnvManager
 from IPython import embed
 from Model import *
 use_cuda = torch.cuda.is_available()

@@ -1,7 +1,7 @@
 #include "BVH.h"
 #include <iostream>
 
-namespace MASS
+namespace WAD
 {
 
 Eigen::Matrix3d R_x(double x);

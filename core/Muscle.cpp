@@ -10,7 +10,7 @@ std::vector<int> sort_indices(const std::vector<double>& val)
 	return idx;
 }
 
-namespace MASS
+namespace WAD
 {
 
 Anchor::

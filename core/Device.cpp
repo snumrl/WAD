@@ -1,7 +1,7 @@
 #include "Device.h"
 #include <iostream>
 
-namespace MASS
+namespace WAD
 {
 
 Device::

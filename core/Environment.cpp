@@ -2,7 +2,7 @@
 #include <ctime>
 #include <regex>
 
-namespace MASS
+namespace WAD
 {
 
 Environment::
@@ -99,19 +99,19 @@ ParseMetaFile(const std::string& meta_file)
 		else if(!index.compare("skel_file")){
 			std::string str2;
 			ss>>str2;
-			mSkelFile = std::string(MASS_ROOT_DIR)+str2;
+			mSkelFile = std::string(WAD_ROOT_DIR)+str2;
 		}
 		else if(!index.compare("muscle_file")){
 			std::string str2;
 			ss>>str2;
 			if(this->GetUseMuscle())
-				mMuscleFile = std::string(MASS_ROOT_DIR)+str2;
+				mMuscleFile = std::string(WAD_ROOT_DIR)+str2;
 		}
 		else if(!index.compare("device_file")){
 			std::string str2;
 			ss>>str2;
 			if(this->GetUseDevice())
-				mDeviceFile = std::string(MASS_ROOT_DIR)+str2;
+				mDeviceFile = std::string(WAD_ROOT_DIR)+str2;
 		}
 		else if(!index.compare("bvh_file")){
 			std::string str2,str3;
@@ -119,7 +119,7 @@ ParseMetaFile(const std::string& meta_file)
 			mCyclic = false;
 			if(!str3.compare("true"))
 				mCyclic = true;
-			mBVHFile = std::string(MASS_ROOT_DIR)+str2;
+			mBVHFile = std::string(WAD_ROOT_DIR)+str2;
 		}
 	}
 	ifs.close();
@@ -160,29 +160,34 @@ ParseAdaptiveFile(const std::string& adaptive_file)
 		else if(!index.compare("mass")){
 			double lower, upper;
 			ss>>lower>>upper;
-			mParam_Character.insert(std::make_pair("mass", std::make_pair(lower,upper)));
+			mParam_Character["mass"] = std::make_pair(lower,upper);
+			// mParam_Character.insert(std::make_pair("mass", std::make_pair(lower,upper)));
 		}
 		else if(!index.compare("force")){
 			double lower, upper;
 			ss>>lower>>upper;
-			mParam_Character.insert(std::make_pair("force", std::make_pair(lower,upper)));
+			mParam_Character["force"] = std::make_pair(lower,upper);
+			// mParam_Character.insert(std::make_pair("force", std::make_pair(lower,upper)));			
 		}
 		else if(!index.compare("speed")){
 			double lower, upper;
 			ss>>lower>>upper;
-			mParam_Character.insert(std::make_pair("speed", std::make_pair(lower,upper)));
+			mParam_Character["speed"] = std::make_pair(lower,upper);
+			// mParam_Character.insert(std::make_pair("speed", std::make_pair(lower,upper)));
 		}
 		else if(!index.compare("device_k")){
 			double lower, upper;
 			ss>>lower>>upper;
 			if(mUseDevice)
-				mParam_Device.insert(std::make_pair("k", std::make_pair(lower,upper)));
+				mParam_Device["k"] = std::make_pair(lower,upper);
+				// mParam_Device.insert(std::make_pair("k", std::make_pair(lower,upper)));
 		}
 		else if(!index.compare("delta_t")){
 			double lower, upper;
 			ss>>lower>>upper;
 			if(mUseDevice)
-				mParam_Device.insert(std::make_pair("delta_t", std::make_pair(lower,upper)));
+				mParam_Device["delta_t"] = std::make_pair(lower,upper);
+				// mParam_Device.insert(std::make_pair("delta_t", std::make_pair(lower,upper)));
 		}
 	}
 	ifs.close();
@@ -196,7 +201,7 @@ SetWorld()
 	mWorld->setTimeStep(1.0/mSimulationHz);
 	mWorld->getConstraintSolver()->setCollisionDetector(dart::collision::BulletCollisionDetector::create());
 	
-	mGround = MASS::BuildFromFile(std::string(MASS_ROOT_DIR)+std::string("/data/ground.xml"));
+	mGround = WAD::BuildFromFile(std::string(WAD_ROOT_DIR)+std::string("/data/ground.xml"));
 	mWorld->addSkeleton(mGround);	
 }
 
@@ -208,7 +213,7 @@ Initialize(const std::string& meta_file, bool load_obj)
 	this->SetWorld();
 	this->SetNumSteps(mSimulationHz/mControlHz);
 
-	MASS::Character* character = new MASS::Character(mWorld);
+	WAD::Character* character = new WAD::Character(mWorld);
 	character->LoadSkeleton(mSkelFile, load_obj);
 	character->LoadBVH(mBVHFile, mCyclic);
 	character->SetHz(mSimulationHz, mControlHz);
@@ -221,9 +226,9 @@ Initialize(const std::string& meta_file, bool load_obj)
 	character->SetUseAdaptiveSampling(mUseAdaptiveSampling);
 	this->SetCharacter(character);
 
-	MASS::Device* device;
+	WAD::Device* device;
 	if(mUseDevice){
-		device = new MASS::Device(mWorld);
+		device = new WAD::Device(mWorld);
 		device->LoadSkeleton(mDeviceFile,load_obj);
 		device->SetHz(mSimulationHz, mControlHz);
 		device->SetCharacter(character);
@@ -232,9 +237,11 @@ Initialize(const std::string& meta_file, bool load_obj)
 		this->SetDevice(device);
 	}
 
-	if(mUseAdaptiveSampling)
+	if(mUseAdaptiveSampling){
+		this->ParseAdaptiveFile("../data/adaptive.txt");
 		this->SetAdaptiveParamNums();
-	
+	}
+			
 	mCharacter->Initialize();
 
 	if(mUseDevice){
@@ -256,8 +263,6 @@ void
 Environment::
 SetAdaptiveParamNums()
 {
-	this->ParseAdaptiveFile("../data/adaptive.txt");
-
 	int numParam = mNumParamState_Character;
 	mCharacter->SetNumParamState(mNumParamState_Character);
 
@@ -316,7 +321,6 @@ Step(bool device_onoff, bool isRender)
 	// auto char_skel = mCharacter->GetSkeleton();
 	// double root_y = mCharacter->GetSkeleton()->getBodyNode(0)->getTransform().translation()[1] - mGround->getRootBodyNode()->getCOM()[1];
 	// std::cout << "root y : " << root_y << std::endl;
-
 	mWorld->step();
 	mSimCount++;
 	if(mSimCount == mNumSteps)
@@ -496,8 +500,10 @@ GetParamState()
 {
 	int param_dim = 0;
 	int char_dim = mCharacter->GetNumParamState();
-	int device_dim = mDevice->GetNumParamState();
-
+	int device_dim;
+	if(mUseDevice)
+		device_dim = mDevice->GetNumParamState();
+	
 	param_dim += char_dim;
 	if(mUseDevice)
 		param_dim += device_dim;

@@ -15,7 +15,7 @@ Eigen::VectorXd string_to_vectorXd(const std::string& input, int n);
 Eigen::Matrix3d string_to_matrix3d(const std::string& input);
 
 using namespace dart::dynamics;
-namespace MASS
+namespace WAD
 {
 	ShapePtr MakeSphereShape(double radius);
 	ShapePtr MakeCapsuleShape(double radius, double height);

@@ -2,7 +2,7 @@
 #include "GLFunctions.h"
 #include <glad/glad.h>
 
-namespace MASS
+namespace WAD
 {
 
 std::vector<Eigen::Vector3f> buildCircle(float radius, int steps)

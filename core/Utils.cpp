@@ -1,6 +1,6 @@
 #include "Utils.h"
 
-namespace MASS
+namespace WAD
 {
 
 namespace Utils

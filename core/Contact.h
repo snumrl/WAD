@@ -1,5 +1,5 @@
-#ifndef __MASS_CONTACT_H__
-#define __MASS_CONTACT_H__
+#ifndef __CONTACT_H__
+#define __CONTACT_H__
 
 #include "dart/dart.hpp"
 #include <deque>
@@ -7,7 +7,7 @@
 
 using namespace dart::dynamics;
 using namespace dart::simulation;
-namespace MASS
+namespace WAD
 {
 
 class Contact

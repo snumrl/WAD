@@ -70,7 +70,7 @@ public:
 	py::array_t<float> GetMaxV();
 
 private:
-	std::vector<MASS::Environment*> mEnvs;
+	std::vector<WAD::Environment*> mEnvs;
 	int mNumEnvs;
 };
 

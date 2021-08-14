@@ -3,12 +3,15 @@
 #include <tinyxml.h>
 #include <ctime>
 
-namespace MASS
+#define STANCE_PHASE 0
+#define SWING_PHASE 1
+
+namespace WAD
 {
 
 Character::
 Character(WorldPtr& wPtr)
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mNumParamState(0),mMass(0),mMassLower(0)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mNumParamState(0),mMass(0),mMassLower(0),mPhaseStateRight(-1)
 {
 	this->SetWorld(wPtr);
 
@@ -379,43 +382,44 @@ Initialize_Forces()
 {
 	mMaxForces.resize(mDof);
 	mDefaultForces.resize(mDof);
+	
 	mDefaultForces <<
 		 0, 0, 0, 0, 0, 0,   //pelvis
 		 300, 300, 300,      //Femur L
-		 300,                //Tibia L
+		 300, 			     //Tibia L
 		 300, 300, 300,      //Talus L
 		 300, 300,           //Thumb, Pinky L
 		 300, 300, 300,      //Femur R
-		 300,                //Tibia R
+		 300, 			     //Tibia R
 		 300, 300, 300,      //Talus R
 		 300, 300,           //Thumb, Pinky R
 		 300, 300, 300,      //Spine
 		 300, 300, 300,      //Torso
 		 300, 300, 300,      //Neck
 		 300, 300, 300;      //Head
-	// 	//  300, 300, 300,      //Shoulder L
-	// 	//  300, 300, 300,      //Arm L
-	// 	//  300,                //ForeArm L
-	// 	//  300, 300, 300,      //Hand L
-	// 	//  300, 300, 300,      //Shoulder R
-	// 	//  300, 300, 300,      //Arm R
-	// 	//  300,                //ForeArm R
-	// 	//  300, 300, 300;      //Hand R
+	// // 	//  300, 300, 300,      //Shoulder L
+	// // 	//  300, 300, 300,      //Arm L
+	// // 	//  300,                //ForeArm L
+	// // 	//  300, 300, 300,      //Hand L
+	// // 	//  300, 300, 300,      //Shoulder R
+	// // 	//  300, 300, 300,      //Arm R
+	// // 	//  300,                //ForeArm R
+	// // 	//  300, 300, 300;      //Hand R
 
 	// mDefaultForces <<
 	//      0, 0, 0, 0, 0, 0,   //pelvis
-	//      200, 100, 150,      //Femur L
-	//      100,                //Tibia L
-	//      150, 50, 50,        //Talus L
-	//      30, 30,             //Thumb, Pinky L
-	//      200, 100, 150,      //Femur R
-	//      100,                //Tibia R
-	//      150, 50, 50,        //Talus R
-	//      30, 30,             //Thumb, Pinky R
-	//      80, 80, 80,         //Spine
-	//      80, 80, 80,         //Torso
-	//      30, 30, 30,         //Neck
-	//      30, 30, 30;         //Head
+	//      200, 100, 100,      //Femur L
+	//      100,       //Tibia L
+	//      150, 100, 100,        //Talus L
+	//      50, 50,             //Thumb, Pinky L
+	//      200, 100, 100,      //Femur R
+	//      100,       //Tibia R
+	//      150, 100, 100,        //Talus R
+	//      50, 50,             //Thumb, Pinky R
+	//      100, 100, 100,         //Spine
+	//      100, 100, 100,         //Torso
+	//      50, 50, 50,         //Neck
+	//      50, 50, 50;         //Head
 	    //  50, 50, 50,         //Shoulder L
 	    //  50, 50, 50,         //Arm L
 	    //  30,                 //ForeArm L
@@ -506,11 +510,11 @@ SetPDParameters()
 
 	mKp << 0, 0, 0, 0, 0, 0,
 		500, 500, 500,
-		500,
+		500, 
 		400, 400, 400,
 		100, 100,
 		500, 500, 500,
-		500,
+		500, 
 		400, 400, 400,
 		100, 100,
 		1000, 1000, 1000,
@@ -528,11 +532,11 @@ SetPDParameters()
 
 	mKv << 0, 0, 0, 0, 0, 0,
 		50, 50, 50,
-		50,
+		50, 
 		40, 40, 40,
 		10, 10,
 		50, 50, 50,
-		50,
+		50, 
 		40, 40, 40,
 		10, 10,
 		100, 100, 100,
@@ -631,15 +635,14 @@ Step(bool isRender)
 {
 	SetDesiredTorques();
 	mSkeleton->setForces(mDesiredTorque);
-
+	
 	this->SetMeasure(isRender);
-
+	
 	if(mStepCnt == mNumSteps-1)
 		mAdaptiveTime += mTemporalDisplacement;
 
 	mStepCnt++;
 	mStepCntTotal++;
-
 }
 
 void
@@ -717,7 +720,7 @@ SetMeasure(bool isRender)
 	}
 	this->SetComHistory();
 	this->SetFoot();
-
+	
 	double phase = mPhase;
 	double frame = mFrame;
 	if(mAdaptiveMotion)
@@ -728,15 +731,15 @@ SetMeasure(bool isRender)
 
 	if(mUseMuscle)
 		mMetabolicEnergy->Set(this->GetMuscles(), mCurVel3d, phase, frame);
-	else
-		mJointDatas->SetTorques(mDesiredTorque, phase, frame);
-
+	// else
+	mJointDatas->SetTorques(mDesiredTorque, phase, frame);
+	
 	if(isRender)
 	{
 		mJointDatas->SetAngles(phase);
 		mContacts->Set();
 		// this->SetCoT();
-	}
+	}	
 }
 
 void
@@ -956,7 +959,7 @@ GetState()
 		state.resize(state_dim);
 		state << state_character, state_device;
 	}
-
+	
 	return state;
 }
 
@@ -1278,15 +1281,15 @@ GetReward_Character_Imitation()
 	Eigen::VectorXd ee_pos_diff(ees.size());
 	for(int i = 0; i < ees.size(); i++)
 	{
-		double w = 0.0;
+		double w = 1.0;
 		if(ees[i]->getName() == "Head")
-			w = 0.4;
-		if(ees[i]->getName() == "Pelvis")
-			w = 0.3;
+			w = 0.5;
+		// if(ees[i]->getName() == "Pelvis")
+		// 	w = 0.3;
 		if(ees[i]->getName() == "TalusR" || ees[i]->getName() == "TalusL")
-			w = 0.2;
-		if(ees[i]->getName() == "HandR" || ees[i]->getName() == "HandL")
-			w = 0.1;
+			w = 0.5;
+		// if(ees[i]->getName() == "HandR" || ees[i]->getName() == "HandL")
+		// 	w = 0.1;
 
 		ee_rot_diff[i] = w * Eigen::AngleAxisd(ref_ee_r[i].inverse() * cur_ee_r[i]).angle();
 		ee_pos_diff[i] = w * (ref_ee_p[i] - cur_ee_p[i]).norm();
@@ -1300,8 +1303,8 @@ GetReward_Character_Imitation()
 	double sig_p = 5.0;
 	double sig_q = 0.5;
 	double sig_com = 20.0;
-	double sig_ee_rot = 10.0;
-	double sig_ee_pos = 20.0;
+	double sig_ee_rot = 20.0;
+	double sig_ee_pos = 10.0;
 	
 	double r_p = Utils::exp_of_squared(p_diff, sig_p);
 	double r_q = Utils::exp_of_squared(q_diff, sig_q);
@@ -1752,7 +1755,7 @@ SetActionImitationLearning(const Eigen::VectorXd& a)
 	int pd_dof = mNumActiveDof;
 	double pd_scale = 0.1;
 	mAction.segment(0,pd_dof) = a.segment(0,pd_dof) * pd_scale;
-
+	
 	double t = mWorld->getTime();
 	double timeStep = (double)mNumSteps*mWorld->getTimeStep();
 	this->GetPosAndVel(t+timeStep, mTargetPositions, mTargetVelocities);
@@ -2157,6 +2160,7 @@ void
 Character::
 SetAdaptiveParams(std::map<std::string, std::pair<double, double>>& p)
 {
+	mAdaptiveParams = p;
 	for(auto p_ : p){
 		std::string name = p_.first;
 		double lower = (p_.second).first;

@@ -1,11 +1,11 @@
-#ifndef __MASS_JOINT_DATA_H__
-#define __MASS_JOINT_DATA_H__
+#ifndef __JOINT_DATA_H__
+#define __JOINT_DATA_H__
 #include "dart/dart.hpp"
 #include <deque>
 #include <map>
 
 using namespace dart::dynamics;
-namespace MASS
+namespace WAD
 {
 
 class JointData

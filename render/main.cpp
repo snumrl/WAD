@@ -5,7 +5,7 @@
 
 int main(int argc,char** argv)
 {
-	MASS::Environment* env = new MASS::Environment();
+	WAD::Environment* env = new WAD::Environment();
 
 	if(argc==1)
 	{
@@ -17,22 +17,22 @@ int main(int argc,char** argv)
 	pybind11::scoped_interpreter guard{};
 	glutInit(&argc, argv);
 
-	MASS::Window* window;
+	WAD::Window* window;
 	if(argc == 2)
 	{
-		window = new MASS::Window(env);
+		window = new WAD::Window(env);
 	}
 	else if(argc == 3)
 	{
-		window = new MASS::Window(env, argv[2]);
+		window = new WAD::Window(env, argv[2]);
 	}
 	else if(argc == 4)
 	{
-		window = new MASS::Window(env, argv[2], argv[3]);
+		window = new WAD::Window(env, argv[2], argv[3]);
 	}
 	else if(argc == 5)
 	{
-		window = new MASS::Window(env, argv[2], argv[3], argv[4]);
+		window = new WAD::Window(env, argv[2], argv[3], argv[4]);
 	}
 	else{
 		std::cout<<"Please check your input"<<std::endl;

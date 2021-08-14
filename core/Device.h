@@ -1,12 +1,12 @@
-#ifndef __MASS_DEVICE_H__
-#define __MASS_DEVICE_H__
+#ifndef __DEVICE_H__
+#define __DEVICE_H__
 #include "dart/dart.hpp"
 #include "Character.h"
 #include "DARTHelper.h"
 
 using namespace dart::dynamics;
 using namespace dart::simulation;
-namespace MASS
+namespace WAD
 {
 
 class Device

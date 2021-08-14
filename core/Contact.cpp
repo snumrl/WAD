@@ -1,6 +1,6 @@
 #include "Contact.h"
 
-namespace MASS
+namespace WAD
 {
 
 Contact::
@@ -24,6 +24,23 @@ Initialize(const SkeletonPtr& skel, double m, int steps)
 	mMass = m;
 	mNumSteps = steps;
 }
+
+// void
+// Contact::
+// SetContactObject(std::string name)
+// {
+// 	if(mObjects.count(name) > 0)
+// 	{
+// 		std::cout << "Already Added Contact Object!" << std::endl;
+// 		return ;
+// 	}
+
+// 	mObjects[name] = 
+
+// 	mContactObjects[name] = std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>>();
+// 	mContactForceDequeMap[name] = std::deque<double>(mWindowSize);
+// }
+
 
 void
 Contact::

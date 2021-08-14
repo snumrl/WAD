@@ -2,15 +2,15 @@
 // Created by lasagnaphil on 20. 9. 21..
 //
 
-#ifndef MSS_SHAPERENDERER_H
-#define MSS_SHAPERENDERER_H
+#ifndef __SHAPERENDERER_H__
+#define __SHAPERENDERER_H__
 
 #include <dart/dart.hpp>
 #include <unordered_map>
 #include "Muscle.h"
 
 using namespace dart::dynamics;
-namespace MASS
+namespace WAD
 {
 
 struct ShapeRenderer {
@@ -32,4 +32,4 @@ private:
 };
 
 }
-#endif //MSS_SHAPERENDERER_H
+#endif //_SHAPERENDERER_H_

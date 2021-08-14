@@ -1,7 +1,25 @@
 #include "GLFWApp.h"
 #include <iostream>
 
-namespace MASS
+Eigen::Vector4d white(0.9, 0.9, 0.9, 1.0);
+Eigen::Vector4d black(0.1, 0.1, 0.1, 1.0);
+Eigen::Vector4d grey(0.6, 0.6, 0.6, 1.0);
+Eigen::Vector4d red(0.8, 0.2, 0.2, 1.0);
+Eigen::Vector4d green(0.2, 0.8, 0.2, 1.0);
+Eigen::Vector4d blue(0.2, 0.2, 0.8, 1.0);
+Eigen::Vector4d yellow(0.8, 0.8, 0.2, 1.0);
+Eigen::Vector4d purple(0.8, 0.2, 0.8, 1.0);
+
+Eigen::Vector4d white_trans(0.9, 0.9, 0.9, 0.2);
+Eigen::Vector4d black_trans(0.1, 0.1, 0.1, 0.2);
+Eigen::Vector4d grey_trans(0.6, 0.6, 0.6, 0.2);
+Eigen::Vector4d red_trans(0.8, 0.2, 0.2, 0.2);
+Eigen::Vector4d green_trans(0.2, 0.8, 0.2, 0.2);
+Eigen::Vector4d blue_trans(0.2, 0.2, 0.8, 0.2);
+Eigen::Vector4d yellow_trans(0.8, 0.8, 0.2, 0.2);
+Eigen::Vector4d purple_trans(0.8, 0.2, 0.8, 0.2);
+
+namespace WAD
 {
 
 #define IM_MIN(A, B)            (((A) < (B)) ? (A) : (B))
@@ -10,7 +28,6 @@ namespace MASS
 
 #define WindowWidth 2160;
 #define WinodwHeight 1080;
-
 
 template <typename T>
 inline T RandomRange(T min, T max) {
@@ -26,9 +43,9 @@ GLFWApp(Environment* env)
       mDrawOBJ(false),mDrawCharacter(true),mDrawDevice(true),mDrawTarget(false),mDrawReference(false),
       mSplitViewNum(2),mSplitIdx(0),mViewMode(0),isFirstUImanager(true)
 {
-  	mm = py::module::import("__main__");
+    mm = py::module::import("__main__");
 	mns = mm.attr("__dict__");
-    py::str module_dir = (std::string(MASS_ROOT_DIR)+"/python").c_str();
+    py::str module_dir = (std::string(WAD_ROOT_DIR)+"/python").c_str();
 	sys_module = py::module::import("sys");
 	sys_module.attr("path").attr("insert")(1, module_dir);
     py::exec("import torch",mns);
@@ -87,7 +104,11 @@ GLFWApp(Environment* env, const std::string& nn_path, const std::string& muscle_
 GLFWApp::
 ~GLFWApp() 
 {
-    ImPlot::DestroyContext();
+    for(auto p : mPlotContexts)
+    {
+        ImPlot::SetCurrentContext(p.second);
+        ImPlot::DestroyContext();
+    }    
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
@@ -113,7 +134,7 @@ InitViewer()
     mZoom = 0.25;
     mPersp = 45.0;
 	
-    mUiWidthRatio = 0.5;
+    mUiWidthRatio = 0.2;
     mUiHeightRatio = 0.2;
     mUiViewerRatio = 0.4;
 
@@ -127,7 +148,6 @@ InitViewer()
 	mImguiWidth = mWindowWidth - mViewerWidth;
     mImguiHeight = mWindowHeight;
     
-    // mTrackball = std::make_unique<Trackball>();
     double smaller = mViewerWidth < mViewerHeight ? mViewerWidth : mViewerHeight;
     mTrackball.setTrackball(Eigen::Vector2d(mViewerWidth*0.5, mViewerHeight*0.5), smaller*0.5);
     mTrackball.setQuaternion(Eigen::Quaterniond(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY())));
@@ -154,7 +174,7 @@ InitGLFW()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
-    
+
     mWindow = glfwCreateWindow(mWindowWidth, mWindowHeight, "render", nullptr, nullptr);
 	if (mWindow == NULL) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -164,7 +184,7 @@ InitGLFW()
 	glfwMakeContextCurrent(mWindow);
 
    	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-	    std::cerr << "Failed to initialize GLAD" << std::endl;
+        std::cerr << "Failed to initialize GLAD" << std::endl;
 	    exit(EXIT_FAILURE);
 	}
 
@@ -221,12 +241,28 @@ InitGLFW()
     
     ImGui_ImplGlfw_InitForOpenGL(mWindow, true);
 	ImGui_ImplOpenGL3_Init("#version 150");
-
-	ImPlot::CreateContext();
+    
+    mPlotContexts["Main"] = ImPlot::CreateContext();
     ImPlot::StyleColorsDark();
-    ImPlot::SetColormap(ImPlotColormap_Default);
     ImPlot::GetStyle().AntiAliasedLines = true;
     
+    mPlotContexts["Analysis"] = ImPlot::CreateContext();
+    ImPlot::SetCurrentContext(mPlotContexts["Analysis"]);
+    ImPlot::StyleColorsDark();
+    ImPlot::GetStyle().AntiAliasedLines = true;
+
+    mPlotContexts["Learning"] = ImPlot::CreateContext();
+    ImPlot::SetCurrentContext(mPlotContexts["Learning"]);
+    ImPlot::StyleColorsDark();
+    ImPlot::GetStyle().AntiAliasedLines = true;
+
+    mPlotContexts["Simulation"] = ImPlot::CreateContext();
+    ImPlot::SetCurrentContext(mPlotContexts["Simulation"]);
+    ImPlot::StyleColorsDark();
+    ImPlot::GetStyle().AntiAliasedLines = true;
+    
+    ImPlot::SetCurrentContext(mPlotContexts["Main"]);
+
     this->InitUI();
 }
 
@@ -247,7 +283,7 @@ InitGL()
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
     glShadeModel(GL_SMOOTH);
-    glPolygonMode(GL_FRONT, GL_FILL);
+    glPolygonMode(GL_FRONT, GL_FILL);    
 }
 
 void
@@ -278,11 +314,10 @@ InitCamera(int idx)
     
     // TODO: Apply camera transform based on idx
     glScalef(mZoom, mZoom, mZoom);
-    glTranslatef(mTrans[0] * 0.001, mTrans[1] * 0.001, mTrans[2] * 0.001);
-
+    glTranslatef(mTrans[0] * 0.001, mTrans[1] * 0.001, mTrans[2] * 0.001);    
 }
-void 
 
+void 
 GLFWApp::
 InitLights() 
 {
@@ -336,6 +371,20 @@ InitAnalysis()
     mJointAngleMinMax["Ankle_sagittal"] = std::pair(-40.0, 40.0);
     mJointAngleMinMax["Ankle_frontal"] = std::pair(-20.0, 20.0);
     mJointAngleMinMax["Ankle_transverse"] = std::pair(-40.0, 0.0);
+
+    mJointTorqueMinMax["Hip_x"] = std::pair(-200.0,200.0);
+    mJointTorqueMinMax["Hip_y"] = std::pair(-200.0, 200.0);
+    mJointTorqueMinMax["Hip_z"] = std::pair(-200.0, 200.0);
+
+    mJointTorqueMinMax["Knee_x"] = std::pair(-200.0, 200.0);
+    mJointTorqueMinMax["Knee_y"] = std::pair(-200.0, 200.0);
+    mJointTorqueMinMax["Knee_z"] = std::pair(-200.0, 200.0);
+
+    mJointTorqueMinMax["Ankle_x"] = std::pair(-200.0, 200.0);
+    mJointTorqueMinMax["Ankle_y"] = std::pair(-200.0, 200.0);
+    mJointTorqueMinMax["Ankle_z"] = std::pair(-200.0, 200.0);
+
+    mAdaptiveParams = mEnv->GetCharacter()->GetAdaptiveParams();       
 }
 
 void
@@ -350,7 +399,6 @@ void
 GLFWApp::
 StartLoop() 
 {
-#if 1
     const double frameTime = 1.0 / 60.0;
     double previous = glfwGetTime();
     double lag = 0;
@@ -370,27 +418,7 @@ StartLoop()
         this->Draw();
     
         glfwSwapBuffers(mWindow);        
-    }
-#else
-    while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-
-        double lastTime;
-        lastTime = glfwGetTime();
-        update();
-        perfStats["update"] = std::ceil((glfwGetTime() - lastTime) * 100000) / 100;
-        
-        lastTime = glfwGetTime();
-        drawSimFrame();
-        perfStats["render_sim"] = std::ceil((glfwGetTime() - lastTime) * 100000) / 100;
-        
-        lastTime = glfwGetTime();
-        drawUiFrame();
-        perfStats["render_ui"] = std::ceil((glfwGetTime() - lastTime) * 100000) / 100;
-        
-        glfwSwapBuffers(window);
-    }
-#endif
+    }    
 }
 
 void GLFWApp::Update()
@@ -405,7 +433,7 @@ void GLFWApp::Update()
 
         mEnv->SetAction(action);
     }
-    
+ 
     int num = mEnv->GetNumSteps()/2.0;
     if (mEnv->GetUseMuscle()) {
         int inference_per_sim = 2;
@@ -421,8 +449,8 @@ void GLFWApp::Update()
         for (int i=0; i<num; i++)
             mEnv->Step(mDevice_On, true);
     }
-    
-    // mEnv->GetReward();
+  
+    mEnv->GetReward();
     mDisplayIter++;    
 }
 
@@ -476,7 +504,7 @@ Draw()
     this->SetFocus();    
     
     this->DrawSimFrame();
-    this->DrawUiFrame();
+    this->DrawUiFrame();    
 }
 
 void 
@@ -502,7 +530,7 @@ DrawSimFrame()
         this->DrawGround();
         this->DrawCharacter();    
         if(mEnv->GetUseDevice())
-            this->DrawDevice();    
+            this->DrawDevice();            
     }       
 }
 
@@ -519,20 +547,16 @@ DrawUiFrame()
     double w2 = (1-mUiWidthRatio) * mImguiWidth;
     double h1 = mUiHeightRatio * mImguiHeight;
     double h2 = (1-mUiHeightRatio) * mImguiHeight;
-
+    
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();    
-
-    // bool show_demo_window = true;
-    // if (show_demo_window)
-    //     ImGui::ShowDemoWindow(&show_demo_window);
-
+    
     this->DrawUiFrame_Manager();
-    this->DrawUiFrame_SimState(x1, y1, w1, h1);
+    this->DrawUiFrame_SimState(x1, y1, w1, h1+h2);
     this->DrawUiFrame_Learning(x2, y1, w2, h1);
-    this->DrawUiFrame_Analysis(x1, y2, w1+w2, h2);
-
+    this->DrawUiFrame_Analysis(x2, y2, w2, h2);
+    
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
@@ -557,8 +581,6 @@ void
 GLFWApp::
 DrawUiFrame_Manager()
 {
-    // You can pass in a reference ImGuiStyle structure to compare to, revert to and save to
-    // (without a reference style pointer, we will use one compared locally as a reference)
     ImGuiStyle& style = ImGui::GetStyle();
     ImGuiStyle ref_saved_style;
     ref_saved_style = style;
@@ -668,17 +690,19 @@ DrawUiFrame_Manager()
 
         if (ImGui::BeginTabItem("Plot"))
         {
-            ImPlot::ShowStyleSelector("ImPlot Style");
-            ImPlot::ShowColormapSelector("ImPlot Colormap");
-            float indent = ImGui::CalcItemWidth() - ImGui::GetFrameHeight();
-            ImGui::Indent(ImGui::CalcItemWidth() - ImGui::GetFrameHeight());
-            ImGui::Checkbox("Anti-Aliased Lines", &ImPlot::GetStyle().AntiAliasedLines);
-            ImGui::Unindent(indent);
+            ImPlot::SetCurrentContext(mPlotContexts["Analysis"]);
+            ImPlot::ShowColormapSelector("Analysis Color");            
+
+            ImPlot::SetCurrentContext(mPlotContexts["Learning"]);
+            ImPlot::ShowColormapSelector("Learning Color");      
+
+            ImPlot::SetCurrentContext(mPlotContexts["Simulation"]);
+            ImPlot::ShowColormapSelector("Simulation Color");      
+
+            ImPlot::SetCurrentContext(mPlotContexts["Main"]);
 
             ImGui::EndTabItem();
         }   
-
-         
 
         // if (ImGui::BeginTabItem("Rendering"))
         // {
@@ -753,8 +777,27 @@ DrawUiFrame_SimState(double x, double y, double w, double h)
     ImGui::Begin("Simulation");                          // Create a window called "Hello, world!" and append into it.
     ImGui::SetWindowPos("Simulation", ImVec2(x, y));    
     ImGui::SetWindowSize("Simulation", ImVec2(w, h));
+        
+    ImPlot::SetCurrentContext(mPlotContexts["Simulation"]);        
+    
+    if(mEnv->GetUseAdaptiveSampling())
+    {   
+        int idx = 0;
+        Eigen::VectorXd params = mEnv->GetParamState();
+        for(auto p : mAdaptiveParams)
+        {
+            std::string name = p.first;
+            double lower = p.second.first;
+            double upper = p.second.second;
+            float value = params[idx];
+            ImGui::SliderFloat(name.c_str(), &value, lower, upper, "%.2f x");    
+            params[idx] = (double)value;
+            idx++;
+        }        
+        mEnv->SetParamState(params);        
+    }
 
-    ImGui::Text("Simulation FPS %.1f FPS (%.3f ms/frame)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+    ImPlot::SetCurrentContext(mPlotContexts["Main"]);
     ImGui::End();
 }
 
@@ -765,8 +808,69 @@ DrawUiFrame_Learning(double x, double y, double w, double h)
     ImGui::Begin("Learning");                          // Create a window called "Hello, world!" and append into it.
     ImGui::SetWindowPos("Learning", ImVec2(x, y));    
     ImGui::SetWindowSize("Learning", ImVec2(w, h));
+    
+    ImPlot::SetCurrentContext(mPlotContexts["Learning"]);
 
+
+    ImPlot::SetCurrentContext(mPlotContexts["Main"]);
     ImGui::End();
+}
+
+void
+GLFWApp::
+DrawDequeGraph(std::string name, std::string xAxis, std::string yAxis, std::deque<double> data, double w, double h)
+{
+    int size = data.size();
+    float x[size]; 
+    float data_[size];
+    double min = 10000;
+    double max = -10000;
+    for(int i=0; i<size; i++)
+    {
+        x[i] = i*(1.0/(size-1.0));
+        data_[i] = data[i];
+        if(data_[i] > max)
+            max = data_[i];
+        if(data_[i] < min)
+            min = data_[i];
+    }
+
+    ImPlot::SetNextPlotLimits(0.0, 1.0, min, max, ImGuiCond_Always);                
+    if (ImPlot::BeginPlot(name.c_str(), xAxis.c_str(), yAxis.c_str(), ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+        ImPlot::PlotLine(yAxis.c_str(),x,data_,size);                        
+        ImPlot::EndPlot();
+    }
+}
+
+void
+GLFWApp::
+DrawDequeGraph(std::string name, std::string xAxis, std::string yAxis, std::deque<double> data, double yMin, double yMax, double w, double h)
+{
+    int size = data.size();
+    float x[size]; 
+    float data_[size];
+    double min = yMin;
+    double max = yMax;
+    for(int i=0; i<size; i++)
+    {
+        x[i] = i*(1.0/(size-1.0));
+        data_[i] = data[i];
+        if(data_[i] > max)
+            max = data_[i];
+        if(data_[i] < min)
+            min = data_[i];
+    }
+
+    if(max > yMax)
+        yMax = max;
+    if(min < yMin)
+        yMin = min;
+
+    ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
+    if (ImPlot::BeginPlot(name.c_str(), xAxis.c_str(), yAxis.c_str(), ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+        ImPlot::PlotLine(yAxis.c_str(),x,data_,size);                        
+        ImPlot::EndPlot();
+    }    
 }
 
 void
@@ -784,9 +888,93 @@ DrawJointAngle(std::string name, std::deque<double> data, double yMin, double yM
 
     ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
     if (ImPlot::BeginPlot(name.c_str(), "%", "deg", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
-        ImPlot::PlotLine("deg",x,data_,size);                
+        ImPlot::PlotLine("deg",x,data_,size);                        
         ImPlot::EndPlot();
     }
+}
+
+void
+GLFWApp::
+DrawJointAngle(std::string name, std::deque<double> data1, std::deque<double> data2, double yMin, double yMax, double w, double h)
+{
+    int size = data1.size();
+    float x[size];
+    float data1_[size];
+    float data2_[size];
+    for(int i=0; i<size; i++)
+    {
+        x[i] = i*(1.0/(size-1.0));
+        data1_[i] = data1[i]*180.0/M_PI;
+        data2_[i] = data2[i]*180.0/M_PI;
+    }
+    
+    ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
+    if (ImPlot::BeginPlot(name.c_str(), "%", "deg", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+        ImPlot::PlotLine("char1",x,data1_,size);                
+        ImPlot::PlotLine("char2",x,data2_,size);                
+        ImPlot::EndPlot();
+    }
+}
+
+void
+GLFWApp::
+DrawJointTorque(std::string name, std::deque<double> data, double yMin, double yMax, double w, double h)
+{
+    int size = data.size();
+    float x[size]; 
+    float data_[size];
+    for(int i=0; i<size; i++)
+    {
+        x[i] = i*(1.0/(size-1.0));
+        data_[i] = data[i];
+    }
+
+    ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
+    if (ImPlot::BeginPlot(name.c_str(), "%", "Nm", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+        ImPlot::PlotLine("deg",x,data_,size);                        
+        ImPlot::EndPlot();
+    }
+}
+
+void
+GLFWApp::
+DrawJointTorque(std::string name, std::deque<double> data1, std::deque<double> data2, double yMin, double yMax, double w, double h)
+{
+    int size = data1.size();
+    float x[size];
+    float data1_[size];
+    float data2_[size];
+    for(int i=0; i<size; i++)
+    {
+        x[i] = i*(1.0/(size-1.0));
+        data1_[i] = data1[i];
+        data2_[i] = data2[i];
+    }
+    
+    ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
+    if (ImPlot::BeginPlot(name.c_str(), "%", "Nm", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+        ImPlot::PlotLine("char1",x,data1_,size);                
+        ImPlot::PlotLine("char2",x,data2_,size);                
+        ImPlot::EndPlot();
+    }
+}
+
+bool
+GLFWApp::
+ShowCompareDataSelecter()
+{   
+    static int person_idx = -1;
+    if(ImGui::Combo("person", &person_idx, "Person 0\0Person 1\0Person 2\0"))
+    {
+        switch(person_idx)
+        {
+            case 0: mComparePersonIdx = 0; break; 
+            case 1: mComparePersonIdx = 1; break; 
+            case 2: mComparePersonIdx = 2; break; 
+        }
+        return true;
+    }
+    return false;
 }
 
 void
@@ -797,161 +985,200 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
     ImGui::SetWindowPos("Analysis", ImVec2(x, y));    
     ImGui::SetWindowSize("Analysis", ImVec2(w, h));
     
+    ImPlot::SetCurrentContext(mPlotContexts["Analysis"]);
+
+    static bool compare = false;
+    ImGui::Checkbox("Compare", &compare);
+    if(compare)
+    { 
+        ImGui::SameLine();
+        this->ShowCompareDataSelecter();
+    }
+    ImGui::Separator();
+    
     if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_None))
     {
-        JointData* data = mEnv->GetCharacter()->GetJointDatas(); 
-        auto angles = data->GetAngles();
+        JointData* jointData = mEnv->GetCharacter()->GetJointDatas(); 
+        auto angles = jointData->GetAngles();
+        auto torques = jointData->GetTorques();
 
         if (ImGui::BeginTabItem("Joint Angle"))
-        {
-            double w = mImguiWidth/3.0 - 10.0;
-            double h = (mImguiHeight*(1.0 - mUiHeightRatio))/3.0 - 30.0;
+        {   
+         
+            double w_ = w/3.0 - 10.0;
+            double h_ = h/3.0 - 30.0;
 
             std::deque<double> angleData;
             double yMin, yMax;
             std::string plotName, dataName;
             std::string plotNamePre, dataNamePre;
-            
+            std::string namePost;
+
             for(int i=0; i<3; i++)
             {
-                if(i==0)
-                {
-                    plotNamePre = "Hip";
-                    dataNamePre = "FemurL";
+                if(i==0){
+                    plotNamePre = "Hip"; dataNamePre = "FemurL";
                 }
-                else if(i==1)
-                {
-                    plotNamePre = "Knee";
-                    dataNamePre = "TibiaL";
+                else if(i==1){
+                    plotNamePre = "Knee"; dataNamePre = "TibiaL";
                 }
-                else if(i==2)
-                {
-                    plotNamePre = "Ankle";
-                    dataNamePre = "TalusL";
+                else if(i==2){
+                    plotNamePre = "Ankle"; dataNamePre = "TalusL";
                 }
-             
-                plotName = plotNamePre + "_sagittal";
-                dataName = dataNamePre + "_sagittal";
-                angleData = angles[dataName];
-                yMin = mJointAngleMinMax[plotName].first;
-                yMax = mJointAngleMinMax[plotName].second;
-                this->DrawJointAngle(plotName, angleData, yMin, yMax, w, h);
+    
+                for(int j=0; j<3; j++)
+                {
+                    if(j==0)
+                        namePost = "_sagittal";
+                    else if(j==1)
+                        namePost = "_frontal";
+                    else if(j==2)
+                        namePost = "_transverse";
+                    
+                    plotName = plotNamePre + namePost;
+                    dataName = dataNamePre + namePost;
+                    angleData = angles[dataName];
+                    yMin = mJointAngleMinMax[plotName].first;
+                    yMax = mJointAngleMinMax[plotName].second;
+                
+                    if(compare)
+                    {
+                        //get data from mComparePersonIdx
+                        std::deque<double> compareAngleData(angleData.size());
+                        for(int i=0; i<angleData.size(); i++)
+                            compareAngleData[i] = angleData[i] - 5.0/180.0*M_PI;
+                        
+                        this->DrawJointAngle(plotName, angleData, compareAngleData, yMin, yMax, w_, h_);
+                    }
+                    else
+                        this->DrawJointAngle(plotName, angleData, yMin, yMax, w_, h_);
 
-                ImGui::SameLine();
-                plotName = plotNamePre + "_frontal";
-                dataName = dataNamePre + "_frontal";
-                angleData = angles[dataName];
-                yMin = mJointAngleMinMax[plotName].first;
-                yMax = mJointAngleMinMax[plotName].second;
-                this->DrawJointAngle(plotName, angleData, yMin, yMax, w, h);
-
-
-                ImGui::SameLine();
-                plotName = plotNamePre + "_transverse";
-                dataName = dataNamePre + "_transverse";
-                angleData = angles[dataName];
-                yMin = mJointAngleMinMax[plotName].first;
-                yMax = mJointAngleMinMax[plotName].second;
-                this->DrawJointAngle(plotName, angleData, yMin, yMax, w, h);
+                    if(j<2)
+                        ImGui::SameLine();
+                }
             }
-            
+
             ImGui::EndTabItem();
         }
+
+        if (ImGui::BeginTabItem("Joint Torque"))
+        {   
+         
+            double w_ = w/3.0 - 10.0;
+            double h_ = h/3.0 - 30.0;
+
+            std::deque<double> torqueData;
+            double yMin, yMax;
+            std::string plotName, dataName;
+            std::string plotNamePre, dataNamePre;
+            std::string namePost;
+
+            for(int i=0; i<3; i++)
+            {
+                if(i==0){
+                    plotNamePre = "Hip"; dataNamePre = "FemurL";
+                }
+                else if(i==1){
+                    plotNamePre = "Knee"; dataNamePre = "TibiaL";
+                }
+                else if(i==2){
+                    plotNamePre = "Ankle"; dataNamePre = "TalusL";
+                }
+    
+                for(int j=0; j<3; j++)
+                {
+                    if(j==0)
+                        namePost = "_x";
+                    else if(j==1)
+                        namePost = "_y";
+                    else if(j==2)
+                        namePost = "_z";
+                    
+                    plotName = plotNamePre + namePost;
+                    dataName = dataNamePre + namePost;
+                    torqueData = torques[dataName];
+                    yMin = mJointTorqueMinMax[plotName].first;
+                    yMax = mJointTorqueMinMax[plotName].second;
+                
+                    if(compare)
+                    {
+                        //get data from mComparePersonIdx
+                        std::deque<double> compareTorqueData(torqueData.size());
+                        for(int i=0; i<torqueData.size(); i++)
+                            compareTorqueData[i] = torqueData[i] - 5.0;
+                        
+                        this->DrawJointTorque(plotName, torqueData, compareTorqueData, yMin, yMax, w_, h_);
+                    }
+                    else
+                        this->DrawJointTorque(plotName, torqueData, yMin, yMax, w_, h_);
+
+                    if(j<2)
+                        ImGui::SameLine();
+                }
+            }
+
+            ImGui::EndTabItem();
+        }
+
+        MetabolicEnergy* metaEnergy = mEnv->GetCharacter()->GetMetabolicEnergy(); 
+        const auto& energy = metaEnergy->GetHOUD06_map_deque();
 
         if (ImGui::BeginTabItem("Metabolic Energy"))
         {
+            double w_ = w/3.0 - 10.0;
+            double h_ = h/3.0 - 30.0;
+
+            std::deque<double> energyData;
+            std::string xAxisName = "%";
+            std::string yAxisName = "Metabolic Energy";
+            int idx = 0;
+            for(auto e : energy)
+            {   
+                this->DrawDequeGraph(e.first, xAxisName, yAxisName, e.second, 0.0, 1.0, w_, h_);
+                if(idx%3 < 2)
+                    ImGui::SameLine();
+                idx++;
+            }
 
             ImGui::EndTabItem();
         }
 
-        // if (ImGui::BeginTabItem("Configuration"))
-        // {
-        //     ImPlot::ShowStyleSelector("ImPlot Style");
-        //     ImPlot::ShowColormapSelector("ImPlot Colormap");
-        //     float indent = ImGui::CalcItemWidth() - ImGui::GetFrameHeight();
-        //     ImGui::Indent(ImGui::CalcItemWidth() - ImGui::GetFrameHeight());
-        //     ImGui::Checkbox("Anti-Aliased Lines", &ImPlot::GetStyle().AntiAliasedLines);
-        //     ImGui::Unindent(indent);
+        if (ImGui::BeginTabItem("Activation Levels"))
+        {
+            // Eigen::VectorXd al = mEnv->GetCharacter()->GetActivationLevels();
+            
+            // int size = 20;
+            // double xs[size];
+            // float ys[size];
+            // const char* labels[size];
+            // for(int i=0; i<size; i++)
+            // {
+            //     labels[i] = std::to_string(i).c_str();
+            //     xs[i] = (double)i;
+            //     ys[i] = al[i];
+            // }
 
-        //     ImGui::EndTabItem();
-        // }
+            // ImPlot::SetNextPlotLimits(-0.5, 19.5, 0, 1, ImGuiCond_Always);
+            // ImPlot::SetNextPlotTicksX((const double*)xs, 3, labels);
+            
+            // double w = mImguiWidth*(1.0-mUiWidthRatio) - 20;
+            // double h = mImguiHeight*(1.0-mUiHeightRatio)/4.0 - 20;
+            // if (ImPlot::BeginPlot("Bar Plot", "Muscle", "level",
+            //                 ImVec2(w,h), 0, 0, 0))
+            // {
+            //     double level = 1.0+(3.0*a), 1.0, 1.0, 1.0
+            //     ImPlot::PushStyleColor(ImPlotCol_Fill, ImVec4(1,1.0,1.0,1.0));
+            //     ImPlot::SetLegendLocation(ImPlotLocation_South, ImPlotOrientation_Horizontal);
+            //     ImPlot::PlotBars("Activation", ys, size, 0.1, 0);
+            //     ImPlot::PopStyleColor();
+            //     ImPlot::EndPlot();
+            // }
+                                   
+            ImGui::EndTabItem();
+        }
     }
 
-
-    // if (ImGui::CollapsingHeader("Configuration")) {
-        // ImPlot::ShowStyleSelector("ImPlot Style");
-        // ImPlot::ShowColormapSelector("ImPlot Colormap");
-        // float indent = ImGui::CalcItemWidth() - ImGui::GetFrameHeight();
-        // ImGui::Indent(ImGui::CalcItemWidth() - ImGui::GetFrameHeight());
-        // ImGui::Checkbox("Anti-Aliased Lines", &ImPlot::GetStyle().AntiAliasedLines);
-        // ImGui::Unindent(indent);
-    // }
-
-    // if (ImGui::CollapsingHeader("Joint Angle")) {
-    //     int dNumL = 101; 
-    //     int dNumR = 101;
-    //     float xL[dNumL], xR[dNumR];
-    //     float yL[dNumL], yR[dNumR]; 
-    //     for (int i = 0; i < dNumL; ++i) {
-    //         xL[i] = i * 1.0f;
-    //         yL[i] = 10.0f + 10.0f * sinf(1.0f* xL[i]);             
-    //     }
-    //     for (int i = 0; i < dNumR; ++i) {
-    //         xR[i] = i * 1.0f;
-    //         yR[i] = 11.0f + 14.0f * sinf(1.0f* xR[i]);             
-    //     }
-      
-    //     double w = mImguiWidth / 3.0 - 10.0;
-    //     double h = (mImguiHeight * (1.0 - mUiHeightRatio)) / 3.0 - 30.0;
-
-    //     for(int i=0; i<3; i++)
-    //     {
-    //         std::string plotNamePre, plotName;
-    //         float x_min, x_max, y_min, y_max;
-    //         x_min = 0.0; x_max = 100.0;
-    //         if(i==0){
-    //             plotNamePre = "Hip";
-    //             y_min = -20.0; y_max = 40.0; 
-    //         }
-    //         else if(i==1){
-    //             plotNamePre = "Knee";
-    //             y_min = 0.0; y_max = 80.0;                 
-    //         }
-    //         else if(i==2){
-    //             plotNamePre = "Ankle";
-    //             y_min = -40.0; y_max = 20.0;                 
-    //         }
-            
-    //         plotName = plotNamePre + "-Flexion-Extension";            
-    //         ImPlot::SetNextPlotLimits(x_min, x_max, y_min, y_max, ImGuiCond_Always);                
-    //         if (ImPlot::BeginPlot(plotName.c_str(), "%", "deg", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
-    //             ImPlot::PlotLine("left",xL,yL,dNumL);
-    //             ImPlot::PlotLine("right",xR,yR,dNumR);                
-    //             ImPlot::EndPlot();
-    //         }
-
-    //         ImGui::SameLine();
-    //         plotName = plotNamePre + "-Aduction-Abduction";            
-    //         ImPlot::SetNextPlotLimits(x_min, x_max, y_min, y_max, ImGuiCond_Always);                
-    //         if (ImPlot::BeginPlot(plotName.c_str(), "%", "deg", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
-    //             // ImPlot::PushColormap(ImPlotColormap_Jet);
-    //             ImPlot::PlotLine("left",xL,yL,dNumL);
-    //             ImPlot::PlotLine("right",xR,yR,dNumR);
-    //             ImPlot::EndPlot();
-    //             // ImPlot::PopColormap(ImPlotColormap_Jet);
-    //         }
-            
-    //         ImGui::SameLine();
-    //         plotName = plotNamePre + "-Internal-External";            
-    //         ImPlot::SetNextPlotLimits(x_min, x_max, y_min, y_max, ImGuiCond_Always);                
-    //         if (ImPlot::BeginPlot(plotName.c_str(), "%", "deg", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
-    //             ImPlot::PlotLine("left",xL,yL,dNumL);
-    //             ImPlot::PlotLine("right",xR,yR,dNumR);
-    //             ImPlot::EndPlot();
-    //         }
-    //     }        
-    // }
-
+    ImPlot::SetCurrentContext(mPlotContexts["Main"]);
     ImGui::End();
 }
 
@@ -1113,10 +1340,15 @@ DrawBodyNode(const BodyNode* bn)
 	Eigen::Affine3d tmp = bn->getRelativeTransform();
 	glMultMatrixd(tmp.data());
 
+    if(bn->getName() == "FemurL" || bn->getName() == "FemurR" || bn->getName() == "TibiaL" || bn->getName() == "TibiaR" || bn->getName() == "TalusL" || bn->getName() == "TalusR")
+		mDrawCoordinate = true;
+	else
+		mDrawCoordinate = false;
+
 	auto sns = bn->getShapeNodesWith<VisualAspect>();
 	for(const auto& sn : sns)
 		DrawShapeFrame(sn);
-
+    
 	for(const auto& et : bn->getChildEntities())
 		DrawEntity(et);
 
@@ -1203,6 +1435,18 @@ DrawShape(const Shape* shape, const Eigen::Vector4d& color)
 			mShapeRenderer.renderMesh(mesh, false, y, color);
 		}
 	}   
+
+    if(mDrawCoordinate && shape->is<SphereShape>()){
+        Eigen::Vector3d o(0.0, 0.0, 0.0);
+        Eigen::Vector3d x(0.1, 0.0, 0.0);
+        Eigen::Vector3d y(0.0, 0.1, 0.0);
+        Eigen::Vector3d z(0.0, 0.0, 0.1);
+        double w = 3.0;
+		DrawLine(o, x, red, w);
+		DrawLine(o, y, green, w);
+		DrawLine(o, z, blue, w);
+	}
+
 	glDisable(GL_COLOR_MATERIAL);
     glDisable(GL_DEPTH_TEST);    
 }
@@ -1254,6 +1498,25 @@ DrawOriginCoord()
        
     glDisable(GL_DEPTH_TEST);    
     glEnable(GL_LIGHTING);    
+}
+
+void
+GLFWApp::
+DrawLine(Eigen::Vector3d v0, Eigen::Vector3d v1, Eigen::Vector4d color, double lineWidth)
+{
+    glDisable(GL_LIGHTING);
+    glEnable(GL_DEPTH_TEST);
+    glLineWidth(lineWidth);
+
+    glColor3f(color[0], color[1], color[2]);
+    
+    glBegin(GL_LINES);
+    glVertex3f(v0[0], v0[1], v0[2]);
+    glVertex3f(v1[0], v1[1], v1[2]);
+    glEnd();
+
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
 }
 
 void 

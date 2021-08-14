@@ -8,8 +8,8 @@ EnvManager(std::string meta_file,int num_envs)
 	dart::math::seedRand();
 	omp_set_num_threads(mNumEnvs);
 	for(int i = 0;i<mNumEnvs;i++){
-		mEnvs.push_back(new MASS::Environment());
-		MASS::Environment* env = mEnvs.back();
+		mEnvs.push_back(new WAD::Environment());
+		WAD::Environment* env = mEnvs.back();
 
 		env->SetId(i);
 		env->Initialize(meta_file, false);
@@ -422,7 +422,7 @@ GetMaxV()
 	return toNumPyArray(mEnvs[0]->GetMaxV());
 }
 
-PYBIND11_MODULE(pymss, m){
+PYBIND11_MODULE(pywad, m){
 	py::class_<EnvManager>(m, "EnvManager")
 		.def(py::init<std::string, int>())
 		.def("Step",&EnvManager::Step)

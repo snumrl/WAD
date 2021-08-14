@@ -3,7 +3,7 @@
 #include <GL/glew.h>
 #include <assimp/cimport.h>
 
-namespace MASS
+namespace WAD
 {
 
 std::vector<Eigen::Vector3f> buildCircle(float radius, int steps)

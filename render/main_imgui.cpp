@@ -3,7 +3,7 @@
 #include <pybind11/embed.h>
 
 int main(int argc, char** argv) {
-    MASS::Environment* env = new MASS::Environment();
+    WAD::Environment* env = new WAD::Environment();
     if(argc == 1)
 	{
 		std::cout<<"Provide Metadata.txt"<<std::endl;
@@ -13,15 +13,15 @@ int main(int argc, char** argv) {
 
     pybind11::scoped_interpreter guard{};
 
-    MASS::GLFWApp* app;
+    WAD::GLFWApp* app;
     if(argc == 2){
-        app = new MASS::GLFWApp(env);
+        app = new WAD::GLFWApp(env);
     }
     else if(argc == 3){
-        app = new MASS::GLFWApp(env, argv[2]);
+        app = new WAD::GLFWApp(env, argv[2]);
     }
     else if(argc == 4){
-        app = new MASS::GLFWApp(env, argv[2], argv[3]);
+        app = new WAD::GLFWApp(env, argv[2], argv[3]);
     }
     else{
         std::cout<<"Please check your input"<<std::endl;

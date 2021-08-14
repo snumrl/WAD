@@ -1,5 +1,5 @@
-#ifndef __MASS_ENVIRONMENT_H__
-#define __MASS_ENVIRONMENT_H__
+#ifndef __ENVIRONMENT_H__
+#define __ENVIRONMENT_H__
 #include "dart/dart.hpp"
 #include "dart/collision/bullet/bullet.hpp"
 #include "BVH.h"
@@ -12,7 +12,7 @@
 
 using namespace dart::dynamics;
 using namespace dart::simulation;
-namespace MASS
+namespace WAD
 {
 
 class Environment

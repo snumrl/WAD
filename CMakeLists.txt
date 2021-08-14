@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5.1)
-project(mss)
+project(wad)
 
 set(OpenGL_GL_PREFERENCE LEGACY)
 
@@ -15,7 +15,7 @@ add_compile_options(-fPIC)
 add_compile_options(-Wdeprecated-declarations)
 add_compile_options(-DHAVE_CSTDDEF)
 
-add_definitions(-DMASS_ROOT_DIR="${CMAKE_HOME_DIRECTORY}")
+add_definitions(-DWAD_ROOT_DIR="${CMAKE_HOME_DIRECTORY}")
 set(CMAKE_MODULE_PATH "${CMAKE_HOME_DIRECTORY}/cmake")
 
 add_subdirectory( core )

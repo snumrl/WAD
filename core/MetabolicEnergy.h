@@ -1,5 +1,5 @@
-#ifndef __MASS_METABOLIC_ENERGY_H__
-#define __MASS_METABOLIC_ENERGY_H__
+#ifndef __METABOLIC_ENERGY_H__
+#define __METABOLIC_ENERGY_H__
 #include "dart/dart.hpp"
 #include "Muscle.h"
 #include <deque>
@@ -7,7 +7,7 @@
 #include <set>
 
 using namespace dart::simulation;
-namespace MASS
+namespace WAD
 {
 
 class MetabolicEnergy
