@@ -53,6 +53,7 @@ public:
 	void Initialize_Mass();
 	void Initialize_Speed();
 	void Initialize_JointWeights();
+	void Initialize_Contacts();
 	void SetJointPositionLimits();
 
 	void SetWorld(const WorldPtr& wPtr){ mWorld = wPtr; }
@@ -174,7 +175,7 @@ public:
 	std::deque<double> GetSignals(int idx);
 	JointData* GetJointDatas(){return mJointDatas;}
 	MetabolicEnergy* GetMetabolicEnergy(){return mMetabolicEnergy;}
-	Contact* GetContacts(){return mContacts;}
+	// Contact* GetContacts(){return mContacts;}
 
 	void SetMass();
 	void SetMassRatio(double r);
@@ -195,6 +196,7 @@ public:
 	void SetTrajectory();
 	void SetComHistory();
 	void SetFoot();
+	void SetContact();
 
 	double GetCoT(){return mCurCoT;}
 	double GetCurVelocity(){return mCurVel;}
@@ -224,7 +226,8 @@ private:
 	std::map<std::string,std::string> mBVHmap;
 	
 	Device* mDevice;
-	Contact* mContacts;
+	// Contact* mContacts;
+	std::map<std::string, Contact*> mContacts;
 	JointData* mJointDatas;
 	MetabolicEnergy* mMetabolicEnergy;
 
@@ -266,8 +269,11 @@ private:
 	std::pair<double,double> mPhases;
 	std::pair<double,double> mAdaptivePhases;
 	int mPhaseStateRight;
+	int mPhaseStateLeft;
 	double mPhaseChangeTimeRight;
+	double mPhaseChangeTimeLeft;
 	std::deque<std::pair<double, int>> mGaitPhaseRight;
+	std::deque<std::pair<double, int>> mGaitPhaseLeft;
 
 	double mTimeOffset;
 	double mStride;

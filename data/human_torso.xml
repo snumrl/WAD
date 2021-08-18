@@ -19,7 +19,7 @@
         <Body type="Box" mass="4.0" size="0.1198 0.4156 0.1141 " contact="Off" color="0.6 0.6 1.5 1.0" obj="L_Tibia.obj">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0903 0.3018 -0.0 "/>
         </Body>
-        <Joint type="Revolute" axis ="1.0 0.0 0.0" bvh="Character1_LeftLeg" lower="-1.0" upper="1.0" force_lower="-1000.0" force_upper="1000.0">
+        <Joint type="Revolute" axis ="1.0 0.0 0.0" bvh="Character1_LeftLeg" lower="0.0" upper="1.5" force_lower="-1000.0" force_upper="1000.0">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0.0903 0.5387 -0.0 "/>
         </Joint>
         <!-- <Joint type="Ball" bvh="Character1_LeftLeg" lower="-1.0 -0.8 -0.8" upper="1.5 0.8 0.8" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">
@@ -62,7 +62,7 @@
         <Body type="Box" mass="4.0" size="0.1198 0.4156 0.1141 " contact="Off" color="0.3 0.3 1.5 1.0" obj="R_Tibia.obj">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.0903 0.3018 -0.0 "/>
         </Body>
-        <Joint type="Revolute" axis ="1.0 0.0 0.0" bvh="Character1_RightLeg" lower="-1.0" upper="1.0" force_lower="-1000.0" force_upper="1000.0">
+        <Joint type="Revolute" axis ="1.0 0.0 0.0" bvh="Character1_RightLeg" lower="0.0" upper="1.5" force_lower="-1000.0" force_upper="1000.0">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="-0.0903 0.5387 -0.0 "/>
         </Joint>
         <!-- <Joint type="Ball" bvh="Character1_RightLeg" lower="-1.0 -0.8 -0.8" upper="1.5 0.8 0.8" force_lower="-1000.0 -1000.0 -1000.0" force_upper="1000.0 1000.0 1000.0">

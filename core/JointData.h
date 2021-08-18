@@ -17,49 +17,55 @@ public:
     void Initialize(const SkeletonPtr& skel);
     void Reset();
 
-    void SetTorques(const Eigen::VectorXd& torques);
-    void SetTorques(const Eigen::VectorXd& torques, double phase, double frame);
-
-    void SetTorques(std::string name, double torque, double phase);
-    void SetTorquesNorm(std::string name, double norm, double phase);
-
     void SetMaxForces(const Eigen::VectorXd& forces){mMaxForces = forces;}
 
-    void SetAngles(double phase);
-    void SetAngles(std::string name, double angle, double phase);
+    void SetPhaseState(int phaseState, double time);
+
+    void SetTorques(const Eigen::VectorXd& torques);
+    void SetTorques(std::string name, double torque);
+    void SetTorquesGaitPhase(std::string name, double torque);
+
+    void SetAngles();
+    void SetAngles(std::string name, double angle);
+    void SetAnglesGaitPhase(std::string name, double angle);
+
+    void SetAnglesRef();
+    void SetAnglesRef(std::string name, double angle);
+    void SetAnglesGaitPhaseRef(std::string name, double angle);
 
     const std::map<std::string, std::deque<double>>& GetTorques(){return mTorques;}
-    const std::map<std::string, std::deque<double>>& GetTorquesNorm(){return mTorquesNorm;}
+    const std::map<std::string, std::deque<double>>& GetTorquesGaitPhasePrev(){return mTorquesGaitPhasePrev;}
     const std::map<std::string, std::deque<double>>& GetAngles(){return mAngles;}
-
-    const std::map<std::string, std::deque<std::pair<double, double>>>& GetTorquesPhase(){ return mTorquesPhase;}
-    const std::map<std::string, std::deque<std::pair<double, double>>>& GetTorquesNormPhase(){ return mTorquesNormPhase;}
-    const std::map<std::string, std::deque<std::pair<double, double>>>& GetAnglesPhase(){ return mAnglesPhase;}
+    const std::map<std::string, std::deque<double>>& GetAnglesGaitPhasePrev(){return mAnglesGaitPhasePrev;}    
+    const std::map<std::string, std::deque<double>>& GetAnglesGaitPhaseRefPrev(){return mAnglesGaitPhaseRefPrev;}        
 
     double GetReward();
 private:
     SkeletonPtr mSkeleton;
-
+    int mDof;
+    int mJointNum;
     int mWindowSize;
     int mCycleStep;
-    int mJointNum;
-    int mDof;
-    double mPhasePrev;
+   
+    bool mOnlyLowerBody;
+    bool mOnCycle;
     double mCycleTorqueSum;
     double mCycleTorqueErr;
-    bool mOnCycle;
-    bool mOnlyLowerBody;
+   
+    int mPhaseStateRight;
+    int mPhaseStateRightPrev;
 
     Eigen::VectorXd mMaxForces;
 
     std::map<std::string, std::deque<double>> mTorques;
-    std::map<std::string, std::deque<double>> mTorquesNorm;
+    std::map<std::string, std::deque<double>> mTorquesGaitPhase;
+    std::map<std::string, std::deque<double>> mTorquesGaitPhasePrev;
+
     std::map<std::string, std::deque<double>> mAngles;
-
-    std::map<std::string, std::deque<std::pair<double, double>>> mTorquesPhase;
-    std::map<std::string, std::deque<std::pair<double, double>>> mTorquesNormPhase;
-    std::map<std::string, std::deque<std::pair<double, double>>> mAnglesPhase;
-
+    std::map<std::string, std::deque<double>> mAnglesGaitPhase;
+    std::map<std::string, std::deque<double>> mAnglesGaitPhasePrev;
+    std::map<std::string, std::deque<double>> mAnglesGaitPhaseRef;
+    std::map<std::string, std::deque<double>> mAnglesGaitPhaseRefPrev;
 };
 
 }

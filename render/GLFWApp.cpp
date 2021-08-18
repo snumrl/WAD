@@ -120,8 +120,113 @@ GLFWApp::
 
 void
 GLFWApp::
+tmpData()
+{
+    mTmpAngleData["Hip_sagittal"] = std::deque<double>(51);
+    mTmpAngleData["Hip_sagittal_std1"] = std::deque<double>(51);
+    mTmpAngleData["Hip_sagittal_std2"] = std::deque<double>(51);
+    mTmpAngleData["Hip_frontal"] = std::deque<double>(51);
+    mTmpAngleData["Hip_transverse"] = std::deque<double>(51);
+
+    mTmpAngleData["Knee_sagittal"] = std::deque<double>(51);
+    mTmpAngleData["Knee_sagittal_std1"] = std::deque<double>(51);
+    mTmpAngleData["Knee_sagittal_std2"] = std::deque<double>(51);
+    mTmpAngleData["Knee_frontal"] = std::deque<double>(51);
+    mTmpAngleData["Knee_transverse"] = std::deque<double>(51);
+
+    mTmpAngleData["Ankle_sagittal"] = std::deque<double>(51);
+    mTmpAngleData["Ankle_sagittal_std1"] = std::deque<double>(51);
+    mTmpAngleData["Ankle_sagittal_std2"] = std::deque<double>(51);
+    mTmpAngleData["Ankle_frontal"] = std::deque<double>(51);
+    mTmpAngleData["Ankle_transverse"] = std::deque<double>(51);
+
+    Eigen::VectorXd tmp(51);
+	tmp << 
+    35.8, 35.7, 35.5, 35.1, 34.2, 32.8, 31.1, 29.1, 26.9, 24.7, 
+    22.5, 20.3, 18.1, 15.8, 13.6, 11.4,  9.3,  7.3,  5.3,  3.4,
+     1.6, -0.1, -1.7, -3.2, -4.4, -5.3, -5.8, -5.7, -4.9, -3.4,
+    -0.9,  2.3,  6.1, 10.1, 14.1, 17.9, 21.4, 24.6, 27.4, 29.9,
+    32.0, 33.7, 35.1, 36.0, 36.6, 36.7, 36.5, 36.2, 35.8, 35.6, 35.5;
+    for(int i=0; i<51; i++)
+        mTmpAngleData["Hip_sagittal"][i] = tmp[i];       
+    
+    tmp << 
+    30.4,30.2,29.9, 29.3, 28.3, 26.9, 25.1, 23.1, 20.9, 18.7,
+    16.5,14.3,12.1,  9.9,  7.6,  5.4,  3.2,  1.0, -1.1, -3.2,
+    -5.1,-6.9,-8.5,-10.0,-11.2,-12.1,-12.6,-12.5,-11.7,-10.1,
+    -7.7,-4.4,-0.5,  3.6,  7.8, 11.7, 15.4, 18.7, 21.7, 24.3,
+    26.5,28.3,29.7, 30.6, 31.1, 31.2, 31.0, 30.6, 30.3, 30.1, 29.9;
+    for(int i=0; i<51; i++)
+        mTmpAngleData["Hip_sagittal_std1"][i] = tmp[i];       
+
+    tmp <<
+    41.3,41.2,41.1,40.9,40.2,38.8,37.1,35.0,32.9,30.7,
+    28.5,26.3,24.0,21.8,19.6,17.4,15.4,13.6,11.8,10.0,
+     8.3, 6.7, 5.1, 3.7, 2.5, 1.5, 1.0, 1.1, 1.8, 3.4,
+     5.8, 9.0,12.7,16.6,20.4,24.0,27.4,30.5,33.2,35.5,
+    37.5,39.1,40.5,41.4,42.0,42.2,42.1,41.7,41.3,41.0,41.0;
+    for(int i=0; i<51; i++)
+        mTmpAngleData["Hip_sagittal_std2"][i] = tmp[i];       
+    
+    tmp <<
+     5.6, 7.9,10.9,14.1,16.9,18.6,19.3,19.2,18.6,17.6,
+    16.5,15.2,13.9,12.6,11.3,10.1, 9.0, 8.0, 7.2, 6.6,
+     6.2, 6.3, 6.8, 7.9, 9.5,11.6,14.5,18.1,22.6,27.9,
+    33.9,40.2,46.3,51.7,55.7,58.2,59.1,58.7,56.9,53.9,
+    49.8,44.7,38.8,32.4,25.5,18.7,12.5, 7.6, 4.6,4.0,5.4;
+    for(int i=0; i<51; i++)
+        mTmpAngleData["Knee_sagittal"][i] = tmp[i];       
+    
+    tmp <<
+    -0.1,2.5,5.3,8.3,10.8,12.3,13.0,12.9,12.4,11.6,10.6,9.4,8.2,7.0,5.8,4.6,3.5,2.5,1.6,0.9,0.5,0.5,1.1,2.2,3.8,6.0,8.7,12.2,16.4,21.5,27.3,33.6,39.9,45.7,50.0,52.5,53.3,52.4,50.1,46.5,42.0,36.5,30.3,23.7,16.8,10.2,4.4,0.2,-2.0,-1.9,-0.2;
+    for(int i=0; i<51; i++)
+        mTmpAngleData["Knee_sagittal_std1"][i] = tmp[i];       
+
+    tmp <<
+    11.2,13.4,16.5,20.0,23.0,24.8,25.6,25.5,24.8,23.7,22.4,21.0,19.6,18.2,16.8,15.6,14.6,13.6,12.9,12.3,12.0,12.0,12.5,13.5,15.1,17.3,20.2,24.0,28.8,34.3,40.5,46.8,52.8,57.7,61.4,63.8,65.0,65.0,63.8,61.3,57.6,52.9,47.3,41.0,34.2,27.2,20.5,14.9,11.2,10.0,11.0;
+    for(int i=0; i<51; i++)
+        mTmpAngleData["Knee_sagittal_std2"][i] = tmp[i];       
+
+    tmp <<
+    -2.1,-3.9,-5.6,-5.6,-4.1,-2.1,-0.2, 1.5, 2.9, 4.1,
+     5.2, 6.1, 6.8, 7.4, 8.0, 8.6, 9.1, 9.7,10.2,10.7,
+    11.1,11.5,11.8,11.8,11.5,10.4, 8.4, 4.9,-0.2,-6.9,
+    -13.8,-18.5,-19.8,-18.0,-14.7,-11.2,-7.9,-4.9,-2.4,
+    -0.3,1.1,2.1,2.5,2.4,1.8,1.0,0.1,-0.6,-1.1,-1.4,-2.3;
+    for(int i=0; i<51; i++)
+        mTmpAngleData["Ankle_sagittal"][i] = tmp[i];    
+
+    tmp <<
+    -7.7,-9.1,-10.3,-9.9,-8.2,-6.1,-4.2,-2.5,-1.0,0.2,1.4,2.3,3.1,3.7,4.3,4.8,5.3,5.7,6.1,6.4,6.7,7.0,7.1,6.9,6.3,4.8,2.1,-2.2,-8.6,-16.2,-23.3,-27.6,-28.6,-26.7,-22.9,-18.7,-14.7,-11.1,-8.1,-5.6,-3.7,-2.4,-1.7,-1.7,-2.4,-3.4,-4.6,-5.7,-6.4,-7.0,-7.8;
+    for(int i=0; i<51; i++)
+        mTmpAngleData["Ankle_sagittal_std1"][i] = tmp[i];    
+
+    tmp <<
+    3.5,1.3,-0.8,-1.3,-0.1,1.9,3.8,5.5,6.9,8.0,9.0,9.8,10.5,11.1,11.8,12.4,13.0,13.7,14.3,15.0,15.5,16.1,16.5,16.8,16.7,16.0,14.6,12.1,8.1,2.4,-4.3,-9.5,-10.9,-9.3,-6.5,-3.7,-1.1,1.3,3.4,4.9,6.0,6.6,6.7,6.4,5.9,5.4,4.8,4.5,4.3,4.1,3.1;
+    for(int i=0; i<51; i++)
+        mTmpAngleData["Ankle_sagittal_std2"][i] = tmp[i];    
+
+    tmp << 
+    -1.6,-0.9,0.1,1.3,2.6,3.7,4.5,5.0,5.2,5.2,5.0,4.7,4.4,4.0,3.6,3.2,2.9,2.7,2.6,2.5,2.4,2.4,2.2,1.9,1.4,0.8,0.0,-1.1,-2.3,-3.8,-5.2,-6.3,-7.0,-7.1,-6.8,-6.3,-5.6,-4.9,-4.2,-3.6,-3.1,-2.7,-2.4,-2.2,-2.2,-2.2,-2.3,-2.4,-2.4,-2.1,-1.6;
+    for(int i=0; i<51; i++)
+        mTmpAngleData["Hip_frontal"][i] = tmp[i];    
+
+    tmp <<
+    -2.7,-2.6,-2.2,-1.2,0.1,0.8,0.7,0.2,-0.1,-0.3,-0.5,-0.7,-1.0,-1.3,-1.4,-1.4,-1.4,-1.5,-1.5,-1.6,-1.7,-1.9,-2.1,-2.3,-2.6,-3.0,-3.5,-4.0,-4.5,-4.8,-5.1,-5.3,-5.3,-4.9,-4.2,-3.2,-2.2,-1.2,-0.2,0.5,1.1,1.2,0.9,0.1,-1.0,-2.2,-3.0,-3.3,-3.2,-3.0,-2.8;
+    for(int i=0; i<51; i++)
+        mTmpAngleData["Hip_transverse"][i] = tmp[i];    
+
+    tmp << 
+    -8.2,-7.4,-6.3,-5.2,-4.6,-4.4,-4.4,-4.5,-4.6,-4.7,-4.8,-4.9,-5.1,-5.4,-5.6,-5.9,-6.3,-6.7,-7.1,-7.4,-7.7,-7.9,-7.9,-7.6,-7.1,-6.4,-5.6,-4.6,-3.5,-2.4,-1.5,-1.5,-2.6,-4.5,-6.7,-8.6,-10.2,-11.4,-12.4,-13.2,-13.8,-14.2,-14.1,-13.7,-12.9,-11.9,-10.8,-9.9,-9.3,-8.9,-8.4;
+    for(int i=0; i<51; i++)
+        mTmpAngleData["Ankle_transverse"][i] = tmp[i];    
+}
+
+void
+GLFWApp::
 Initialize()
 {
+    this->tmpData();
     mDevice_On = mEnv->GetCharacter()->GetDevice_OnOff();
     this->InitGLFW();    
     this->InitAnalysis();
@@ -361,7 +466,7 @@ GLFWApp::
 InitAnalysis()
 {
     mJointAngleMinMax["Hip_sagittal"] = std::pair(-40.0, 40.0);
-    mJointAngleMinMax["Hip_frontal"] = std::pair(-20.0, 20.0);
+    mJointAngleMinMax["Hip_frontal"] = std::pair(-20.0, 40.0);
     mJointAngleMinMax["Hip_transverse"] = std::pair(-20.0, 20.0);
 
     mJointAngleMinMax["Knee_sagittal"] = std::pair(-15.0, 75.0);
@@ -370,7 +475,7 @@ InitAnalysis()
 
     mJointAngleMinMax["Ankle_sagittal"] = std::pair(-40.0, 40.0);
     mJointAngleMinMax["Ankle_frontal"] = std::pair(-20.0, 20.0);
-    mJointAngleMinMax["Ankle_transverse"] = std::pair(-40.0, 0.0);
+    mJointAngleMinMax["Ankle_transverse"] = std::pair(-40.0, 40.0);
 
     mJointTorqueMinMax["Hip_x"] = std::pair(-200.0,200.0);
     mJointTorqueMinMax["Hip_y"] = std::pair(-200.0, 200.0);
@@ -383,6 +488,18 @@ InitAnalysis()
     mJointTorqueMinMax["Ankle_x"] = std::pair(-200.0, 200.0);
     mJointTorqueMinMax["Ankle_y"] = std::pair(-200.0, 200.0);
     mJointTorqueMinMax["Ankle_z"] = std::pair(-200.0, 200.0);
+
+    mJointTorqueMinMax["Spine_x"] = std::pair(-200.0, 200.0);
+    mJointTorqueMinMax["Spine_y"] = std::pair(-200.0, 200.0);
+    mJointTorqueMinMax["Spine_z"] = std::pair(-200.0, 200.0);
+
+    mJointTorqueMinMax["Torso_x"] = std::pair(-200.0, 200.0);
+    mJointTorqueMinMax["Torso_y"] = std::pair(-200.0, 200.0);
+    mJointTorqueMinMax["Torso_z"] = std::pair(-200.0, 200.0);
+
+    mJointTorqueMinMax["Neck_x"] = std::pair(-200.0, 200.0);
+    mJointTorqueMinMax["Neck_y"] = std::pair(-200.0, 200.0);
+    mJointTorqueMinMax["Neck_z"] = std::pair(-200.0, 200.0);
 
     mAdaptiveParams = mEnv->GetCharacter()->GetAdaptiveParams();       
 }
@@ -897,21 +1014,64 @@ void
 GLFWApp::
 DrawJointAngle(std::string name, std::deque<double> data1, std::deque<double> data2, double yMin, double yMax, double w, double h)
 {
-    int size = data1.size();
-    float x[size];
-    float data1_[size];
-    float data2_[size];
-    for(int i=0; i<size; i++)
+    int size1 = data1.size();
+    float x1[size1];
+    float data1_[size1];
+    for(int i=0; i<size1; i++)
     {
-        x[i] = i*(1.0/(size-1.0));
-        data1_[i] = data1[i]*180.0/M_PI;
-        data2_[i] = data2[i]*180.0/M_PI;
+        x1[i] = i*(1.0/(size1-1.0));
+        data1_[i] = data1[i]*180.0/M_PI;        
+    }
+
+    int size2 = data2.size();
+    float x2[size2];
+    float data2_[size2];
+    for(int i=0; i<size2; i++)
+    {
+        x2[i] = i*(1.0/(size2-1.0));
+        data2_[i] = data2[i];        
     }
     
     ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
     if (ImPlot::BeginPlot(name.c_str(), "%", "deg", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
-        ImPlot::PlotLine("char1",x,data1_,size);                
-        ImPlot::PlotLine("char2",x,data2_,size);                
+        ImPlot::PlotLine("char1",x1,data1_,size1);                
+        ImPlot::PlotLine("char2",x2,data2_,size2);                
+        ImPlot::EndPlot();
+    }
+}
+
+void
+GLFWApp::
+DrawJointAngle(std::string name, std::deque<double> data1, std::deque<double> data2, std::deque<double> std1, std::deque<double> std2, double yMin, double yMax, double w, double h)
+{
+    int size1 = data1.size();
+    float x1[size1];
+    float data1_[size1];
+    for(int i=0; i<size1; i++)
+    {
+        x1[i] = i*(1.0/(size1-1.0));
+        data1_[i] = data1[i]*180.0/M_PI;        
+    }
+
+    int size2 = data2.size();
+    float x2[size2];
+    float data2_[size2];
+    float std1_[size2];
+    float std2_[size2];
+    for(int i=0; i<size2; i++)
+    {
+        x2[i] = i*(1.0/(size2-1.0));
+        data2_[i] = data2[i];        
+        std1_[i] = std1[i];
+        std2_[i] = std2[i];        
+    }
+    
+    ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
+    if (ImPlot::BeginPlot(name.c_str(), "%", "deg", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+        ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.2f);
+        ImPlot::PlotLine("char1",x1,data1_,size1);                
+        ImPlot::PlotShaded("char2",x2,std1_,std2_,size2);                
+        ImPlot::PlotLine("char2",x2,data2_,size2);                        
         ImPlot::EndPlot();
     }
 }
@@ -940,21 +1100,28 @@ void
 GLFWApp::
 DrawJointTorque(std::string name, std::deque<double> data1, std::deque<double> data2, double yMin, double yMax, double w, double h)
 {
-    int size = data1.size();
-    float x[size];
-    float data1_[size];
-    float data2_[size];
-    for(int i=0; i<size; i++)
+    int size1 = data1.size();
+    float x1[size1];    
+    float data1_[size1];
+    for(int i=0; i<size1; i++)
     {
-        x[i] = i*(1.0/(size-1.0));
-        data1_[i] = data1[i];
-        data2_[i] = data2[i];
+        x1[i] = i*(1.0/(size1-1.0));
+        data1_[i] = data1[i];        
+    }
+
+    int size2 = data2.size();
+    float x2[size2];
+    float data2_[size2];
+    for(int i=0; i<size2; i++)
+    {
+        x2[i] = i*(1.0/(size2-1.0));
+        data2_[i] = data2[i];        
     }
     
     ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
     if (ImPlot::BeginPlot(name.c_str(), "%", "Nm", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
-        ImPlot::PlotLine("char1",x,data1_,size);                
-        ImPlot::PlotLine("char2",x,data2_,size);                
+        ImPlot::PlotLine("char1",x1,data1_,size1);                
+        ImPlot::PlotLine("char2",x2,data2_,size2);                
         ImPlot::EndPlot();
     }
 }
@@ -1000,7 +1167,9 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
     {
         JointData* jointData = mEnv->GetCharacter()->GetJointDatas(); 
         auto angles = jointData->GetAngles();
+        auto anglesPhase = jointData->GetAnglesGaitPhasePrev();
         auto torques = jointData->GetTorques();
+        auto torquesPhase = jointData->GetTorquesGaitPhasePrev();
 
         if (ImGui::BeginTabItem("Joint Angle"))
         {   
@@ -1009,6 +1178,7 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
             double h_ = h/3.0 - 30.0;
 
             std::deque<double> angleData;
+            std::deque<double> angleDataRef;
             double yMin, yMax;
             std::string plotName, dataName;
             std::string plotNamePre, dataNamePre;
@@ -1017,13 +1187,13 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
             for(int i=0; i<3; i++)
             {
                 if(i==0){
-                    plotNamePre = "Hip"; dataNamePre = "FemurL";
+                    plotNamePre = "Hip"; dataNamePre = "FemurR";
                 }
                 else if(i==1){
-                    plotNamePre = "Knee"; dataNamePre = "TibiaL";
+                    plotNamePre = "Knee"; dataNamePre = "TibiaR";
                 }
                 else if(i==2){
-                    plotNamePre = "Ankle"; dataNamePre = "TalusL";
+                    plotNamePre = "Ankle"; dataNamePre = "TalusR";
                 }
     
                 for(int j=0; j<3; j++)
@@ -1037,18 +1207,24 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
                     
                     plotName = plotNamePre + namePost;
                     dataName = dataNamePre + namePost;
-                    angleData = angles[dataName];
+                    // angleData = angles[dataName];
+                    angleData = anglesPhase[dataName];
+                    if(dataName == "FemurR_sagittal" || dataName == "FemurR_frontal" || dataName == "TalusR_sagittal" || dataName == "TalusR_transverse")
+                    {
+                        for(int i=0; i<angleData.size(); i++)
+                            angleData[i] *= -1;                        
+                    }
                     yMin = mJointAngleMinMax[plotName].first;
                     yMax = mJointAngleMinMax[plotName].second;
                 
                     if(compare)
                     {
-                        //get data from mComparePersonIdx
-                        std::deque<double> compareAngleData(angleData.size());
-                        for(int i=0; i<angleData.size(); i++)
-                            compareAngleData[i] = angleData[i] - 5.0/180.0*M_PI;
-                        
-                        this->DrawJointAngle(plotName, angleData, compareAngleData, yMin, yMax, w_, h_);
+                        if(plotName == "Hip_sagittal" || plotName == "Knee_sagittal" || plotName == "Ankle_sagittal")
+                        {
+                            this->DrawJointAngle(plotName, angleData, mTmpAngleData[plotName], mTmpAngleData[plotName+"_std1"], mTmpAngleData[plotName +"_std2"], yMin, yMax, w_, h_);
+                        }
+                        else//get data from mComparePersonIdx
+                            this->DrawJointAngle(plotName, angleData, mTmpAngleData[plotName], yMin, yMax, w_, h_);                        
                     }
                     else
                         this->DrawJointAngle(plotName, angleData, yMin, yMax, w_, h_);
@@ -1063,7 +1239,6 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
 
         if (ImGui::BeginTabItem("Joint Torque"))
         {   
-         
             double w_ = w/3.0 - 10.0;
             double h_ = h/3.0 - 30.0;
 
@@ -1073,7 +1248,7 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
             std::string plotNamePre, dataNamePre;
             std::string namePost;
 
-            for(int i=0; i<3; i++)
+            for(int i=0; i<6; i++)
             {
                 if(i==0){
                     plotNamePre = "Hip"; dataNamePre = "FemurL";
@@ -1083,6 +1258,15 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
                 }
                 else if(i==2){
                     plotNamePre = "Ankle"; dataNamePre = "TalusL";
+                }
+                else if(i==3){
+                    plotNamePre = "Spine"; dataNamePre = "Spine";
+                }
+                else if(i==4){
+                    plotNamePre = "Torso"; dataNamePre = "Torso";
+                }
+                else if(i==5){
+                    plotNamePre = "Neck"; dataNamePre = "Neck";
                 }
     
                 for(int j=0; j<3; j++)
@@ -1096,18 +1280,20 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
                     
                     plotName = plotNamePre + namePost;
                     dataName = dataNamePre + namePost;
-                    torqueData = torques[dataName];
+                    // torqueData = torques[dataName];
+                    torqueData = torquesPhase[dataName];                    
                     yMin = mJointTorqueMinMax[plotName].first;
                     yMax = mJointTorqueMinMax[plotName].second;
                 
                     if(compare)
                     {
                         //get data from mComparePersonIdx
-                        std::deque<double> compareTorqueData(torqueData.size());
-                        for(int i=0; i<torqueData.size(); i++)
-                            compareTorqueData[i] = torqueData[i] - 5.0;
-                        
-                        this->DrawJointTorque(plotName, torqueData, compareTorqueData, yMin, yMax, w_, h_);
+                        // int size = torqueData.size()/2;
+                        // std::deque<double> compareTorqueData(size);
+                        // for(int i=0; i<compareTorqueData.size(); i++)
+                        //     compareTorqueData[i] = torqueData[i] - 5.0;
+                        this->DrawJointTorque(plotName, torqueData, yMin, yMax, w_, h_);
+                        // this->DrawJointTorque(plotName, torqueData, compareTorqueData, yMin, yMax, w_, h_);
                     }
                     else
                         this->DrawJointTorque(plotName, torqueData, yMin, yMax, w_, h_);

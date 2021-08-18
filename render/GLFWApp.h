@@ -57,6 +57,8 @@ public:
 	void Update();
 	void SetFocus();	
 
+	void tmpData();
+
 	void Draw();
 	void DrawSimFrame();
     void DrawUiFrame();
@@ -69,6 +71,7 @@ public:
 	void DrawDequeGraph(std::string name, std::string xAxis, std::string yAxis, std::deque<double> data, double yMin, double yMax, double w, double h);
 	void DrawJointAngle(std::string name, std::deque<double> data, double yMin, double yMax, double w, double h);
 	void DrawJointAngle(std::string name, std::deque<double> data1, std::deque<double> data2, double yMin, double yMax, double w, double h);
+	void DrawJointAngle(std::string name, std::deque<double> data1, std::deque<double> data2, std::deque<double> std1, std::deque<double> std2, double yMin, double yMax, double w, double h);
 	void DrawJointTorque(std::string name, std::deque<double> data, double yMin, double yMax, double w, double h);
 	void DrawJointTorque(std::string name, std::deque<double> data1, std::deque<double> data2, double yMin, double yMax, double w, double h);
 	
@@ -152,6 +155,8 @@ private:
 	std::map<std::string, std::pair<double,double>> mJointAngleMinMax;
 	std::map<std::string, std::pair<double,double>> mJointTorqueMinMax;
 	std::map<std::string, std::pair<double,double>> mAdaptiveParams;
+
+	std::map<std::string, std::deque<double>> mTmpAngleData;
 
 	ImVec4 mUiBackground;	 	
 

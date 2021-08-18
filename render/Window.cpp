@@ -323,17 +323,17 @@ WriteJointTorque()
 {
 	if(!isOpenFile)
 	{
-		mJointDatas = mEnv->GetCharacter()->GetJointDatas();
-		auto& torquesNorm = mJointDatas->GetTorquesNorm();
-		for(auto iter = torquesNorm.begin(); iter != torquesNorm.end(); iter++)
-			mFile << " " + iter->first;
+		// mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+		// auto& torquesNorm = mJointDatas->GetTorquesNorm();
+		// for(auto iter = torquesNorm.begin(); iter != torquesNorm.end(); iter++)
+		// 	mFile << " " + iter->first;
 	}
 	else
 	{
-		mJointDatas = mEnv->GetCharacter()->GetJointDatas();
-		auto& torquesNorm = mJointDatas->GetTorquesNorm();
-		for(auto iter = torquesNorm.begin(); iter != torquesNorm.end(); iter++)
-			mFile << " " + std::to_string((iter->second).at(0));
+		// mJointDatas = mEnv->GetCharacter()->GetJointDatas();
+		// auto& torquesNorm = mJointDatas->GetTorquesNorm();
+		// for(auto iter = torquesNorm.begin(); iter != torquesNorm.end(); iter++)
+		// 	mFile << " " + std::to_string((iter->second).at(0));
 	}
 }
 
@@ -877,35 +877,35 @@ DrawContactForce()
 	glEnable(GL_COLOR_MATERIAL);
 	glEnable(GL_DEPTH_TEST);
 
-	Eigen::Vector4d color(0.8, 1.2, 0.8, 0.6);
-	mRI->setPenColor(color);
+	// Eigen::Vector4d color(0.8, 1.2, 0.8, 0.6);
+	// mRI->setPenColor(color);
 
-	Contact* contact = mEnv->GetCharacter()->GetContacts();
-	auto& objects = contact->GetContactObjects();
-	double force_scaler = -0.0005;
-	for(auto iter = objects.begin(); iter != objects.end(); iter++)
-	{
-		for(int i=0; i<(iter->second).size(); i++)
-		{
-			Eigen::Vector3d f = force_scaler*((iter->second).at(i)).first;
-			Eigen::Vector3d p = ((iter->second).at(i)).second;
-			double norm = f.norm();
-			// if(norm != 0)
-			// 	dart::gui::drawArrow3D(p, f/norm, norm, 0.005, 0.015);
-		}
-	}
+	// Contact* contact = mEnv->GetCharacter()->GetContacts();
+	// auto& objects = contact->GetContactObjects();
+	// double force_scaler = -0.0005;
+	// for(auto iter = objects.begin(); iter != objects.end(); iter++)
+	// {
+	// 	for(int i=0; i<(iter->second).size(); i++)
+	// 	{
+	// 		Eigen::Vector3d f = force_scaler*((iter->second).at(i)).first;
+	// 		Eigen::Vector3d p = ((iter->second).at(i)).second;
+	// 		double norm = f.norm();
+	// 		// if(norm != 0)
+	// 		// 	dart::gui::drawArrow3D(p, f/norm, norm, 0.005, 0.015);
+	// 	}
+	// }
 
-	glDisable(GL_COLOR_MATERIAL);
-	glDisable(GL_DEPTH_TEST);
+	// glDisable(GL_COLOR_MATERIAL);
+	// glDisable(GL_DEPTH_TEST);
 
-	DrawGLBegin();
+	// DrawGLBegin();
 
-	double fL = contact->GetContactForce("TalusL");
-	double fR = contact->GetContactForce("TalusR");
+	// double fL = contact->GetContactForce("TalusL");
+	// double fR = contact->GetContactForce("TalusR");
 
-	bool big = true;
-	DrawString(0.70, 0.44, big, "Contact L : " + std::to_string(fL));
-	DrawString(0.70, 0.41, big, "Contact R : " + std::to_string(fR));
+	// bool big = true;
+	// DrawString(0.70, 0.44, big, "Contact L : " + std::to_string(fL));
+	// DrawString(0.70, 0.41, big, "Contact R : " + std::to_string(fR));
 
 	DrawGLEnd();
 }

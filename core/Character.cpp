@@ -3,8 +3,8 @@
 #include <tinyxml.h>
 #include <ctime>
 
-#define STANCE_PHASE 0
-#define SWING_PHASE 1
+#define SWING_PHASE 0
+#define STANCE_PHASE 1
 
 namespace WAD
 {
@@ -45,9 +45,12 @@ Character::
 	for(int i=0; i<mMusclesFemur.size(); i++)
 		delete(mMusclesFemur[i]);
 
+	// for(int i=0; i<mContacts.size(); i++)
+	// 	delete(mContacts[i]);
+
 	delete mBVH;
 	delete mDevice;
-	delete mContacts;
+	// delete mContacts;
 	delete mJointDatas;
 	delete mMetabolicEnergy;
 }
@@ -268,6 +271,7 @@ Initialize()
 	this->Initialize_Rewards();
 	this->Initialize_Forces();
 	this->Initialize_Mass();
+	this->Initialize_Contacts();
 	if(mUseMuscle)
 		this->Initialize_Muscles();
 
@@ -302,10 +306,10 @@ Initialize()
 	mJointDatas->Initialize(mSkeleton);
 	mJointDatas->SetMaxForces(mMaxForces);
 
-	mContacts = new Contact(mWorld);
-	mContacts->Initialize(mSkeleton, mMass, mNumSteps);
-	mContacts->SetContactObject("TalusL");
-	mContacts->SetContactObject("TalusR");
+	// mContacts = new Contact(mWorld);
+	// mContacts->Initialize(mSkeleton, mMass, mNumSteps);
+	// mContacts->SetContactObject("TalusL");
+	// mContacts->SetContactObject("TalusR");
 
 	this->Reset();
 }
@@ -383,20 +387,20 @@ Initialize_Forces()
 	mMaxForces.resize(mDof);
 	mDefaultForces.resize(mDof);
 	
-	mDefaultForces <<
-		 0, 0, 0, 0, 0, 0,   //pelvis
-		 300, 300, 300,      //Femur L
-		 300, 			     //Tibia L
-		 300, 300, 300,      //Talus L
-		 300, 300,           //Thumb, Pinky L
-		 300, 300, 300,      //Femur R
-		 300, 			     //Tibia R
-		 300, 300, 300,      //Talus R
-		 300, 300,           //Thumb, Pinky R
-		 300, 300, 300,      //Spine
-		 300, 300, 300,      //Torso
-		 300, 300, 300,      //Neck
-		 300, 300, 300;      //Head
+	// mDefaultForces <<
+	// 	 0, 0, 0, 0, 0, 0,   //pelvis
+	// 	 300, 300, 300,      //Femur L
+	// 	 300, 			     //Tibia L
+	// 	 300, 300, 300,      //Talus L
+	// 	 300, 300,           //Thumb, Pinky L
+	// 	 300, 300, 300,      //Femur R
+	// 	 300, 			     //Tibia R
+	// 	 300, 300, 300,      //Talus R
+	// 	 300, 300,           //Thumb, Pinky R
+	// 	 300, 300, 300,      //Spine
+	// 	 300, 300, 300,      //Torso
+	// 	 300, 300, 300,      //Neck
+	// 	 300, 300, 300;      //Head
 	// // 	//  300, 300, 300,      //Shoulder L
 	// // 	//  300, 300, 300,      //Arm L
 	// // 	//  300,                //ForeArm L
@@ -406,20 +410,20 @@ Initialize_Forces()
 	// // 	//  300,                //ForeArm R
 	// // 	//  300, 300, 300;      //Hand R
 
-	// mDefaultForces <<
-	//      0, 0, 0, 0, 0, 0,   //pelvis
-	//      200, 100, 100,      //Femur L
-	//      100,       //Tibia L
-	//      150, 100, 100,        //Talus L
-	//      50, 50,             //Thumb, Pinky L
-	//      200, 100, 100,      //Femur R
-	//      100,       //Tibia R
-	//      150, 100, 100,        //Talus R
-	//      50, 50,             //Thumb, Pinky R
-	//      100, 100, 100,         //Spine
-	//      100, 100, 100,         //Torso
-	//      50, 50, 50,         //Neck
-	//      50, 50, 50;         //Head
+	mDefaultForces <<
+	     0, 0, 0, 0, 0, 0,   //pelvis
+	     250, 100, 100,      //Femur L
+	     100,       //Tibia L
+	     150, 100, 100,        //Talus L
+	     50, 50,             //Thumb, Pinky L
+	     200, 100, 100,      //Femur R
+	     100,       //Tibia R
+	     150, 100, 100,        //Talus R
+	     50, 50,             //Thumb, Pinky R
+	     100, 100, 100,         //Spine
+	     100, 100, 100,         //Torso
+	     50, 50, 50,         //Neck
+	     50, 50, 50;         //Head
 	    //  50, 50, 50,         //Shoulder L
 	    //  50, 50, 50,         //Arm L
 	    //  30,                 //ForeArm L
@@ -481,6 +485,36 @@ Initialize_Rewards()
 		mRewards.insert(std::make_pair(tag, std::deque<double>(reward_window)));
 	}
 }
+
+void
+Character::
+Initialize_Contacts()
+{
+	Contact* footLeft = new Contact(mWorld);
+	BodyNode* bnFootLeft = mSkeleton->getBodyNode("TalusL");
+	footLeft->Initialize("TalusL", bnFootLeft);
+	mContacts["footLeft"] = footLeft;
+
+	if(mContacts["footLeft"]->isContact())
+		mPhaseStateLeft = STANCE_PHASE;
+	else
+		mPhaseStateLeft = SWING_PHASE;
+	mPhaseChangeTimeLeft = mWorld->getTime();
+	mGaitPhaseLeft.push_front(std::make_pair(mPhaseChangeTimeLeft, mPhaseStateLeft));
+
+	Contact* footRight = new Contact(mWorld);
+	BodyNode* bnFootRight = mSkeleton->getBodyNode("TalusR");
+	footRight->Initialize("TalusR", bnFootRight);
+	mContacts["footRight"] = footRight;
+
+	if(mContacts["footRight"]->isContact())
+		mPhaseStateRight = STANCE_PHASE;
+	else
+		mPhaseStateRight = SWING_PHASE;
+	mPhaseChangeTimeRight = mWorld->getTime();
+	mGaitPhaseRight.push_front(std::make_pair(mPhaseChangeTimeRight, mPhaseStateRight));
+}
+
 
 void
 Character::
@@ -607,8 +641,21 @@ Reset()
 	mCurVel = 0.0;
 	mCurVel3d.setZero();
 
+	mGaitPhaseRight.clear();
+	mGaitPhaseLeft.clear();
+
+	mPhaseStateRight = mContacts["footRight"]->isContact();
+	mPhaseChangeTimeRight = mWorld->getTime();
+	mGaitPhaseRight.push_front(std::make_pair(mPhaseChangeTimeRight, mPhaseStateRight));
+
+	mPhaseStateLeft  = mContacts["footLeft"]->isContact();
+	mPhaseChangeTimeLeft = mWorld->getTime();
+	mGaitPhaseLeft.push_front(std::make_pair(mPhaseChangeTimeLeft, mPhaseStateLeft));
+	
 	mMetabolicEnergy->Reset();
 	mJointDatas->Reset();
+	for(auto c : mContacts)
+		c.second->Reset();
 	if(mUseMuscle)
 		Reset_Muscles();
 
@@ -720,7 +767,8 @@ SetMeasure(bool isRender)
 	}
 	this->SetComHistory();
 	this->SetFoot();
-	
+	this->SetContact();
+
 	double phase = mPhase;
 	double frame = mFrame;
 	if(mAdaptiveMotion)
@@ -729,17 +777,48 @@ SetMeasure(bool isRender)
 		frame = mAdaptiveFrame;
 	}
 
+	mJointDatas->SetPhaseState(mPhaseStateRight, mWorld->getTime());
+	mJointDatas->SetAngles();
 	if(mUseMuscle)
 		mMetabolicEnergy->Set(this->GetMuscles(), mCurVel3d, phase, frame);
-	// else
-	mJointDatas->SetTorques(mDesiredTorque, phase, frame);
-	
+	else
+		mJointDatas->SetTorques(mDesiredTorque);
+
 	if(isRender)
 	{
-		mJointDatas->SetAngles(phase);
-		mContacts->Set();
-		// this->SetCoT();
+		// mJointDatas->SetAngles();
 	}	
+}
+
+void
+Character::
+SetContact()
+{
+	for(auto c : mContacts)
+		c.second->Set();
+	
+	double time = mWorld->getTime();
+	int footLeftState;
+	if(mContacts["footLeft"]->isContact())
+		footLeftState = STANCE_PHASE;
+	else
+		footLeftState = SWING_PHASE;
+	if(mPhaseStateLeft != footLeftState)
+	{
+		mPhaseStateLeft = footLeftState;
+		mGaitPhaseLeft.push_front(std::make_pair(time, mPhaseStateLeft));
+	}
+
+	int footRightState;
+	if(mContacts["footRight"]->isContact())
+		footRightState = STANCE_PHASE;
+	else
+		footRightState = SWING_PHASE;
+	if(mPhaseStateRight != footRightState)
+	{
+		mPhaseStateRight = footRightState;
+		mGaitPhaseRight.push_front(std::make_pair(time, mPhaseStateRight));
+	}		
 }
 
 void
@@ -1181,7 +1260,6 @@ GetReward_Character()
 	std::pair<double,double> r_imit = GetReward_Character_Imitation();
 	std::pair<double,double> r_effi = GetReward_Character_Efficiency();
 
-
 	mReward["imit_c"] = r_imit.first;
 	mReward["imit_s"] = r_imit.second;
  	mReward["effi_c"] = r_effi.first;
@@ -1303,8 +1381,8 @@ GetReward_Character_Imitation()
 	double sig_p = 5.0;
 	double sig_q = 0.5;
 	double sig_com = 20.0;
-	double sig_ee_rot = 20.0;
-	double sig_ee_pos = 10.0;
+	double sig_ee_rot = 10.0;
+	double sig_ee_pos = 20.0;
 	
 	double r_p = Utils::exp_of_squared(p_diff, sig_p);
 	double r_q = Utils::exp_of_squared(q_diff, sig_q);
@@ -2064,7 +2142,7 @@ SetMass()
 	}
 
 	mMetabolicEnergy->SetMass(mMass);
-	mContacts->SetMass(mMass);
+	// mContacts->SetMass(mMass);
 }
 
 void
