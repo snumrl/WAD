@@ -1372,7 +1372,7 @@ GetReward_Character_Imitation()
 
 	//=====================================
 
-	double sig_p = 10.0;
+	double sig_p = 5.0;
 	double sig_q = 0.5;
 	double sig_com = 20.0;
 	double sig_ee_rot = 10.0;

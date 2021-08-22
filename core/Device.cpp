@@ -152,27 +152,35 @@ GetState() const
 	// int offset = (history_interval * mSimulationHz);
 	// int history_num = (history_window+0.001)/(history_interval)+1;
 
-	double history_interval = 0.15;
+	double history_interval = 0.1;
 	int offset = (history_interval * mSimulationHz);
-	int history_num = 5;
+	int history_num = 6;
 
 	int parameter_num = mNumParamState;
-	Eigen::VectorXd state(history_num*2+parameter_num);
+	Eigen::VectorXd state(history_num+parameter_num);
 	double scaler = 2.0;
 	for(int i=0; i<history_num; i++)
 	{
-		double signal_y = mDeviceSignals_y.at(mDelta_t_idx - (i-2)*offset);
-		double torque_l = mK_ * signal_y;
-		double torque_r = mK_ * signal_y;
-		double des_torque_l =  1*torque_l;
-		double des_torque_r = -1*torque_r;
+		double signal_y = mDeviceSignals_y.at(mDelta_t_idx - i*offset);
+		double des_torque_l =  1 * mK_ * signal_y;
+		double des_torque_r = -1 * mK_ * signal_y;
 
-		state[i*2] = des_torque_l/mK_ * scaler;
-		state[i*2+1] = des_torque_r/mK_ * scaler;
+		state[i] = signal_y;
 	}
+	// for(int i=0; i<history_num; i++)
+	// {
+	// 	double signal_y = mDeviceSignals_y.at(mDelta_t_idx - (i-2)*offset);
+	// 	double torque_l = mK_ * signal_y;
+	// 	double torque_r = mK_ * signal_y;
+	// 	double des_torque_l =  1*torque_l;
+	// 	double des_torque_r = -1*torque_r;
+
+	// 	state[i*2] = des_torque_l/mK_ * scaler;
+	// 	state[i*2+1] = des_torque_r/mK_ * scaler;
+	// }
 
 	for(int i=0; i<parameter_num; i++)
-		state[history_num*2 + i] = mParamState[i];
+		state[history_num + i] = mParamState[i];
 
 	return state;
 }
