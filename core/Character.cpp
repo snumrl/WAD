@@ -11,7 +11,7 @@ namespace WAD
 
 Character::
 Character(WorldPtr& wPtr)
-	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mNumParamState(0),mMass(0),mMassLower(0),mPhaseStateRight(-1)
+	:mSkeleton(nullptr),mBVH(nullptr),mDevice(nullptr),mTc(Eigen::Isometry3d::Identity()),mUseMuscle(false),mUseDevice(false),mOnDevice(false),mNumParamState(0),mMass(0),mMassLower(0)
 {
 	this->SetWorld(wPtr);
 
@@ -19,9 +19,7 @@ Character(WorldPtr& wPtr)
 	mForceRatio = 1.0;
 	mSpeedRatio = 1.0;
 
-	mLowerBody = true;
-	mLowerMuscleRelatedDof = 30;
-	mUpperMuscleRelatedDof = 26;
+	mLowerBody = true;	
 
 	mAdaptiveLowerBody = true;
 	mAdaptiveLowerDof = 24;
@@ -103,10 +101,6 @@ LoadMuscles(const std::string& path)
 		return;
 	}
 
-	std::string mFileName = "Femur_related_muscle";
-	std::ofstream mFile;
-	mFile.open(mFileName);
-
 	bool isExist = false;
 	double simTimeStep = 1.0/mSimulationHz;
 	double conTimeStep = 1.0/mControlHz;
@@ -151,7 +145,6 @@ LoadMuscles(const std::string& path)
 
 				if(body == "FemurL" || body == "FemurR"){
 					muscle_elem->SetFemur(true);
-					mFile << name + "\n";
 				}
 
 				if(i == 0 || i == num_waypoints-1)
@@ -195,8 +188,7 @@ LoadMuscles(const std::string& path)
 		}
 	}
 	mNumMuscle = mMuscles.size();
-	mNumMuscleMap = mMusclesMap.size();
-	mFile.close();
+	mNumMuscleMap = mMusclesMap.size();	
 }
 
 bool
@@ -244,8 +236,9 @@ Initialize()
 	}
 
 	mAction = Eigen::VectorXd::Zero(mNumAction);
-	mAction_prev = Eigen::VectorXd::Zero(mNumAction);
+	mActionPrev = Eigen::VectorXd::Zero(mNumAction);
 	mDesiredTorque = Eigen::VectorXd::Zero(mDof);
+	mDesiredTorquePrev = Eigen::VectorXd::Zero(mDof);
 
 	mAdaptiveTime = 0.0;
 	mTemporalDisplacement = 0.0;
@@ -607,9 +600,10 @@ Reset()
 	mSkeleton->setVelocities(mTargetVelocities);
 	mSkeleton->computeForwardKinematics(true,false,false);
 
-	mAction.setZero();
-	mAction_prev.setZero();
+	mAction.setZero();	
+	mActionPrev.setZero();	
 	mDesiredTorque.setZero();
+	mDesiredTorquePrev.setZero();
 
 	for(int i=0; i<mFemurSignals.at(0).size(); i++){
 		mFemurSignals.at(0).at(i) = 0.0;
@@ -777,7 +771,7 @@ SetMeasure(bool isRender)
 		frame = mAdaptiveFrame;
 	}
 
-	mJointDatas->SetPhaseState(mPhaseStateRight, mWorld->getTime());
+	mJointDatas->SetPhaseState(mPhaseStateLeft, mPhaseStateRight, mWorld->getTime());
 	mJointDatas->SetAngles();
 	if(mUseMuscle)
 		mMetabolicEnergy->Set(this->GetMuscles(), mCurVel3d, phase, frame);
@@ -1378,7 +1372,7 @@ GetReward_Character_Imitation()
 
 	//=====================================
 
-	double sig_p = 5.0;
+	double sig_p = 10.0;
 	double sig_q = 0.5;
 	double sig_com = 20.0;
 	double sig_ee_rot = 10.0;
@@ -1655,27 +1649,6 @@ GetReward_Width()
 	return reward;
 }
 
-double
-Character::
-GetReward_ActionReg()
-{
-	Eigen::VectorXd prev = mAction_prev.segment(mNumActiveDof,56);
-	Eigen::VectorXd cur = mAction.segment(mNumActiveDof,56);
-
-	double actionDiff = (prev-cur).norm();
-
-	double err_scale = 1.0;
-	double actionReg_scale = 10.0;
-	double actionReg_err = 0.0;
-
-	actionReg_err = actionDiff;
-
-	double reward = 0.0;
-	reward = exp(-err_scale * actionReg_scale * actionReg_err);
-
-	return reward;
-}
-
 void
 Character::
 SetPhases()
@@ -1749,8 +1722,6 @@ void
 Character::
 SetAction(const Eigen::VectorXd& a)
 {
-	mAction_prev = mAction;
-
 	if(mAdaptiveMotion)
 		this->SetActionAdaptiveMotion(a);
 	else
@@ -1833,11 +1804,15 @@ SetActionImitationLearning(const Eigen::VectorXd& a)
 	int pd_dof = mNumActiveDof;
 	double pd_scale = 0.1;
 	mAction.segment(0,pd_dof) = a.segment(0,pd_dof) * pd_scale;
+	if(mActionPrev.norm() != 0)
+		mAction = 0.2 * mAction + 0.8 * mActionPrev;
 	
 	double t = mWorld->getTime();
 	double timeStep = (double)mNumSteps*mWorld->getTimeStep();
 	this->GetPosAndVel(t+timeStep, mTargetPositions, mTargetVelocities);
 	this->GetPosAndVel(t+timeStep, mReferencePositions, mReferenceVelocities);
+
+	mActionPrev = mAction;
 }
 
 void
@@ -1848,9 +1823,14 @@ SetDesiredTorques()
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction.segment(0,mNumActiveDof);
 	mDesiredTorque = this->GetSPDForces(p_des);
 
+	if(mDesiredTorquePrev.norm() != 0)
+		mDesiredTorque = 0.2*mDesiredTorque + 0.8*mDesiredTorquePrev;
+
 	for(int i=0; i<mDesiredTorque.size(); i++){
 		mDesiredTorque[i] = Utils::Clamp(mDesiredTorque[i], -mMaxForces[i], mMaxForces[i]);
 	}
+
+	mDesiredTorquePrev = mDesiredTorque;
 
 	mFemurSignals.at(0).pop_back();
 	mFemurSignals.at(0).push_front(mDesiredTorque[6]);

@@ -18,14 +18,9 @@ JointData::
 Initialize(const SkeletonPtr& skel)
 {
     mSkeleton = skel;
-    mOnlyLowerBody = true;
-    if(mOnlyLowerBody)
-        mJointNum = 11;
-    else 
-        mJointNum = mSkeleton->getNumJoints();
-
     mDof = mSkeleton->getNumDofs();
-
+    mJointNum = mSkeleton->getNumJoints();
+    
     mOnCycle = false;
     mCycleStep = 0;
     mCycleTorqueErr = 0.0;
@@ -35,9 +30,15 @@ Initialize(const SkeletonPtr& skel)
     mPhaseStateRightPrev = 1;
 
     mWindowSize = 540;
-    
-    int jointNum = mSkeleton->getNumJoints();
-    for(int i=0; i<jointNum; i++)
+    this->Initialize_Torques();
+    this->Initialize_Angles();    
+}
+
+void
+JointData::
+Initialize_Torques()
+{
+    for(int i=0; i<mJointNum; i++)
     {
         const auto& joint = mSkeleton->getJoint(i);
         int idx = joint->getIndexInSkeleton(0);
@@ -45,50 +46,67 @@ Initialize(const SkeletonPtr& skel)
         
         if(joint->getType() == "FreeJoint")
         {
-            mTorques[name+"_a"] = std::deque<double>(mWindowSize);
-            mTorques[name+"_b"] = std::deque<double>(mWindowSize);
-            mTorques[name+"_c"] = std::deque<double>(mWindowSize);
-
-            mTorquesGaitPhase[name+"_a"] = std::deque<double>();
-            mTorquesGaitPhase[name+"_b"] = std::deque<double>();
-            mTorquesGaitPhase[name+"_c"] = std::deque<double>();
-
-            mTorquesGaitPhasePrev[name+"_a"] = std::deque<double>();
-            mTorquesGaitPhasePrev[name+"_b"] = std::deque<double>();
-            mTorquesGaitPhasePrev[name+"_c"] = std::deque<double>();
+            for(int i=0; i<3; i++)
+            {
+                std::string namePost;
+                if(i==0)
+                    namePost = "_a";
+                else if(i==1)
+                    namePost = "_b";
+                else if(i==2)
+                    namePost = "_c";
+            
+                mTorques[name+namePost] = std::deque<double>(mWindowSize);    
+                mTorquesGaitPhase[name+namePost] = std::deque<double>();
+                mTorquesGaitPhasePrev[name+namePost] = std::deque<double>();
+            }
         }
+
+        for(int i=0; i<3; i++)
+        {
+            std::string namePost;
+            if(i==0)
+                namePost = "_x";
+            else if(i==1)
+                namePost = "_y";
+            else if(i==2)
+                namePost = "_z";
+            
+            mTorques[name+namePost] = std::deque<double>(mWindowSize);    
+            mTorquesGaitPhase[name+namePost] = std::deque<double>();
+            mTorquesGaitPhasePrev[name+namePost] = std::deque<double>();            
+        }
+    }
+}
+
+void
+JointData::
+Initialize_Angles()
+{
+    for(int i=0; i<mJointNum; i++)
+    {
+        const auto& joint = mSkeleton->getJoint(i);
+        int idx = joint->getIndexInSkeleton(0);
+        std::string name = joint->getName();
         
-        mTorques[name+"_x"] = std::deque<double>(mWindowSize);
-        mTorques[name+"_y"] = std::deque<double>(mWindowSize);
-        mTorques[name+"_z"] = std::deque<double>(mWindowSize);
-
-        mTorquesGaitPhase[name+"_x"] = std::deque<double>();
-        mTorquesGaitPhase[name+"_y"] = std::deque<double>();
-        mTorquesGaitPhase[name+"_z"] = std::deque<double>();
-
-        mTorquesGaitPhasePrev[name+"_x"] = std::deque<double>();
-        mTorquesGaitPhasePrev[name+"_y"] = std::deque<double>();
-        mTorquesGaitPhasePrev[name+"_z"] = std::deque<double>();
-     
-        mAngles[name+"_sagittal"] = std::deque<double>(mWindowSize);
-        mAngles[name+"_frontal"] = std::deque<double>(mWindowSize);
-        mAngles[name+"_transverse"] = std::deque<double>(mWindowSize);
-
-        mAnglesGaitPhase[name+"_sagittal"] = std::deque<double>();
-        mAnglesGaitPhase[name+"_frontal"] = std::deque<double>();
-        mAnglesGaitPhase[name+"_transverse"] = std::deque<double>();
-
-        mAnglesGaitPhasePrev[name+"_sagittal"] = std::deque<double>();
-        mAnglesGaitPhasePrev[name+"_frontal"] = std::deque<double>();
-        mAnglesGaitPhasePrev[name+"_transverse"] = std::deque<double>();
-
-        mAnglesGaitPhaseRef[name+"_sagittal"] = std::deque<double>();
-        mAnglesGaitPhaseRef[name+"_frontal"] = std::deque<double>();
-        mAnglesGaitPhaseRef[name+"_transverse"] = std::deque<double>();
-
-        mAnglesGaitPhaseRefPrev[name+"_sagittal"] = std::deque<double>();
-        mAnglesGaitPhaseRefPrev[name+"_frontal"] = std::deque<double>();
-        mAnglesGaitPhaseRefPrev[name+"_transverse"] = std::deque<double>();
+        for(int i=0; i<3; i++)
+        {
+            std::string namePost;
+            if(i==0)
+                namePost = "_sagittal";
+            else if(i==1)
+                namePost = "_frontal";
+            else if(i==2)
+                namePost = "_transverse";
+                       
+            mAngles[name+namePost] = std::deque<double>(mWindowSize);    
+            mAnglesGaitPhaseLeft[name+namePost] = std::deque<double>();
+            mAnglesStancePhaseLeftPrev[name+namePost] = std::deque<double>();            
+            mAnglesSwingPhaseLeftPrev[name+namePost] = std::deque<double>();            
+            mAnglesGaitPhaseRight[name+namePost] = std::deque<double>();
+            mAnglesStancePhaseRightPrev[name+namePost] = std::deque<double>();            
+            mAnglesSwingPhaseRightPrev[name+namePost] = std::deque<double>();            
+        }
     }
 }
 
@@ -108,17 +126,23 @@ Reset()
     for(auto iter = mTorquesGaitPhasePrev.begin(); iter != mTorquesGaitPhasePrev.end(); iter++)
         (iter->second).clear();
 
-    for(auto iter = mAnglesGaitPhase.begin(); iter != mAnglesGaitPhase.end(); iter++)
+    for(auto iter = mAnglesGaitPhaseLeft.begin(); iter != mAnglesGaitPhaseLeft.end(); iter++)
         (iter->second).clear();
 
-    for(auto iter = mAnglesGaitPhasePrev.begin(); iter != mAnglesGaitPhasePrev.end(); iter++)
+    for(auto iter = mAnglesStancePhaseLeftPrev.begin(); iter != mAnglesStancePhaseLeftPrev.end(); iter++)
         (iter->second).clear();
 
-    for(auto iter = mAnglesGaitPhaseRef.begin(); iter != mAnglesGaitPhaseRef.end(); iter++)
+    for(auto iter = mAnglesSwingPhaseLeftPrev.begin(); iter != mAnglesSwingPhaseLeftPrev.end(); iter++)
+        (iter->second).clear();        
+
+    for(auto iter = mAnglesGaitPhaseRight.begin(); iter != mAnglesGaitPhaseRight.end(); iter++)
         (iter->second).clear();
 
-    for(auto iter = mAnglesGaitPhaseRefPrev.begin(); iter != mAnglesGaitPhaseRefPrev.end(); iter++)
+    for(auto iter = mAnglesStancePhaseRightPrev.begin(); iter != mAnglesStancePhaseRightPrev.end(); iter++)
         (iter->second).clear();
+
+    for(auto iter = mAnglesSwingPhaseRightPrev.begin(); iter != mAnglesSwingPhaseRightPrev.end(); iter++)
+        (iter->second).clear();        
     
     mOnCycle = false;
     
@@ -132,50 +156,97 @@ Reset()
 
 void
 JointData::
-SetPhaseState(int phaseState, double time)
+SetPhaseState(int stateLeft, int stateRight, double time)
+{
+    this->SetPhaseStateLeft(stateLeft);
+    this->SetPhaseStateRight(stateRight);    
+}
+
+void
+JointData::
+SetPhaseStateLeft(int phaseState)
+{
+    mPhaseStateLeft = phaseState;
+    if(mPhaseStateLeft != mPhaseStateLeftPrev)
+    {
+        if(mPhaseStateLeft == 1)
+        {
+            for(auto a : mAnglesGaitPhaseLeft)
+            {
+                mAnglesSwingPhaseLeftPrev[a.first].clear();
+                mAnglesSwingPhaseLeftPrev[a.first] = a.second;
+                mAnglesGaitPhaseLeft[a.first].clear();                
+            }            
+        }
+        else if(mPhaseStateLeft == 0)
+        {
+            for(auto a : mAnglesGaitPhaseLeft)
+            {
+                mAnglesStancePhaseLeftPrev[a.first].clear();
+                mAnglesStancePhaseLeftPrev[a.first] = a.second;
+                mAnglesGaitPhaseLeft[a.first].clear();                
+            }
+        }
+    }    
+
+    mPhaseStateLeftPrev = mPhaseStateLeft;
+}
+
+void
+JointData::
+SetPhaseStateRight(int phaseState)
 {
     mPhaseStateRight = phaseState;
     if(mPhaseStateRight != mPhaseStateRightPrev)
     {
         if(mPhaseStateRight == 1)
         {
-            if(mOnCycle)
-            {
-                mCycleTorqueErr = mCycleTorqueSum;
-                mCycleTorqueErr /= (double)(mDof-6);
-                mCycleTorqueErr /= (double)(mCycleStep);            
-            }
-            else
-            {
-                mOnCycle = true;
-            }
-            mCycleStep = 0;
-            mCycleTorqueSum = 0;    
+            this->ChangePhaseTorques();
 
-            for(auto t : mTorquesGaitPhase)
+            for(auto a : mAnglesGaitPhaseRight)
             {
-                mTorquesGaitPhasePrev[t.first].clear();
-                mTorquesGaitPhasePrev[t.first] = t.second;
-                mTorquesGaitPhase[t.first].clear();                
-            }
-
-            for(auto a : mAnglesGaitPhase)
+                mAnglesSwingPhaseRightPrev[a.first].clear();
+                mAnglesSwingPhaseRightPrev[a.first] = a.second;
+                mAnglesGaitPhaseRight[a.first].clear();                
+            }            
+        }
+        else if(mPhaseStateRight == 0)
+        {
+            for(auto a : mAnglesGaitPhaseRight)
             {
-                mAnglesGaitPhasePrev[a.first].clear();
-                mAnglesGaitPhasePrev[a.first] = a.second;
-                mAnglesGaitPhase[a.first].clear();                
-            }
-
-            for(auto a : mAnglesGaitPhaseRef)
-            {
-                mAnglesGaitPhaseRefPrev[a.first].clear();
-                mAnglesGaitPhaseRefPrev[a.first] = a.second;
-                mAnglesGaitPhaseRef[a.first].clear();                
+                mAnglesStancePhaseRightPrev[a.first].clear();
+                mAnglesStancePhaseRightPrev[a.first] = a.second;
+                mAnglesGaitPhaseRight[a.first].clear();                
             }
         }
     }    
 
     mPhaseStateRightPrev = mPhaseStateRight;
+}
+
+void
+JointData::
+ChangePhaseTorques()
+{
+    if(mOnCycle)
+    {
+        mCycleTorqueErr = mCycleTorqueSum;
+        mCycleTorqueErr /= (double)(mDof-6);
+        mCycleTorqueErr /= (double)(mCycleStep);            
+    }
+    else
+    {
+        mOnCycle = true;
+    }
+    mCycleStep = 0;
+    mCycleTorqueSum = 0;    
+
+    for(auto t : mTorquesGaitPhase)
+    {
+        mTorquesGaitPhasePrev[t.first].clear();
+        mTorquesGaitPhasePrev[t.first] = t.second;
+        mTorquesGaitPhase[t.first].clear();                
+    }
 }
 
 void
@@ -270,7 +341,8 @@ void
 JointData::
 SetAnglesGaitPhase(std::string name, double angle)
 {
-    mAnglesGaitPhase[name].push_back(angle);    
+    mAnglesGaitPhaseLeft[name].push_back(angle);    
+    mAnglesGaitPhaseRight[name].push_back(angle);    
 }
 
 void
@@ -279,96 +351,26 @@ SetAngles()
 {
     if(mOnCycle)
     {
-        int jointNum = mSkeleton->getNumJoints();
         Eigen::VectorXd pos = mSkeleton->getPositions();
-        for(int i=0; i<jointNum; i++)
+        for(int i=0; i<mJointNum; i++)
         {
             auto joint = mSkeleton->getJoint(i);
             int idx = joint->getIndexInSkeleton(0);
             std::string name = joint->getName();
             std::string type = joint->getType();
+            double radTodeg = 180.0/M_PI;
 
-            if(type == "FreeJoint")
-            {
-                this->SetAngles(name+"_sagittal", pos[idx]);
-                this->SetAngles(name+"_frontal", pos[idx+1]);
-                this->SetAngles(name+"_transverse", pos[idx+2]);
+            double p0 = pos[idx+0]*radTodeg;
+            double p1 = (type == "RevoluteJoint") ? 0.0 : pos[idx+1]*radTodeg;
+            double p2 = (type == "RevoluteJoint") ? 0.0 : pos[idx+2]*radTodeg;
 
-                this->SetAnglesGaitPhase(name+"_sagittal", pos[idx]);
-                this->SetAnglesGaitPhase(name+"_frontal", pos[idx+1]);
-                this->SetAnglesGaitPhase(name+"_transverse", pos[idx+2]);
-            }
-            else if(type == "BallJoint")
-            {
-                this->SetAngles(name+"_sagittal", pos[idx]);
-                this->SetAngles(name+"_frontal", pos[idx+1]);
-                this->SetAngles(name+"_transverse", pos[idx+2]);
+            this->SetAngles(name+"_sagittal",  p0);
+            this->SetAngles(name+"_frontal",   p1);
+            this->SetAngles(name+"_transverse",p2);
 
-                this->SetAnglesGaitPhase(name+"_sagittal", pos[idx]);
-                this->SetAnglesGaitPhase(name+"_frontal", pos[idx+1]);
-                this->SetAnglesGaitPhase(name+"_transverse", pos[idx+2]);
-            }
-            else if(type == "RevoluteJoint")
-            {
-                this->SetAngles(name+"_sagittal", pos[idx]);
-                this->SetAngles(name+"_frontal", 0.0);
-                this->SetAngles(name+"_transverse", 0.0);
-
-                this->SetAnglesGaitPhase(name+"_sagittal", pos[idx]);
-                this->SetAnglesGaitPhase(name+"_frontal", 0.0);
-                this->SetAnglesGaitPhase(name+"_transverse", 0.0);            
-            }
-            else
-            {
-            }
-        }
-    }
-}
-
-
-void
-JointData::
-SetAnglesGaitPhaseRef(std::string name, double angle)
-{
-    mAnglesGaitPhaseRef[name].push_back(angle);        
-}
-
-void
-JointData::
-SetAnglesRef()
-{
-    if(mOnCycle)
-    {
-        int jointNum = mSkeleton->getNumJoints();
-        Eigen::VectorXd pos = mSkeleton->getPositions();
-        for(int i=0; i<jointNum; i++)
-        {
-            auto joint = mSkeleton->getJoint(i);
-            int idx = joint->getIndexInSkeleton(0);
-            std::string name = joint->getName();
-            std::string type = joint->getType();
-
-            if(type == "FreeJoint")
-            {
-                this->SetAnglesGaitPhaseRef(name+"_sagittal", pos[idx]);
-                this->SetAnglesGaitPhaseRef(name+"_frontal", pos[idx+1]);
-                this->SetAnglesGaitPhaseRef(name+"_transverse", pos[idx+2]);
-            }
-            else if(type == "BallJoint")
-            {
-                this->SetAnglesGaitPhaseRef(name+"_sagittal", pos[idx]);
-                this->SetAnglesGaitPhaseRef(name+"_frontal", pos[idx+1]);
-                this->SetAnglesGaitPhaseRef(name+"_transverse", pos[idx+2]);
-            }
-            else if(type == "RevoluteJoint")
-            {
-                this->SetAnglesGaitPhaseRef(name+"_sagittal", pos[idx]);
-                this->SetAnglesGaitPhaseRef(name+"_frontal", 0.0);
-                this->SetAnglesGaitPhaseRef(name+"_transverse", 0.0);            
-            }
-            else
-            {
-            }
+            this->SetAnglesGaitPhase(name+"_sagittal",  p0);
+            this->SetAnglesGaitPhase(name+"_frontal",   p1);
+            this->SetAnglesGaitPhase(name+"_transverse",p2);
         }
     }
 }

@@ -25,6 +25,7 @@
 #include "BVH.h"
 #include "ShapeRenderer.h"
 #include "GLFunctions.h"
+#include "AnalysisData.h"
 
 struct GLFWwindow;
 
@@ -57,8 +58,6 @@ public:
 	void Update();
 	void SetFocus();	
 
-	void tmpData();
-
 	void Draw();
 	void DrawSimFrame();
     void DrawUiFrame();
@@ -69,9 +68,10 @@ public:
 
 	void DrawDequeGraph(std::string name, std::string xAxis, std::string yAxis, std::deque<double> data, double w, double h);
 	void DrawDequeGraph(std::string name, std::string xAxis, std::string yAxis, std::deque<double> data, double yMin, double yMax, double w, double h);
-	void DrawJointAngle(std::string name, std::deque<double> data, double yMin, double yMax, double w, double h);
-	void DrawJointAngle(std::string name, std::deque<double> data1, std::deque<double> data2, double yMin, double yMax, double w, double h);
-	void DrawJointAngle(std::string name, std::deque<double> data1, std::deque<double> data2, std::deque<double> std1, std::deque<double> std2, double yMin, double yMax, double w, double h);
+	void DrawJointAngle(std::string name, std::deque<double> stance, std::deque<double> swing, double yMin, double yMax, double w, double h);
+	void DrawJointAngle(std::string name, std::deque<double> stanceL, std::deque<double> swingL, std::deque<double> stanceR, std::deque<double> swingR, double yMin, double yMax, double w, double h);
+	void DrawJointAngle(std::string name, std::deque<double> stanceL, std::deque<double> swingL, std::deque<double> stanceR, std::deque<double> swingR, std::deque<double> data3, double yMin, double yMax, double w, double h);
+	void DrawJointAngle(std::string name, std::deque<double> stanceL, std::deque<double> swingL, std::deque<double> stanceR, std::deque<double> swingR, std::deque<double> cmpData, std::deque<double> cmpStd1, std::deque<double> cmpStd2, double yMin, double yMax, double w, double h);
 	void DrawJointTorque(std::string name, std::deque<double> data, double yMin, double yMax, double w, double h);
 	void DrawJointTorque(std::string name, std::deque<double> data1, std::deque<double> data2, double yMin, double yMax, double w, double h);
 	
@@ -116,7 +116,9 @@ private:
 	Environment* mEnv;
 	GLFWwindow* mWindow;
 	ShapeRenderer mShapeRenderer;
-	
+	AnalysisData* mAnalysisData;
+	std::map<std::string, std::deque<double>> mRealJointData;
+
 	dart::gui::Trackball mTrackball;
 	std::vector<dart::gui::Trackball> mSplitTrackballs;
 
@@ -149,14 +151,13 @@ private:
 	bool isFirstUImanager;
 	bool mDrawCoordinate;
 
+	bool mLegend;
 	int mComparePersonIdx;
 
 	std::map<std::string, double> perfStats;
 	std::map<std::string, std::pair<double,double>> mJointAngleMinMax;
 	std::map<std::string, std::pair<double,double>> mJointTorqueMinMax;
 	std::map<std::string, std::pair<double,double>> mAdaptiveParams;
-
-	std::map<std::string, std::deque<double>> mTmpAngleData;
 
 	ImVec4 mUiBackground;	 	
 

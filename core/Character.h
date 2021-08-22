@@ -108,7 +108,6 @@ public:
 	double GetReward_Stride();
 	double GetReward_Time();
 	double GetReward_Width();
-	double GetReward_ActionReg();
 	double GetCurReward(){return mCurReward;}
 
 	void SetAction(const Eigen::VectorXd& a);
@@ -240,9 +239,7 @@ private:
 	int mAdaptiveLowerDof;
 	int mAdaptiveUpperDof;
 	int mNumTotalRelatedDof;
-	int mLowerMuscleRelatedDof;
-	int mUpperMuscleRelatedDof;
-
+	
 	int mNumJoints;
 	int mNumBodyNodes;
 	int mNumState;
@@ -312,9 +309,10 @@ private:
 	Eigen::VectorXd mReferenceVelocities;
 
 	Eigen::VectorXd mDesiredTorque;
+	Eigen::VectorXd mDesiredTorquePrev;
 
-	Eigen::VectorXd mAction;
-	Eigen::VectorXd mAction_prev;
+	Eigen::VectorXd mAction;	
+	Eigen::VectorXd mActionPrev;	
 	Eigen::VectorXd mActivationLevels;
 
 	Eigen::VectorXd mJointPositionLowerLimits;

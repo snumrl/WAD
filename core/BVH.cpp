@@ -329,40 +329,48 @@ SetMotionFrames()
 				T.linear() = R;
 				p.segment<6>(idx) = FreeJoint::convertToPositions(T);
 
-				if(jointName == "Pelvis"){
-					if(p[idx+2] > 0)
-						p[idx+2]   *= 0.8;
-					else
-						p[idx+2]   *= 0.5;
-				}
+				// if(jointName == "Pelvis"){
+				// 	if(p[idx+2] > 0)
+				// 		p[idx+2] *= 0.5;
+				// 	else
+				// 		p[idx+2] *= 0.3;
+ 
+				// 	if(p[idx+1] < 0)
+				// 		p[idx+1] *= 0.5;
+				// }
 			}
 			else if(jn->getType()=="BallJoint"){
 				p.segment<3>(idx) = BallJoint::convertToPositions(R);
 
-				if(jointName == "Spine"){
-					p[idx] -= 0.06;
-					// p[idx] += 0.25;
-				}
+				// if(jointName == "Spine"){
+				// 	p[idx] -= 0.06;
+				// 	// p[idx] += 0.25;
+				// }
 
-				if(jointName == "Torso"){
-					// p[idx] += 0.3;
-					if(p[idx+2] > 0)
-						p[idx+2] *= 0.3;
-				}
+				// if(jointName == "Torso"){
+				// 	// p[idx] += 0.3;
+				// 	if(p[idx+2] > 0)
+				// 		p[idx+2] *= 0.3;
+				// }
 
-				// if(jointName == "ShoulderL" || jointName == "ShoulderR")
-				// 	p[idx] -= 0.3;
+				// // if(jointName == "ShoulderL" || jointName == "ShoulderR")
+				// // 	p[idx] -= 0.3;
 
-				if(jointName == "ArmL")
-					p[idx+2] -= 0.05;
+				// if(jointName == "ArmL")
+				// 	p[idx+2] -= 0.05;
 
-				if(jointName == "ArmR")
-					p[idx+2] += 0.05;
+				// if(jointName == "ArmR")
+				// 	p[idx+2] += 0.05;
 
-				if(jointName == "FemurL" || jointName == "FemurR"){
-					if(p[idx+2] > 0)
-						p[idx+2] *= 0.5;
-				}				
+				// if(jointName == "FemurL"){
+				// 	p[idx+2] *= 0.6;					
+				// 	p[idx+2] += 0.02;
+				// }				
+										
+				// if(jointName == "FemurR"){
+				// 	p[idx+2] *= 0.3;
+				// 	p[idx+2] -= 0.02;
+				// }				 			
 			}
 			else if(jn->getType()=="RevoluteJoint")
 			{
@@ -385,7 +393,7 @@ SetMotionFrames()
 			}
 		}
 		mMotionFrames[i] = p;
-		mMotionFrames[i][4] -= 0.02;
+		// mMotionFrames[i][4] -= 0.02;
 	}
 }
 
