@@ -1387,7 +1387,7 @@ GetReward_Character_Imitation()
 	double sig_q = 0.5;
 	double sig_com = 20.0;
 	double sig_ee_rot = 10.0;
-	double sig_ee_pos = 20.0;
+	double sig_ee_pos = 40.0;
 	
 	double r_p = Utils::exp_of_squared(p_diff, sig_p);
 	double r_q = Utils::exp_of_squared(q_diff, sig_q);
@@ -1476,11 +1476,105 @@ double
 Character::
 GetReward_Pose()
 {
-	Eigen::VectorXd pose_cur, pose_ref;
+	// Eigen::VectorXd pose_cur, pose_ref;
 
-	int num_ee = mEndEffectors.size();
-	Eigen::VectorXd p_save = mSkeleton->getPositions();
-	Eigen::VectorXd v_save = mSkeleton->getVelocities();
+	// int num_ee = mEndEffectors.size();
+	// Eigen::VectorXd p_save = mSkeleton->getPositions();
+	// Eigen::VectorXd v_save = mSkeleton->getVelocities();
+
+	// Eigen::VectorXd p_reward;
+	// Eigen::VectorXd v_reward;
+	// this->GetPosAndVel(mAdaptiveTime, p_reward, v_reward);
+	
+	// mSkeleton->setPositions(p_reward);
+	// mSkeleton->computeForwardKinematics(true, true, false);
+	
+	// dart::dynamics::BodyNode* root_ref = mSkeleton->getRootBodyNode();
+	// Eigen::Isometry3d cur_root_inv = root_ref->getWorldTransform().inverse();
+
+	// Eigen::VectorXd root_rot_ref = Utils::QuaternionToAxisAngle(Eigen::Quaterniond((root_ref->getWorldTransform()).linear()));
+	// Eigen::VectorXd head_ref = Eigen::VectorXd::Zero(4);
+
+	// // pose_ref.resize((num_ee)*3);
+	// pose_ref.resize((num_ee)*6);
+	// for(int i=0;i<num_ee;i++)
+	// {
+	// 	Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
+	// 	Eigen::Vector3d rot = Utils::QuaternionToAxisAngle(Eigen::Quaterniond(transform.linear()));
+
+	// 	// if(i==2)
+	// 	// 	head_ref.segment<3>(0) << rot;
+	// 	// else
+	// 	pose_ref.segment<6>(6*i) << rot, transform.translation();		
+	// }
+
+	// head_ref[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] - root_ref->getCOM()[1]);
+
+	// // restore
+	// mSkeleton->setPositions(mTargetPositions);
+	// mSkeleton->setVelocities(mTargetVelocities);
+	// mSkeleton->computeForwardKinematics(true, true, false);
+
+	// dart::dynamics::BodyNode* root_cur = mSkeleton->getRootBodyNode();
+	// cur_root_inv = root_cur->getWorldTransform().inverse();
+
+	// Eigen::VectorXd root_rot_cur = Utils::QuaternionToAxisAngle(Eigen::Quaterniond((root_cur->getWorldTransform()).linear()));
+	// Eigen::VectorXd head_cur = Eigen::VectorXd::Zero(4);
+
+	// // pose_cur.resize((num_ee)*3);
+	// pose_cur.resize((num_ee)*6);
+	// for(int i=0;i<num_ee;i++)
+	// {
+	// 	Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
+	// 	Eigen::Vector3d rot = Utils::QuaternionToAxisAngle(Eigen::Quaterniond(transform.linear()));
+		
+	// 	// if(i==2)
+	// 	// 	head_cur.segment<3>(0) << rot;
+	// 	// else
+	// 	pose_cur.segment<6>(6*i) << rot, transform.translation();		
+	// }
+
+	// head_cur[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] - root_cur->getCOM()[1]);
+
+	// double err_scale = 1.0;
+
+	// double pose_scale = 0.1;
+	// double head_scale = 5.0;
+	// double root_scale = 1.0;
+
+	// double pose_err = (pose_cur-pose_ref).norm();
+	// double head_err = (head_cur-head_ref).norm();
+	// double root_err = (root_rot_cur-root_rot_ref).norm();
+
+	// double pose_reward = exp(-1.0 * pose_scale * pose_err);
+	// double head_reward = exp(-1.0 * head_scale * head_err);
+	// double root_reward = exp(-1.0 * root_scale * root_err);
+
+	// // std::cout << "pose err : " << pose_err << std::endl;
+	// // std::cout << "pose rew : " << pose_reward << std::endl;
+	// // std::cout << "head err : " << head_err << std::endl;
+	// // std::cout << "head rew : " << head_reward << std::endl;
+	// // std::cout << std::endl;
+
+	// // double reward = pose_reward * head_reward;
+	// double reward = pose_reward;
+	
+	// mSkeleton->setPositions(p_save);
+	// mSkeleton->setVelocities(v_save);
+	// mSkeleton->computeForwardKinematics(true, true, false);
+
+	Eigen::VectorXd cur_q = mSkeleton->getPositions();
+	Eigen::VectorXd cur_dq = mSkeleton->getVelocities();
+	dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
+	
+	// Current Position and Velocity
+	Eigen::VectorXd p_cur, v_cur;
+	p_cur.resize((mNumBodyNodes-1)*3);
+	for (int i=1; i<mNumBodyNodes; i++)
+	{
+		dart::dynamics::BodyNode* cur_body = mSkeleton->getBodyNode(i);
+		p_cur.segment<3>(3*(i-1)) = cur_body->getCOM(root);
+	}
 
 	Eigen::VectorXd p_reward;
 	Eigen::VectorXd v_reward;
@@ -1488,82 +1582,40 @@ GetReward_Pose()
 	
 	mSkeleton->setPositions(p_reward);
 	mSkeleton->computeForwardKinematics(true, true, false);
-	
-	dart::dynamics::BodyNode* root_ref = mSkeleton->getRootBodyNode();
-	Eigen::Isometry3d cur_root_inv = root_ref->getWorldTransform().inverse();
 
-	Eigen::VectorXd root_rot_ref = Utils::QuaternionToAxisAngle(Eigen::Quaterniond((root_ref->getWorldTransform()).linear()));
-	Eigen::VectorXd head_ref = Eigen::VectorXd::Zero(4);
+	Eigen::Vector3d ref_root_com = root->getCOM();
 
-	// pose_ref.resize((num_ee)*3);
-	pose_ref.resize((num_ee)*6);
-	for(int i=0;i<num_ee;i++)
+	Eigen::VectorXd p_ref, v_ref;
+	p_ref.resize((mNumBodyNodes-1)*3);
+	for (int i=1; i<mNumBodyNodes; i++)
 	{
-		Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
-		Eigen::Vector3d rot = Utils::QuaternionToAxisAngle(Eigen::Quaterniond(transform.linear()));
-
-		// if(i==2)
-		// 	head_ref.segment<3>(0) << rot;
-		// else
-		pose_ref.segment<6>(6*i) << rot, transform.translation();		
+		dart::dynamics::BodyNode* cur_body = mSkeleton->getBodyNode(i);
+		p_ref.segment<3>(3*(i-1)) = cur_body->getCOM(root);
 	}
 
-	head_ref[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] - root_ref->getCOM()[1]);
-
-	// restore
-	mSkeleton->setPositions(mTargetPositions);
-	mSkeleton->setVelocities(mTargetVelocities);
+	mSkeleton->setPositions(cur_q);
+	mSkeleton->setVelocities(cur_dq);
 	mSkeleton->computeForwardKinematics(true, true, false);
 
-	dart::dynamics::BodyNode* root_cur = mSkeleton->getRootBodyNode();
-	cur_root_inv = root_cur->getWorldTransform().inverse();
+	// Position and Velocity Difference
+	Eigen::VectorXd p_diff, v_diff;
+	p_diff.resize((mNumBodyNodes-1)*3);
+	v_diff.resize((mNumBodyNodes-1)*3);
 
-	Eigen::VectorXd root_rot_cur = Utils::QuaternionToAxisAngle(Eigen::Quaterniond((root_cur->getWorldTransform()).linear()));
-	Eigen::VectorXd head_cur = Eigen::VectorXd::Zero(4);
+	p_diff = (p_cur - p_ref);
+	v_diff = (v_cur - v_ref);
 
-	// pose_cur.resize((num_ee)*3);
-	pose_cur.resize((num_ee)*6);
-	for(int i=0;i<num_ee;i++)
-	{
-		Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
-		Eigen::Vector3d rot = Utils::QuaternionToAxisAngle(Eigen::Quaterniond(transform.linear()));
-		
-		// if(i==2)
-		// 	head_cur.segment<3>(0) << rot;
-		// else
-		pose_cur.segment<6>(6*i) << rot, transform.translation();		
-	}
+	// p_diff[0] = root->getCOM()[0];
+	// v_diff = (v_cur - v_ref);
 
-	head_cur[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] - root_cur->getCOM()[1]);
+	// Endeffector
+		//=====================================
 
-	double err_scale = 1.0;
-
-	double pose_scale = 0.1;
-	double head_scale = 5.0;
-	double root_scale = 1.0;
-
-	double pose_err = (pose_cur-pose_ref).norm();
-	double head_err = (head_cur-head_ref).norm();
-	double root_err = (root_rot_cur-root_rot_ref).norm();
-
-	double pose_reward = exp(-1.0 * pose_scale * pose_err);
-	double head_reward = exp(-1.0 * head_scale * head_err);
-	double root_reward = exp(-1.0 * root_scale * root_err);
-
-	// std::cout << "pose err : " << pose_err << std::endl;
-	// std::cout << "pose rew : " << pose_reward << std::endl;
-	// std::cout << "head err : " << head_err << std::endl;
-	// std::cout << "head rew : " << head_reward << std::endl;
-	// std::cout << std::endl;
-
-	// double reward = pose_reward * head_reward;
-	double reward = pose_reward;
+	double sig_p = 10.0;
 	
-	mSkeleton->setPositions(p_save);
-	mSkeleton->setVelocities(v_save);
-	mSkeleton->computeForwardKinematics(true, true, false);
+	double r_p = Utils::exp_of_squared(p_diff, sig_p);
 
-	return reward;
+	return r_p;
 }
 
 double
