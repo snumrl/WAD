@@ -9,7 +9,7 @@ Device(WorldPtr& wPtr)
 :mUseDeviceNN(false),mNumParamState(0)
 {
 	mWorld = wPtr;
-	mDelta_t = 0.3;
+	mDelta_t = 0.2;
 	mK_ = 15.0;
 }
 
@@ -161,7 +161,7 @@ GetState() const
 	double scaler = 2.0;
 	for(int i=0; i<history_num; i++)
 	{
-		double signal_y = mDeviceSignals_y.at(mDelta_t_idx - i*offset);
+		double signal_y = mDeviceSignals_y.at(mDelta_t_idx + i*offset);
 		double des_torque_l =  1 * mK_ * signal_y;
 		double des_torque_r = -1 * mK_ * signal_y;
 
@@ -350,7 +350,7 @@ SetNumParamState(int n)
 void
 Device::
 SetParamState(const Eigen::VectorXd& paramState)
-{
+{	
 	mParamState = paramState;
 	double param = 0.0;
 	for(int i=0; i<paramState.size(); i++)
@@ -378,6 +378,7 @@ void
 Device::
 SetAdaptiveParams(std::map<std::string, std::pair<double, double>>& p)
 {
+	mAdaptiveParams = p;
 	for(auto p_ : p){
 		std::string name = p_.first;
 		double lower = (p_.second).first;

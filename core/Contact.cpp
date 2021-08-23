@@ -17,12 +17,24 @@ Contact::
 
 void
 Contact::
-Initialize(std::string name, BodyNode* bn)
+Initialize(std::string name, SkeletonPtr skel)
 {
 	mName = name;
-	mBodyNode = bn;
+	mSkeleton = skel;
+	
+	if(mName == "FootLeft")
+	{
+		mBnTalus = mSkeleton->getBodyNode("TalusL");
+		mBnThumb = mSkeleton->getBodyNode("FootThumbL");
+		mBnPinky = mSkeleton->getBodyNode("FootPinkyL");
+	}
 
-	this->Set();
+	if(mName == "FootRight")
+	{
+		mBnTalus = mSkeleton->getBodyNode("TalusR");
+		mBnThumb = mSkeleton->getBodyNode("FootThumbR");
+		mBnPinky = mSkeleton->getBodyNode("FootPinkyR");
+	}
 }
 
 void
@@ -34,29 +46,57 @@ Reset()
 
 void
 Contact::
+AddGround(BodyNode* grnd)
+{
+	mBnGround = grnd;
+}
+
+void
+Contact::
 Set()
 {
 	mContact = false;
+	BodyNode* bn; 
 	const dart::collision::CollisionResult& result = mWorld->getLastCollisionResult();
-	for(const auto& shapeNode : mBodyNode->getShapeNodesWith<CollisionAspect>())
-	{
-		// Eigen::Vector3d force3d = Eigen::Vector3d::Zero();
-		for(const auto& contact : result.getContacts())
+	for(int i=0; i<3; i++)
+	{	
+		if(i==0)
+			bn = mBnTalus;
+		else if(i==1)
+			bn = mBnThumb;
+		else if(i==2)
+			bn = mBnPinky;
+
+		for(const auto& sf: bn->getShapeNodesWith<CollisionAspect>())
 		{
-			if(shapeNode == contact.collisionObject1->getShapeFrame() ||
-				shapeNode == contact.collisionObject2->getShapeFrame())
+			for(const auto& sfGround : mBnGround->getShapeNodesWith<CollisionAspect>())
 			{
-				mContact = true;
-				// (iter->second).push_back(std::make_pair(contact.force, contact.point));
-					// std::cout << name << " : " << body->getCOM()[0] << " " << body->getCOM()[1] << " " << body->getCOM()[2] << std::endl;
-				// Eigen::Vector3d cur_force = contact.force;
-				// force_vector += cur_force;
-			}
+				for(const auto& contact : result.getContacts())
+				{
+					const dart::dynamics::ShapeFrame* sf1 = contact.collisionObject1->getShapeFrame();
+					const dart::dynamics::ShapeFrame* sf2 = contact.collisionObject2->getShapeFrame();	
+					if(sf == sf1 || sf == sf2)
+					{
+						if(sfGround == sf1 || sfGround == sf2)
+						{
+							mContact = true;
+							break;
+						}
+									
+						// (iter->second).push_back(std::make_pair(contact.force, contact.point));
+							// std::cout << name << " : " << body->getCOM()[0] << " " << body->getCOM()[1] << " " << body->getCOM()[2] << std::endl;
+						// Eigen::Vector3d cur_force = contact.force;
+						// force_vector += cur_force;
+					}
+				}
+			}		
+			// this->SetContactForce(name, force_vector.norm());
+			// mContactForceDequeMap[name].pop_back();
+			// mContactForceDequeMap[name].push_front(this->GetContactForce(name));
 		}
-		// this->SetContactForce(name, force_vector.norm());
-		// mContactForceDequeMap[name].pop_back();
-		// mContactForceDequeMap[name].push_front(this->GetContactForce(name));
 	}
+	
+	
 }
 
 bool

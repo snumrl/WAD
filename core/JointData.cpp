@@ -101,11 +101,9 @@ Initialize_Angles()
                        
             mAngles[name+namePost] = std::deque<double>(mWindowSize);    
             mAnglesGaitPhaseLeft[name+namePost] = std::deque<double>();
-            mAnglesStancePhaseLeftPrev[name+namePost] = std::deque<double>();            
-            mAnglesSwingPhaseLeftPrev[name+namePost] = std::deque<double>();            
+            mAnglesGaitPhaseLeftPrev[name+namePost] = std::deque<double>();
             mAnglesGaitPhaseRight[name+namePost] = std::deque<double>();
-            mAnglesStancePhaseRightPrev[name+namePost] = std::deque<double>();            
-            mAnglesSwingPhaseRightPrev[name+namePost] = std::deque<double>();            
+            mAnglesGaitPhaseRightPrev[name+namePost] = std::deque<double>();
         }
     }
 }
@@ -129,23 +127,16 @@ Reset()
     for(auto iter = mAnglesGaitPhaseLeft.begin(); iter != mAnglesGaitPhaseLeft.end(); iter++)
         (iter->second).clear();
 
-    for(auto iter = mAnglesStancePhaseLeftPrev.begin(); iter != mAnglesStancePhaseLeftPrev.end(); iter++)
+    for(auto iter = mAnglesGaitPhaseLeftPrev.begin(); iter != mAnglesGaitPhaseLeftPrev.end(); iter++)
         (iter->second).clear();
-
-    for(auto iter = mAnglesSwingPhaseLeftPrev.begin(); iter != mAnglesSwingPhaseLeftPrev.end(); iter++)
-        (iter->second).clear();        
-
+    
     for(auto iter = mAnglesGaitPhaseRight.begin(); iter != mAnglesGaitPhaseRight.end(); iter++)
         (iter->second).clear();
 
-    for(auto iter = mAnglesStancePhaseRightPrev.begin(); iter != mAnglesStancePhaseRightPrev.end(); iter++)
+    for(auto iter = mAnglesGaitPhaseRightPrev.begin(); iter != mAnglesGaitPhaseRightPrev.end(); iter++)
         (iter->second).clear();
 
-    for(auto iter = mAnglesSwingPhaseRightPrev.begin(); iter != mAnglesSwingPhaseRightPrev.end(); iter++)
-        (iter->second).clear();        
-    
     mOnCycle = false;
-    
     mCycleStep = 0;
     mCycleTorqueErr = 0.0;
     mCycleTorqueSum = 0.0;
@@ -173,20 +164,14 @@ SetPhaseStateLeft(int phaseState)
         {
             for(auto a : mAnglesGaitPhaseLeft)
             {
-                mAnglesSwingPhaseLeftPrev[a.first].clear();
-                mAnglesSwingPhaseLeftPrev[a.first] = a.second;
+                if(a.second.size() < 50)
+                    break;
+
+                mAnglesGaitPhaseLeftPrev[a.first].clear();
+                mAnglesGaitPhaseLeftPrev[a.first] = a.second;
                 mAnglesGaitPhaseLeft[a.first].clear();                
             }            
-        }
-        else if(mPhaseStateLeft == 0)
-        {
-            for(auto a : mAnglesGaitPhaseLeft)
-            {
-                mAnglesStancePhaseLeftPrev[a.first].clear();
-                mAnglesStancePhaseLeftPrev[a.first] = a.second;
-                mAnglesGaitPhaseLeft[a.first].clear();                
-            }
-        }
+        }        
     }    
 
     mPhaseStateLeftPrev = mPhaseStateLeft;
@@ -201,23 +186,17 @@ SetPhaseStateRight(int phaseState)
     {
         if(mPhaseStateRight == 1)
         {
-            this->ChangePhaseTorques();
+            for(auto a : mAnglesGaitPhaseRight)
+            {
+                if(a.second.size() < 50)
+                    break;
 
-            for(auto a : mAnglesGaitPhaseRight)
-            {
-                mAnglesSwingPhaseRightPrev[a.first].clear();
-                mAnglesSwingPhaseRightPrev[a.first] = a.second;
-                mAnglesGaitPhaseRight[a.first].clear();                
-            }            
-        }
-        else if(mPhaseStateRight == 0)
-        {
-            for(auto a : mAnglesGaitPhaseRight)
-            {
-                mAnglesStancePhaseRightPrev[a.first].clear();
-                mAnglesStancePhaseRightPrev[a.first] = a.second;
+                mAnglesGaitPhaseRightPrev[a.first].clear();
+                mAnglesGaitPhaseRightPrev[a.first] = a.second;
                 mAnglesGaitPhaseRight[a.first].clear();                
             }
+
+            this->ChangePhaseTorques();
         }
     }    
 
@@ -231,7 +210,8 @@ ChangePhaseTorques()
     if(mOnCycle)
     {
         mCycleTorqueErr = mCycleTorqueSum;
-        mCycleTorqueErr /= (double)(mDof-6);
+        // mCycleTorqueErr /= (double)(mDof-6);
+        mCycleTorqueErr /= (double)(14);
         mCycleTorqueErr /= (double)(mCycleStep);            
     }
     else
@@ -297,10 +277,13 @@ SetTorques(const Eigen::VectorXd& torques)
             }
             else if(type == "BallJoint")
             {
-                mCycleTorqueSum += fabs(torques[idx])/(double)mMaxForces[idx];
-                mCycleTorqueSum += fabs(torques[idx+1])/(double)mMaxForces[idx+1];
-                mCycleTorqueSum += fabs(torques[idx+2])/(double)mMaxForces[idx+2];
-                
+                if(name == "FemurL" || name == "FemurR" || name == "TalusL" || name == "TalusR")
+                {
+                    mCycleTorqueSum += fabs(torques[idx])/(double)mMaxForces[idx];
+                    mCycleTorqueSum += fabs(torques[idx+1])/(double)mMaxForces[idx+1];
+                    mCycleTorqueSum += fabs(torques[idx+2])/(double)mMaxForces[idx+2];
+                }
+                                
                 this->SetTorques(name+"_x", torques[idx+0]);
                 this->SetTorques(name+"_y", torques[idx+1]);
                 this->SetTorques(name+"_z", torques[idx+2]);
@@ -311,7 +294,8 @@ SetTorques(const Eigen::VectorXd& torques)
             }
             else if(type == "RevoluteJoint")
             {
-                mCycleTorqueSum += fabs(torques[idx])/(double)mMaxForces[idx];
+                if(name == "TibiaL" || name == "TibiaR")
+                    mCycleTorqueSum += fabs(torques[idx])/(double)mMaxForces[idx];
 
                 this->SetTorques(name+"_x", torques[idx+0]);
                 this->SetTorques(name+"_y", 0.0);
@@ -358,11 +342,11 @@ SetAngles()
             int idx = joint->getIndexInSkeleton(0);
             std::string name = joint->getName();
             std::string type = joint->getType();
-            double radTodeg = 180.0/M_PI;
+            double rad2deg = 180.0/M_PI;
 
-            double p0 = pos[idx+0]*radTodeg;
-            double p1 = (type == "RevoluteJoint") ? 0.0 : pos[idx+1]*radTodeg;
-            double p2 = (type == "RevoluteJoint") ? 0.0 : pos[idx+2]*radTodeg;
+            double p0 = pos[idx+0]*rad2deg;
+            double p1 = (type == "RevoluteJoint") ? 0.0 : pos[idx+1]*rad2deg;
+            double p2 = (type == "RevoluteJoint") ? 0.0 : pos[idx+2]*rad2deg;
 
             this->SetAngles(name+"_sagittal",  p0);
             this->SetAngles(name+"_frontal",   p1);

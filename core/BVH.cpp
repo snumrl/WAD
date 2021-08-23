@@ -342,6 +342,10 @@ SetMotionFrames()
 			else if(jn->getType()=="BallJoint"){
 				p.segment<3>(idx) = BallJoint::convertToPositions(R);
 
+				if(jointName == "Head" || jointName == "Neck"){
+					p[idx] -= 0.1;
+				}
+
 				if(jointName == "Spine"){
 					p[idx] -= 0.06;
 					// p[idx] += 0.25; // old man

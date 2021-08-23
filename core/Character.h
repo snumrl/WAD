@@ -57,6 +57,7 @@ public:
 	void SetJointPositionLimits();
 
 	void SetWorld(const WorldPtr& wPtr){ mWorld = wPtr; }
+	void SetGround(SkeletonPtr& grnd){ mGround = grnd; } 
 	void SetDevice(Device* device);
 
 	void SetHz(int sHz, int cHz);
@@ -216,6 +217,7 @@ public:
 private:
 	WorldPtr mWorld;
 	SkeletonPtr mSkeleton;
+	SkeletonPtr mGround;
 	std::vector<BodyNode*> mEndEffectors;
 	std::vector<Muscle*> mMuscles;
 	std::vector<Muscle*> mMusclesFemur;

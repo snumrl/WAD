@@ -124,6 +124,7 @@ void
 GLFWApp::
 Initialize()
 {
+    mPhaseRatio = 0.5;
     mDevice_On = mEnv->GetCharacter()->GetDevice_OnOff();
     this->InitGLFW();    
     this->InitAnalysis();
@@ -136,8 +137,8 @@ InitViewer()
     mZoom = 0.25;
     mPersp = 45.0;
 	
-    mUiWidthRatio = 0.1;
-    mUiHeightRatio = 0.1;
+    mUiWidthRatio = 0.2;
+    mUiHeightRatio = 0.4;
     mUiViewerRatio = 0.4;
 
     //window size
@@ -401,7 +402,9 @@ InitAnalysis()
     mJointTorqueMinMax["Neck_y"] = std::pair(-200.0, 200.0);
     mJointTorqueMinMax["Neck_z"] = std::pair(-200.0, 200.0);
 
-    mAdaptiveParams = mEnv->GetCharacter()->GetAdaptiveParams();       
+    mAdaptiveParams_Char = mEnv->GetCharacter()->GetAdaptiveParams();
+    if(mEnv->GetUseDevice())       
+        mAdaptiveParams_Device = mEnv->GetDevice()->GetAdaptiveParams();                
 }
 
 void
@@ -447,10 +450,10 @@ void GLFWApp::Update()
             action = GetActionFromNN();
         else
             action = Eigen::VectorXd::Zero(mEnv->GetNumAction());
-
+    
         mEnv->SetAction(action);
     }
- 
+   
     int num = mEnv->GetNumSteps()/2.0;
     if (mEnv->GetUseMuscle()) {
         int inference_per_sim = 2;
@@ -466,7 +469,7 @@ void GLFWApp::Update()
         for (int i=0; i<num; i++)
             mEnv->Step(mDevice_On, true);
     }
-  
+    
     mEnv->GetReward();
     mDisplayIter++;    
 }
@@ -693,7 +696,7 @@ DrawUiFrame_Manager()
 
             // Post-baking font scaling. Note that this is NOT the nice way of scaling fonts, read below.
             // (we enforce hard clamping manually as by default DragFloat/SliderFloat allows CTRL+Click text to get out of bounds).
-            const float MIN_SCALE = 0.3f;
+            const float MIN_SCALE = 0.2f;
             const float MAX_SCALE = 2.0f;
             static float window_scale = 1.0f;
             ImGui::PushItemWidth(ImGui::GetFontSize() * 8);
@@ -805,18 +808,53 @@ DrawUiFrame_SimState(double x, double y, double w, double h)
     {   
         int idx = 0;
         Eigen::VectorXd params = mEnv->GetParamState();
-        for(auto p : mAdaptiveParams)
+        for(auto p : mAdaptiveParams_Char)
         {
             std::string name = p.first;
+            if(name == "mass")
+                idx = 0;
+            else if(name == "force")
+                idx = 1;                
+            else if(name == "speed")
+                idx = 2;
+
             double lower = p.second.first;
             double upper = p.second.second;
-            float value = params[idx];
+            float value = lower + ((params[idx]+1.0)/2.0)*(upper-lower);
             ImGui::SliderFloat(name.c_str(), &value, lower, upper, "%.2f x");    
-            params[idx] = (double)value;
-            idx++;
-        }        
+            if(upper == lower)
+                params[idx] = 1.0;
+            else
+                params[idx] = (double)(value-lower)/(upper-lower)*2 - 1.0;            
+        }       
+        
+        ImGui::Separator();
+        if(mEnv->GetUseDevice())
+        {
+            for(auto p : mAdaptiveParams_Device)
+            {
+                std::string name = p.first;
+                if(name == "k")
+                    idx = 3;
+                else if(name == "delta_t")
+                    idx = 4;                
+                
+                double lower = p.second.first;
+                double upper = p.second.second;
+                float value = lower + ((params[idx]+1.0)/2.0)*(upper-lower);
+                ImGui::SliderFloat(name.c_str(), &value, lower, upper, "%.2f x");    
+                if(upper == lower)
+                    params[idx] = 1.0;
+                else
+                    params[idx] = (double)(value-lower)/(upper-lower)*2 - 1.0;            
+            }
+        } 
+        
         mEnv->SetParamState(params);        
     }
+
+    ImGui::Text("Velocity %.2f m/s", mEnv->GetCharacter()->GetCurVelocity());
+            ImGui::End();
 
     ImPlot::SetCurrentContext(mPlotContexts["Main"]);
     ImGui::End();
@@ -832,9 +870,319 @@ DrawUiFrame_Learning(double x, double y, double w, double h)
     
     ImPlot::SetCurrentContext(mPlotContexts["Learning"]);
 
+    if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_None))
+    {
+        std::map<std::string, std::deque<double>> rewards = mEnv->GetCharacter()->GetRewards();
+        // for(auto r : rewards)
+        // {
+        //     std::cout << r.first << std::endl;
+        //     for(auto d : r.second)
+        //     {
+        //         std::cout << d << ", ";
+        //     }
+        // }
+        // std::cout << std::endl;
+
+        if (ImGui::BeginTabItem("Reward"))
+        {            
+            double w_ = w/4.0 - 10.0;
+            double h_ = h/2.0 - 20.0;
+           
+            std::deque<double> reward1, reward2, reward3, reward4; 
+            std::string name1, name2, name3, name4;
+            for(int i=0; i<2; i++)
+            {
+                if(i==0){
+                    reward1 = rewards["imit_c"]; 
+                    reward2 = rewards["imit_pos"]; 
+                    reward3 = rewards["imit_ee_pos"]; 
+                    reward4 = rewards["imit_ee_rot"]; 
+                    name1 = "imit_c";
+                    name2 = "imit_p";
+                    name3 = "imit_ee_p";
+                    name4 = "imit_ee_r";
+                }
+                else if(i==1){
+                    reward1 = rewards["effi_c"];
+                    reward2 = rewards["effi_vel"];
+                    reward3 = rewards["effi_pose"];
+                    reward4 = rewards["effi_energy"];
+                    name1 = "effi_c";
+                    name2 = "effi_vel";
+                    name3 = "effi_pose";                    
+                    name4 = "effi_E";                    
+                }
+
+                this->DrawRewardGraph(name1, reward1, 0.0, 1.0, w_, h_);
+                ImGui::SameLine();
+                this->DrawRewardGraph(name2, reward2, 0.0, 1.0, w_, h_);
+                ImGui::SameLine();
+                this->DrawRewardGraph(name3, reward3, 0.0, 1.0, w_, h_);
+                ImGui::SameLine();
+                this->DrawRewardGraph(name4, reward4, 0.0, 1.0, w_, h_);
+            }
+            ImGui::EndTabItem();
+        }
+    }
 
     ImPlot::SetCurrentContext(mPlotContexts["Main"]);
     ImGui::End();
+}
+
+void
+GLFWApp::
+DrawUiFrame_Analysis(double x, double y, double w, double h)
+{
+    ImGui::Begin("Analysis");                         
+    ImGui::SetWindowPos("Analysis", ImVec2(x, y));    
+    ImGui::SetWindowSize("Analysis", ImVec2(w, h));
+    
+    ImPlot::SetCurrentContext(mPlotContexts["Analysis"]);
+
+    static bool compare = false;
+    static bool legend = false;
+    ImGui::Checkbox("Legend", &legend);
+    mLegend = legend;
+    ImGui::SameLine();
+    ImGui::Checkbox("Compare", &compare);
+    if(compare)
+    { 
+        ImGui::SameLine();
+        this->ShowCompareDataSelecter();
+    }
+    ImGui::Separator();
+    
+    if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_None))
+    {
+        JointData* jointData = mEnv->GetCharacter()->GetJointDatas(); 
+        auto angles = jointData->GetAngles();
+        auto angleGaitLeft = jointData->GetAnglesGaitPhaseLeftPrev();
+        auto angleGaitRight = jointData->GetAnglesGaitPhaseRightPrev();
+        
+        auto torques = jointData->GetTorques();
+        auto torquesPhase = jointData->GetTorquesGaitPhasePrev();
+
+        if (ImGui::BeginTabItem("Joint Angle"))
+        {            
+            double w_ = w/3.0 - 10.0;
+            double h_ = h/3.0 - 30.0;
+           
+            double yMin, yMax;
+            std::string plotName, dataName;
+            std::string plotNamePre, dataNamePre, namePost;
+            std::deque<double> angleGaitL;
+            std::deque<double> angleGaitR;
+           
+            for(int i=0; i<3; i++)
+            {
+                if(i==0){
+                    plotNamePre = "Hip"; dataNamePre = "Femur";
+                }
+                else if(i==1){
+                    plotNamePre = "Knee"; dataNamePre = "Tibia";
+                }
+                else if(i==2){
+                    plotNamePre = "Ankle"; dataNamePre = "Talus";
+                }
+    
+                for(int j=0; j<3; j++)
+                {
+                    if(j==0)
+                        namePost = "_sagittal";
+                    else if(j==1)
+                        namePost = "_frontal";
+                    else if(j==2)
+                        namePost = "_transverse";
+                    
+                    for(int k=0; k<2; k++)
+                    {
+                        std::string cur;
+                        if(k==0)
+                            cur = "L";
+                        else if(k==1)
+                            cur = "R";
+
+                        plotName = plotNamePre + namePost;
+                        dataName = dataNamePre + cur + namePost;
+
+                        if(k==0)
+                            angleGaitL = angleGaitLeft[dataName];
+                        else if(k==1)
+                            angleGaitR = angleGaitRight[dataName];
+                       
+                        if(dataName == "FemurL_sagittal" || dataName == "FemurL_transverse" || dataName == "TalusL_sagittal")
+                        {
+                            for(int i=0; i<angleGaitL.size(); i++)
+                                angleGaitL[i] *= -1;                                        
+                        }
+
+                        if(dataName == "FemurR_sagittal" || dataName == "FemurR_frontal" || dataName == "TalusR_sagittal" || dataName == "TalusR_transverse")
+                        {
+                            for(int i=0; i<angleGaitR.size(); i++)
+                                angleGaitR[i] *= -1;                                         
+                        }
+                    }
+
+                    yMin = mJointAngleMinMax[plotName].first;
+                    yMax = mJointAngleMinMax[plotName].second;
+                    if(compare)
+                    {
+                        if(plotName == "Hip_sagittal" || plotName == "Hip_frontal" || plotName == "Hip_transverse"|| plotName == "Knee_sagittal" || plotName == "Ankle_sagittal" || plotName == "Ankle_transverse")
+                            this->DrawJointAngle(plotName, angleGaitL, angleGaitR, mRealJointData[plotName], mRealJointData[plotName+"_std1"], mRealJointData[plotName +"_std2"], yMin, yMax, w_, h_);
+                        else
+                            this->DrawJointAngle(plotName, angleGaitL, angleGaitR, mRealJointData[plotName], yMin, yMax, w_, h_);                        
+                    }
+                    else{
+                        this->DrawJointAngle(plotName, angleGaitL, angleGaitR, yMin, yMax, w_, h_);
+                    }
+                    
+                    if(j<2)
+                        ImGui::SameLine();
+                }
+            }
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Joint Torque"))
+        {   
+            double w_ = w/3.0 - 10.0;
+            double h_ = h/3.0 - 30.0;
+
+            std::deque<double> torqueData;
+            double yMin, yMax;
+            std::string plotName, dataName;
+            std::string plotNamePre, dataNamePre;
+            std::string namePost;
+
+            for(int i=0; i<6; i++)
+            {
+                if(i==0){
+                    plotNamePre = "Hip"; dataNamePre = "FemurL";
+                }
+                else if(i==1){
+                    plotNamePre = "Knee"; dataNamePre = "TibiaL";
+                }
+                else if(i==2){
+                    plotNamePre = "Ankle"; dataNamePre = "TalusL";
+                }
+                else if(i==3){
+                    plotNamePre = "Spine"; dataNamePre = "Spine";
+                }
+                else if(i==4){
+                    plotNamePre = "Torso"; dataNamePre = "Torso";
+                }
+                else if(i==5){
+                    plotNamePre = "Neck"; dataNamePre = "Neck";
+                }
+    
+                for(int j=0; j<3; j++)
+                {
+                    if(j==0)
+                        namePost = "_x";
+                    else if(j==1)
+                        namePost = "_y";
+                    else if(j==2)
+                        namePost = "_z";
+                    
+                    plotName = plotNamePre + namePost;
+                    dataName = dataNamePre + namePost;
+                    // torqueData = torques[dataName];
+                    torqueData = torquesPhase[dataName];                    
+                    yMin = mJointTorqueMinMax[plotName].first;
+                    yMax = mJointTorqueMinMax[plotName].second;
+                
+                    if(compare)
+                        this->DrawJointTorque(plotName, torqueData, yMin, yMax, w_, h_);
+                    else
+                        this->DrawJointTorque(plotName, torqueData, yMin, yMax, w_, h_);
+
+                    if(j<2)
+                        ImGui::SameLine();
+                }
+            }
+            ImGui::EndTabItem();
+        }
+
+        MetabolicEnergy* metaEnergy = mEnv->GetCharacter()->GetMetabolicEnergy(); 
+        const auto& energy = metaEnergy->GetHOUD06_map_deque();
+
+        if (ImGui::BeginTabItem("Metabolic Energy"))
+        {
+            double w_ = w/3.0 - 10.0;
+            double h_ = h/3.0 - 30.0;
+
+            std::deque<double> energyData;
+            std::string xAxisName = "%";
+            std::string yAxisName = "Metabolic Energy";
+            int idx = 0;
+            for(auto e : energy)
+            {   
+                this->DrawDequeGraph(e.first, xAxisName, yAxisName, e.second, 0.0, 1.0, w_, h_);
+                if(idx%3 < 2)
+                    ImGui::SameLine();
+                idx++;
+            }
+
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Activation Levels"))
+        {
+            // Eigen::VectorXd al = mEnv->GetCharacter()->GetActivationLevels();
+            
+            // int size = 20;
+            // double xs[size];
+            // float ys[size];
+            // const char* labels[size];
+            // for(int i=0; i<size; i++)
+            // {
+            //     labels[i] = std::to_string(i).c_str();
+            //     xs[i] = (double)i;
+            //     ys[i] = al[i];
+            // }
+
+            // ImPlot::SetNextPlotLimits(-0.5, 19.5, 0, 1, ImGuiCond_Always);
+            // ImPlot::SetNextPlotTicksX((const double*)xs, 3, labels);
+            
+            // double w = mImguiWidth*(1.0-mUiWidthRatio) - 20;
+            // double h = mImguiHeight*(1.0-mUiHeightRatio)/4.0 - 20;
+            // if (ImPlot::BeginPlot("Bar Plot", "Muscle", "level",
+            //                 ImVec2(w,h), 0, 0, 0))
+            // {
+            //     double level = 1.0+(3.0*a), 1.0, 1.0, 1.0
+            //     ImPlot::PushStyleColor(ImPlotCol_Fill, ImVec4(1,1.0,1.0,1.0));
+            //     ImPlot::SetLegendLocation(ImPlotLocation_South, ImPlotOrientation_Horizontal);
+            //     ImPlot::PlotBars("Activation", ys, size, 0.1, 0);
+            //     ImPlot::PopStyleColor();
+            //     ImPlot::EndPlot();
+            // }
+                                   
+            ImGui::EndTabItem();
+        }
+    }
+
+    ImPlot::SetCurrentContext(mPlotContexts["Main"]);
+    ImGui::End();
+}
+
+void
+GLFWApp::
+DrawRewardGraph(std::string name, std::deque<double> reward, double yMin, double yMax, double w, double h)
+{
+    int size = reward.size();
+    float x[size];
+    float r[size];
+    for(int i=0; i<size; i++)
+    {
+        x[i] = i*(1.0/(size-1.0));
+        r[i] = reward[i];        
+    }
+    
+    ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
+    if (ImPlot::BeginPlot(name.c_str(), "%", "deg", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+        ImPlot::PlotLine("deg", x, r, size);                        
+        ImPlot::EndPlot();
+    }    
 }
 
 void
@@ -894,123 +1242,46 @@ DrawDequeGraph(std::string name, std::string xAxis, std::string yAxis, std::dequ
     }    
 }
 
-void
+void 
 GLFWApp::
-DrawJointAngle(std::string name, std::deque<double> stance, std::deque<double> swing, double yMin, double yMax, double w, double h)
+DrawJointAngle(std::string name, std::deque<double> gait, double yMin, double yMax, double w, double h)
 {
-    int size1 = stance.size();
-    int size2 = swing.size();
-    int size = size1 + size2;
+    int size = gait.size();
     float x[size];
     float data[size];
-    for(int i=0; i<size1; i++)
+    for(int i=0; i<size; i++)
     {
-        x[i] = i*(0.6/(size1));
-        data[i] = stance[i];        
+        x[i] = i*(1.0/(size-1.0));
+        data[i] = gait[i];        
     }
-    for(int i=0; i<size2; i++)
-    {
-        x[i+size1] = i*(0.4/(size2-1.0))+0.6;
-        data[i+size1] = swing[i];        
-    }
-
+    
     ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
     if (ImPlot::BeginPlot(name.c_str(), "%", "deg", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
-        ImPlot::PlotLine("deg",x,data,size);                        
+        ImPlot::PlotLine("deg", x, data, size);                        
         ImPlot::EndPlot();
     }
-}
 
-void
+}
+void 
 GLFWApp::
-DrawJointAngle(std::string name, std::deque<double> stanceL, std::deque<double> swingL,  std::deque<double> stanceR, std::deque<double> swingR, double yMin, double yMax, double w, double h)
+DrawJointAngle(std::string name, std::deque<double> gaitL, std::deque<double> gaitR, double yMin, double yMax, double w, double h)
 {
-    int sizeL1 = stanceL.size();
-    int sizeL2 = swingL.size();
-    int sizeL = sizeL1 + sizeL2;
+    int sizeL = gaitL.size();
     float xL[sizeL];
     float dataL[sizeL];
-    for(int i=0; i<sizeL1; i++)
+    for(int i=0; i<sizeL; i++)
     {
-        xL[i] = i*(0.6/(sizeL1));
-        dataL[i] = stanceL[i];        
-    }
-    for(int i=0; i<sizeL2; i++)
-    {
-        xL[i+sizeL1] = i*(0.4/(sizeL2-1.0))+0.6;
-        dataL[i+sizeL1] = swingL[i];        
+        xL[i] = i*(1.0/(sizeL-1.0));
+        dataL[i] = gaitL[i];        
     }
 
-    int sizeR1 = stanceR.size();
-    int sizeR2 = swingR.size();
-    int sizeR = sizeR1 + sizeR2;
+    int sizeR = gaitR.size();
     float xR[sizeR];
     float dataR[sizeR];
-    for(int i=0; i<sizeR1; i++)
+    for(int i=0; i<sizeR; i++)
     {
-        xR[i] = i*(0.6/(sizeR1));
-        dataR[i] = stanceR[i];        
-    }
-    for(int i=0; i<sizeR2; i++)
-    {
-        xR[i+sizeR1] = i*(0.4/(sizeR2-1.0))+0.6;
-        dataR[i+sizeR1] = swingR[i];        
-    }   
-    
-    int plotStyle = ImPlotFlags_CanvasOnly;
-    if(mLegend)
-        plotStyle = ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMousePos;
-    ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
-    if (ImPlot::BeginPlot(name.c_str(), "%", "deg", ImVec2(w,h), plotStyle, ImPlotAxisFlags_Lock)) {
-        ImPlot::PlotLine("Left",xL,dataL,sizeL);                
-        ImPlot::PlotLine("Right",xR,dataR,sizeR);                
-        ImPlot::EndPlot();
-    }
-}
-
-void
-GLFWApp::
-DrawJointAngle(std::string name, std::deque<double> stanceL, std::deque<double> swingL, std::deque<double> stanceR, std::deque<double> swingR, std::deque<double> data3, double yMin, double yMax, double w, double h)
-{
-    int sizeL1 = stanceL.size();
-    int sizeL2 = swingL.size();
-    int sizeL = sizeL1 + sizeL2;
-    float xL[sizeL];
-    float dataL[sizeL];
-    for(int i=0; i<sizeL1; i++)
-    {
-        xL[i] = i*(0.6/(sizeL1));
-        dataL[i] = stanceL[i];        
-    }
-    for(int i=0; i<sizeL2; i++)
-    {
-        xL[i+sizeL1] = i*(0.4/(sizeL2-1.0))+0.6;
-        dataL[i+sizeL1] = swingL[i];        
-    }
-
-    int sizeR1 = stanceR.size();
-    int sizeR2 = swingR.size();
-    int sizeR = sizeR1 + sizeR2;
-    float xR[sizeR];
-    float dataR[sizeR];
-    for(int i=0; i<sizeR1; i++)
-    {
-        xR[i] = i*(0.6/(sizeR1));
-        dataR[i] = stanceR[i];        
-    }
-    for(int i=0; i<sizeR2; i++)
-    {
-        xR[i+sizeR1] = i*(0.4/(sizeR2-1.0))+0.6;
-        dataR[i+sizeR1] = swingR[i];        
-    }   
-
-    int size3 = data3.size();
-    float x3[size3];
-    float data3_[size3];
-    for(int i=0; i<size3; i++)
-    {
-        x3[i] = i*(1.0/(size3-1.0));
-        data3_[i] = data3[i];        
+        xR[i] = i*(1.0/(sizeR-1.0));
+        dataR[i] = gaitR[i];        
     }
     
     int plotStyle = ImPlotFlags_CanvasOnly;
@@ -1018,60 +1289,88 @@ DrawJointAngle(std::string name, std::deque<double> stanceL, std::deque<double> 
         plotStyle = ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMousePos;
     ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
     if (ImPlot::BeginPlot(name.c_str(), "%", "deg", ImVec2(w,h), plotStyle, ImPlotAxisFlags_Lock)) {
-        ImPlot::PlotLine("left",xL,dataL,sizeL);                
-        ImPlot::PlotLine("right",xR,dataR,sizeR);                
-        ImPlot::PlotLine("real",x3,data3_,size3);                
+        ImPlot::PlotLine("Left", xL, dataL, sizeL);                        
+        ImPlot::PlotLine("Right", xR, dataR, sizeR);                        
+        ImPlot::EndPlot();
+    }
+
+}
+void
+GLFWApp::
+DrawJointAngle(std::string name, std::deque<double> gaitL, std::deque<double> gaitR, std::deque<double> gaitCmp, double yMin, double yMax, double w, double h)
+{
+    int sizeL = gaitL.size();
+    float xL[sizeL];
+    float dataL[sizeL];
+    for(int i=0; i<sizeL; i++)
+    {
+        xL[i] = i*(1.0/(sizeL-1.0));
+        dataL[i] = gaitL[i];        
+    }
+
+    int sizeR = gaitR.size();
+    float xR[sizeR];
+    float dataR[sizeR];
+    for(int i=0; i<sizeR; i++)
+    {
+        xR[i] = i*(1.0/(sizeR-1.0));
+        dataR[i] = gaitR[i];        
+    }
+
+    int sizeCmp = gaitCmp.size();
+    float xCmp[sizeCmp];
+    float dataCmp[sizeCmp];
+    for(int i=0; i<sizeCmp; i++)
+    {
+        xCmp[i] = i*(1.0/(sizeCmp-1.0));
+        dataCmp[i] = gaitCmp[i];
+    }
+    
+    int plotStyle = ImPlotFlags_CanvasOnly;
+    if(mLegend)
+        plotStyle = ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMousePos;
+    ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
+    if (ImPlot::BeginPlot(name.c_str(), "%", "deg", ImVec2(w,h), plotStyle, ImPlotAxisFlags_Lock)) {
+        ImPlot::PlotLine("Left", xL, dataL, sizeL);                        
+        ImPlot::PlotLine("Right", xR, dataR, sizeR);                        
+        ImPlot::PlotLine("Real", xCmp, dataCmp, sizeCmp);                        
         ImPlot::EndPlot();
     }
 }
 
-void
+void 
 GLFWApp::
-DrawJointAngle(std::string name, std::deque<double> stanceL, std::deque<double> swingL, std::deque<double> stanceR, std::deque<double> swingR, std::deque<double> cmpData, std::deque<double> cmpStd1, std::deque<double> cmpStd2, double yMin, double yMax, double w, double h)
+DrawJointAngle(std::string name, std::deque<double> gaitL, std::deque<double> gaitR, std::deque<double> gaitCmp, std::deque<double> std1, std::deque<double> std2, double yMin, double yMax, double w, double h)
 {
-    int sizeL1 = stanceL.size();
-    int sizeL2 = swingL.size();
-    int sizeL = sizeL1 + sizeL2;
+    int sizeL = gaitL.size();
     float xL[sizeL];
     float dataL[sizeL];
-    for(int i=0; i<sizeL1; i++)
+    for(int i=0; i<sizeL; i++)
     {
-        xL[i] = i*(0.6/(sizeL1));
-        dataL[i] = stanceL[i];        
-    }
-    for(int i=0; i<sizeL2; i++)
-    {
-        xL[i+sizeL1] = i*(0.4/(sizeL2-1.0))+0.6;
-        dataL[i+sizeL1] = swingL[i];        
+        xL[i] = i*(1.0/(sizeL-1.0));
+        dataL[i] = gaitL[i];        
     }
 
-    int sizeR1 = stanceR.size();
-    int sizeR2 = swingR.size();
-    int sizeR = sizeR1 + sizeR2;
+    int sizeR = gaitR.size();
     float xR[sizeR];
     float dataR[sizeR];
-    for(int i=0; i<sizeR1; i++)
+    for(int i=0; i<sizeR; i++)
     {
-        xR[i] = i*(0.6/(sizeR1));
-        dataR[i] = stanceR[i];        
+        xR[i] = i*(1.0/(sizeR-1.0));
+        dataR[i] = gaitR[i];        
     }
-    for(int i=0; i<sizeR2; i++)
-    {
-        xR[i+sizeR1] = i*(0.4/(sizeR2-1.0))+0.6;
-        dataR[i+sizeR1] = swingR[i];        
-    }   
 
-    int size3 = cmpData.size();
-    float x3[size3];
-    float data[size3];
-    float std1[size3];
-    float std2[size3];
-    for(int i=0; i<size3; i++)
+    int sizeCmp = gaitCmp.size();
+    float xCmp[sizeCmp];
+    float dataCmp[sizeCmp];
+    float dataCmpStd1[sizeCmp];
+    float dataCmpStd2[sizeCmp];
+    for(int i=0; i<sizeCmp; i++)
     {
-        x3[i] = i*(1.0/(size3-1.0));
-        data[i] = cmpData[i];        
-        std1[i] = cmpStd1[i];
-        std2[i] = cmpStd2[i];        
+        xCmp[i] = i*(1.0/(sizeCmp-1.0));
+        dataCmp[i] = gaitCmp[i];        
+        dataCmpStd1[i] = std1[i];
+        dataCmpStd2[i] = std2[i];
     }
     
     int plotStyle = ImPlotFlags_CanvasOnly;
@@ -1080,10 +1379,10 @@ DrawJointAngle(std::string name, std::deque<double> stanceL, std::deque<double> 
     ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
     if (ImPlot::BeginPlot(name.c_str(), "%", "deg", ImVec2(w,h), plotStyle, ImPlotAxisFlags_Lock)) {
         ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.2f);
-        ImPlot::PlotLine("left",xL,dataL,sizeL);                
-        ImPlot::PlotLine("right",xR,dataR,sizeR);                        
-        ImPlot::PlotShaded("real",x3,std1,std2,size3);                
-        ImPlot::PlotLine("real",x3,data,size3);                        
+        ImPlot::PlotLine("Left", xL, dataL, sizeL);                        
+        ImPlot::PlotLine("Right", xR, dataR, sizeR);  
+        ImPlot::PlotShaded("Real",xCmp,dataCmpStd1,dataCmpStd2,sizeCmp);                       
+        ImPlot::PlotLine("Real", xCmp, dataCmp, sizeCmp);                        
         ImPlot::EndPlot();
     }
 }
@@ -1154,275 +1453,6 @@ ShowCompareDataSelecter()
         return true;
     }
     return false;
-}
-
-void
-GLFWApp::
-DrawUiFrame_Analysis(double x, double y, double w, double h)
-{
-    ImGui::Begin("Analysis");                         
-    ImGui::SetWindowPos("Analysis", ImVec2(x, y));    
-    ImGui::SetWindowSize("Analysis", ImVec2(w, h));
-    
-    ImPlot::SetCurrentContext(mPlotContexts["Analysis"]);
-
-    static bool compare = false;
-    static bool legend = false;
-    ImGui::Checkbox("Legend", &legend);
-    mLegend = legend;
-    ImGui::SameLine();
-    ImGui::Checkbox("Compare", &compare);
-    if(compare)
-    { 
-        ImGui::SameLine();
-        this->ShowCompareDataSelecter();
-    }
-    ImGui::Separator();
-    
-    if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_None))
-    {
-        JointData* jointData = mEnv->GetCharacter()->GetJointDatas(); 
-        auto angles = jointData->GetAngles();
-        auto anglesStanceLeft = jointData->GetAnglesStancePhaseLeftPrev();
-        auto anglesSwingLeft = jointData->GetAnglesSwingPhaseLeftPrev();
-        auto anglesStanceRight = jointData->GetAnglesStancePhaseRightPrev();
-        auto anglesSwingRight = jointData->GetAnglesSwingPhaseRightPrev();
-        
-        auto torques = jointData->GetTorques();
-        auto torquesPhase = jointData->GetTorquesGaitPhasePrev();
-
-        if (ImGui::BeginTabItem("Joint Angle"))
-        {            
-            double w_ = w/3.0 - 10.0;
-            double h_ = h/3.0 - 30.0;
-           
-            double yMin, yMax;
-            std::string plotName, dataName;
-            std::string plotNamePre, dataNamePre, namePost;
-            std::deque<double> angleStanceL;
-            std::deque<double> angleStanceR;
-            std::deque<double> angleSwingL;
-            std::deque<double> angleSwingR;
-           
-            for(int i=0; i<3; i++)
-            {
-                if(i==0){
-                    plotNamePre = "Hip"; dataNamePre = "Femur";
-                }
-                else if(i==1){
-                    plotNamePre = "Knee"; dataNamePre = "Tibia";
-                }
-                else if(i==2){
-                    plotNamePre = "Ankle"; dataNamePre = "Talus";
-                }
-    
-                for(int j=0; j<3; j++)
-                {
-                    if(j==0)
-                        namePost = "_sagittal";
-                    else if(j==1)
-                        namePost = "_frontal";
-                    else if(j==2)
-                        namePost = "_transverse";
-                    
-                    for(int k=0; k<2; k++)
-                    {
-                        std::string cur;
-                        if(k==0)
-                            cur = "L";
-                        else if(k==1)
-                            cur = "R";
-
-                        plotName = plotNamePre + namePost;
-                        dataName = dataNamePre + cur + namePost;
-
-                        if(k==0){
-                            angleStanceL = anglesStanceLeft[dataName];
-                            angleSwingL = anglesSwingLeft[dataName];
-                        }                            
-                        else if(k==1){
-                            angleStanceR = anglesStanceRight[dataName];
-                            angleSwingR = anglesSwingRight[dataName];                           
-                        }                       
-                       
-                        if(dataName == "FemurL_sagittal" || dataName == "FemurL_transverse" || dataName == "TalusL_sagittal")
-                        {
-                            for(int i=0; i<angleStanceL.size(); i++)
-                                angleStanceL[i] *= -1;  
-                            for(int i=0; i<angleSwingL.size(); i++)
-                                angleSwingL[i] *= -1;                        
-                        }
-
-                        if(dataName == "FemurR_sagittal" || dataName == "FemurR_frontal" || dataName == "TalusR_sagittal" || dataName == "TalusR_transverse")
-                        {
-                            for(int i=0; i<angleStanceR.size(); i++)
-                                angleStanceR[i] *= -1;   
-                            for(int i=0; i<angleSwingR.size(); i++)
-                                angleSwingR[i] *= -1;                        
-                        }
-                    }
-
-                    yMin = mJointAngleMinMax[plotName].first;
-                    yMax = mJointAngleMinMax[plotName].second;
-                    if(compare)
-                    {
-                        if(plotName == "Hip_sagittal" || plotName == "Hip_frontal" || plotName == "Hip_transverse"|| plotName == "Knee_sagittal" || plotName == "Ankle_sagittal" || plotName == "Ankle_transverse")
-                            this->DrawJointAngle(plotName, angleStanceL, angleSwingL, angleStanceR, angleSwingR, mRealJointData[plotName], mRealJointData[plotName+"_std1"], mRealJointData[plotName +"_std2"], yMin, yMax, w_, h_);
-                        else
-                            this->DrawJointAngle(plotName, angleStanceL, angleSwingL, angleStanceR, angleSwingR, mRealJointData[plotName], yMin, yMax, w_, h_);                        
-                    }
-                    else{
-                        this->DrawJointAngle(plotName, angleStanceL, angleSwingL, angleStanceR, angleSwingR, yMin, yMax, w_, h_);
-                    }
-                    // if(compare)
-                    // {
-                    //     if(plotName == "Hip_sagittal" || plotName == "Hip_frontal" || plotName == "Hip_transverse"|| plotName == "Knee_sagittal" || plotName == "Ankle_sagittal" || plotName == "Ankle_transverse")
-                    //         this->DrawJointAngle(plotName, angleData1, angleData2, mRealJointData[plotName], mRealJointData[plotName+"_std1"], mRealJointData[plotName +"_std2"], yMin, yMax, w_, h_);
-                    //     else
-                    //         this->DrawJointAngle(plotName, angleData1, angleData2, mRealJointData[plotName], yMin, yMax, w_, h_);                        
-                    // }
-                    // else{
-                    //     this->DrawJointAngle(plotName, angleData1, angleData2, yMin, yMax, w_, h_);
-                    // }
-                        
-
-                    if(j<2)
-                        ImGui::SameLine();
-                }
-            }
-
-            ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("Joint Torque"))
-        {   
-            double w_ = w/3.0 - 10.0;
-            double h_ = h/3.0 - 30.0;
-
-            std::deque<double> torqueData;
-            double yMin, yMax;
-            std::string plotName, dataName;
-            std::string plotNamePre, dataNamePre;
-            std::string namePost;
-
-            for(int i=0; i<6; i++)
-            {
-                if(i==0){
-                    plotNamePre = "Hip"; dataNamePre = "FemurL";
-                }
-                else if(i==1){
-                    plotNamePre = "Knee"; dataNamePre = "TibiaL";
-                }
-                else if(i==2){
-                    plotNamePre = "Ankle"; dataNamePre = "TalusL";
-                }
-                else if(i==3){
-                    plotNamePre = "Spine"; dataNamePre = "Spine";
-                }
-                else if(i==4){
-                    plotNamePre = "Torso"; dataNamePre = "Torso";
-                }
-                else if(i==5){
-                    plotNamePre = "Neck"; dataNamePre = "Neck";
-                }
-    
-                for(int j=0; j<3; j++)
-                {
-                    if(j==0)
-                        namePost = "_x";
-                    else if(j==1)
-                        namePost = "_y";
-                    else if(j==2)
-                        namePost = "_z";
-                    
-                    plotName = plotNamePre + namePost;
-                    dataName = dataNamePre + namePost;
-                    // torqueData = torques[dataName];
-                    torqueData = torquesPhase[dataName];                    
-                    yMin = mJointTorqueMinMax[plotName].first;
-                    yMax = mJointTorqueMinMax[plotName].second;
-                
-                    if(compare)
-                    {
-                        //get data from mComparePersonIdx
-                        // int size = torqueData.size()/2;
-                        // std::deque<double> compareTorqueData(size);
-                        // for(int i=0; i<compareTorqueData.size(); i++)
-                        //     compareTorqueData[i] = torqueData[i] - 5.0;
-                        this->DrawJointTorque(plotName, torqueData, yMin, yMax, w_, h_);
-                        // this->DrawJointTorque(plotName, torqueData, compareTorqueData, yMin, yMax, w_, h_);
-                    }
-                    else
-                        this->DrawJointTorque(plotName, torqueData, yMin, yMax, w_, h_);
-
-                    if(j<2)
-                        ImGui::SameLine();
-                }
-            }
-
-            ImGui::EndTabItem();
-        }
-
-        MetabolicEnergy* metaEnergy = mEnv->GetCharacter()->GetMetabolicEnergy(); 
-        const auto& energy = metaEnergy->GetHOUD06_map_deque();
-
-        if (ImGui::BeginTabItem("Metabolic Energy"))
-        {
-            double w_ = w/3.0 - 10.0;
-            double h_ = h/3.0 - 30.0;
-
-            std::deque<double> energyData;
-            std::string xAxisName = "%";
-            std::string yAxisName = "Metabolic Energy";
-            int idx = 0;
-            for(auto e : energy)
-            {   
-                this->DrawDequeGraph(e.first, xAxisName, yAxisName, e.second, 0.0, 1.0, w_, h_);
-                if(idx%3 < 2)
-                    ImGui::SameLine();
-                idx++;
-            }
-
-            ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("Activation Levels"))
-        {
-            // Eigen::VectorXd al = mEnv->GetCharacter()->GetActivationLevels();
-            
-            // int size = 20;
-            // double xs[size];
-            // float ys[size];
-            // const char* labels[size];
-            // for(int i=0; i<size; i++)
-            // {
-            //     labels[i] = std::to_string(i).c_str();
-            //     xs[i] = (double)i;
-            //     ys[i] = al[i];
-            // }
-
-            // ImPlot::SetNextPlotLimits(-0.5, 19.5, 0, 1, ImGuiCond_Always);
-            // ImPlot::SetNextPlotTicksX((const double*)xs, 3, labels);
-            
-            // double w = mImguiWidth*(1.0-mUiWidthRatio) - 20;
-            // double h = mImguiHeight*(1.0-mUiHeightRatio)/4.0 - 20;
-            // if (ImPlot::BeginPlot("Bar Plot", "Muscle", "level",
-            //                 ImVec2(w,h), 0, 0, 0))
-            // {
-            //     double level = 1.0+(3.0*a), 1.0, 1.0, 1.0
-            //     ImPlot::PushStyleColor(ImPlotCol_Fill, ImVec4(1,1.0,1.0,1.0));
-            //     ImPlot::SetLegendLocation(ImPlotLocation_South, ImPlotOrientation_Horizontal);
-            //     ImPlot::PlotBars("Activation", ys, size, 0.1, 0);
-            //     ImPlot::PopStyleColor();
-            //     ImPlot::EndPlot();
-            // }
-                                   
-            ImGui::EndTabItem();
-        }
-    }
-
-    ImPlot::SetCurrentContext(mPlotContexts["Main"]);
-    ImGui::End();
 }
 
 void
@@ -1503,7 +1533,6 @@ DrawCharacter()
 	if(mDrawReference)
 		this->DrawReference();
 }
-
 
 void 
 GLFWApp::

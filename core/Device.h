@@ -69,6 +69,7 @@ public:
     void SetMinMaxV(int idx, double lower, double upper);
     void SetAdaptiveParams(std::map<std::string, std::pair<double,double>>& p);
     void SetAdaptiveParams(std::string name, double lower, double upper);
+    const std::map<std::string, std::pair<double,double>>& GetAdaptiveParams(){return mAdaptiveParams;}
 
     int GetNumParamState() const {return mNumParamState;}
     const Eigen::VectorXd& GetParamState(){return mParamState;}
@@ -111,6 +112,7 @@ private:
     double mK_;
     double mK_scaler;
 
+    std::map<std::string, std::pair<double, double>> mAdaptiveParams;
     int mNumParamState;
     Eigen::VectorXd mParamState;
     Eigen::VectorXd mMin_v;

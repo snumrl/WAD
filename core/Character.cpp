@@ -464,13 +464,18 @@ Initialize_Rewards()
 	// mRewardTags.push_back("effi");
 	mRewardTags.push_back("reward_c");
 	mRewardTags.push_back("reward_s");
+
 	mRewardTags.push_back("imit_c");
 	mRewardTags.push_back("effi_c");
+	
+	mRewardTags.push_back("imit_pos");
+	mRewardTags.push_back("imit_ee_rot");
+	mRewardTags.push_back("imit_ee_pos");
+
 	mRewardTags.push_back("effi_s");
 	mRewardTags.push_back("effi_vel");
 	mRewardTags.push_back("effi_pose");
-	mRewardTags.push_back("effi_stride");
-
+	mRewardTags.push_back("effi_energy");
 
 	int reward_window = 70;
 	for(auto tag : mRewardTags){
@@ -483,9 +488,12 @@ void
 Character::
 Initialize_Contacts()
 {
+	BodyNode* ground = mGround->getBodyNode("ground");
+	
 	Contact* footLeft = new Contact(mWorld);
-	BodyNode* bnFootLeft = mSkeleton->getBodyNode("TalusL");
-	footLeft->Initialize("TalusL", bnFootLeft);
+	footLeft->Initialize("FootLeft", mSkeleton);
+	footLeft->AddGround(ground);
+	footLeft->Set();
 	mContacts["footLeft"] = footLeft;
 
 	if(mContacts["footLeft"]->isContact())
@@ -496,8 +504,9 @@ Initialize_Contacts()
 	mGaitPhaseLeft.push_front(std::make_pair(mPhaseChangeTimeLeft, mPhaseStateLeft));
 
 	Contact* footRight = new Contact(mWorld);
-	BodyNode* bnFootRight = mSkeleton->getBodyNode("TalusR");
-	footRight->Initialize("TalusR", bnFootRight);
+	footRight->Initialize("FootRight", mSkeleton);
+	footRight->AddGround(ground);
+	footRight->Set();
 	mContacts["footRight"] = footRight;
 
 	if(mContacts["footRight"]->isContact())
@@ -1258,7 +1267,7 @@ GetReward_Character()
 	mReward["imit_s"] = r_imit.second;
  	mReward["effi_c"] = r_effi.first;
 	mReward["effi_s"] = r_effi.second;
-
+		
 	double ratio_imit = 1.0;
 	double ratio_effi = 1.0;
 
@@ -1278,6 +1287,8 @@ GetReward_Character()
 		r_continuous = r_imit.first;
 		r_spike = r_imit.second;
 	}
+	mReward["reward_c"] = r_continuous;
+	mReward["reward_s"] = r_spike;
 
 	return std::make_pair(r_continuous,r_spike);
 }
@@ -1355,11 +1366,11 @@ GetReward_Character_Imitation()
 	{
 		double w = 1.0;
 		if(ees[i]->getName() == "Head")
-			w = 0.5;
+			w = 0.3;
 		// if(ees[i]->getName() == "Pelvis")
 		// 	w = 0.3;
 		if(ees[i]->getName() == "TalusR" || ees[i]->getName() == "TalusL")
-			w = 0.5;
+			w = 0.4;
 		// if(ees[i]->getName() == "HandR" || ees[i]->getName() == "HandL")
 		// 	w = 0.1;
 
@@ -1382,7 +1393,11 @@ GetReward_Character_Imitation()
 	double r_q = Utils::exp_of_squared(q_diff, sig_q);
 	double r_ee_rot = Utils::exp_of_squared(ee_rot_diff, sig_ee_rot);
 	double r_ee_pos = Utils::exp_of_squared(ee_pos_diff, sig_ee_pos);
-		
+
+	mReward["imit_pos"] = r_p;
+	mReward["imit_ee_rot"] = r_ee_rot;
+	mReward["imit_ee_pos"] = r_ee_pos;
+	
 	// double r_total = r_p * r_q * r_ee_rot * r_ee_pos * r_com;
 	double r_total = r_p * r_ee_rot * r_ee_pos;
 
@@ -1405,7 +1420,8 @@ GetReward_Character_Efficiency()
 		return std::make_pair(1.0, 0.0);
 
 	double r_EnergyMin = 1.0;
-	r_EnergyMin = this->GetReward_Energy();
+	// r_EnergyMin = this->GetReward_Energy();
+	r_EnergyMin = 0.0;
 
 	// if(mWorld->getTime() < mTimeOffset)
 	// 	return std::make_pair(1.0, 1.0 * r_EnergyMin);
@@ -1433,13 +1449,13 @@ GetReward_Character_Efficiency()
 
 	mReward["effi_vel"] = r_Vel;
 	mReward["effi_pose"] = r_Pose;
-	mReward["effi_stride"] = r_Stride;
+	mReward["effi_energy"] = r_EnergyMin;
 
 	// double r_continuous = r_Pose * r_Vel;
 	// double r_spike = 0.0 * r_EnergyMin;
 	double r_continuous = r_Pose * r_Vel;
-	double r_spike = 100.0 * r_Stride * r_Vel;
-
+	double r_spike = 10.0 * r_EnergyMin * r_Vel;
+	
 	return std::make_pair(r_continuous, r_spike);
 }
 
@@ -1486,10 +1502,10 @@ GetReward_Pose()
 		Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
 		Eigen::Vector3d rot = Utils::QuaternionToAxisAngle(Eigen::Quaterniond(transform.linear()));
 
-		if(i==2)
-			head_ref.segment<3>(0) << rot;
-		else
-			pose_ref.segment<6>(6*i) << rot, transform.translation();		
+		// if(i==2)
+		// 	head_ref.segment<3>(0) << rot;
+		// else
+		pose_ref.segment<6>(6*i) << rot, transform.translation();		
 	}
 
 	head_ref[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] - root_ref->getCOM()[1]);
@@ -1512,11 +1528,10 @@ GetReward_Pose()
 		Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
 		Eigen::Vector3d rot = Utils::QuaternionToAxisAngle(Eigen::Quaterniond(transform.linear()));
 		
-		if(i==2)
-			head_cur.segment<3>(0) << rot;
-		else
-			pose_cur.segment<6>(6*i) << rot, transform.translation();
-		
+		// if(i==2)
+		// 	head_cur.segment<3>(0) << rot;
+		// else
+		pose_cur.segment<6>(6*i) << rot, transform.translation();		
 	}
 
 	head_cur[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] - root_cur->getCOM()[1]);
@@ -1569,7 +1584,7 @@ GetReward_Vel()
 	double vel = diff/(cur[3]-past[3]);
 
 	// vel_err = fabs(vel-1.0*mSpeedRatio);
-	vel_err = fabs(vel-1.2);
+	vel_err = fabs(vel-1.1);
 
 	double reward = 0.0;
 	reward = exp(-1.0 * vel_scale * vel_err);
@@ -1771,29 +1786,28 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 				mAction[i] = Utils::Clamp(mAction[i], -2.0, 2.0);			
 		}		
 	}
-
+	
 	double timeStep = (double)mNumSteps*mWorld->getTimeStep();
 	if(mAdaptiveMotionSP)
 	 	mTemporalDisplacement = timeStep;
 	else
 	 	mTemporalDisplacement = timeStep * (1.0/mSpeedRatio) * exp(mAction[pd_dof+sp_dof]);
-
+	
 	double cur_time = mAdaptiveTime;
 	double next_time = mAdaptiveTime + mTemporalDisplacement;
 	Eigen::VectorXd cur_pos, cur_vel;
 	Eigen::VectorXd next_pos, next_vel;
 	this->GetPosAndVel(cur_time, cur_pos, cur_vel);
 	this->GetPosAndVel(next_time, next_pos, next_vel);
-
 	Eigen::VectorXd delta_pos = next_pos - cur_pos;
 	delta_pos.segment(0, sp_dof) += mAction.segment(pd_dof, sp_dof);
 	
 	mTargetPositions += delta_pos;
 	mTargetVelocities = next_vel;
-
+	
 	for(int i=6; i<mTargetPositions.size(); i++)
 		mTargetPositions[i] = Utils::Clamp(mTargetPositions[i],mJointPositionLowerLimits[i],mJointPositionUpperLimits[i]);
-
+	
 	this->GetPosAndVel(mWorld->getTime()+timeStep, mReferencePositions, mReferenceVelocities);	
 }
 

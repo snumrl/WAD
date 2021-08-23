@@ -32,7 +32,7 @@ class EpisodeBuffer(object):
 		self.data = []
 
 	def Push(self, *args):
-		self.data.append(Episode(*args))
+		self.data.append(EpisodeAdaptive(*args))
 	def Pop(self):
 		self.data.pop()
 	def GetData(self):
@@ -109,7 +109,7 @@ class PPO(object):
 
 		self.buffer_size = 1024*8
 		self.batch_size = 128*8
-		self.replay_buffer = ReplayBuffer(30000)
+		self.replay_buffer = ReplayBuffer(32000)
 
 		self.gamma = 0.99
 		self.lb = 0.99
@@ -157,19 +157,49 @@ class PPO(object):
 			self.num_paramstate_char = self.env.GetNumParamState_Char()
 			if self.use_device:
 				self.num_paramstate_device = self.env.GetNumParamState_Device()
-			self.marginal_buffer = MarginalBuffer(10000)
-			self.marginal_model = MarginalNN(self.num_paramstate)
-			self.marginal_value_avg = 1.
-			self.marginal_learning_rate = 5e-5
-			if use_cuda:
-				self.marginal_model.cuda()
-			self.marginal_optimizer = optim.Adam(self.marginal_model.parameters(), lr=self.marginal_learning_rate)
-			self.marginal_loss = 0.0
+			
+			self.params = []
+			for i in range(32):
+				self.params.append([0, 0, 0, 0, 0])
 
-			self.InitialParamStates = []
-			self.InitialParamStates_num = 1000
+			# self.param_min = self.env.GetMinVstd::cout <<()
+			# self.param_max = self.env.GetMaxV()
+			# self.param_slot = 0
+			# self.param_set = [[]]
+			# self.param_set_num = []
 
-			self.marginal_k = 5
+			# for i in range(self.num_paramstate):
+			# 	if(self.param_min[i] != self.param_max[i]):
+			# 		for j in range(self.param_set):
+			# 			new_a = self.param_set[j].append(-1)
+			# 			new_b = self.param_set[j].append(1)
+			# 			self.param_set.append(new_a)
+			# 			self.param_set.append(new_b)
+			# 			self.param_slot += 1
+			# 	else:
+			# 		for j in range(self.param_set):
+			# 			new_a = self.param_set[j].append(0)
+			# 			self.param_set.append(new_a)
+						
+			# for i in range(self.param_set):
+			# 	self.param_set_num.append(0)
+
+			# print("param set : ", self.param_set)
+			# print("param num : ", self.param_set_num)
+			
+			# self.marginal_buffer = MarginalBuffer(10000)
+			# self.marginal_model = MarginalNN(self.num_paramstate)
+			# self.marginal_value_avg = 1.
+			# self.marginal_learning_rate = 5e-5
+			# if use_cuda:
+			# 	self.marginal_model.cuda()
+			# self.marginal_optimizer = optim.Adam(self.marginal_model.parameters(), lr=self.marginal_learning_rate)
+			# self.marginal_loss = 0.0
+
+			# self.InitialParamStates = []
+			# self.InitialParamStates_num = 1000
+
+			# self.marginal_k = 5
 
 		# ========== Common setting ========== #
 		self.num_simulation_Hz = self.env.GetSimulationHz()
@@ -223,8 +253,8 @@ class PPO(object):
 		self.marginal_model.load('../nn/'+path+'_marginal.pt')
 
 	def Train(self):
-		if self.use_adaptive_sampling:
-			self.GenerateInitialStates()
+		# if self.use_adaptive_sampling:
+		# 	self.GenerateInitialStates()
 		self.GenerateTransitions()
 
 		self.OptimizeModel()
@@ -234,8 +264,8 @@ class PPO(object):
 		self.OptimizeSimulationNN()
 		if self.use_muscle:
 			self.OptimizeMuscleNN()
-		if self.use_adaptive_sampling:
-			self.OptimizeMarginalNN()
+		# if self.use_adaptive_sampling:
+		# 	self.OptimizeMarginalNN()
 
 	def GenerateInitialStates(self):
 		min_v = self.env.GetMinV()
@@ -282,11 +312,16 @@ class PPO(object):
 
 		states = self.env.GetStates()
 
+		# if self.use_adaptive_sampling:
+		# 	for j in range(self.num_slaves):
+		# 		initial_state = np.float32(random.choice(self.InitialParamStates))
+		# 		self.env.SetParamState(j, initial_state)
+		
 		if self.use_adaptive_sampling:
 			for j in range(self.num_slaves):
-				initial_state = np.float32(random.choice(self.InitialParamStates))
-				self.env.SetParamState(j, initial_state)
-
+				self.params[j] = [0.0, 0.0, 0.0, 0.0, -1.0 + 0.5*(j/7)]
+				self.env.SetParamState(j, self.params[j])
+		
 		counter = 0
 		local_step = 0
 		while True:
@@ -335,8 +370,9 @@ class PPO(object):
 
 					self.env.Reset(True,j)
 					if self.use_adaptive_sampling:
-						initial_state = np.float32(random.choice(self.InitialParamStates))
-						self.env.SetParamState(j, initial_state)
+						self.env.SetParamState(j, self.params[j])
+					# 	initial_state = np.float32(random.choice(self.InitialParamStates))
+					# 	self.env.SetParamState(j, initial_state)
 
 			if local_step >= self.buffer_size:
 				break
@@ -348,8 +384,8 @@ class PPO(object):
 		self.replay_buffer.Clear()
 		if self.use_muscle:
 			self.muscle_buffer.Clear()
-		if self.use_adaptive_sampling:
-			self.marginal_buffer.Clear()
+		# if self.use_adaptive_sampling:
+		# 	self.marginal_buffer.Clear()
 
 		self.sum_return = 0.0
 		for epi in self.total_episodes:
@@ -401,13 +437,13 @@ class PPO(object):
 			for i in range(size):
 				self.replay_buffer.Push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
 
-			if self.use_adaptive_sampling:
-				for i in range(size):
-					cur_state = states[i][self.num_state_char-self.num_paramstate_char:self.num_state_char]
-					if self.use_device:
-						cur_state = np.append(cur_state, states[i][self.num_state-self.num_paramstate_device:self.num_state])
+			# if self.use_adaptive_sampling:
+			# 	for i in range(size):
+			# 		cur_state = states[i][self.num_state_char-self.num_paramstate_char:self.num_state_char]
+			# 		if self.use_device:
+			# 			cur_state = np.append(cur_state, states[i][self.num_state-self.num_paramstate_device:self.num_state])
 
-					self.marginal_buffer.Push(cur_state, values[i])
+			# 		self.marginal_buffer.Push(cur_state, values[i])
 
 		self.num_episode = len(self.total_episodes)
 		self.num_tuple = len(self.replay_buffer.buffer)
@@ -569,8 +605,8 @@ class PPO(object):
 		self.SaveModel()
 		if self.use_muscle:
 			self.SaveModel_Muscle()
-		if self.use_adaptive_sampling:
-			self.SaveModel_Marginal()
+		# if self.use_adaptive_sampling:
+		# 	self.SaveModel_Marginal()
 
 		self.rewards.append(self.sum_return/self.num_episode)
 		return np.array(self.rewards)
@@ -642,11 +678,11 @@ if __name__=="__main__":
 		if ppo.use_adaptive_sampling is False:
 			print("Dont put : -a command")
 			sys.exit()
-		else:
-			ppo.LoadModel_Marginal(args.adaptive)
-	else:
-		if ppo.use_adaptive_sampling:
-			ppo.SaveModel_Marginal()
+	# 	else:
+	# 		ppo.LoadModel_Marginal(args.adaptive)
+	# else:
+	# 	if ppo.use_adaptive_sampling:
+	# 		ppo.SaveModel_Marginal()
 
 	print('num states: {}, num actions: {}'.format(ppo.env.GetNumState(),ppo.env.GetNumAction()))
 

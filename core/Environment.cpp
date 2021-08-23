@@ -214,6 +214,7 @@ Initialize(const std::string& meta_file, bool load_obj)
 	this->SetNumSteps(mSimulationHz/mControlHz);
 
 	WAD::Character* character = new WAD::Character(mWorld);
+	character->SetGround(mGround);
 	character->LoadSkeleton(mSkelFile, load_obj);
 	character->LoadBVH(mBVHFile, mCyclic);
 	character->SetHz(mSimulationHz, mControlHz);
@@ -243,7 +244,7 @@ Initialize(const std::string& meta_file, bool load_obj)
 	}
 			
 	mCharacter->Initialize();
-
+	
 	if(mUseDevice){
 		mDevice->Initialize();
 		mCharacter->SetUseDevice(true);
@@ -483,7 +484,7 @@ GetNumActiveDof()
 void
 Environment::
 SetParamState(Eigen::VectorXd paramState)
-{
+{	
 	int paramState_Char = mCharacter->GetNumParamState();
 	mCharacter->SetParamState(paramState.segment(0,paramState_Char));
 

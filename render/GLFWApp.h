@@ -68,12 +68,18 @@ public:
 
 	void DrawDequeGraph(std::string name, std::string xAxis, std::string yAxis, std::deque<double> data, double w, double h);
 	void DrawDequeGraph(std::string name, std::string xAxis, std::string yAxis, std::deque<double> data, double yMin, double yMax, double w, double h);
-	void DrawJointAngle(std::string name, std::deque<double> stance, std::deque<double> swing, double yMin, double yMax, double w, double h);
-	void DrawJointAngle(std::string name, std::deque<double> stanceL, std::deque<double> swingL, std::deque<double> stanceR, std::deque<double> swingR, double yMin, double yMax, double w, double h);
-	void DrawJointAngle(std::string name, std::deque<double> stanceL, std::deque<double> swingL, std::deque<double> stanceR, std::deque<double> swingR, std::deque<double> data3, double yMin, double yMax, double w, double h);
-	void DrawJointAngle(std::string name, std::deque<double> stanceL, std::deque<double> swingL, std::deque<double> stanceR, std::deque<double> swingR, std::deque<double> cmpData, std::deque<double> cmpStd1, std::deque<double> cmpStd2, double yMin, double yMax, double w, double h);
+	// void DrawJointAngle(std::string name, std::deque<double> stance, std::deque<double> swing, double yMin, double yMax, double w, double h);
+	// void DrawJointAngle(std::string name, std::deque<double> stanceL, std::deque<double> swingL, std::deque<double> stanceR, std::deque<double> swingR, double yMin, double yMax, double w, double h);
+	// void DrawJointAngle(std::string name, std::deque<double> stanceL, std::deque<double> swingL, std::deque<double> stanceR, std::deque<double> swingR, std::deque<double> data3, double yMin, double yMax, double w, double h);
+	// void DrawJointAngle(std::string name, std::deque<double> stanceL, std::deque<double> swingL, std::deque<double> stanceR, std::deque<double> swingR, std::deque<double> cmpData, std::deque<double> cmpStd1, std::deque<double> cmpStd2, double yMin, double yMax, double w, double h);
+	void DrawJointAngle(std::string name, std::deque<double> gait, double yMin, double yMax, double w, double h);
+	void DrawJointAngle(std::string name, std::deque<double> gaitL, std::deque<double> gaitR, double yMin, double yMax, double w, double h);
+	void DrawJointAngle(std::string name, std::deque<double> gaitL, std::deque<double> gaitR, std::deque<double> gaitComp, double yMin, double yMax, double w, double h);
+	void DrawJointAngle(std::string name, std::deque<double> gaitL, std::deque<double> gaitR, std::deque<double> gaitCoamp, std::deque<double> std1, std::deque<double> std2, double yMin, double yMax, double w, double h);
 	void DrawJointTorque(std::string name, std::deque<double> data, double yMin, double yMax, double w, double h);
 	void DrawJointTorque(std::string name, std::deque<double> data1, std::deque<double> data2, double yMin, double yMax, double w, double h);
+	
+	void DrawRewardGraph(std::string name, std::deque<double> reward, double yMin, double yMax, double w, double h);
 	
 	void DrawLine(Eigen::Vector3d v0, Eigen::Vector3d v1, Eigen::Vector4d color, double lineWidth);
 	
@@ -154,10 +160,13 @@ private:
 	bool mLegend;
 	int mComparePersonIdx;
 
+	double mPhaseRatio;
+
 	std::map<std::string, double> perfStats;
 	std::map<std::string, std::pair<double,double>> mJointAngleMinMax;
 	std::map<std::string, std::pair<double,double>> mJointTorqueMinMax;
-	std::map<std::string, std::pair<double,double>> mAdaptiveParams;
+	std::map<std::string, std::pair<double,double>> mAdaptiveParams_Char;
+	std::map<std::string, std::pair<double,double>> mAdaptiveParams_Device;
 
 	ImVec4 mUiBackground;	 	
 

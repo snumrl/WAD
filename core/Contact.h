@@ -16,9 +16,10 @@ public:
     Contact(const WorldPtr& wPtr);
     ~Contact();
 
-    void Initialize(std::string name, BodyNode* bn);
+    void Initialize(std::string name, SkeletonPtr skel);
     void Set();
     void Reset();
+    void AddGround(BodyNode* grnd);
 
     bool isContact();
 
@@ -40,14 +41,17 @@ public:
 
 private:
     WorldPtr mWorld;
-    BodyNode* mBodyNode;
-    std::string mName;
+    SkeletonPtr mSkeleton;
+    BodyNode* mBnTalus;
+    BodyNode* mBnThumb;
+    BodyNode* mBnPinky;
+    BodyNode* mBnGround;
 
+    std::string mName;
     bool mContact;
     // SkeletonPtr mSkeleton;
     // int mWindowSize;
     // int mNumSteps
-    ;
     // double mMass;
     // std::map<std::string, std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>>> mContactObjects;
     // std::map<std::string, double> mContactForces;
