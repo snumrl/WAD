@@ -164,9 +164,6 @@ SetPhaseStateLeft(int phaseState)
         {
             for(auto a : mAnglesGaitPhaseLeft)
             {
-                if(a.second.size() < 50)
-                    break;
-
                 mAnglesGaitPhaseLeftPrev[a.first].clear();
                 mAnglesGaitPhaseLeftPrev[a.first] = a.second;
                 mAnglesGaitPhaseLeft[a.first].clear();                
@@ -186,17 +183,14 @@ SetPhaseStateRight(int phaseState)
     {
         if(mPhaseStateRight == 1)
         {
+            this->ChangePhaseTorques();
+
             for(auto a : mAnglesGaitPhaseRight)
             {
-                if(a.second.size() < 50)
-                    break;
-
                 mAnglesGaitPhaseRightPrev[a.first].clear();
                 mAnglesGaitPhaseRightPrev[a.first] = a.second;
                 mAnglesGaitPhaseRight[a.first].clear();                
-            }
-
-            this->ChangePhaseTorques();
+            }            
         }
     }    
 

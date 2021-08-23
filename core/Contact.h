@@ -16,7 +16,7 @@ public:
     Contact(const WorldPtr& wPtr);
     ~Contact();
 
-    void Initialize(std::string name, SkeletonPtr skel);
+    void Initialize(std::string name, BodyNode* bn);
     void Set();
     void Reset();
     void AddGround(BodyNode* grnd);
@@ -41,11 +41,8 @@ public:
 
 private:
     WorldPtr mWorld;
-    SkeletonPtr mSkeleton;
-    BodyNode* mBnTalus;
-    BodyNode* mBnThumb;
-    BodyNode* mBnPinky;
-    BodyNode* mBnGround;
+    BodyNode* mBodyNode;
+    BodyNode* mGround;
 
     std::string mName;
     bool mContact;

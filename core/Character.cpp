@@ -491,7 +491,7 @@ Initialize_Contacts()
 	BodyNode* ground = mGround->getBodyNode("ground");
 	
 	Contact* footLeft = new Contact(mWorld);
-	footLeft->Initialize("FootLeft", mSkeleton);
+	footLeft->Initialize("TalusL", mSkeleton->getBodyNode("TalusL"));
 	footLeft->AddGround(ground);
 	footLeft->Set();
 	mContacts["footLeft"] = footLeft;
@@ -504,7 +504,7 @@ Initialize_Contacts()
 	mGaitPhaseLeft.push_front(std::make_pair(mPhaseChangeTimeLeft, mPhaseStateLeft));
 
 	Contact* footRight = new Contact(mWorld);
-	footRight->Initialize("FootRight", mSkeleton);
+	footRight->Initialize("TalusR", mSkeleton->getBodyNode("TalusR"));
 	footRight->AddGround(ground);
 	footRight->Set();
 	mContacts["footRight"] = footRight;
@@ -1366,11 +1366,11 @@ GetReward_Character_Imitation()
 	{
 		double w = 1.0;
 		if(ees[i]->getName() == "Head")
-			w = 0.3;
+			w = 0.5;
 		// if(ees[i]->getName() == "Pelvis")
 		// 	w = 0.3;
 		if(ees[i]->getName() == "TalusR" || ees[i]->getName() == "TalusL")
-			w = 0.4;
+			w = 0.5;
 		// if(ees[i]->getName() == "HandR" || ees[i]->getName() == "HandL")
 		// 	w = 0.1;
 
@@ -1383,7 +1383,7 @@ GetReward_Character_Imitation()
 
 	//=====================================
 
-	double sig_p = 5.0;
+	double sig_p = 10.0;
 	double sig_q = 0.5;
 	double sig_com = 20.0;
 	double sig_ee_rot = 10.0;
@@ -1420,8 +1420,8 @@ GetReward_Character_Efficiency()
 		return std::make_pair(1.0, 0.0);
 
 	double r_EnergyMin = 1.0;
-	// r_EnergyMin = this->GetReward_Energy();
-	r_EnergyMin = 0.0;
+	r_EnergyMin = this->GetReward_Energy();
+	r_EnergyMin *= 10.0;
 
 	// if(mWorld->getTime() < mTimeOffset)
 	// 	return std::make_pair(1.0, 1.0 * r_EnergyMin);
@@ -1454,7 +1454,7 @@ GetReward_Character_Efficiency()
 	// double r_continuous = r_Pose * r_Vel;
 	// double r_spike = 0.0 * r_EnergyMin;
 	double r_continuous = r_Pose * r_Vel;
-	double r_spike = 10.0 * r_EnergyMin * r_Vel;
+	double r_spike = r_EnergyMin * r_Vel;
 	
 	return std::make_pair(r_continuous, r_spike);
 }
@@ -1538,7 +1538,7 @@ GetReward_Pose()
 
 	double err_scale = 1.0;
 
-	double pose_scale = 0.05;
+	double pose_scale = 0.1;
 	double head_scale = 5.0;
 	double root_scale = 1.0;
 
