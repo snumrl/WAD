@@ -31,6 +31,7 @@ Initialize(const SkeletonPtr& skel)
 
     mWindowSize = 540;
     this->Initialize_Torques();
+    this->Initialize_Moments();
     this->Initialize_Angles();    
 }
 
@@ -81,6 +82,51 @@ Initialize_Torques()
 
 void
 JointData::
+Initialize_Moments()
+{
+    for(int i=0; i<mJointNum; i++)
+    {
+        const auto& joint = mSkeleton->getJoint(i);
+        int idx = joint->getIndexInSkeleton(0);
+        std::string name = joint->getName();
+        
+        if(joint->getType() == "FreeJoint")
+        {
+            for(int i=0; i<3; i++)
+            {
+                std::string namePost;
+                if(i==0)
+                    namePost = "_a";
+                else if(i==1)
+                    namePost = "_b";
+                else if(i==2)
+                    namePost = "_c";
+            
+                mMoments[name+namePost] = std::deque<double>(mWindowSize);    
+                mMomentsGaitPhase[name+namePost] = std::deque<double>();
+                mMomentsGaitPhasePrev[name+namePost] = std::deque<double>();
+            }
+        }
+
+        for(int i=0; i<3; i++)
+        {
+            std::string namePost;
+            if(i==0)
+                namePost = "_x";
+            else if(i==1)
+                namePost = "_y";
+            else if(i==2)
+                namePost = "_z";
+            
+            mMoments[name+namePost] = std::deque<double>(mWindowSize);    
+            mMomentsGaitPhase[name+namePost] = std::deque<double>();
+            mMomentsGaitPhasePrev[name+namePost] = std::deque<double>();            
+        }
+    }
+}
+
+void
+JointData::
 Initialize_Angles()
 {
     for(int i=0; i<mJointNum; i++)
@@ -122,6 +168,12 @@ Reset()
         (iter->second).clear();
 
     for(auto iter = mTorquesGaitPhasePrev.begin(); iter != mTorquesGaitPhasePrev.end(); iter++)
+        (iter->second).clear();
+
+    for(auto iter = mMomentsGaitPhase.begin(); iter != mMomentsGaitPhase.end(); iter++)
+        (iter->second).clear();
+
+    for(auto iter = mMomentsGaitPhasePrev.begin(); iter != mMomentsGaitPhasePrev.end(); iter++)
         (iter->second).clear();
 
     for(auto iter = mAnglesGaitPhaseLeft.begin(); iter != mAnglesGaitPhaseLeft.end(); iter++)
@@ -184,6 +236,7 @@ SetPhaseStateRight(int phaseState)
         if(mPhaseStateRight == 1)
         {
             this->ChangePhaseTorques();
+            this->ChangePhaseMoments();
 
             for(auto a : mAnglesGaitPhaseRight)
             {
@@ -220,6 +273,18 @@ ChangePhaseTorques()
         mTorquesGaitPhasePrev[t.first].clear();
         mTorquesGaitPhasePrev[t.first] = t.second;
         mTorquesGaitPhase[t.first].clear();                
+    }
+}
+
+void
+JointData::
+ChangePhaseMoments()
+{
+    for(auto t : mMomentsGaitPhase)
+    {
+        mMomentsGaitPhasePrev[t.first].clear();
+        mMomentsGaitPhasePrev[t.first] = t.second;
+        mMomentsGaitPhase[t.first].clear();                
     }
 }
 
@@ -298,6 +363,80 @@ SetTorques(const Eigen::VectorXd& torques)
                 this->SetTorquesGaitPhase(name+"_x", torques[idx+0]);
                 this->SetTorquesGaitPhase(name+"_y", 0.0);
                 this->SetTorquesGaitPhase(name+"_z", 0.0);
+            }
+            else
+            {
+            }
+        }
+        mCycleStep++;
+    }
+}
+
+void
+JointData::
+SetMoments(std::string name, double moment)
+{
+    mMoments[name].pop_back();
+    mMoments[name].push_front(moment);
+}
+
+void
+JointData::
+SetMomentsGaitPhase(std::string name, double moment)
+{
+    mMomentsGaitPhase[name].push_front(moment);    
+}
+
+void
+JointData::
+SetMoments(const Eigen::VectorXd& moments)
+{
+    if(mOnCycle)
+    {
+        int jointNum = mSkeleton->getNumJoints();
+        for(int i=0; i<jointNum; i++)
+        {
+            auto joint = mSkeleton->getJoint(i);
+            int idx = joint->getIndexInSkeleton(0);
+            std::string name = joint->getName();
+            std::string type = joint->getType();
+            
+            double norm;
+            if(type == "FreeJoint")
+            {
+                this->SetMoments(name+"_x", moments[idx+0]);
+                this->SetMoments(name+"_y", moments[idx+1]);
+                this->SetMoments(name+"_z", moments[idx+2]);
+                this->SetMoments(name+"_a", moments[idx+3]);
+                this->SetMoments(name+"_b", moments[idx+4]);
+                this->SetMoments(name+"_c", moments[idx+5]);
+
+                this->SetMomentsGaitPhase(name+"_x", moments[idx+0]);
+                this->SetMomentsGaitPhase(name+"_y", moments[idx+1]);
+                this->SetMomentsGaitPhase(name+"_z", moments[idx+2]);
+                this->SetMomentsGaitPhase(name+"_a", moments[idx+3]);
+                this->SetMomentsGaitPhase(name+"_b", moments[idx+4]);
+                this->SetMomentsGaitPhase(name+"_c", moments[idx+5]);
+            }
+            else if(type == "BallJoint")
+            {
+                this->SetMoments(name+"_x", moments[idx+0]);
+                this->SetMoments(name+"_y", moments[idx+1]);
+                this->SetMoments(name+"_z", moments[idx+2]);
+
+                this->SetMomentsGaitPhase(name+"_x", moments[idx+0]);
+                this->SetMomentsGaitPhase(name+"_y", moments[idx+1]);
+                this->SetMomentsGaitPhase(name+"_z", moments[idx+2]);
+            }
+            else if(type == "RevoluteJoint")
+            {
+                this->SetMoments(name+"_x", moments[idx+0]);
+                this->SetMoments(name+"_y", 0.0);
+                this->SetMoments(name+"_z", 0.0);
+
+                this->SetMomentsGaitPhase(name+"_x", moments[idx+0]);
+                this->SetMomentsGaitPhase(name+"_y", 0.0);
+                this->SetMomentsGaitPhase(name+"_z", 0.0);
             }
             else
             {

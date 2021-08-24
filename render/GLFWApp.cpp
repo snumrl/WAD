@@ -402,6 +402,30 @@ InitAnalysis()
     mJointTorqueMinMax["Neck_y"] = std::pair(-200.0, 200.0);
     mJointTorqueMinMax["Neck_z"] = std::pair(-200.0, 200.0);
 
+    mJointMomentMinMax["Hip_x"] = std::pair(-200.0,200.0);
+    mJointMomentMinMax["Hip_y"] = std::pair(-200.0, 200.0);
+    mJointMomentMinMax["Hip_z"] = std::pair(-200.0, 200.0);
+
+    mJointMomentMinMax["Knee_x"] = std::pair(-200.0, 200.0);
+    mJointMomentMinMax["Knee_y"] = std::pair(-200.0, 200.0);
+    mJointMomentMinMax["Knee_z"] = std::pair(-200.0, 200.0);
+
+    mJointMomentMinMax["Ankle_x"] = std::pair(-200.0, 200.0);
+    mJointMomentMinMax["Ankle_y"] = std::pair(-200.0, 200.0);
+    mJointMomentMinMax["Ankle_z"] = std::pair(-200.0, 200.0);
+
+    mJointMomentMinMax["Spine_x"] = std::pair(-200.0, 200.0);
+    mJointMomentMinMax["Spine_y"] = std::pair(-200.0, 200.0);
+    mJointMomentMinMax["Spine_z"] = std::pair(-200.0, 200.0);
+
+    mJointMomentMinMax["Torso_x"] = std::pair(-200.0, 200.0);
+    mJointMomentMinMax["Torso_y"] = std::pair(-200.0, 200.0);
+    mJointMomentMinMax["Torso_z"] = std::pair(-200.0, 200.0);
+
+    mJointMomentMinMax["Neck_x"] = std::pair(-200.0, 200.0);
+    mJointMomentMinMax["Neck_y"] = std::pair(-200.0, 200.0);
+    mJointMomentMinMax["Neck_z"] = std::pair(-200.0, 200.0);
+
     mAdaptiveParams_Char = mEnv->GetCharacter()->GetAdaptiveParams();
     if(mEnv->GetUseDevice())       
         mAdaptiveParams_Device = mEnv->GetDevice()->GetAdaptiveParams();                
@@ -721,6 +745,8 @@ DrawUiFrame_Manager()
 
             ImPlot::SetCurrentContext(mPlotContexts["Main"]);
 
+            ImGui::SliderFloat("lpAlpha", &mLpAlpha, 0.05f, 1.0f);
+
             ImGui::EndTabItem();
         }   
 
@@ -959,9 +985,6 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
         auto angleGaitLeft = jointData->GetAnglesGaitPhaseLeftPrev();
         auto angleGaitRight = jointData->GetAnglesGaitPhaseRightPrev();
         
-        auto torques = jointData->GetTorques();
-        auto torquesPhase = jointData->GetTorquesGaitPhasePrev();
-
         if (ImGui::BeginTabItem("Joint Angle"))
         {            
             double w_ = w/3.0 - 10.0;
@@ -1010,13 +1033,13 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
                         else if(k==1)
                             angleGaitR = angleGaitRight[dataName];
                        
-                        if(dataName == "FemurL_sagittal" || dataName == "FemurL_transverse" || dataName == "TalusL_sagittal")
+                        if(dataName == "FemurL_sagittal" || dataName == "FemurL_transverse" || dataName == "TalusL_sagittal" || dataName == "TalusL_transverse")
                         {
                             for(int i=0; i<angleGaitL.size(); i++)
                                 angleGaitL[i] *= -1;                                        
                         }
 
-                        if(dataName == "FemurR_sagittal" || dataName == "FemurR_frontal" || dataName == "TalusR_sagittal" || dataName == "TalusR_transverse")
+                        if(dataName == "FemurR_sagittal" || dataName == "FemurR_frontal" || dataName == "TalusR_sagittal" || dataName == "TalusR_frontal")
                         {
                             for(int i=0; i<angleGaitR.size(); i++)
                                 angleGaitR[i] *= -1;                                         
@@ -1043,6 +1066,8 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
             ImGui::EndTabItem();
         }
 
+        auto torques = jointData->GetTorques();
+        auto torquesPhase = jointData->GetTorquesGaitPhasePrev();
         if (ImGui::BeginTabItem("Joint Torque"))
         {   
             double w_ = w/3.0 - 10.0;
@@ -1096,6 +1121,67 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
                     else
                         this->DrawJointTorque(plotName, torqueData, yMin, yMax, w_, h_);
 
+                    if(j<2)
+                        ImGui::SameLine();
+                }
+            }
+            ImGui::EndTabItem();
+        }
+        
+        auto moments = jointData->GetMoments();
+        auto momentsPhase = jointData->GetMomentsGaitPhasePrev();
+        if (ImGui::BeginTabItem("Joint Moment"))
+        {   
+            double w_ = w/3.0 - 10.0;
+            double h_ = h/3.0 - 30.0;
+
+            std::deque<double> momentData;
+            double yMin, yMax;
+            std::string plotName, dataName;
+            std::string plotNamePre, dataNamePre;
+            std::string namePost;
+
+            for(int i=0; i<6; i++)
+            {
+                if(i==0){
+                    plotNamePre = "Hip"; dataNamePre = "FemurL";
+                }
+                else if(i==1){
+                    plotNamePre = "Knee"; dataNamePre = "TibiaL";
+                }
+                else if(i==2){
+                    plotNamePre = "Ankle"; dataNamePre = "TalusL";
+                }
+                else if(i==3){
+                    plotNamePre = "Spine"; dataNamePre = "Spine";
+                }
+                else if(i==4){
+                    plotNamePre = "Torso"; dataNamePre = "Torso";
+                }
+                else if(i==5){
+                    plotNamePre = "Neck"; dataNamePre = "Neck";
+                }
+    
+                for(int j=0; j<3; j++)
+                {
+                    if(j==0)
+                        namePost = "_x";
+                    else if(j==1)
+                        namePost = "_y";
+                    else if(j==2)
+                        namePost = "_z";
+                    
+                    plotName = plotNamePre + namePost;
+                    dataName = dataNamePre + namePost;
+                    momentData = momentsPhase[dataName];                    
+                    yMin = mJointMomentMinMax[plotName].first;
+                    yMax = mJointMomentMinMax[plotName].second;
+                
+                    if(compare)
+                        this->DrawJointMoment(plotName, momentData, yMin, yMax, w_, h_);
+                    else
+                        this->DrawJointMoment(plotName, momentData, yMin, yMax, w_, h_);
+                    
                     if(j<2)
                         ImGui::SameLine();
                 }
@@ -1175,7 +1261,10 @@ DrawRewardGraph(std::string name, std::deque<double> reward, double yMin, double
     for(int i=0; i<size; i++)
     {
         x[i] = i*(1.0/(size-1.0));
-        r[i] = reward[i];        
+        if(i==0)
+            r[size-1-i] = reward[size-1-i];        
+        else
+            r[size-1-i] = mLpAlpha*reward[size-1-i] + (1-mLpAlpha)*r[size-i];        
     }
     
     ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
@@ -1272,7 +1361,10 @@ DrawJointAngle(std::string name, std::deque<double> gaitL, std::deque<double> ga
     for(int i=0; i<sizeL; i++)
     {
         xL[i] = i*(1.0/(sizeL-1.0));
-        dataL[i] = gaitL[i];        
+        if(i==0)
+            dataL[i] = gaitL[i];        
+        else
+            dataL[i] = mLpAlpha*gaitL[i] + (1-mLpAlpha)*dataL[i-1];        
     }
 
     int sizeR = gaitR.size();
@@ -1281,7 +1373,10 @@ DrawJointAngle(std::string name, std::deque<double> gaitL, std::deque<double> ga
     for(int i=0; i<sizeR; i++)
     {
         xR[i] = i*(1.0/(sizeR-1.0));
-        dataR[i] = gaitR[i];        
+        if(i==0)
+            dataR[i] = gaitR[i];        
+        else
+            dataR[i] = mLpAlpha*gaitR[i] + (1-mLpAlpha)*dataR[i-1];        
     }
     
     int plotStyle = ImPlotFlags_CanvasOnly;
@@ -1397,7 +1492,10 @@ DrawJointTorque(std::string name, std::deque<double> data, double yMin, double y
     for(int i=0; i<size; i++)
     {
         x[i] = i*(1.0/(size-1.0));
-        data_[i] = data[i];
+        if(i==0)
+            data_[i] = data[i];            
+        else
+            data_[i] = mLpAlpha*data[i] + (1-mLpAlpha)*data_[i-1];             
     }
 
     ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
@@ -1433,6 +1531,29 @@ DrawJointTorque(std::string name, std::deque<double> data1, std::deque<double> d
     if (ImPlot::BeginPlot(name.c_str(), "%", "Nm", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
         ImPlot::PlotLine("char1",x1,data1_,size1);                
         ImPlot::PlotLine("char2",x2,data2_,size2);                
+        ImPlot::EndPlot();
+    }
+}
+
+void
+GLFWApp::
+DrawJointMoment(std::string name, std::deque<double> data, double yMin, double yMax, double w, double h)
+{
+    int size = data.size();
+    float x[size]; 
+    float data_[size];
+    for(int i=0; i<size; i++)
+    {
+        x[i] = i*(1.0/(size-1.0));
+        if(i==0)
+            data_[i] = data[i];            
+        else
+            data_[i] = mLpAlpha*data[i] + (1-mLpAlpha)*data_[i-1];             
+    }
+
+    ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
+    if (ImPlot::BeginPlot(name.c_str(), "%", "Nm", ImVec2(w,h), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+        ImPlot::PlotLine("Nm/kg",x,data_,size);                        
         ImPlot::EndPlot();
     }
 }
@@ -1806,6 +1927,7 @@ keyboardPress(int key, int scancode, int action, int mods)
             case GLFW_KEY_F: mFocus = !mFocus; break;
             case GLFW_KEY_V: mViewMode = (mViewMode+1)%4; break;
             case GLFW_KEY_T: mDrawTarget = !mDrawTarget; break;
+            case GLFW_KEY_Y: mDrawReference = !mDrawReference; break;                    
             case GLFW_KEY_C: mDrawCharacter = !mDrawCharacter; break;
             case GLFW_KEY_D: mDrawDevice = !mDrawDevice; break;
             default: break;

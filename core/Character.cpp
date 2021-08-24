@@ -394,27 +394,27 @@ Initialize_Forces()
 	// 	 300, 300, 300,      //Torso
 	// 	 300, 300, 300,      //Neck
 	// 	 300, 300, 300;      //Head
-	// // 	//  300, 300, 300,      //Shoulder L
-	// // 	//  300, 300, 300,      //Arm L
-	// // 	//  300,                //ForeArm L
-	// // 	//  300, 300, 300,      //Hand L
-	// // 	//  300, 300, 300,      //Shoulder R
-	// // 	//  300, 300, 300,      //Arm R
-	// // 	//  300,                //ForeArm R
-	// // 	//  300, 300, 300;      //Hand R
+	// 	//  300, 300, 300,      //Shoulder L
+	// 	//  300, 300, 300,      //Arm L
+	// 	//  300,                //ForeArm L
+	// 	//  300, 300, 300,      //Hand L
+	// 	//  300, 300, 300,      //Shoulder R
+	// 	//  300, 300, 300,      //Arm R
+	// 	//  300,                //ForeArm R
+	// 	//  300, 300, 300;      //Hand R
 
 	mDefaultForces <<
 	     0, 0, 0, 0, 0, 0,   //pelvis
-	     250, 100, 100,      //Femur L
-	     100,       //Tibia L
-	     150, 100, 100,        //Talus L
+	     200, 100, 100,      //Femur L
+	     100,                //Tibia L
+	     150, 100, 100,      //Talus L
 	     50, 50,             //Thumb, Pinky L
 	     200, 100, 100,      //Femur R
-	     100,       //Tibia R
-	     150, 100, 100,        //Talus R
+	     100,                //Tibia R
+	     150, 100, 100,      //Talus R
 	     50, 50,             //Thumb, Pinky R
-	     100, 100, 100,         //Spine
-	     100, 100, 100,         //Torso
+	     100, 100, 100,      //Spine
+	     100, 100, 100,      //Torso
 	     50, 50, 50,         //Neck
 	     50, 50, 50;         //Head
 	    //  50, 50, 50,         //Shoulder L
@@ -450,18 +450,6 @@ void
 Character::
 Initialize_Rewards()
 {
-	// mRewardTags.push_back("reward");
-	// mRewardTags.push_back("pose");
-	// mRewardTags.push_back("vel");
-	// mRewardTags.push_back("root");
-	// mRewardTags.push_back("ee");
-	// mRewardTags.push_back("com");
-	// mRewardTags.push_back("smooth");
-	// mRewardTags.push_back("min");
-	// mRewardTags.push_back("contact");
-	// mRewardTags.push_back("reg");
-	// mRewardTags.push_back("imit");
-	// mRewardTags.push_back("effi");
 	mRewardTags.push_back("reward_c");
 	mRewardTags.push_back("reward_s");
 
@@ -613,6 +601,8 @@ Reset()
 	mActionPrev.setZero();	
 	mDesiredTorque.setZero();
 	mDesiredTorquePrev.setZero();
+	mDesiredMoment.setZero();
+	mDesiredMomentPrev.setZero();
 
 	for(int i=0; i<mFemurSignals.at(0).size(); i++){
 		mFemurSignals.at(0).at(i) = 0.0;
@@ -782,10 +772,10 @@ SetMeasure(bool isRender)
 
 	mJointDatas->SetPhaseState(mPhaseStateLeft, mPhaseStateRight, mWorld->getTime());
 	mJointDatas->SetAngles();
+	mJointDatas->SetTorques(mDesiredTorque);
+	mJointDatas->SetMoments(mDesiredMoment);
 	if(mUseMuscle)
 		mMetabolicEnergy->Set(this->GetMuscles(), mCurVel3d, phase, frame);
-	else
-		mJointDatas->SetTorques(mDesiredTorque);
 
 	if(isRender)
 	{
@@ -799,7 +789,13 @@ SetContact()
 {
 	for(auto c : mContacts)
 		c.second->Set();
-	
+
+	double phase;
+	if(mAdaptiveMotion)
+		phase = mAdaptivePhase;
+	else
+		phase = mPhase;
+
 	double time = mWorld->getTime();
 	int footLeftState;
 	if(mContacts["footLeft"]->isContact())
@@ -808,8 +804,23 @@ SetContact()
 		footLeftState = SWING_PHASE;
 	if(mPhaseStateLeft != footLeftState)
 	{
-		mPhaseStateLeft = footLeftState;
-		mGaitPhaseLeft.push_front(std::make_pair(time, mPhaseStateLeft));
+		if(footLeftState == STANCE_PHASE)
+		{
+			if(phase > 0.7 && phase < 0.85)
+			{
+				mPhaseStateLeft = footLeftState;
+				mGaitPhaseLeft.push_front(std::make_pair(time, mPhaseStateLeft));
+			}
+		}
+
+		if(footLeftState == SWING_PHASE)
+		{
+			if(phase > 0.33 && phase < 0.47)
+			{
+				mPhaseStateLeft = footLeftState;
+				mGaitPhaseLeft.push_front(std::make_pair(time, mPhaseStateLeft));
+			}
+		}		
 	}
 
 	int footRightState;
@@ -819,8 +830,23 @@ SetContact()
 		footRightState = SWING_PHASE;
 	if(mPhaseStateRight != footRightState)
 	{
-		mPhaseStateRight = footRightState;
-		mGaitPhaseRight.push_front(std::make_pair(time, mPhaseStateRight));
+		if(footRightState == STANCE_PHASE)
+		{
+			if(phase > 0.23 && phase < 0.37)
+			{
+				mPhaseStateRight = footRightState;
+				mGaitPhaseRight.push_front(std::make_pair(time, mPhaseStateRight));
+			}
+		}
+
+		if(footRightState == SWING_PHASE)
+		{
+			if(phase > 0.83 && phase < 0.97)
+			{
+				mPhaseStateRight = footRightState;
+				mGaitPhaseRight.push_front(std::make_pair(time, mPhaseStateRight));
+			}
+		}		
 	}		
 }
 
@@ -1366,7 +1392,7 @@ GetReward_Character_Imitation()
 	{
 		double w = 1.0;
 		if(ees[i]->getName() == "Head")
-			w = 0.5;
+			w = 1.0;
 		// if(ees[i]->getName() == "Pelvis")
 		// 	w = 0.3;
 		if(ees[i]->getName() == "TalusR" || ees[i]->getName() == "TalusL")
@@ -1383,11 +1409,11 @@ GetReward_Character_Imitation()
 
 	//=====================================
 
-	double sig_p = 10.0;
+	double sig_p = 5.0;
 	double sig_q = 0.5;
 	double sig_com = 20.0;
 	double sig_ee_rot = 10.0;
-	double sig_ee_pos = 40.0;
+	double sig_ee_pos = 30.0;
 	
 	double r_p = Utils::exp_of_squared(p_diff, sig_p);
 	double r_q = Utils::exp_of_squared(q_diff, sig_q);
@@ -1603,14 +1629,7 @@ GetReward_Pose()
 	v_diff.resize((mNumBodyNodes-1)*3);
 
 	p_diff = (p_cur - p_ref);
-	v_diff = (v_cur - v_ref);
-
-	// p_diff[0] = root->getCOM()[0];
-	// v_diff = (v_cur - v_ref);
-
-	// Endeffector
-		//=====================================
-
+	
 	double sig_p = 10.0;
 	
 	double r_p = Utils::exp_of_squared(p_diff, sig_p);
@@ -1749,7 +1768,7 @@ SetPhase()
 		phase += (cycleTime)/cycleTime;
 
 	mPhase = phase;
-
+	
 	mAdaptivePhasePrev = mAdaptivePhase;
 	double adaptivePhase = mAdaptiveTime;
 	int adaptiveCycleCount = (int)(mAdaptiveTime/cycleTime);
@@ -1870,15 +1889,15 @@ SetActionImitationLearning(const Eigen::VectorXd& a)
 	int pd_dof = mNumActiveDof;
 	double pd_scale = 0.1;
 	mAction.segment(0,pd_dof) = a.segment(0,pd_dof) * pd_scale;
-	if(mActionPrev.norm() != 0)
-		mAction = 0.2 * mAction + 0.8 * mActionPrev;
+	// if(mActionPrev.norm() != 0)
+	// 	mAction = 0.2 * mAction + 0.8 * mActionPrev;
 	
 	double t = mWorld->getTime();
 	double timeStep = (double)mNumSteps*mWorld->getTimeStep();
 	this->GetPosAndVel(t+timeStep, mTargetPositions, mTargetVelocities);
 	this->GetPosAndVel(t+timeStep, mReferencePositions, mReferenceVelocities);
 
-	mActionPrev = mAction;
+	// mActionPrev = mAction;
 }
 
 void
@@ -1888,7 +1907,7 @@ SetDesiredTorques()
 	Eigen::VectorXd p_des = mTargetPositions;
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction.segment(0,mNumActiveDof);
 	mDesiredTorque = this->GetSPDForces(p_des);
-
+	
 	if(mDesiredTorquePrev.norm() != 0)
 		mDesiredTorque = 0.2*mDesiredTorque + 0.8*mDesiredTorquePrev;
 
@@ -1898,6 +1917,9 @@ SetDesiredTorques()
 
 	mDesiredTorquePrev = mDesiredTorque;
 
+	mDesiredMoment = mM_inv * mDesiredTorque;
+	// std::cout << "moments: " << mDesiredMoment << std::endl;
+	
 	mFemurSignals.at(0).pop_back();
 	mFemurSignals.at(0).push_front(mDesiredTorque[6]);
 
@@ -1928,6 +1950,8 @@ GetSPDForces(const Eigen::VectorXd& p_desired)
 
 	Eigen::MatrixXf M = (mSkeleton->getMassMatrix() + Eigen::MatrixXd(dt * mKv.asDiagonal())).cast<float>();
 	Eigen::MatrixXd M_inv = M.inverse().cast<double>();
+	mM_inv = M_inv;
+	// mM_inv = (mSkeleton->getMassMatrix()).inverse();
 
 	Eigen::VectorXd qdqdt = q + dq*dt;
 	Eigen::VectorXd p_diff = -mKp.cwiseProduct(mSkeleton->getPositionDifferences(qdqdt,p_desired));

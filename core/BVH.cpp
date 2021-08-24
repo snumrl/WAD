@@ -255,7 +255,7 @@ Parse(const std::string& file, bool cyclic)
 						mMotions[i/4+1][j] = val;
 				}
 			}
-			mNumTotalFrames = mNumTotalFrames/4+1;
+			mNumTotalFrames = mNumTotalFrames/4+1;			
 		}
 	}
 	is.close();
@@ -270,6 +270,43 @@ Parse(const std::string& file, bool cyclic)
 		this->SetMotionFramesNonCyclic(1000, true);
 		this->SetMotionVelFramesNonCyclic(1000, true);
 	}
+
+	// this->blend();
+}
+
+void
+BVH::
+blend()
+{
+	int size = mMotions.size();
+	// int hip_l_idx = 6;
+	// int hip_r_idx = 15;
+	// int knee_l_idx = 9;
+	// int knee_r_idx = 18;
+
+	int range = 3; 
+
+	std::vector<double> mid;
+	mid.resize(24);
+
+	for(int i=0; i<24; i++)
+	{
+		mid[i] = (mMotions[0][i] + mMotions[size-1][i])/2.0;
+	}
+
+	int div = 6;
+	for(int i=0; i<24; i++)
+	{
+		for(int j=1; j<div; j++)
+		{
+			double ratio = j/(double)div;
+			mMotions[div-j][i] = (ratio)*mid[i] + (1-ratio)*mMotions[div][i];
+			mMotions[size-div-1+j][i] = (ratio)*mid[i] + (1-ratio)*mMotions[size-div-1][i];
+		}		
+		mMotions[0][i] = mid[i];
+		mMotions[size-1][i] = mid[i];
+	}
+	
 }
 
 Eigen::Matrix3d
@@ -297,7 +334,7 @@ SetMotionTransform()
 	T1.linear() = this->Get(root_bvh_name);
 	T1.translation() = 0.01*(mDataLast.segment<3>(0));
 
-	mCycleOffset = T1.translation() + 0.01*(mMotions[1]-mMotions[0]).segment<3>(0) - T0.translation();
+	mCycleOffset = T1.translation() - T0.translation();	
 }
 
 void
@@ -331,12 +368,14 @@ SetMotionFrames()
 
 				if(jointName == "Pelvis"){
 					if(p[idx+2] > 0)
-						p[idx+2] *= 0.5;
+						p[idx+2] *= 0.7;
 					else
 						p[idx+2] *= 0.3;
  
 					if(p[idx+1] < 0)
 						p[idx+1] *= 0.5;
+					else
+						p[idx+1] *= 1.5;
 				}
 			}
 			else if(jn->getType()=="BallJoint"){
@@ -354,8 +393,14 @@ SetMotionFrames()
 				if(jointName == "Torso"){
 					// p[idx] += 0.3; // old man
 					p[idx] -= 0.06;
+
+					if(p[idx+1] > 0)
+						p[idx+1] *= 0.7;
+
 					if(p[idx+2] > 0)
 						p[idx+2] *= 0.3;
+					else 
+						p[idx+2] *= 0.5;
 				}
 
 				// if(jointName == "ShoulderL" || jointName == "ShoulderR")

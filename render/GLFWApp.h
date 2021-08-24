@@ -78,6 +78,8 @@ public:
 	void DrawJointAngle(std::string name, std::deque<double> gaitL, std::deque<double> gaitR, std::deque<double> gaitCoamp, std::deque<double> std1, std::deque<double> std2, double yMin, double yMax, double w, double h);
 	void DrawJointTorque(std::string name, std::deque<double> data, double yMin, double yMax, double w, double h);
 	void DrawJointTorque(std::string name, std::deque<double> data1, std::deque<double> data2, double yMin, double yMax, double w, double h);
+	void DrawJointMoment(std::string name, std::deque<double> data, double yMin, double yMax, double w, double h);
+	void DrawJointMoment(std::string name, std::deque<double> data1, std::deque<double> data2, double yMin, double yMax, double w, double h);
 	
 	void DrawRewardGraph(std::string name, std::deque<double> reward, double yMin, double yMax, double w, double h);
 	
@@ -161,10 +163,12 @@ private:
 	int mComparePersonIdx;
 
 	double mPhaseRatio;
+	float mLpAlpha = 1.0;
 
 	std::map<std::string, double> perfStats;
 	std::map<std::string, std::pair<double,double>> mJointAngleMinMax;
 	std::map<std::string, std::pair<double,double>> mJointTorqueMinMax;
+	std::map<std::string, std::pair<double,double>> mJointMomentMinMax;
 	std::map<std::string, std::pair<double,double>> mAdaptiveParams_Char;
 	std::map<std::string, std::pair<double,double>> mAdaptiveParams_Device;
 

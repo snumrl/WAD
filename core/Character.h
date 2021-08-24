@@ -128,6 +128,7 @@ public:
 	const Eigen::VectorXd& GetTargetVelocities(){ return mTargetVelocities; }
 	const Eigen::VectorXd& GetReferencePositions(){return mReferencePositions;}
 	Eigen::VectorXd GetDesiredTorques();
+	Eigen::VectorXd GetDesiredMoments(){ return mDesiredMoment;}
 	Eigen::VectorXd GetSPDForces(const Eigen::VectorXd& p_desired);
 
 	void GetNextPosition(Eigen::VectorXd cur, Eigen::VectorXd delta, Eigen::VectorXd& next);
@@ -305,6 +306,8 @@ private:
 	Eigen::Isometry3d mTc;
 	Eigen::VectorXd mKp, mKv;
 
+	Eigen::MatrixXd mM_inv;
+
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;
 	Eigen::VectorXd mReferencePositions;
@@ -312,6 +315,9 @@ private:
 
 	Eigen::VectorXd mDesiredTorque;
 	Eigen::VectorXd mDesiredTorquePrev;
+
+	Eigen::VectorXd mDesiredMoment;
+	Eigen::VectorXd mDesiredMomentPrev;
 
 	Eigen::VectorXd mAction;	
 	Eigen::VectorXd mActionPrev;	

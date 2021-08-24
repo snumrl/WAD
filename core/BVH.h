@@ -60,6 +60,8 @@ public:
 	BVHNode* ReadHierarchy(BVHNode* parent,const std::string& name,int& channel_offset,std::ifstream& is);
 	void Parse(const std::string& file, bool cyclic=true);
 
+	void blend();
+
 	Eigen::Matrix3d Get(const std::string& bvh_node);
 	const Eigen::VectorXd& GetMotion(int k);
 	Eigen::VectorXd GetMotionVel(int k);

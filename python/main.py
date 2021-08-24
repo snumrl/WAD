@@ -158,35 +158,24 @@ class PPO(object):
 			if self.use_device:
 				self.num_paramstate_device = self.env.GetNumParamState_Device()
 			
+			min_v = self.env.GetMinV()
+			max_v = self.env.GetMaxV()
+			self.param_mul = []
+			self.param_base = []
+			self.param_div_num = 5
+			for i in range(self.num_paramstate):
+				self.param_base.append(-1)
+				if(min_v[i] == max_v[i]):
+					self.param_mul.append(0)
+				else:
+					self.param_mul.append(2.0/self.param_div_num)
+
 			self.params = []
-			for i in range(32):
-				self.params.append([0, 0, 0, 0, 0])
+			for i in range(self.num_slaves):
+				k = i%(self.param_div_num +1)
+				params = [k*self.param_mul[i]+self.param_base[i] for i in range(len(self.param_base))]
+				self.params.append(params)
 
-			# self.param_min = self.env.GetMinVstd::cout <<()
-			# self.param_max = self.env.GetMaxV()
-			# self.param_slot = 0
-			# self.param_set = [[]]
-			# self.param_set_num = []
-
-			# for i in range(self.num_paramstate):
-			# 	if(self.param_min[i] != self.param_max[i]):
-			# 		for j in range(self.param_set):
-			# 			new_a = self.param_set[j].append(-1)
-			# 			new_b = self.param_set[j].append(1)
-			# 			self.param_set.append(new_a)
-			# 			self.param_set.append(new_b)
-			# 			self.param_slot += 1
-			# 	else:
-			# 		for j in range(self.param_set):
-			# 			new_a = self.param_set[j].append(0)
-			# 			self.param_set.append(new_a)
-						
-			# for i in range(self.param_set):
-			# 	self.param_set_num.append(0)
-
-			# print("param set : ", self.param_set)
-			# print("param num : ", self.param_set_num)
-			
 			# self.marginal_buffer = MarginalBuffer(10000)
 			# self.marginal_model = MarginalNN(self.num_paramstate)
 			# self.marginal_value_avg = 1.
@@ -312,14 +301,8 @@ class PPO(object):
 
 		states = self.env.GetStates()
 
-		# if self.use_adaptive_sampling:
-		# 	for j in range(self.num_slaves):
-		# 		initial_state = np.float32(random.choice(self.InitialParamStates))
-		# 		self.env.SetParamState(j, initial_state)
-		
 		if self.use_adaptive_sampling:
 			for j in range(self.num_slaves):
-				self.params[j] = [0.0, 0.0, 0.0, 0.0, -1.0 + 0.5*(j/7)]
 				self.env.SetParamState(j, self.params[j])
 		
 		counter = 0
