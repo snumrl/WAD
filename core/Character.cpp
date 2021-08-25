@@ -1395,7 +1395,7 @@ GetReward_Character_Imitation()
 	{
 		double w = 1.0;
 		if(ees[i]->getName() == "Head")
-			w = 1.0;
+			w = 0.5;
 		// if(ees[i]->getName() == "Pelvis")
 		// 	w = 0.3;
 		if(ees[i]->getName() == "TalusR" || ees[i]->getName() == "TalusL")
@@ -1412,11 +1412,11 @@ GetReward_Character_Imitation()
 
 	//=====================================
 
-	double sig_p = 5.0;
+	double sig_p = 10.0;
 	double sig_q = 0.5;
 	double sig_com = 20.0;
 	double sig_ee_rot = 10.0;
-	double sig_ee_pos = 30.0;
+	double sig_ee_pos = 40.0;
 	
 	double r_p = Utils::exp_of_squared(p_diff, sig_p);
 	double r_q = Utils::exp_of_squared(q_diff, sig_q);
@@ -1601,7 +1601,7 @@ GetReward_Pose()
 
 	double err_scale = 1.0;
 
-	double pose_scale = 0.1;
+	double pose_scale = 0.2;
 	double head_scale = 5.0;
 	double root_scale = 1.0;
 
