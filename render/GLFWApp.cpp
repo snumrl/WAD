@@ -911,32 +911,36 @@ DrawUiFrame_Learning(double x, double y, double w, double h)
 
         if (ImGui::BeginTabItem("Reward"))
         {            
-            double w_ = w/4.0 - 10.0;
+            double w_ = w/5.0 - 10.0;
             double h_ = h/2.0 - 20.0;
            
-            std::deque<double> reward1, reward2, reward3, reward4; 
-            std::string name1, name2, name3, name4;
+            std::deque<double> reward1, reward2, reward3, reward4, reward5; 
+            std::string name1, name2, name3, name4, name5;
             for(int i=0; i<2; i++)
             {
                 if(i==0){
-                    reward1 = rewards["imit_c"]; 
-                    reward2 = rewards["imit_pos"]; 
-                    reward3 = rewards["imit_ee_pos"]; 
-                    reward4 = rewards["imit_ee_rot"]; 
-                    name1 = "imit_c";
-                    name2 = "imit_p";
-                    name3 = "imit_ee_p";
-                    name4 = "imit_ee_r";
+                    reward1 = rewards["reward_c"]; 
+                    reward2 = rewards["imit_c"]; 
+                    reward3 = rewards["imit_pos"]; 
+                    reward4 = rewards["imit_ee_pos"]; 
+                    reward5 = rewards["imit_ee_rot"]; 
+                    name1 = "reward_c";
+                    name2 = "imit_c";
+                    name3 = "imit_p";
+                    name4 = "imit_ee_p";
+                    name5 = "imit_ee_r";
                 }
                 else if(i==1){
                     reward1 = rewards["effi_c"];
                     reward2 = rewards["effi_vel"];
                     reward3 = rewards["effi_pose"];
-                    reward4 = rewards["effi_energy"];
+                    reward4 = rewards["effi_phase"];
+                    reward5 = rewards["effi_energy"];
                     name1 = "effi_c";
                     name2 = "effi_vel";
-                    name3 = "effi_pose";                    
-                    name4 = "effi_E";                    
+                    name3 = "effi_pose";         
+                    name4 = "effi_phase";           
+                    name5 = "effi_E";                    
                 }
 
                 this->DrawRewardGraph(name1, reward1, 0.0, 1.0, w_, h_);
@@ -946,6 +950,8 @@ DrawUiFrame_Learning(double x, double y, double w, double h)
                 this->DrawRewardGraph(name3, reward3, 0.0, 1.0, w_, h_);
                 ImGui::SameLine();
                 this->DrawRewardGraph(name4, reward4, 0.0, 1.0, w_, h_);
+                ImGui::SameLine();
+                this->DrawRewardGraph(name5, reward5, 0.0, 1.0, w_, h_);
             }
             ImGui::EndTabItem();
         }

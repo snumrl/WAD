@@ -464,6 +464,7 @@ Initialize_Rewards()
 	mRewardTags.push_back("effi_vel");
 	mRewardTags.push_back("effi_pose");
 	mRewardTags.push_back("effi_energy");
+	mRewardTags.push_back("effi_phase");
 
 	int reward_window = 70;
 	for(auto tag : mRewardTags){
@@ -1456,7 +1457,11 @@ GetReward_Character_Efficiency()
 	r_Pose = this->GetReward_Pose();
 
 	double r_Vel = 1.0;
-	r_Vel = this->GetReward_Vel();
+	// r_Vel = this->GetReward_Vel();
+	r_Vel = 1.0;
+
+	double r_Phase = 1.0;
+	r_Phase = this->GetReward_Phase();
 	
 	double r_Stride = 1.0;
 	r_Stride = this->GetReward_Stride();
@@ -1476,10 +1481,11 @@ GetReward_Character_Efficiency()
 	mReward["effi_vel"] = r_Vel;
 	mReward["effi_pose"] = r_Pose;
 	mReward["effi_energy"] = r_EnergyMin;
+	mReward["effi_phase"] = r_Phase;
 
 	// double r_continuous = r_Pose * r_Vel;
 	// double r_spike = 0.0 * r_EnergyMin;
-	double r_continuous = r_Pose * r_Vel;
+	double r_continuous = r_Phase * r_Pose * r_Vel;
 	double r_spike = r_EnergyMin * r_Vel;
 	
 	return std::make_pair(r_continuous, r_spike);
@@ -1500,107 +1506,32 @@ GetReward_Energy()
 
 double
 Character::
+GetReward_Phase()
+{
+	double err_scale = 1.0;
+	double phase_scale = 1.0;
+	double phase_err = 0.0;
+
+	double adapPhase = mAdaptivePhase;
+	double phase = mPhase;
+
+	phase_err = fabs(adapPhase - phase);
+
+	double reward = 0.0;
+	reward = exp(-1.0 * phase_scale * phase_err);
+
+	return reward;
+}
+
+double
+Character::
 GetReward_Pose()
 {
-	// Eigen::VectorXd pose_cur, pose_ref;
+	Eigen::VectorXd pose_cur, pose_ref;
 
-	// int num_ee = mEndEffectors.size();
-	// Eigen::VectorXd p_save = mSkeleton->getPositions();
-	// Eigen::VectorXd v_save = mSkeleton->getVelocities();
-
-	// Eigen::VectorXd p_reward;
-	// Eigen::VectorXd v_reward;
-	// this->GetPosAndVel(mAdaptiveTime, p_reward, v_reward);
-	
-	// mSkeleton->setPositions(p_reward);
-	// mSkeleton->computeForwardKinematics(true, true, false);
-	
-	// dart::dynamics::BodyNode* root_ref = mSkeleton->getRootBodyNode();
-	// Eigen::Isometry3d cur_root_inv = root_ref->getWorldTransform().inverse();
-
-	// Eigen::VectorXd root_rot_ref = Utils::QuaternionToAxisAngle(Eigen::Quaterniond((root_ref->getWorldTransform()).linear()));
-	// Eigen::VectorXd head_ref = Eigen::VectorXd::Zero(4);
-
-	// // pose_ref.resize((num_ee)*3);
-	// pose_ref.resize((num_ee)*6);
-	// for(int i=0;i<num_ee;i++)
-	// {
-	// 	Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
-	// 	Eigen::Vector3d rot = Utils::QuaternionToAxisAngle(Eigen::Quaterniond(transform.linear()));
-
-	// 	// if(i==2)
-	// 	// 	head_ref.segment<3>(0) << rot;
-	// 	// else
-	// 	pose_ref.segment<6>(6*i) << rot, transform.translation();		
-	// }
-
-	// head_ref[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] - root_ref->getCOM()[1]);
-
-	// // restore
-	// mSkeleton->setPositions(mTargetPositions);
-	// mSkeleton->setVelocities(mTargetVelocities);
-	// mSkeleton->computeForwardKinematics(true, true, false);
-
-	// dart::dynamics::BodyNode* root_cur = mSkeleton->getRootBodyNode();
-	// cur_root_inv = root_cur->getWorldTransform().inverse();
-
-	// Eigen::VectorXd root_rot_cur = Utils::QuaternionToAxisAngle(Eigen::Quaterniond((root_cur->getWorldTransform()).linear()));
-	// Eigen::VectorXd head_cur = Eigen::VectorXd::Zero(4);
-
-	// // pose_cur.resize((num_ee)*3);
-	// pose_cur.resize((num_ee)*6);
-	// for(int i=0;i<num_ee;i++)
-	// {
-	// 	Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
-	// 	Eigen::Vector3d rot = Utils::QuaternionToAxisAngle(Eigen::Quaterniond(transform.linear()));
-		
-	// 	// if(i==2)
-	// 	// 	head_cur.segment<3>(0) << rot;
-	// 	// else
-	// 	pose_cur.segment<6>(6*i) << rot, transform.translation();		
-	// }
-
-	// head_cur[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] - root_cur->getCOM()[1]);
-
-	// double err_scale = 1.0;
-
-	// double pose_scale = 0.1;
-	// double head_scale = 5.0;
-	// double root_scale = 1.0;
-
-	// double pose_err = (pose_cur-pose_ref).norm();
-	// double head_err = (head_cur-head_ref).norm();
-	// double root_err = (root_rot_cur-root_rot_ref).norm();
-
-	// double pose_reward = exp(-1.0 * pose_scale * pose_err);
-	// double head_reward = exp(-1.0 * head_scale * head_err);
-	// double root_reward = exp(-1.0 * root_scale * root_err);
-
-	// // std::cout << "pose err : " << pose_err << std::endl;
-	// // std::cout << "pose rew : " << pose_reward << std::endl;
-	// // std::cout << "head err : " << head_err << std::endl;
-	// // std::cout << "head rew : " << head_reward << std::endl;
-	// // std::cout << std::endl;
-
-	// // double reward = pose_reward * head_reward;
-	// double reward = pose_reward;
-	
-	// mSkeleton->setPositions(p_save);
-	// mSkeleton->setVelocities(v_save);
-	// mSkeleton->computeForwardKinematics(true, true, false);
-
-	Eigen::VectorXd cur_q = mSkeleton->getPositions();
-	Eigen::VectorXd cur_dq = mSkeleton->getVelocities();
-	dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
-	
-	// Current Position and Velocity
-	Eigen::VectorXd p_cur, v_cur;
-	p_cur.resize((mNumBodyNodes-1)*3);
-	for (int i=1; i<mNumBodyNodes; i++)
-	{
-		dart::dynamics::BodyNode* cur_body = mSkeleton->getBodyNode(i);
-		p_cur.segment<3>(3*(i-1)) = cur_body->getCOM(root);
-	}
+	int num_ee = mEndEffectors.size();
+	Eigen::VectorXd p_save = mSkeleton->getPositions();
+	Eigen::VectorXd v_save = mSkeleton->getVelocities();
 
 	Eigen::VectorXd p_reward;
 	Eigen::VectorXd v_reward;
@@ -1608,33 +1539,129 @@ GetReward_Pose()
 	
 	mSkeleton->setPositions(p_reward);
 	mSkeleton->computeForwardKinematics(true, true, false);
+	
+	dart::dynamics::BodyNode* root_ref = mSkeleton->getRootBodyNode();
+	Eigen::Isometry3d cur_root_inv = root_ref->getWorldTransform().inverse();
 
-	Eigen::Vector3d ref_root_com = root->getCOM();
+	Eigen::VectorXd root_rot_ref = Utils::QuaternionToAxisAngle(Eigen::Quaterniond((root_ref->getWorldTransform()).linear()));
+	Eigen::VectorXd head_ref = Eigen::VectorXd::Zero(4);
 
-	Eigen::VectorXd p_ref, v_ref;
-	p_ref.resize((mNumBodyNodes-1)*3);
-	for (int i=1; i<mNumBodyNodes; i++)
+	// pose_ref.resize((num_ee)*3);
+	pose_ref.resize((num_ee)*6);
+	for(int i=0;i<num_ee;i++)
 	{
-		dart::dynamics::BodyNode* cur_body = mSkeleton->getBodyNode(i);
-		p_ref.segment<3>(3*(i-1)) = cur_body->getCOM(root);
+		Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
+		Eigen::Vector3d rot = Utils::QuaternionToAxisAngle(Eigen::Quaterniond(transform.linear()));
+
+		// if(i==2)
+		// 	head_ref.segment<3>(0) << rot;
+		// else
+		pose_ref.segment<6>(6*i) << rot, transform.translation();		
 	}
 
-	mSkeleton->setPositions(cur_q);
-	mSkeleton->setVelocities(cur_dq);
+	head_ref[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] - root_ref->getCOM()[1]);
+
+	// restore
+	mSkeleton->setPositions(mTargetPositions);
+	mSkeleton->setVelocities(mTargetVelocities);
 	mSkeleton->computeForwardKinematics(true, true, false);
 
-	// Position and Velocity Difference
-	Eigen::VectorXd p_diff, v_diff;
-	p_diff.resize((mNumBodyNodes-1)*3);
-	v_diff.resize((mNumBodyNodes-1)*3);
+	dart::dynamics::BodyNode* root_cur = mSkeleton->getRootBodyNode();
+	cur_root_inv = root_cur->getWorldTransform().inverse();
 
-	p_diff = (p_cur - p_ref);
-	
-	double sig_p = 10.0;
-	
-	double r_p = Utils::exp_of_squared(p_diff, sig_p);
+	Eigen::VectorXd root_rot_cur = Utils::QuaternionToAxisAngle(Eigen::Quaterniond((root_cur->getWorldTransform()).linear()));
+	Eigen::VectorXd head_cur = Eigen::VectorXd::Zero(4);
 
-	return r_p;
+	// pose_cur.resize((num_ee)*3);
+	pose_cur.resize((num_ee)*6);
+	for(int i=0;i<num_ee;i++)
+	{
+		Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
+		Eigen::Vector3d rot = Utils::QuaternionToAxisAngle(Eigen::Quaterniond(transform.linear()));
+		
+		// if(i==2)
+		// 	head_cur.segment<3>(0) << rot;
+		// else
+		pose_cur.segment<6>(6*i) << rot, transform.translation();		
+	}
+
+	head_cur[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] - root_cur->getCOM()[1]);
+
+	double err_scale = 1.0;
+
+	double pose_scale = 0.1;
+	double head_scale = 5.0;
+	double root_scale = 1.0;
+
+	double pose_err = (pose_cur-pose_ref).norm();
+	double head_err = (head_cur-head_ref).norm();
+	double root_err = (root_rot_cur-root_rot_ref).norm();
+
+	double pose_reward = exp(-1.0 * pose_scale * pose_err);
+	double head_reward = exp(-1.0 * head_scale * head_err);
+	double root_reward = exp(-1.0 * root_scale * root_err);
+
+	// std::cout << "pose err : " << pose_err << std::endl;
+	// std::cout << "pose rew : " << pose_reward << std::endl;
+	// std::cout << "head err : " << head_err << std::endl;
+	// std::cout << "head rew : " << head_reward << std::endl;
+	// std::cout << std::endl;
+
+	// double reward = pose_reward * head_reward;
+	double reward = pose_reward;
+	
+	mSkeleton->setPositions(p_save);
+	mSkeleton->setVelocities(v_save);
+	mSkeleton->computeForwardKinematics(true, true, false);
+
+	return reward;
+
+	// Eigen::VectorXd cur_q = mSkeleton->getPositions();
+	// Eigen::VectorXd cur_dq = mSkeleton->getVelocities();
+	// dart::dynamics::BodyNode* root = mSkeleton->getBodyNode(0);
+	
+	// // Current Position and Velocity
+	// Eigen::VectorXd p_cur, v_cur;
+	// p_cur.resize((mNumBodyNodes-1)*3);
+	// for (int i=1; i<mNumBodyNodes; i++)
+	// {
+	// 	dart::dynamics::BodyNode* cur_body = mSkeleton->getBodyNode(i);
+	// 	p_cur.segment<3>(3*(i-1)) = cur_body->getCOM(root);
+	// }
+
+	// Eigen::VectorXd p_reward;
+	// Eigen::VectorXd v_reward;
+	// this->GetPosAndVel(mAdaptiveTime, p_reward, v_reward);
+	
+	// mSkeleton->setPositions(p_reward);
+	// mSkeleton->computeForwardKinematics(true, true, false);
+
+	// Eigen::Vector3d ref_root_com = root->getCOM();
+
+	// Eigen::VectorXd p_ref, v_ref;
+	// p_ref.resize((mNumBodyNodes-1)*3);
+	// for (int i=1; i<mNumBodyNodes; i++)
+	// {
+	// 	dart::dynamics::BodyNode* cur_body = mSkeleton->getBodyNode(i);
+	// 	p_ref.segment<3>(3*(i-1)) = cur_body->getCOM(root);
+	// }
+
+	// mSkeleton->setPositions(cur_q);
+	// mSkeleton->setVelocities(cur_dq);
+	// mSkeleton->computeForwardKinematics(true, true, false);
+
+	// // Position and Velocity Difference
+	// Eigen::VectorXd p_diff, v_diff;
+	// p_diff.resize((mNumBodyNodes-1)*3);
+	// v_diff.resize((mNumBodyNodes-1)*3);
+
+	// p_diff = (p_cur - p_ref);
+	
+	// double sig_p = 10.0;
+	
+	// double r_p = Utils::exp_of_squared(p_diff, sig_p);
+
+	// return r_p;
 }
 
 double

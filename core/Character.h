@@ -104,6 +104,7 @@ public:
 	std::pair<double,double> GetReward_Character_Efficiency();
 
 	double GetReward_Energy();
+	double GetReward_Phase();
 	double GetReward_Pose();
 	double GetReward_Vel();
 	double GetReward_Stride();
