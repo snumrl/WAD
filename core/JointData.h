@@ -14,7 +14,7 @@ public:
     JointData();
     ~JointData();
 
-    void Initialize(const SkeletonPtr& skel);
+    void Initialize(const SkeletonPtr& skel, int simHz, int conHz);
     void Initialize_Torques();
     void Initialize_Moments();
     void Initialize_Angles();
@@ -22,9 +22,9 @@ public:
 
     void SetMaxForces(const Eigen::VectorXd& forces){mMaxForces = forces;}
 
-    void SetPhaseState(int stateLeft, int stateRight, double time);
-    void SetPhaseStateLeft(int phaseState);
-    void SetPhaseStateRight(int phaseState);  
+    void SetPhaseState(int stateLeft, Eigen::Vector3d comLeft, int stateRight, Eigen::Vector3d comRight, double time);
+    void SetPhaseStateLeft(int phaseState, Eigen::Vector3d com, double time);
+    void SetPhaseStateRight(int phaseState, Eigen::Vector3d com, double time);  
     
     void SetTorques(const Eigen::VectorXd& torques);
     void SetTorques(std::string name, double torque);
@@ -40,6 +40,11 @@ public:
 
     void ChangePhaseTorques();
     void ChangePhaseMoments();
+
+    double GetStrideRight(){ return mStrideRight; }
+    double GetStrideLeft(){ return mStrideLeft; }
+    double GetCadenceRight(){ return mCadenceRight; }
+    double GetCadenceLeft(){ return mCadenceLeft; }
 
     const std::map<std::string, std::deque<double>>& GetTorques(){return mTorques;}
     const std::map<std::string, std::deque<double>>& GetTorquesGaitPhase(){return mTorquesGaitPhase;}
@@ -68,12 +73,24 @@ private:
     double mCycleTorqueSum;
     double mCycleTorqueErr;
    
+    int mSimulationHz;
+    int mControlHz;
+
     int mPhaseStateLeft;
     int mPhaseStateLeftPrev;
 
     int mPhaseStateRight;
     int mPhaseStateRightPrev;
+
+    double mStrideLeft, mStrideRight;
+    double mCadenceLeft, mCadenceRight;
+
+    double mTimeLeft, mTimeLeftPrev;
+    double mTimeRight, mTimeRightPrev;
     
+    Eigen::Vector3d mComLeft, mComLeftPrev;
+    Eigen::Vector3d mComRight, mComRightPrev;
+
     Eigen::VectorXd mMaxForces;
     std::map<std::string, std::deque<double>> mTorques;
     std::map<std::string, std::deque<double>> mTorquesGaitPhase;

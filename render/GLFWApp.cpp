@@ -880,7 +880,8 @@ DrawUiFrame_SimState(double x, double y, double w, double h)
     }
 
     ImGui::Text("Velocity %.2f m/s", mEnv->GetCharacter()->GetCurVelocity());
-            ImGui::End();
+    ImGui::Text("Stride R %.2f m", mEnv->GetCharacter()->GetJointDatas()->GetStrideRight());
+    ImGui::Text("Cadence %.2f ", mEnv->GetCharacter()->GetJointDatas()->GetCadenceRight());
 
     ImPlot::SetCurrentContext(mPlotContexts["Main"]);
     ImGui::End();

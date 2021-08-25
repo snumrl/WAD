@@ -334,7 +334,7 @@ SetMotionTransform()
 	T1.linear() = this->Get(root_bvh_name);
 	T1.translation() = 0.01*(mDataLast.segment<3>(0));
 
-	mCycleOffset = T1.translation() - T0.translation();	
+	mCycleOffset = T1.translation() + 0.01*(mMotions[1]-mMotions[0]).segment<3>(0) - T0.translation();	
 }
 
 void

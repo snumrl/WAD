@@ -15,12 +15,15 @@ JointData::
 
 void
 JointData::
-Initialize(const SkeletonPtr& skel)
+Initialize(const SkeletonPtr& skel, int simHz, int conHz)
 {
     mSkeleton = skel;
     mDof = mSkeleton->getNumDofs();
     mJointNum = mSkeleton->getNumJoints();
     
+    mSimulationHz = simHz;
+    mControlHz = conHz;
+
     mOnCycle = false;
     mCycleStep = 0;
     mCycleTorqueErr = 0.0;
@@ -28,6 +31,21 @@ Initialize(const SkeletonPtr& skel)
     
     mPhaseStateRight = 1;
     mPhaseStateRightPrev = 1;
+
+    mStrideLeft = 0.0;
+    mStrideRight = 0.0;
+    mCadenceLeft = 0.0;
+    mCadenceRight = 0.0;
+
+    mTimeLeft = 0.0;
+    mTimeLeftPrev = 0.0;
+    mTimeRight = 0.0;
+    mTimeRightPrev = 0.0;
+
+    mComLeft  = Eigen::Vector3d::Zero();
+    mComRight = Eigen::Vector3d::Zero();
+    mComLeftPrev  = Eigen::Vector3d::Zero();
+    mComRightPrev = Eigen::Vector3d::Zero();
 
     mWindowSize = 540;
     this->Initialize_Torques();
@@ -188,6 +206,16 @@ Reset()
     for(auto iter = mAnglesGaitPhaseRightPrev.begin(); iter != mAnglesGaitPhaseRightPrev.end(); iter++)
         (iter->second).clear();
 
+    mTimeLeft = 0.0;
+    mTimeLeftPrev = 0.0;
+    mTimeRight = 0.0;
+    mTimeRightPrev = 0.0;
+
+    mComLeft.setZero();
+    mComRight.setZero();
+    mComLeftPrev.setZero();
+    mComRightPrev.setZero();
+
     mOnCycle = false;
     mCycleStep = 0;
     mCycleTorqueErr = 0.0;
@@ -199,15 +227,15 @@ Reset()
 
 void
 JointData::
-SetPhaseState(int stateLeft, int stateRight, double time)
+SetPhaseState(int stateLeft, Eigen::Vector3d comLeft, int stateRight, Eigen::Vector3d comRight, double time)
 {
-    this->SetPhaseStateLeft(stateLeft);
-    this->SetPhaseStateRight(stateRight);    
+    this->SetPhaseStateLeft(stateLeft, comLeft, time);
+    this->SetPhaseStateRight(stateRight, comRight, time);    
 }
 
 void
 JointData::
-SetPhaseStateLeft(int phaseState)
+SetPhaseStateLeft(int phaseState, Eigen::Vector3d com, double time)
 {
     mPhaseStateLeft = phaseState;
     if(mPhaseStateLeft != mPhaseStateLeftPrev)
@@ -228,13 +256,16 @@ SetPhaseStateLeft(int phaseState)
 
 void
 JointData::
-SetPhaseStateRight(int phaseState)
+SetPhaseStateRight(int phaseState, Eigen::Vector3d com, double time)
 {
     mPhaseStateRight = phaseState;
     if(mPhaseStateRight != mPhaseStateRightPrev)
     {
         if(mPhaseStateRight == 1)
         {
+            mTimeRight = time;
+            mComRight = com;
+
             this->ChangePhaseTorques();
             this->ChangePhaseMoments();
 
@@ -243,7 +274,10 @@ SetPhaseStateRight(int phaseState)
                 mAnglesGaitPhaseRightPrev[a.first].clear();
                 mAnglesGaitPhaseRightPrev[a.first] = a.second;
                 mAnglesGaitPhaseRight[a.first].clear();                
-            }            
+            }
+
+            mTimeRightPrev = mTimeRight;
+            mComRightPrev = mComRight;  
         }
     }    
 
@@ -254,12 +288,21 @@ void
 JointData::
 ChangePhaseTorques()
 {
+    if(mComRightPrev.norm() == 0){
+        mStrideRight = 1.34;
+        mCadenceRight = 0;
+    }
+    else{
+        mStrideRight = (mComRight - mComRightPrev).norm();
+        mCadenceRight = 60.0/(mTimeRight - mTimeRightPrev);
+    }
+
     if(mOnCycle)
     {
-        mCycleTorqueErr = mCycleTorqueSum;
+        mCycleTorqueErr = mCycleTorqueSum * (1.0/(double)mSimulationHz)*mCycleStep;
         // mCycleTorqueErr /= (double)(mDof-6);
         mCycleTorqueErr /= (double)(14);
-        mCycleTorqueErr /= (double)(mCycleStep);            
+        mCycleTorqueErr /= (double)(mStrideRight);            
     }
     else
     {

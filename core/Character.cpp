@@ -296,7 +296,7 @@ Initialize()
 	mMetabolicEnergy->Initialize(this->GetMuscles(), mMass, mNumSteps, frames, ratio);
 
 	mJointDatas = new JointData();
-	mJointDatas->Initialize(mSkeleton);
+	mJointDatas->Initialize(mSkeleton, mSimulationHz, mControlHz);
 	mJointDatas->SetMaxForces(mMaxForces);
 
 	// mContacts = new Contact(mWorld);
@@ -771,7 +771,9 @@ SetMeasure(bool isRender)
 		frame = mAdaptiveFrame;
 	}
 
-	mJointDatas->SetPhaseState(mPhaseStateLeft, mPhaseStateRight, mWorld->getTime());
+	Eigen::Vector3d TalusL = mSkeleton->getBodyNode("TalusL")->getCOM();
+	Eigen::Vector3d TalusR = mSkeleton->getBodyNode("TalusR")->getCOM();
+	mJointDatas->SetPhaseState(mPhaseStateLeft, TalusL, mPhaseStateRight, TalusR, mWorld->getTime());
 	mJointDatas->SetAngles();
 	mJointDatas->SetTorques(mDesiredTorque);
 	mJointDatas->SetMoments(mDesiredMoment);
@@ -1515,7 +1517,17 @@ GetReward_Phase()
 	double adapPhase = mAdaptivePhase;
 	double phase = mPhase;
 
-	phase_err = fabs(adapPhase - phase);
+	double err1, err2; 
+	if(adapPhase < phase){
+		err1 = fabs(adapPhase - phase);
+		err2 = fabs(adapPhase+1 - phase);
+	}
+	else if(adapPhase > phase){
+		err1 = fabs(phase - adapPhase);
+		err2 = fabs(phase+1 - adapPhase);
+	}
+	
+	phase_err = (err1 < err2) ? err1 : err2;
 
 	double reward = 0.0;
 	reward = exp(-1.0 * phase_scale * phase_err);
