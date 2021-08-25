@@ -1450,7 +1450,7 @@ GetReward_Character_Efficiency()
 
 	double r_EnergyMin = 1.0;
 	r_EnergyMin = this->GetReward_Energy();
-	r_EnergyMin *= 10.0;
+	r_EnergyMin *= 30.0;
 
 	// if(mWorld->getTime() < mTimeOffset)
 	// 	return std::make_pair(1.0, 1.0 * r_EnergyMin);

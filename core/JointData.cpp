@@ -540,15 +540,13 @@ JointData::
 GetReward()
 {
     double err_scale = 1.0;
-    double torque_scale = 10.0;
+    double torque_scale = 0.01;
     double torque_err = 0.0;
 
     double reward = 0.0;
     if(mCycleTorqueErr != 0.0){
         torque_err = mCycleTorqueErr;
-        reward = exp(-err_scale * torque_scale * torque_err);
-        // std::cout << "err : " << torque_err << std::endl;
-        // std::cout << "rew : " << reward << std::endl;
+        reward = exp(-err_scale * torque_scale * torque_err);        
         mCycleTorqueErr = 0.0;
     }
 
