@@ -413,8 +413,8 @@ Initialize_Forces()
 	     100,                //Tibia R
 	     150, 100, 100,      //Talus R
 	     50, 50,             //Thumb, Pinky R
-	     100, 100, 100,      //Spine
-	     100, 100, 100,      //Torso
+	     150, 150, 150,      //Spine
+	     150, 150, 150,      //Torso
 	     50, 50, 50,         //Neck
 	     50, 50, 50;         //Head
 	    //  50, 50, 50,         //Shoulder L
@@ -542,7 +542,7 @@ SetPDParameters()
 		500, 
 		400, 400, 400,
 		100, 100,
-		1000, 1000, 1000,
+		500, 500, 500,
 		500, 500, 500,
 		100, 100, 100,
 		100, 100, 100;
@@ -564,7 +564,7 @@ SetPDParameters()
 		50, 
 		40, 40, 40,
 		10, 10,
-		100, 100, 100,
+		50, 50, 50,
 		50, 50, 50,
 		10, 10, 10,
 		10, 10, 10;
@@ -1694,7 +1694,7 @@ GetReward_Vel()
 	double vel = diff/(cur[3]-past[3]);
 
 	// vel_err = fabs(vel-1.0*mSpeedRatio);
-	vel_err = fabs(vel-1.1);
+	vel_err = fabs(vel-1.2);
 
 	double reward = 0.0;
 	reward = exp(-1.0 * vel_scale * vel_err);
