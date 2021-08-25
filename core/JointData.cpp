@@ -96,6 +96,14 @@ Initialize_Torques()
             mTorquesGaitPhasePrev[name+namePost] = std::deque<double>();            
         }
     }
+
+    mDeviceTorques["FemurL_x"] = std::deque<double>(mWindowSize);
+    mDeviceTorquesGaitPhase["FemurL_x"] = std::deque<double>();
+    mDeviceTorquesGaitPhasePrev["FemurL_x"] = std::deque<double>();
+
+    mDeviceTorques["FemurR_x"] = std::deque<double>(mWindowSize);
+    mDeviceTorquesGaitPhase["FemurR_x"] = std::deque<double>();
+    mDeviceTorquesGaitPhasePrev["FemurR_x"] = std::deque<double>();
 }
 
 void
@@ -179,13 +187,19 @@ Reset()
     for(auto iter = mTorques.begin(); iter != mTorques.end(); iter++)
         std::fill(iter->second.begin(), iter->second.end(), 0.0);
 
-    for(auto iter = mAngles.begin(); iter != mAngles.end(); iter++)
-        std::fill(iter->second.begin(), iter->second.end(), 0.0);
-
     for(auto iter = mTorquesGaitPhase.begin(); iter != mTorquesGaitPhase.end(); iter++)
         (iter->second).clear();
 
     for(auto iter = mTorquesGaitPhasePrev.begin(); iter != mTorquesGaitPhasePrev.end(); iter++)
+        (iter->second).clear();
+
+    for(auto iter = mDeviceTorques.begin(); iter != mDeviceTorques.end(); iter++)
+        std::fill(iter->second.begin(), iter->second.end(), 0.0);
+
+    for(auto iter = mDeviceTorquesGaitPhase.begin(); iter != mDeviceTorquesGaitPhase.end(); iter++)
+        (iter->second).clear();
+
+    for(auto iter = mDeviceTorquesGaitPhasePrev.begin(); iter != mDeviceTorquesGaitPhasePrev.end(); iter++)
         (iter->second).clear();
 
     for(auto iter = mMomentsGaitPhase.begin(); iter != mMomentsGaitPhase.end(); iter++)
@@ -194,6 +208,9 @@ Reset()
     for(auto iter = mMomentsGaitPhasePrev.begin(); iter != mMomentsGaitPhasePrev.end(); iter++)
         (iter->second).clear();
 
+    for(auto iter = mAngles.begin(); iter != mAngles.end(); iter++)
+        std::fill(iter->second.begin(), iter->second.end(), 0.0);
+    
     for(auto iter = mAnglesGaitPhaseLeft.begin(); iter != mAnglesGaitPhaseLeft.end(); iter++)
         (iter->second).clear();
 
@@ -231,6 +248,7 @@ SetPhaseState(int stateLeft, Eigen::Vector3d comLeft, int stateRight, Eigen::Vec
 {
     this->SetPhaseStateLeft(stateLeft, comLeft, time);
     this->SetPhaseStateRight(stateRight, comRight, time);    
+    mCycleStep++;
 }
 
 void
@@ -317,6 +335,13 @@ ChangePhaseTorques()
         mTorquesGaitPhasePrev[t.first] = t.second;
         mTorquesGaitPhase[t.first].clear();                
     }
+
+    for(auto t : mDeviceTorquesGaitPhase)
+    {
+        mDeviceTorquesGaitPhasePrev[t.first].clear();
+        mDeviceTorquesGaitPhasePrev[t.first] = t.second;
+        mDeviceTorquesGaitPhase[t.first].clear();                
+    }
 }
 
 void
@@ -381,6 +406,8 @@ SetTorques(const Eigen::VectorXd& torques)
             {
                 if(name == "FemurL" || name == "FemurR" || name == "TalusL" || name == "TalusR")
                 {
+                    if(name == "FemurL")
+                        std::cout << "idx : " << idx << std::endl;
                     mCycleTorqueSum += fabs(torques[idx])/(double)mMaxForces[idx];
                     mCycleTorqueSum += fabs(torques[idx+1])/(double)mMaxForces[idx+1];
                     mCycleTorqueSum += fabs(torques[idx+2])/(double)mMaxForces[idx+2];
@@ -410,8 +437,36 @@ SetTorques(const Eigen::VectorXd& torques)
             else
             {
             }
-        }
-        mCycleStep++;
+        }        
+    }
+}
+
+void
+JointData::
+SetDeviceTorques(std::string name, double torque)
+{
+    mDeviceTorques[name].pop_back();
+    mDeviceTorques[name].push_front(torque);
+}
+
+void
+JointData::
+SetDeviceTorquesGaitPhase(std::string name, double torque)
+{
+    mDeviceTorquesGaitPhase[name].push_front(torque);
+}
+
+void
+JointData::
+SetDeviceTorques(const Eigen::VectorXd& torques)
+{
+    if(mOnCycle)
+    {        
+        this->SetDeviceTorques("FemurL_x", 10*torques[6]);
+        this->SetDeviceTorques("FemurR_x", 10*torques[9]);
+
+        this->SetDeviceTorquesGaitPhase("FemurL_x", 10*torques[6]);
+        this->SetDeviceTorquesGaitPhase("FemurR_x", 10*torques[9]);
     }
 }
 
@@ -484,8 +539,7 @@ SetMoments(const Eigen::VectorXd& moments)
             else
             {
             }
-        }
-        mCycleStep++;
+        }        
     }
 }
 

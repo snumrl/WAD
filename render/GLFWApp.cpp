@@ -1123,8 +1123,11 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
                     yMin = mJointTorqueMinMax[plotName].first;
                     yMax = mJointTorqueMinMax[plotName].second;
                 
-                    if(compare)
-                        this->DrawJointTorque(plotName, torqueData, yMin, yMax, w_, h_);
+                    if(compare && plotName=="Hip_x"){
+                        auto torquesDevicePhase = jointData->GetDeviceTorquesGaitPhasePrev();
+                        std::deque<double> torqueDeviceData = torquesDevicePhase["FemurL_x"];
+                        this->DrawJointTorque(plotName, torqueData, torqueDeviceData, yMin, yMax, w_, h_);
+                    }
                     else
                         this->DrawJointTorque(plotName, torqueData, yMin, yMax, w_, h_);
 

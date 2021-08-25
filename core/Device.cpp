@@ -9,7 +9,7 @@ Device(WorldPtr& wPtr)
 :mUseDeviceNN(false),mNumParamState(0)
 {
 	mWorld = wPtr;
-	mDelta_t = 0.2;
+	mDelta_t = 0.3;
 	mK_ = 15.0;
 }
 
@@ -162,8 +162,8 @@ GetState() const
 	for(int i=0; i<history_num; i++)
 	{
 		double signal_y = mDeviceSignals_y.at(mDelta_t_idx + i*offset);
-		double des_torque_l =  1 * mK_ * signal_y;
-		double des_torque_r = -1 * mK_ * signal_y;
+		// double des_torque_l =  1 * mK_ * signal_y;
+		// double des_torque_r = -1 * mK_ * signal_y;
 
 		state[i] = signal_y;
 	}
@@ -231,7 +231,7 @@ SetDesiredTorques2()
 	ql_prev = ql;
 	qr_prev = qr;
 
-	double y = sin(qr) - sin(ql);
+	double y = sin(ql) - sin(qr);
 
 	double beta_L = 1.0;
 	double beta_Lhip = 1.0;
@@ -254,7 +254,7 @@ SetDesiredTorques2()
 	mDeviceSignals_R.push_front(des_torque_r);
 
 	mDesiredTorque[6] = des_torque_l;
-	mDesiredTorque[9] = des_torque_r;
+	mDesiredTorque[9] = des_torque_r;	
 }
 
 double

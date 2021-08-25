@@ -30,6 +30,10 @@ public:
     void SetTorques(std::string name, double torque);
     void SetTorquesGaitPhase(std::string name, double torque);
 
+    void SetDeviceTorques(const Eigen::VectorXd& torques);
+    void SetDeviceTorques(std::string name, double torque);
+    void SetDeviceTorquesGaitPhase(std::string name, double torque);
+
     void SetMoments(const Eigen::VectorXd& moments);
     void SetMoments(std::string name, double moment);
     void SetMomentsGaitPhase(std::string name, double moment);
@@ -49,6 +53,10 @@ public:
     const std::map<std::string, std::deque<double>>& GetTorques(){return mTorques;}
     const std::map<std::string, std::deque<double>>& GetTorquesGaitPhase(){return mTorquesGaitPhase;}
     const std::map<std::string, std::deque<double>>& GetTorquesGaitPhasePrev(){return mTorquesGaitPhasePrev;}
+
+    const std::map<std::string, std::deque<double>>& GetDeviceTorques(){return mDeviceTorques;}
+    const std::map<std::string, std::deque<double>>& GetDeviceTorquesGaitPhase(){return mDeviceTorquesGaitPhase;}
+    const std::map<std::string, std::deque<double>>& GetDeviceTorquesGaitPhasePrev(){return mDeviceTorquesGaitPhasePrev;}
 
     const std::map<std::string, std::deque<double>>& GetMoments(){return mMoments;}
     const std::map<std::string, std::deque<double>>& GetMomentsGaitPhase(){return mMomentsGaitPhase;}
@@ -95,6 +103,10 @@ private:
     std::map<std::string, std::deque<double>> mTorques;
     std::map<std::string, std::deque<double>> mTorquesGaitPhase;
     std::map<std::string, std::deque<double>> mTorquesGaitPhasePrev;
+
+    std::map<std::string, std::deque<double>> mDeviceTorques;
+    std::map<std::string, std::deque<double>> mDeviceTorquesGaitPhase;
+    std::map<std::string, std::deque<double>> mDeviceTorquesGaitPhasePrev;
 
     std::map<std::string, std::deque<double>> mMoments;
     std::map<std::string, std::deque<double>> mMomentsGaitPhase;

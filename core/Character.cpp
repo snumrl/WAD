@@ -776,6 +776,9 @@ SetMeasure(bool isRender)
 	mJointDatas->SetPhaseState(mPhaseStateLeft, TalusL, mPhaseStateRight, TalusR, mWorld->getTime());
 	mJointDatas->SetAngles();
 	mJointDatas->SetTorques(mDesiredTorque);
+	if(mUseDevice){
+		mJointDatas->SetDeviceTorques(mDevice->GetDesiredTorques());
+	}
 	mJointDatas->SetMoments(mDesiredMoment);
 	if(mUseMuscle)
 		mMetabolicEnergy->Set(this->GetMuscles(), mCurVel3d, phase, frame);
@@ -1135,7 +1138,7 @@ GetState_Character()
 		if(curTime <= mTimeOffset)
 			nextTime = curTime + this->GetControlTimeStep();
 		else
-			nextTime = curTime + this->GetControlTimeStep() * (1.0/mSpeedRatio);
+			nextTime = curTime + this->GetControlTimeStep();
 	}
 
 	Eigen::VectorXd cur_ref_pos, cur_ref_vel;
@@ -1901,7 +1904,7 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 	if(mAdaptiveMotionSP)
 	 	mTemporalDisplacement = timeStep;
 	else
-	 	mTemporalDisplacement = timeStep * (1.0/mSpeedRatio) * exp(mAction[pd_dof+sp_dof]);
+	 	mTemporalDisplacement = timeStep * exp(mAction[pd_dof+sp_dof]);
 	
 	double cur_time = mAdaptiveTime;
 	double next_time = mAdaptiveTime + mTemporalDisplacement;
