@@ -406,8 +406,6 @@ SetTorques(const Eigen::VectorXd& torques)
             {
                 if(name == "FemurL" || name == "FemurR" || name == "TalusL" || name == "TalusR")
                 {
-                    if(name == "FemurL")
-                        std::cout << "idx : " << idx << std::endl;
                     mCycleTorqueSum += fabs(torques[idx])/(double)mMaxForces[idx];
                     mCycleTorqueSum += fabs(torques[idx+1])/(double)mMaxForces[idx+1];
                     mCycleTorqueSum += fabs(torques[idx+2])/(double)mMaxForces[idx+2];
