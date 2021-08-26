@@ -1396,18 +1396,23 @@ GetReward_Character_Imitation()
 	Eigen::VectorXd ee_pos_diff(ees.size());
 	for(int i = 0; i < ees.size(); i++)
 	{
-		double w = 1.0;
-		if(ees[i]->getName() == "Head")
-			w = 0.5;
+		double w_rot = 1.0;
+		double w_pos = 1.0;
+		if(ees[i]->getName() == "Head"){
+			w_rot = 2.0;
+			w_pos = 0.5;
+		}
 		// if(ees[i]->getName() == "Pelvis")
 		// 	w = 0.3;
-		if(ees[i]->getName() == "TalusR" || ees[i]->getName() == "TalusL")
-			w = 0.5;
+		if(ees[i]->getName() == "TalusR" || ees[i]->getName() == "TalusL"){
+			w_rot = 0.3;
+			w_pos = 0.3;
+		}
 		// if(ees[i]->getName() == "HandR" || ees[i]->getName() == "HandL")
 		// 	w = 0.1;
 
-		ee_rot_diff[i] = w * Eigen::AngleAxisd(ref_ee_r[i].inverse() * cur_ee_r[i]).angle();
-		ee_pos_diff[i] = w * (ref_ee_p[i] - cur_ee_p[i]).norm();
+		ee_rot_diff[i] = w_rot * Eigen::AngleAxisd(ref_ee_r[i].inverse() * cur_ee_r[i]).angle();
+		ee_pos_diff[i] = w_pos * (ref_ee_p[i] - cur_ee_p[i]).norm();
 	}
 
 	//Angle Difference
@@ -1415,11 +1420,11 @@ GetReward_Character_Imitation()
 
 	//=====================================
 
-	double sig_p = 10.0;
+	double sig_p = 5.0;
 	double sig_q = 0.5;
 	double sig_com = 20.0;
 	double sig_ee_rot = 10.0;
-	double sig_ee_pos = 40.0;
+	double sig_ee_pos = 20.0;
 	
 	double r_p = Utils::exp_of_squared(p_diff, sig_p);
 	double r_q = Utils::exp_of_squared(q_diff, sig_q);
