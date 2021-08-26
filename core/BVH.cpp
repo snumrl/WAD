@@ -373,9 +373,9 @@ SetMotionFrames()
 						p[idx+2] *= 0.3;
  
 					if(p[idx+1] < 0)
-						p[idx+1] *= 0.5;
+						p[idx+1] *= 0.7;
 					else
-						p[idx+1] *= 1.5;
+						p[idx+1] *= 1.2;
 				}
 			}
 			else if(jn->getType()=="BallJoint"){
@@ -394,8 +394,8 @@ SetMotionFrames()
 					// p[idx] += 0.3; // old man
 					p[idx] -= 0.06;
 
-					if(p[idx+1] > 0)
-						p[idx+1] *= 0.7;
+					// if(p[idx+1] > 0)
+					// 	p[idx+1] *= 0.7;
 
 					if(p[idx+2] > 0)
 						p[idx+2] *= 0.3;
@@ -413,7 +413,7 @@ SetMotionFrames()
 					p[idx+2] += 0.05;
 
 				if(jointName == "FemurL"){
-					p[idx+1] -= 0.1;
+					// p[idx+1] -= 0.1;
 					p[idx+2] *= 0.4;					
 					// p[idx+2] += 0.04;
 				}				

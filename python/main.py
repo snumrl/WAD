@@ -673,9 +673,9 @@ if __name__=="__main__":
 		ppo.Train()
 		rewards = ppo.Evaluate()
 		if i == 1000:
-			ppr.learning_rate = 5.0*1E-5
+			ppo.learning_rate = 5.0*1E-5
 		if i == 2000:
-			ppr.learning_rate = 1.0*1E-5
+			ppo.learning_rate = 1.0*1E-5
 		
 		if (i%1000 == 0) or (i == ppo.max_iteration-7):
 			Plot(rewards,'reward',0,False,True)
