@@ -41,7 +41,7 @@ GLFWApp(Environment* env)
       mMouseDown(false), mMouseDrag(false),mCapture(false),mRotate(false),mTranslate(false),mDisplayIter(0),
       isDrawCharacter(false),isDrawDevice(false),isDrawTarget(false),isDrawReference(false),
       mDrawOBJ(false),mDrawCharacter(true),mDrawDevice(true),mDrawTarget(false),mDrawReference(false),
-      mSplitViewNum(2),mSplitIdx(0),mViewMode(0),isFirstUImanager(true),mRecordData(false),mParamIdx(0)
+      mSplitViewNum(2),mSplitIdx(0),mViewMode(0),isFirstUImanager(true),mRecordData(false),mParamIdx(0),mDrawDeviceTorque(false)
 {
     mm = py::module::import("__main__");
 	mns = mm.attr("__dict__");
@@ -140,11 +140,11 @@ Initialize()
         mParamSet.push_back(param);
     }    
 
-    mParamCnt = Eigen::VectorXd::Zero(5);
-    mParamVel = Eigen::VectorXd::Zero(5);
-    mParamStride = Eigen::VectorXd::Zero(5);
-    mParamCadence = Eigen::VectorXd::Zero(5);
-    mParamEnergy = Eigen::VectorXd::Zero(5);
+    mParamCnt = Eigen::VectorXd::Zero(6);
+    mParamVel = Eigen::VectorXd::Zero(6);
+    mParamStride = Eigen::VectorXd::Zero(6);
+    mParamCadence = Eigen::VectorXd::Zero(6);
+    mParamEnergy = Eigen::VectorXd::Zero(6);
 }
 
 void
@@ -882,6 +882,10 @@ DrawUiFrame_SimState(double x, double y, double w, double h)
     ImGui::Checkbox("Coordinate", &coordinate);
     mDrawCoordinate = coordinate;
 
+    static bool deviceTorque = false;
+    ImGui::Checkbox("Device Torque", &deviceTorque);
+    mDrawDeviceTorque = deviceTorque;
+
     if(mEnv->GetUseAdaptiveSampling())
     {   
         int idx = 0;
@@ -1346,7 +1350,7 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
             }
 
             ImGui::SameLine();
-            ImPlot::SetNextPlotLimits(-0.05, 0.55, 0.0, 100.0, ImGuiCond_Always);                
+            ImPlot::SetNextPlotLimits(-0.05, 0.55, 50.0, 80.0, ImGuiCond_Always);                
             if (ImPlot::BeginPlot("Energy", "t", "energy", ImVec2(w_,h_), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
                 ImPlot::PlotLine("energy", xs1, energy, 6);
                 ImPlot::EndPlot();
@@ -1693,6 +1697,49 @@ ShowCompareDataSelecter()
 
 void
 GLFWApp::
+DrawDeviceTorque()
+{
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+	glEnable(GL_DEPTH_TEST);
+    Eigen::Vector4d color(0.6, 1.2, 0.6, 0.8);
+    
+    Eigen::VectorXd torques = mEnv->GetDevice()->GetDesiredTorques();
+    double torque_l = torques[6];
+    
+	Eigen::Isometry3d trans_L = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurL")->getTransform();
+	Eigen::Vector3d p_L = trans_L.translation();
+	Eigen::Matrix3d rot_L = trans_L.rotation();
+	Eigen::Vector3d dir_L1 = rot_L.col(2);
+	Eigen::Vector3d dir_L2 = rot_L.col(2); 
+	dir_L2[1] *= -1;
+    dir_L2[2] *= -1;
+
+    if(torque_l < 0)
+		GUI::DrawArrow3D(p_L+0.0699*dir_L2, dir_L2,-0.04*torque_l, 0.015, color, 0.03);
+	else
+		GUI::DrawArrow3D(p_L+0.0699*dir_L1, dir_L1, 0.04*torque_l, 0.015, color, 0.03);
+
+    double torque_r = torques[9];
+    Eigen::Isometry3d trans_R = mEnv->GetCharacter()->GetSkeleton()->getBodyNode("FemurR")->getTransform();
+	Eigen::Vector3d p_R = trans_R.translation();
+	Eigen::Matrix3d rot_R = trans_R.rotation();
+	Eigen::Vector3d dir_R1 = rot_R.col(2);
+	Eigen::Vector3d dir_R2 = rot_R.col(2);
+	dir_R2[1] *= -1;
+    dir_R2[2] *= -1;
+
+	if(torque_r < 0)
+		GUI::DrawArrow3D(p_R+0.0699*dir_R2, dir_R2,-0.04*torque_r, 0.015, color, 0.03);
+	else
+		GUI::DrawArrow3D(p_R+0.0699*dir_R1, dir_R1, 0.04*torque_r, 0.015, color, 0.03);
+
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_COLOR_MATERIAL);
+}
+
+void
+GLFWApp::
 DrawDevice()
 {
     if(mEnv->GetCharacter()->GetDevice_OnOff() && mDrawDevice)
@@ -1700,10 +1747,9 @@ DrawDevice()
 		isDrawDevice = true;
 		DrawSkeleton(mEnv->GetDevice()->GetSkeleton());
 		isDrawDevice = false;
-        // if(mDrawGraph)
-		// 	DrawDeviceSignals();
-		// if(mDrawArrow)
-		// 	DrawArrow();
+        
+        if(mDrawDeviceTorque)
+            this->DrawDeviceTorque(); 
 	}
 }
 

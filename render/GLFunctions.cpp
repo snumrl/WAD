@@ -596,39 +596,39 @@ DrawPoint(const Eigen::Vector3d& p0,const Eigen::Vector3d& color)
 void
 GUI::
 DrawArrow3D(const Eigen::Vector3d& _pt, const Eigen::Vector3d& _dir,
-            const double _length, const double _thickness,const Eigen::Vector3d& color,
+            const double _length, const double _thickness,const Eigen::Vector4d& color,
             const double _arrowThickness)
 {
-    glColor3f(color[0],color[1],color[2]);
+    glColor4f(color[0],color[1],color[2],color[3]);
     Eigen::Vector3d normDir = _dir;
-  normDir.normalize();
+    normDir.normalize();
 
-  double arrowLength;
-  if (_arrowThickness == -1)
-    arrowLength = 4*_thickness;
-  else
-    arrowLength = 2*_arrowThickness;
+    double arrowLength;
+    if (_arrowThickness == -1)
+        arrowLength = 4*_thickness;
+    else
+        arrowLength = 2*_arrowThickness;
 
-  // draw the arrow body as a cylinder
-  GLUquadricObj *c;
-  c = gluNewQuadric();
-  gluQuadricDrawStyle(c, GLU_FILL);
-  gluQuadricNormals(c, GLU_SMOOTH);
+    // draw the arrow body as a cylinder
+    GLUquadricObj *c;
+    c = gluNewQuadric();
+    gluQuadricDrawStyle(c, GLU_FILL);
+    gluQuadricNormals(c, GLU_SMOOTH);
 
-  glPushMatrix();
-  glTranslatef(_pt[0], _pt[1], _pt[2]);
-  glRotated(acos(normDir[2])*180/M_PI, -normDir[1], normDir[0], 0);
-  gluCylinder(c, _thickness, _thickness, _length-arrowLength, 16, 16);
+    glPushMatrix();
+    glTranslatef(_pt[0], _pt[1], _pt[2]);
+    glRotated(acos(normDir[2])*180/M_PI, -normDir[1], normDir[0], 0);
+    gluCylinder(c, _thickness, _thickness, _length-arrowLength, 16, 16);
 
-  // draw the arrowhed as a cone
-  glPushMatrix();
-  glTranslatef(0, 0, _length-arrowLength);
-  gluCylinder(c, arrowLength*0.5, 0.0, arrowLength, 10, 10);
-  glPopMatrix();
+    // draw the arrowhed as a cone
+    glPushMatrix();
+    glTranslatef(0, 0, _length-arrowLength);
+    gluCylinder(c, arrowLength*0.5, 0.0, arrowLength, 10, 10);
+    glPopMatrix();
 
-  glPopMatrix();
+    glPopMatrix();
 
-  gluDeleteQuadric(c);
+    gluDeleteQuadric(c);
 }
 
 void recursiveRender(const struct aiScene *sc, const struct aiNode* nd) {

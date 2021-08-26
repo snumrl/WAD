@@ -95,6 +95,7 @@ public:
 	void DrawTarget();
 	void DrawReference();
 	void DrawDevice();
+	void DrawDeviceTorque();
 
 	void DrawEntity(const dart::dynamics::Entity* entity);
 	void DrawBodyNode(const dart::dynamics::BodyNode* bn);
@@ -157,9 +158,10 @@ private:
 	bool mNNLoaded, mMuscleNNLoaded;
 	bool mDevice_On;
 	bool mDrawOBJ, mDrawCharacter, mDrawDevice, mDrawTarget, mDrawReference;
+	bool mDrawCoordinate, mDrawDeviceTorque;
 	bool isDrawCharacter, isDrawDevice, isDrawTarget, isDrawReference;
 	bool isFirstUImanager;
-	bool mDrawCoordinate;
+	
 	bool mRecordData;
 
 	bool mLegend;
