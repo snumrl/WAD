@@ -50,6 +50,8 @@ public:
     double GetCadenceRight(){ return mCadenceRight; }
     double GetCadenceLeft(){ return mCadenceLeft; }
 
+    double GetTorqueEnergyPrev(){ return mCycleTorqueErrPrev;}
+
     const std::map<std::string, std::deque<double>>& GetTorques(){return mTorques;}
     const std::map<std::string, std::deque<double>>& GetTorquesGaitPhase(){return mTorquesGaitPhase;}
     const std::map<std::string, std::deque<double>>& GetTorquesGaitPhasePrev(){return mTorquesGaitPhasePrev;}
@@ -80,6 +82,7 @@ private:
     bool mOnCycle;
     double mCycleTorqueSum;
     double mCycleTorqueErr;
+    double mCycleTorqueErrPrev;
    
     int mSimulationHz;
     int mControlHz;

@@ -231,7 +231,7 @@ SetDesiredTorques2()
 	ql_prev = ql;
 	qr_prev = qr;
 
-	double y = sin(ql) - sin(qr);
+	double y = sin(qr) - sin(ql);
 
 	double beta_L = 1.0;
 	double beta_Lhip = 1.0;
@@ -244,8 +244,8 @@ SetDesiredTorques2()
 	// double torque = k_ * y_delta_t;
 	double torque_l = mK_ * mDeviceSignals_y.at(mDelta_t_idx);
 	double torque_r = mK_ * mDeviceSignals_y.at(mDelta_t_idx);
-	double des_torque_l =  1*torque_l*beta_L*beta_Lhip;
-	double des_torque_r = -1*torque_r*beta_R*beta_Rhip;
+	double des_torque_l = -1*torque_l*beta_L*beta_Lhip;
+	double des_torque_r =  1*torque_r*beta_R*beta_Rhip;
 
 	mDeviceSignals_L.pop_back();
 	mDeviceSignals_L.push_front(des_torque_l);

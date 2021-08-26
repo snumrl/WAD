@@ -41,7 +41,7 @@ GLFWApp(Environment* env)
       mMouseDown(false), mMouseDrag(false),mCapture(false),mRotate(false),mTranslate(false),mDisplayIter(0),
       isDrawCharacter(false),isDrawDevice(false),isDrawTarget(false),isDrawReference(false),
       mDrawOBJ(false),mDrawCharacter(true),mDrawDevice(true),mDrawTarget(false),mDrawReference(false),
-      mSplitViewNum(2),mSplitIdx(0),mViewMode(0),isFirstUImanager(true)
+      mSplitViewNum(2),mSplitIdx(0),mViewMode(0),isFirstUImanager(true),mRecordData(false),mParamIdx(0)
 {
     mm = py::module::import("__main__");
 	mns = mm.attr("__dict__");
@@ -128,6 +128,23 @@ Initialize()
     mDevice_On = mEnv->GetCharacter()->GetDevice_OnOff();
     this->InitGLFW();    
     this->InitAnalysis();
+
+    for(int i=0; i<6; i++)
+    {
+        Eigen::VectorXd param(5);
+        param[0] = 1.0;
+        param[1] = 1.0;
+        param[2] = 1.0;
+        param[3] = 0.5;
+        param[4] = -1.0 + 0.4*i;
+        mParamSet.push_back(param);
+    }    
+
+    mParamCnt = Eigen::VectorXd::Zero(5);
+    mParamVel = Eigen::VectorXd::Zero(5);
+    mParamStride = Eigen::VectorXd::Zero(5);
+    mParamCadence = Eigen::VectorXd::Zero(5);
+    mParamEnergy = Eigen::VectorXd::Zero(5);
 }
 
 void
@@ -455,14 +472,49 @@ StartLoop()
         glfwPollEvents();
         
         while (lag >= frameTime) {
-            if(mSimulating)
+            if(mSimulating){
                 this->Update();
+                if(mRecordData)
+                    this->RecordData();
+            }
             lag -= frameTime;
         }
         this->Draw();
     
         glfwSwapBuffers(mWindow);        
     }    
+}
+
+void GLFWApp::RecordData()
+{
+    // velocity
+    // stride
+    // stance ratio
+    // stance time
+    // energy 
+
+    int idx = mParamIdx;
+    int cnt = mParamCnt[idx];
+
+    double vel = mEnv->GetCharacter()->GetCurVelocity();
+    mParamVel[idx] = (mParamVel[idx]*cnt + vel)/(cnt+1);
+    
+    double stride = mEnv->GetCharacter()->GetJointDatas()->GetStrideRight();
+    mParamStride[idx] = (mParamStride[idx]*cnt + stride)/(cnt+1);
+
+    double cadence = mEnv->GetCharacter()->GetJointDatas()->GetCadenceRight();
+    mParamCadence[idx] = (mParamCadence[idx]*cnt + cadence)/(cnt+1);
+
+    // double gaitRatio = getGaitRatio();
+    // mParamGaitRatio[idx] = (mParamGaitRatio[idx]*cnt + gaitRatio)/(cnt+1);
+
+    // double stanceTime = getStanceTime();
+    // mParamStanceTime[idx] = (mParamStanceTime[idx]*cnt + stanceTime)/(cnt+1);   
+        
+    double energy = mEnv->GetCharacter()->GetJointDatas()->GetTorqueEnergyPrev();
+    mParamEnergy[idx] = (mParamEnergy[idx]*cnt + energy)/(cnt+1);   
+
+    mParamCnt[idx] += 1;
 }
 
 void GLFWApp::Update()
@@ -1089,13 +1141,13 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
             for(int i=0; i<6; i++)
             {
                 if(i==0){
-                    plotNamePre = "Hip"; dataNamePre = "FemurL";
+                    plotNamePre = "Hip"; dataNamePre = "FemurR";
                 }
                 else if(i==1){
-                    plotNamePre = "Knee"; dataNamePre = "TibiaL";
+                    plotNamePre = "Knee"; dataNamePre = "TibiaR";
                 }
                 else if(i==2){
-                    plotNamePre = "Ankle"; dataNamePre = "TalusL";
+                    plotNamePre = "Ankle"; dataNamePre = "TalusR";
                 }
                 else if(i==3){
                     plotNamePre = "Spine"; dataNamePre = "Spine";
@@ -1125,7 +1177,7 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
                 
                     if(compare && plotName=="Hip_x"){
                         auto torquesDevicePhase = jointData->GetDeviceTorquesGaitPhasePrev();
-                        std::deque<double> torqueDeviceData = torquesDevicePhase["FemurL_x"];
+                        std::deque<double> torqueDeviceData = torquesDevicePhase["FemurR_x"];
                         this->DrawJointTorque(plotName, torqueData, torqueDeviceData, yMin, yMax, w_, h_);
                     }
                     else
@@ -1253,6 +1305,53 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
             //     ImPlot::EndPlot();
             // }
                                    
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Gait"))
+        {
+            double w_ = w/2.0 - 10.0;
+            double h_ = h/2.0 - 30.0;
+
+            static float xs1[6];
+            static float vel[6];
+            static float stride[6];
+            static float cadence[6];
+            static float energy[6];
+            for (int i = 0; i < 6; ++i) {
+                xs1[i] = i * 0.1f; 
+                vel[i] = mParamVel[i];
+                stride[i] = mParamStride[i];
+                cadence[i] = mParamCadence[i];                               
+                energy[i] = mParamEnergy[i];                               
+            }
+
+            ImPlot::SetNextPlotLimits(-0.05, 0.55, 1.0, 1.6, ImGuiCond_Always);                
+            if (ImPlot::BeginPlot("Velocity", "t", "vel", ImVec2(w_,h_), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+                ImPlot::PlotLine("vel", xs1, vel, 6);
+                ImPlot::EndPlot();
+            }
+            
+            ImGui::SameLine();
+            ImPlot::SetNextPlotLimits(-0.05, 0.55, 1.0, 1.6, ImGuiCond_Always);                
+            if (ImPlot::BeginPlot("Stride", "t", "stride", ImVec2(w_,h_), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+                ImPlot::PlotLine("stride", xs1, stride, 6);
+                ImPlot::EndPlot();
+            }
+
+            ImPlot::SetNextPlotLimits(-0.05, 0.55, 50.0, 60.0, ImGuiCond_Always);                
+            if (ImPlot::BeginPlot("Cadence", "t", "cadence", ImVec2(w_,h_), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+                ImPlot::PlotLine("cadence", xs1, cadence, 6);
+                ImPlot::EndPlot();
+            }
+
+            ImGui::SameLine();
+            ImPlot::SetNextPlotLimits(-0.05, 0.55, 0.0, 100.0, ImGuiCond_Always);                
+            if (ImPlot::BeginPlot("Energy", "t", "energy", ImVec2(w_,h_), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
+                ImPlot::PlotLine("energy", xs1, energy, 6);
+                ImPlot::EndPlot();
+            }
+
             ImGui::EndTabItem();
         }
     }
@@ -1525,7 +1624,10 @@ DrawJointTorque(std::string name, std::deque<double> data1, std::deque<double> d
     for(int i=0; i<size1; i++)
     {
         x1[i] = i*(1.0/(size1-1.0));
-        data1_[i] = data1[i];        
+        if(i==0)
+            data1_[i] = data1[i];            
+        else
+            data1_[i] = mLpAlpha*data1[i] + (1-mLpAlpha)*data1_[i-1];               
     }
 
     int size2 = data2.size();
@@ -1534,7 +1636,10 @@ DrawJointTorque(std::string name, std::deque<double> data1, std::deque<double> d
     for(int i=0; i<size2; i++)
     {
         x2[i] = i*(1.0/(size2-1.0));
-        data2_[i] = data2[i];        
+        if(i==0)
+            data2_[i] = data2[i];            
+        else
+            data2_[i] = mLpAlpha*data2[i] + (1-mLpAlpha)*data2_[i-1];               
     }
     
     ImPlot::SetNextPlotLimits(0.0, 1.0, yMin, yMax, ImGuiCond_Always);                
@@ -1940,6 +2045,25 @@ keyboardPress(int key, int scancode, int action, int mods)
             case GLFW_KEY_Y: mDrawReference = !mDrawReference; break;                    
             case GLFW_KEY_C: mDrawCharacter = !mDrawCharacter; break;
             case GLFW_KEY_D: mDrawDevice = !mDrawDevice; break;
+            case GLFW_KEY_Q: mRecordData = !mRecordData; break;
+            case GLFW_KEY_1: 
+                mParamIdx = 0;
+                mEnv->SetParamState(mParamSet[0]); break;
+            case GLFW_KEY_2: 
+                mParamIdx = 1;
+                mEnv->SetParamState(mParamSet[1]); break;
+            case GLFW_KEY_3: 
+                mParamIdx = 2;
+                mEnv->SetParamState(mParamSet[2]); break;
+            case GLFW_KEY_4: 
+                mParamIdx = 3;
+                mEnv->SetParamState(mParamSet[3]); break;
+            case GLFW_KEY_5: 
+                mParamIdx = 4;
+                mEnv->SetParamState(mParamSet[4]); break;
+            case GLFW_KEY_6: 
+                mParamIdx = 5;
+                mEnv->SetParamState(mParamSet[5]); break;
             default: break;
         }
     }

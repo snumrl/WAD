@@ -58,6 +58,8 @@ public:
 	void Update();
 	void SetFocus();	
 
+	void RecordData();
+
 	void Draw();
 	void DrawSimFrame();
     void DrawUiFrame();
@@ -158,12 +160,20 @@ private:
 	bool isDrawCharacter, isDrawDevice, isDrawTarget, isDrawReference;
 	bool isFirstUImanager;
 	bool mDrawCoordinate;
+	bool mRecordData;
 
 	bool mLegend;
 	int mComparePersonIdx;
 
 	double mPhaseRatio;
 	float mLpAlpha = 1.0;
+	int mParamIdx;	
+
+	Eigen::VectorXd mParamCnt;
+	Eigen::VectorXd mParamVel;
+	Eigen::VectorXd mParamStride;
+	Eigen::VectorXd mParamCadence;
+	Eigen::VectorXd mParamEnergy;
 
 	std::map<std::string, double> perfStats;
 	std::map<std::string, std::pair<double,double>> mJointAngleMinMax;
@@ -171,6 +181,8 @@ private:
 	std::map<std::string, std::pair<double,double>> mJointMomentMinMax;
 	std::map<std::string, std::pair<double,double>> mAdaptiveParams_Char;
 	std::map<std::string, std::pair<double,double>> mAdaptiveParams_Device;
+
+	std::vector<Eigen::VectorXd> mParamSet;
 
 	ImVec4 mUiBackground;	 	
 

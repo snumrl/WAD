@@ -599,7 +599,8 @@ GetReward()
     if(mCycleTorqueErr != 0.0){
         torque_err = mCycleTorqueErr;
         reward = exp(-err_scale * torque_scale * torque_err);        
-        mCycleTorqueErr = 0.0;
+        mCycleTorqueErrPrev = mCycleTorqueErr;
+        mCycleTorqueErr = 0.0;        
     }
 
     return reward;
