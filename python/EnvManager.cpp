@@ -422,6 +422,48 @@ GetMaxV()
 	return toNumPyArray(mEnvs[0]->GetMaxV());
 }
 
+bool
+EnvManager::
+isEndAnalysisPeriod(int id)
+{
+	return mEnvs[id]->isEndAnalysisPeriod();
+}
+
+bool
+EnvManager::
+isAnalysisPeriod(int id)
+{
+	return mEnvs[id]->isAnalysisPeriod();
+}
+
+double
+EnvManager::
+GetVelocity(int id)
+{
+	return mEnvs[id]->GetCharacter()->GetCurVelocity();
+}
+
+double
+EnvManager::
+GetStride(int id)
+{
+	return mEnvs[id]->GetCharacter()->GetJointDatas()->GetStrideRight();
+}
+
+double
+EnvManager::
+GetCadence(int id)
+{
+	return mEnvs[id]->GetCharacter()->GetJointDatas()->GetCadenceRight();
+}
+
+double
+EnvManager::
+GetTorqueEnergy(int id)
+{
+	return mEnvs[id]->GetCharacter()->GetJointDatas()->GetTorqueEnergyPrev();
+}
+
 PYBIND11_MODULE(pywad, m){
 	py::class_<EnvManager>(m, "EnvManager")
 		.def(py::init<std::string, int>())
@@ -469,5 +511,11 @@ PYBIND11_MODULE(pywad, m){
 		.def("GetNumParamState_Char", &EnvManager::GetNumParamState_Char)
 		.def("GetNumParamState_Device", &EnvManager::GetNumParamState_Device)
 		.def("GetMinV", &EnvManager::GetMinV)
-		.def("GetMaxV", &EnvManager::GetMaxV);
+		.def("GetMaxV", &EnvManager::GetMaxV)
+		.def("isEndAnalysisPeriod", &EnvManager::isEndAnalysisPeriod)
+		.def("isAnalysisPeriod", &EnvManager::isAnalysisPeriod)
+		.def("GetVelocity", &EnvManager::GetVelocity)
+		.def("GetStride", &EnvManager::GetStride)
+		.def("GetCadence", &EnvManager::GetCadence)
+		.def("GetTorqueEnergy", &EnvManager::GetTorqueEnergy);
 }

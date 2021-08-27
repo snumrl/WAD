@@ -69,6 +69,14 @@ public:
 	py::array_t<float> GetMinV();
 	py::array_t<float> GetMaxV();
 
+	bool isAnalysisPeriod(int id);
+	bool isEndAnalysisPeriod(int id);
+
+	double GetVelocity(int id);
+	double GetStride(int id);
+	double GetCadence(int id);
+	double GetTorqueEnergy(int id);
+
 private:
 	std::vector<WAD::Environment*> mEnvs;
 	int mNumEnvs;

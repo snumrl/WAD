@@ -370,12 +370,14 @@ SetMotionFrames()
 					if(p[idx+2] > 0)
 						p[idx+2] *= 0.7;
 					else
-						p[idx+2] *= 0.3;
+						p[idx+2] *= 0.1;
  
+					p[idx+1] += 0.02;
 					if(p[idx+1] < 0)
-						p[idx+1] *= 0.7;
-					else
-						p[idx+1] *= 1.2;
+						p[idx+1] *= 0.2;
+					
+					if(p[idx+3] < 0)
+						p[idx+3] *= 0.1; 
 				}
 			}
 			else if(jn->getType()=="BallJoint"){
@@ -387,8 +389,8 @@ SetMotionFrames()
 
 				if(jointName == "Spine"){
 					p[idx] -= 0.06;
-					// p[idx] += 0.25; // old man
-				}
+					// p[idx] += 0.25; // old man					
+ 				}
 
 				if(jointName == "Torso"){
 					// p[idx] += 0.3; // old man
@@ -400,7 +402,7 @@ SetMotionFrames()
 					if(p[idx+2] > 0)
 						p[idx+2] *= 0.3;
 					else 
-						p[idx+2] *= 0.5;
+						p[idx+2] *= 0.6;
 				}
 
 				// if(jointName == "ShoulderL" || jointName == "ShoulderR")
@@ -413,7 +415,8 @@ SetMotionFrames()
 					p[idx+2] += 0.05;
 
 				if(jointName == "FemurL"){
-					// p[idx+1] -= 0.1;
+					if(p[idx+1] > 0)
+						p[idx+1] *= 0.1;
 					p[idx+2] *= 0.4;					
 					// p[idx+2] += 0.04;
 				}				

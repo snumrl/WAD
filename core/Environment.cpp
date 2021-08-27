@@ -552,4 +552,29 @@ GetMaxV()
 	return max_v;
 }
 
+bool 
+Environment::
+isAnalysisPeriod()
+{
+	double time = mWorld->getTime();
+
+	if(time > 3.0 && time < 8.0)
+		return true;
+	else
+		return false;
 }
+
+bool
+Environment::
+isEndAnalysisPeriod()
+{
+	double time = mWorld->getTime();
+
+	if(time > 8.0)
+		return true;
+	else 
+		return false;
+}
+
+}
+

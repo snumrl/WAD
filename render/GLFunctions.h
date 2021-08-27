@@ -6,6 +6,12 @@
 #include <Eigen/Geometry>
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <vector>
+#include "dart/external/lodepng/lodepng.h"
+#include "dart/common/Console.hpp"
 
 namespace GUI
 {
@@ -43,7 +49,7 @@ namespace GUI
 	void DrawGround(int com_x, int com_z, double ground_height);
 	void DrawCircularArrow3D(const Eigen::Isometry3d &trans, double deg, double R, double r1, double r2, double h);
 
-	void Draw2DCircle(const Eigen::Vector3d &origin, const Eigen::Vector3d &normal, const Eigen::Vector3d &up, double R, int segment = 30);
+	void Draw2DCircle(const Eigen::Vector3d &origin, const Eigen::Vector3d &normal, const Eigen::Vector3d &up, double R, int segment = 30);	
 };
 
 #endif

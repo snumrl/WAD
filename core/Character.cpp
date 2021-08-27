@@ -1399,14 +1399,14 @@ GetReward_Character_Imitation()
 		double w_rot = 1.0;
 		double w_pos = 1.0;
 		if(ees[i]->getName() == "Head"){
-			w_rot = 0.5;
-			w_pos = 0.5;
+			w_rot = 0.8;
+			w_pos = 0.8;
 		}
 		// if(ees[i]->getName() == "Pelvis")
 		// 	w = 0.3;
 		if(ees[i]->getName() == "TalusR" || ees[i]->getName() == "TalusL"){
-			w_rot = 0.5;
-			w_pos = 0.5;
+			w_rot = 0.2;
+			w_pos = 0.2;
 		}
 		// if(ees[i]->getName() == "HandR" || ees[i]->getName() == "HandL")
 		// 	w = 0.1;
@@ -1458,7 +1458,7 @@ GetReward_Character_Efficiency()
 
 	double r_EnergyMin = 1.0;
 	r_EnergyMin = this->GetReward_Energy();
-	r_EnergyMin *= 30.0;
+	r_EnergyMin *= 20.0;
 
 	// if(mWorld->getTime() < mTimeOffset)
 	// 	return std::make_pair(1.0, 1.0 * r_EnergyMin);

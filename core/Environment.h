@@ -84,6 +84,9 @@ public:
 	Eigen::VectorXd GetMinV();
 	Eigen::VectorXd GetMaxV();
 
+	bool isAnalysisPeriod();
+	bool isEndAnalysisPeriod(); 
+
 private:
 	WorldPtr mWorld;
 	SkeletonPtr mGround;

@@ -59,6 +59,7 @@ public:
 	void SetFocus();	
 
 	void RecordData();
+	bool Screenshot();
 
 	void Draw();
 	void DrawSimFrame();
