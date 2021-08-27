@@ -185,6 +185,7 @@
         "core": "cpp",
         "strstream": "cpp",
         "cfenv": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "databasepager": "cpp"
     }
 }

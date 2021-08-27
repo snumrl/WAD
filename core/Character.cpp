@@ -1399,14 +1399,14 @@ GetReward_Character_Imitation()
 		double w_rot = 1.0;
 		double w_pos = 1.0;
 		if(ees[i]->getName() == "Head"){
-			w_rot = 2.0;
+			w_rot = 0.5;
 			w_pos = 0.5;
 		}
 		// if(ees[i]->getName() == "Pelvis")
 		// 	w = 0.3;
 		if(ees[i]->getName() == "TalusR" || ees[i]->getName() == "TalusL"){
-			w_rot = 0.3;
-			w_pos = 0.3;
+			w_rot = 0.5;
+			w_pos = 0.5;
 		}
 		// if(ees[i]->getName() == "HandR" || ees[i]->getName() == "HandL")
 		// 	w = 0.1;
@@ -1559,13 +1559,13 @@ GetReward_Pose()
 	
 	mSkeleton->setPositions(p_reward);
 	mSkeleton->computeForwardKinematics(true, true, false);
-	
+
 	dart::dynamics::BodyNode* root_ref = mSkeleton->getRootBodyNode();
 	Eigen::Isometry3d cur_root_inv = root_ref->getWorldTransform().inverse();
 
 	Eigen::VectorXd root_rot_ref = Utils::QuaternionToAxisAngle(Eigen::Quaterniond((root_ref->getWorldTransform()).linear()));
 	Eigen::VectorXd head_ref = Eigen::VectorXd::Zero(4);
-
+	
 	// pose_ref.resize((num_ee)*3);
 	pose_ref.resize((num_ee)*6);
 	for(int i=0;i<num_ee;i++)
