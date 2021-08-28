@@ -1399,8 +1399,8 @@ GetReward_Character_Imitation()
 		double w_rot = 1.0;
 		double w_pos = 1.0;
 		if(ees[i]->getName() == "Head"){
-			w_rot = 0.8;
-			w_pos = 0.8;
+			w_rot = 1.0;
+			w_pos = 0.5;
 		}
 		// if(ees[i]->getName() == "Pelvis")
 		// 	w = 0.3;
@@ -1458,7 +1458,7 @@ GetReward_Character_Efficiency()
 
 	double r_EnergyMin = 1.0;
 	r_EnergyMin = this->GetReward_Energy();
-	r_EnergyMin *= 20.0;
+	r_EnergyMin *= 30.0;
 
 	// if(mWorld->getTime() < mTimeOffset)
 	// 	return std::make_pair(1.0, 1.0 * r_EnergyMin);
@@ -1609,7 +1609,7 @@ GetReward_Pose()
 
 	double err_scale = 1.0;
 
-	double pose_scale = 0.2;
+	double pose_scale = 0.4;
 	double head_scale = 5.0;
 	double root_scale = 1.0;
 
@@ -1955,8 +1955,8 @@ SetDesiredTorques()
 	p_des.tail(mTargetPositions.rows() - mRootJointDof) += mAction.segment(0,mNumActiveDof);
 	mDesiredTorque = this->GetSPDForces(p_des);
 	
-	if(mDesiredTorquePrev.norm() != 0)
-		mDesiredTorque = 0.2*mDesiredTorque + 0.8*mDesiredTorquePrev;
+	// if(mDesiredTorquePrev.norm() != 0)
+	// 	mDesiredTorque = 0.2*mDesiredTorque + 0.8*mDesiredTorquePrev;
 
 	for(int i=0; i<mDesiredTorque.size(); i++){
 		mDesiredTorque[i] = Utils::Clamp(mDesiredTorque[i], -mMaxForces[i], mMaxForces[i]);
