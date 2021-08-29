@@ -1400,7 +1400,7 @@ GetReward_Character_Imitation()
 		double w_pos = 1.0;
 		if(ees[i]->getName() == "Head"){
 			w_rot = 1.0;
-			w_pos = 0.5;
+			w_pos = 1.0;
 		}
 		// if(ees[i]->getName() == "Pelvis")
 		// 	w = 0.3;
@@ -1412,7 +1412,9 @@ GetReward_Character_Imitation()
 		// 	w = 0.1;
 
 		ee_rot_diff[i] = w_rot * Eigen::AngleAxisd(ref_ee_r[i].inverse() * cur_ee_r[i]).angle();
-		ee_pos_diff[i] = w_pos * (ref_ee_p[i] - cur_ee_p[i]).norm();
+		Eigen::Vector3d p = (ref_ee_p[i] - cur_ee_p[i]);
+		p[1] = 0;
+		ee_pos_diff[i] = w_pos * (p).norm();
 	}
 
 	//Angle Difference
@@ -1458,7 +1460,7 @@ GetReward_Character_Efficiency()
 
 	double r_EnergyMin = 1.0;
 	r_EnergyMin = this->GetReward_Energy();
-	r_EnergyMin *= 30.0;
+	r_EnergyMin *= 20.0;
 
 	// if(mWorld->getTime() < mTimeOffset)
 	// 	return std::make_pair(1.0, 1.0 * r_EnergyMin);
