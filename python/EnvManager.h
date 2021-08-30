@@ -76,6 +76,8 @@ public:
 	double GetStride(int id);
 	double GetCadence(int id);
 	double GetTorqueEnergy(int id);
+	double GetStanceRatioRight(int id);
+	double GetGaitTimeRight(int id);
 
 private:
 	std::vector<WAD::Environment*> mEnvs;

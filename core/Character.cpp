@@ -405,18 +405,18 @@ Initialize_Forces()
 
 	mDefaultForces <<
 	     0, 0, 0, 0, 0, 0,   //pelvis
-	     200, 100, 100,      //Femur L
+	     250, 150, 150,      //Femur L
 	     100,                //Tibia L
 	     150, 100, 100,      //Talus L
 	     50, 50,             //Thumb, Pinky L
-	     200, 100, 100,      //Femur R
+	     250, 150, 150,      //Femur R
 	     100,                //Tibia R
 	     150, 100, 100,      //Talus R
 	     50, 50,             //Thumb, Pinky R
 	     150, 150, 150,      //Spine
 	     150, 150, 150,      //Torso
-	     50, 50, 50,         //Neck
-	     50, 50, 50;         //Head
+	     100, 100, 100,         //Neck
+	     100, 100, 100;         //Head
 	    //  50, 50, 50,         //Shoulder L
 	    //  50, 50, 50,         //Arm L
 	    //  30,                 //ForeArm L
@@ -544,8 +544,8 @@ SetPDParameters()
 		100, 100,
 		500, 500, 500,
 		500, 500, 500,
-		100, 100, 100,
-		100, 100, 100;
+		300, 300, 300,
+		200, 200, 200;
 		// 400, 400, 400,
 		// 300, 300, 300,
 		// 300,
@@ -566,8 +566,8 @@ SetPDParameters()
 		10, 10,
 		50, 50, 50,
 		50, 50, 50,
-		10, 10, 10,
-		10, 10, 10;
+		30, 30, 30,
+		20, 20, 20;
 		// 40, 40, 40,
 		// 30, 30, 30,
 		// 30,
@@ -1399,8 +1399,8 @@ GetReward_Character_Imitation()
 		double w_rot = 1.0;
 		double w_pos = 1.0;
 		if(ees[i]->getName() == "Head"){
-			w_rot = 1.0;
-			w_pos = 0.5;
+			w_rot = 0.8;
+			w_pos = 0.8;
 		}
 		// if(ees[i]->getName() == "Pelvis")
 		// 	w = 0.3;
@@ -1414,6 +1414,7 @@ GetReward_Character_Imitation()
 		ee_rot_diff[i] = w_rot * Eigen::AngleAxisd(ref_ee_r[i].inverse() * cur_ee_r[i]).angle();
 		Eigen::Vector3d p = (ref_ee_p[i] - cur_ee_p[i]);
 		p[1] = 0;
+		
 		ee_pos_diff[i] = w_pos * (p).norm();
 	}
 
@@ -1549,7 +1550,8 @@ double
 Character::
 GetReward_Pose()
 {
-	Eigen::VectorXd pose_cur, pose_ref;
+	Eigen::VectorXd pos_cur, pos_ref;
+	Eigen::VectorXd ori_cur, ori_ref;
 
 	int num_ee = mEndEffectors.size();
 	Eigen::VectorXd p_save = mSkeleton->getPositions();
@@ -1569,16 +1571,15 @@ GetReward_Pose()
 	Eigen::VectorXd head_ref = Eigen::VectorXd::Zero(4);
 	
 	// pose_ref.resize((num_ee)*3);
-	pose_ref.resize((num_ee)*6);
+	pos_ref.resize((num_ee)*3);
+	ori_ref.resize((num_ee)*3);
 	for(int i=0;i<num_ee;i++)
 	{
 		Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
 		Eigen::Vector3d rot = Utils::QuaternionToAxisAngle(Eigen::Quaterniond(transform.linear()));
 
-		// if(i==2)
-		// 	head_ref.segment<3>(0) << rot;
-		// else
-		pose_ref.segment<6>(6*i) << rot, transform.translation();		
+		pos_ref.segment<3>(3*i) << transform.translation();		
+		ori_ref.segment<3>(3*i) << rot;		
 	}
 
 	head_ref[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] - root_ref->getCOM()[1]);
@@ -1595,7 +1596,8 @@ GetReward_Pose()
 	Eigen::VectorXd head_cur = Eigen::VectorXd::Zero(4);
 
 	// pose_cur.resize((num_ee)*3);
-	pose_cur.resize((num_ee)*6);
+	pos_cur.resize((num_ee)*3);
+	ori_cur.resize((num_ee)*3);
 	for(int i=0;i<num_ee;i++)
 	{
 		Eigen::Isometry3d transform = cur_root_inv * mEndEffectors[i]->getWorldTransform();
@@ -1604,33 +1606,32 @@ GetReward_Pose()
 		// if(i==2)
 		// 	head_cur.segment<3>(0) << rot;
 		// else
-		pose_cur.segment<6>(6*i) << rot, transform.translation();		
+		ori_cur.segment<3>(3*i) << rot;
+		pos_cur.segment<3>(3*i) << transform.translation();		
 	}
 
 	head_cur[3] = (mSkeleton->getBodyNode("Head")->getCOM()[1] - root_cur->getCOM()[1]);
 
 	double err_scale = 1.0;
 
-	double pose_scale = 0.4;
+	double pos_scale = 0.4;
+	double ori_scale = 0.4;
 	double head_scale = 5.0;
 	double root_scale = 1.0;
 
-	double pose_err = (pose_cur-pose_ref).norm();
+	double pos_err = (pos_cur-pos_ref).norm();
+	double ori_err = (ori_cur-ori_ref).norm();
 	double head_err = (head_cur-head_ref).norm();
 	double root_err = (root_rot_cur-root_rot_ref).norm();
 
-	double pose_reward = exp(-1.0 * pose_scale * pose_err);
+	double pos_reward = exp(-1.0 * pos_scale * pos_err);
+	double ori_reward = exp(-1.0 * ori_scale * ori_err);
 	double head_reward = exp(-1.0 * head_scale * head_err);
 	double root_reward = exp(-1.0 * root_scale * root_err);
 
-	// std::cout << "pose err : " << pose_err << std::endl;
-	// std::cout << "pose rew : " << pose_reward << std::endl;
-	// std::cout << "head err : " << head_err << std::endl;
-	// std::cout << "head rew : " << head_reward << std::endl;
-	// std::cout << std::endl;
-
-	// double reward = pose_reward * head_reward;
-	double reward = pose_reward;
+	double reward = pos_reward * ori_reward;
+	// std::cout << "pos : " << pos_reward << std::endl;
+	// std::cout << "ori : " << ori_reward << std::endl;
 	
 	mSkeleton->setPositions(p_save);
 	mSkeleton->setVelocities(v_save);

@@ -464,6 +464,20 @@ GetTorqueEnergy(int id)
 	return mEnvs[id]->GetCharacter()->GetJointDatas()->GetTorqueEnergyPrev();
 }
 
+double
+EnvManager::
+GetStanceRatioRight(int id)
+{
+	return mEnvs[id]->GetCharacter()->GetJointDatas()->GetStanceRatioRight();
+}
+
+double
+EnvManager::
+GetGaitTimeRight(int id)
+{
+	return mEnvs[id]->GetCharacter()->GetJointDatas()->GetGaitTimeRight();
+}
+
 PYBIND11_MODULE(pywad, m){
 	py::class_<EnvManager>(m, "EnvManager")
 		.def(py::init<std::string, int>())
@@ -517,5 +531,7 @@ PYBIND11_MODULE(pywad, m){
 		.def("GetVelocity", &EnvManager::GetVelocity)
 		.def("GetStride", &EnvManager::GetStride)
 		.def("GetCadence", &EnvManager::GetCadence)
-		.def("GetTorqueEnergy", &EnvManager::GetTorqueEnergy);
+		.def("GetTorqueEnergy", &EnvManager::GetTorqueEnergy)
+		.def("GetStanceRatioRight", &EnvManager::GetStanceRatioRight)
+		.def("GetGaitTimeRight", &EnvManager::GetGaitTimeRight);
 }

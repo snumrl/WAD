@@ -25,6 +25,8 @@ public:
     void SetPhaseState(int stateLeft, Eigen::Vector3d comLeft, int stateRight, Eigen::Vector3d comRight, double time);
     void SetPhaseStateLeft(int phaseState, Eigen::Vector3d com, double time);
     void SetPhaseStateRight(int phaseState, Eigen::Vector3d com, double time);  
+
+    void SetPhaseRatioRight();
     
     void SetTorques(const Eigen::VectorXd& torques);
     void SetTorques(std::string name, double torque);
@@ -44,6 +46,10 @@ public:
 
     void ChangePhaseTorques();
     void ChangePhaseMoments();
+
+    double GetStanceRatioRight(){ return mStanceRatioRight; }
+    double GetSwingRatioRight(){ return mSwingRatioRight; }
+    double GetGaitTimeRight(){ return mGaitTimeRight; }
 
     double GetStrideRight(){ return mStrideRight; }
     double GetStrideLeft(){ return mStrideLeft; }
@@ -96,9 +102,12 @@ private:
     double mStrideLeft, mStrideRight;
     double mCadenceLeft, mCadenceRight;
 
-    double mTimeLeft, mTimeLeftPrev;
-    double mTimeRight, mTimeRightPrev;
-    
+    double mTimeIcRight, mTimeIcRightPrev;
+    double mTimeToRight, mTimeToRightPrev;
+
+    double mStanceRatioRight, mSwingRatioRight;
+    double mGaitTimeRight;
+
     Eigen::Vector3d mComLeft, mComLeftPrev;
     Eigen::Vector3d mComRight, mComRightPrev;
 

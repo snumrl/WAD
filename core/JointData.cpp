@@ -37,10 +37,14 @@ Initialize(const SkeletonPtr& skel, int simHz, int conHz)
     mCadenceLeft = 0.0;
     mCadenceRight = 0.0;
 
-    mTimeLeft = 0.0;
-    mTimeLeftPrev = 0.0;
-    mTimeRight = 0.0;
-    mTimeRightPrev = 0.0;
+    mTimeIcRight = 0.0;
+    mTimeIcRightPrev = 0.0;
+    
+    mTimeToRight = 0.0;
+    mTimeToRightPrev = 0.0;
+
+    mStanceRatioRight = 0.0;
+    mGaitTimeRight = 0.0;
 
     mComLeft  = Eigen::Vector3d::Zero();
     mComRight = Eigen::Vector3d::Zero();
@@ -223,10 +227,14 @@ Reset()
     for(auto iter = mAnglesGaitPhaseRightPrev.begin(); iter != mAnglesGaitPhaseRightPrev.end(); iter++)
         (iter->second).clear();
 
-    mTimeLeft = 0.0;
-    mTimeLeftPrev = 0.0;
-    mTimeRight = 0.0;
-    mTimeRightPrev = 0.0;
+    mTimeIcRight = 0.0;
+    mTimeIcRightPrev = 0.0;
+
+    mTimeToRight = 0.0;
+    mTimeToRightPrev = 0.0;
+
+    mStanceRatioRight = 0.0;
+    mGaitTimeRight = 0.0;
 
     mComLeft.setZero();
     mComRight.setZero();
@@ -281,25 +289,45 @@ SetPhaseStateRight(int phaseState, Eigen::Vector3d com, double time)
     {
         if(mPhaseStateRight == 1)
         {
-            mTimeRight = time;
+            // mTimeRightPrev = mTimeRight;
+            mTimeIcRightPrev = mTimeIcRight;
+            mComRightPrev = mComRight;
+
+            mTimeIcRight = time;
             mComRight = com;
 
             this->ChangePhaseTorques();
             this->ChangePhaseMoments();
+            this->SetPhaseRatioRight();
 
             for(auto a : mAnglesGaitPhaseRight)
             {
                 mAnglesGaitPhaseRightPrev[a.first].clear();
                 mAnglesGaitPhaseRightPrev[a.first] = a.second;
                 mAnglesGaitPhaseRight[a.first].clear();                
-            }
-
-            mTimeRightPrev = mTimeRight;
-            mComRightPrev = mComRight;  
+            }            
+        }
+        else if(mPhaseStateRight == 0)
+        {
+            mTimeToRightPrev = mTimeToRight;
+            
+            mTimeToRight = time;
         }
     }    
 
     mPhaseStateRightPrev = mPhaseStateRight;
+}
+
+void
+JointData::
+SetPhaseRatioRight()
+{
+    double stanceTime = mTimeToRight - mTimeIcRightPrev;
+    double swingTime = mTimeIcRight - mTimeToRight;
+    
+    mGaitTimeRight = stanceTime + swingTime;
+    mStanceRatioRight = stanceTime / mGaitTimeRight;
+    mSwingRatioRight = swingTime / mGaitTimeRight;
 }
 
 void
@@ -312,7 +340,7 @@ ChangePhaseTorques()
     }
     else{
         mStrideRight = (mComRight - mComRightPrev).norm();
-        mCadenceRight = 60.0/(mTimeRight - mTimeRightPrev);
+        mCadenceRight = 60.0/(mTimeIcRight - mTimeIcRightPrev)*2.0;
     }
 
     if(mOnCycle)

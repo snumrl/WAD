@@ -37,7 +37,7 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import argparse
 import os
 
-MyData = namedtuple('Data',('reward','velocity','stride', 'cadence', 'torqueEnergy'))
+MyData = namedtuple('Data',('reward','velocity','stride', 'cadence', 'torqueEnergy', 'stanceRatio', 'gaitTime'))
 class DataBuffer(object):
 	def __init__(self):
 		self.data = []
@@ -50,7 +50,7 @@ class DataBuffer(object):
 	def Size(self):
 		return len(self.data)
 
-PARAM_DIV_NUM = 7
+PARAM_DIV_NUM = 11
 PARAM_DIM = 1
 class PPO(object):
 	def __init__(self,meta_file):
@@ -77,7 +77,7 @@ class PPO(object):
 		if use_cuda:
 			self.model.cuda()
 
-		self.analysisDatasize = 64*self.num_slaves
+		self.analysisDatasize = 300*self.num_slaves
 		self.analysisData = [None]*self.num_slaves
 		for j in range(self.num_slaves):
 			self.analysisData[j] = DataBuffer()
@@ -99,8 +99,8 @@ class PPO(object):
 			if self.use_device:
 				self.num_paramstate_device = self.env.GetNumParamState_Device()
 			
-			min_v = self.env.GetMinV()
-			max_v = self.env.GetMaxV()
+			min_v = np.array(self.env.GetMinV())
+			max_v = np.array(self.env.GetMaxV())
 			param_num = len(min_v)
 			param_idx = []
 			for i in range(param_num):
@@ -108,12 +108,19 @@ class PPO(object):
 					param_idx.append(i)
 
 			self.params = []
+			self.params_real = []
 			self.param_div_num = PARAM_DIV_NUM
-
-			param_mul = 2.0/self.param_div_num
+			
+			mul_v = (max_v-min_v)/(self.param_div_num-1)
+			for i in range(self.param_div_num):
+				params = min_v + i*mul_v
+				params_ = params.tolist()
+				self.params_real.append(params_)
+			
+			param_mul = 2.0/(self.param_div_num-1)
 			param_change_num = len(param_idx)
 			if param_change_num == 1:
-				for i in range(self.param_div_num + 1):
+				for i in range(self.param_div_num):
 					params = []
 					for j in range(self.num_paramstate):
 						if j == param_idx[0]:
@@ -123,17 +130,22 @@ class PPO(object):
 					self.params.append(params)
 
 			if param_change_num == 2:
-				for i in range(self.param_div_num + 1):
-					for j in range(self.param_div_num + 1):
+				for i in range(self.param_div_num):
+					for j in range(self.param_div_num):
 						params = []
+						params_real = []
 						for k in range(self.num_paramstate):
 							if k == param_idx[0]:
 								params.append(-1 + i*param_mul)
+								params_real.append(min_v[k] + i*mul_v[k])
 							elif k == param_idx[1]:
 								params.append(-1 + j*param_mul)
+								params_real.append(min_v[k] + j*mul_v[k])
 							else:
 								params.append(0)
+								params.real.append(min_v[k])
 						self.params.append(params)
+						self.params_real.append(params_real)
 
 			# print("params : ", self.params)
 	
@@ -150,6 +162,9 @@ class PPO(object):
 		stride = [None]*self.num_slaves
 		cadence = [None]*self.num_slaves
 		torqueEnergy = [None]*self.num_slaves
+		reward = [None]*self.num_slaves
+		stanceRatio = [None]*self.num_slaves
+		gaitTime = [None]*self.num_slaves
 		
 		states = self.env.GetStates()
 
@@ -158,7 +173,7 @@ class PPO(object):
 				self.env.SetParamState(j, self.params[j])
 		
 		counter = 0
-		local_step = 0
+		local_step = [0]*self.num_slaves
 		while True:
 			counter += 1
 			if counter%10 == 0:
@@ -188,38 +203,66 @@ class PPO(object):
 					nan_occur = True
 				elif self.env.IsEndOfEpisode(j) is False:
 					terminated_state = False
-					rewards[j] = self.env.GetReward(j)
-					reward = rewards[j][0]
-					if (reward > 0.5 && self.env.isAnalysisPeriod(j):
+					# rewards[j] = self.env.GetReward(j)
+					# reward = rewards[j][0]
+					reward[j] = self.env.GetReward(j)[0] 					
+					if (reward[j] > 0.5 and self.env.isAnalysisPeriod(j)):
 						velocity[j] = self.env.GetVelocity(j)
 						stride[j] = self.env.GetStride(j)
 						cadence[j] = self.env.GetCadence(j)
 						torqueEnergy[j] = self.env.GetTorqueEnergy(j)
+						stanceRatio[j] = self.env.GetStanceRatioRight(j)
+						gaitTime[j] = self.env.GetGaitTimeRight(j)
 
-						self.analysisData[j].Push(reward, velocity[j], stride[j], cadence[j], torqueEnergy[j])	
-					local_step += 1
 
-				if self.env.isEndAnalysisPeriod():
-					self.totalData.append(self.analysisData[j])
+						self.analysisData[j].Push(reward[j], velocity[j], stride[j], cadence[j], torqueEnergy[j], stanceRatio[j], gaitTime[j])	
+						local_step[j] += 1
+
+				if self.env.isEndAnalysisPeriod(j) or terminated_state or nan_occur:
+					# self.totalData.append(self.analysisData[j])
 					self.env.Reset(True,j)
 					if self.use_adaptive_sampling:
 						self.env.SetParamState(j, self.params[j])
-					
-			if local_step >= self.analysisDatasize:
+
+			isDone = True
+			for j in range(self.num_slaves):
+				if local_step[j] < self.analysisDatasize:
+					isDone = False
+			
+			if isDone:
 				break
 
 			states = self.env.GetStates()
 			states = self.rms.apply(states)
 
 	def GaitAnalysis(self):
-		for epi in self.totalData:
-			data = epi.GetData()
+
+		f = open("analysis.txt", 'w')
+		f.write("idx p0 p1 p2 p3 p4 r v s c te sr gt" + "\n")
+		for i in range(self.num_slaves):
+			data = self.analysisData[i].GetData()
 			size = len(data)
-			if size == 0:
-				continue
-			
-			reward, velocity, stride, cadence, torqueEnergy = zip(*data)
-						
+
+			reward, velocity, stride, cadence, torqueEnergy, stanceRatio, gaitTime = zip(*data)
+			r = np.mean(np.array(reward))
+			v = np.mean(np.array(velocity))
+			s = np.mean(np.array(stride))
+			c = np.mean(np.array(cadence))
+			te = np.mean(np.array(torqueEnergy))
+			sr = np.mean(np.array(stanceRatio))
+			gt = np.mean(np.array(gaitTime))
+			st = sr * gt #stance time
+
+			f.write("%d %f %f %f %f %f " % (i, self.params_real[i][0], self.params_real[i][1], self.params_real[i][2], self.params_real[i][3], self.params_real[i][4]))
+			f.write("%f %f %f %f %f %f %f %f\n" % (r, v, s, c, te, sr, gt, st))
+			# print(i, " reward : ", np.mesan(np.array(reward)))
+			# print(i, " velocity : ", np.mean(np.array(velocity)))
+			# print(i, " strides : ", np.mean(np.array(stride)))
+			# print(i, " cadence : ", np.mean(np.array(cadence)))
+			# print(i, " energy : ", np.mean(np.array(torqueEnergy)))
+			# print("\n")
+
+		f.close()
 
 if __name__=="__main__":
 	parser = argparse.ArgumentParser()
@@ -253,7 +296,6 @@ if __name__=="__main__":
 			print("provide muscle_nn.pt")
 
 	print('num states: {}, num actions: {}'.format(ppo.env.GetNumState(),ppo.env.GetNumAction()))
-	# ppo.GaitGenerate()
-	# ppo.GaitAnalysis()
+	ppo.GaitGenerate()
+	ppo.GaitAnalysis()
 	# ppo.Plot()
-
