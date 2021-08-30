@@ -337,6 +337,121 @@ SetMotionTransform()
 	mCycleOffset = T1.translation() + 0.01*(mMotions[1]-mMotions[0]).segment<3>(0) - T0.translation();	
 }
 
+// void
+// BVH::
+// SetMotionFrames()
+// {
+// 	int dof = mSkeleton->getNumDofs();
+// 	mMotionFrames.resize(mNumTotalFrames);
+// 	mMotionFramesNonCyclic.resize(1000);
+// 	for(int i=0; i<mNumTotalFrames; i++)
+// 	{
+// 		Eigen::VectorXd m_t = mMotions[i];
+// 		for(auto& bn: mMap)
+// 			bn.second->Set(m_t);
+
+// 		Eigen::VectorXd p = Eigen::VectorXd::Zero(dof);
+// 		for(auto ss : mBVHMap)
+// 		{
+// 			BodyNode* bn = mSkeleton->getBodyNode(ss.first);
+// 			Eigen::Matrix3d R = this->Get(ss.second);
+// 			Joint* jn = bn->getParentJoint();
+
+// 			int idx = jn->getIndexInSkeleton(0);
+// 			std::string jointName = jn->getName();
+// 			if(jn->getType()=="FreeJoint")
+// 			{
+// 				Eigen::Isometry3d T;
+// 				T.translation() = 0.01*m_t.segment<3>(0);
+// 				T.linear() = R;
+// 				p.segment<6>(idx) = FreeJoint::convertToPositions(T);
+
+// 				if(jointName == "Pelvis"){
+// 					// if(p[idx+2] > 0)
+// 					// 	p[idx+2] *= 0.8;
+// 					// else
+// 					// 	p[idx+2] *= 0.5;
+ 
+// 					// p[idx+1] += 0.02;
+// 					// if(p[idx+1] < 0)
+// 					// 	p[idx+1] *= 0.2;
+					
+// 					// if(p[idx+3] < 0)
+// 					// 	p[idx+3] *= 0.1; 
+// 				}			
+// 			}
+// 			else if(jn->getType()=="BallJoint"){
+// 				p.segment<3>(idx) = BallJoint::convertToPositions(R);
+
+// 				if(jointName == "Head" || jointName == "Neck"){
+// 					p[idx] -= 0.1;
+// 				}
+
+// 				if(jointName == "Spine"){
+// 					p[idx] -= 0.06;
+// 					// p[idx] += 0.25; // old man
+// 				}
+
+// 				if(jointName == "Torso"){
+// 					// p[idx] += 0.3; // old man
+// 					// p[idx] -= 0.06;
+
+// 					// // if(p[idx+1] > 0)
+// 					// // 	p[idx+1] *= 0.7;
+
+// 					// if(p[idx+2] > 0)
+// 					// 	p[idx+2] *= 0.3;
+// 					// else 
+// 					// 	p[idx+2] *= 0.6;
+// 				}
+
+// 				// if(jointName == "ShoulderL" || jointName == "ShoulderR")
+// 				// 	p[idx] -= 0.3;
+
+// 				if(jointName == "ArmL")
+// 					p[idx+2] -= 0.05;
+
+// 				if(jointName == "ArmR")
+// 					p[idx+2] += 0.05;
+
+// 				// if(jointName == "FemurL"){
+// 				// 	if(p[idx+2] > 0)
+// 				// 		p[idx+2] *= 0.5;
+// 				// 	// p[idx+2] *= 0.4;					
+// 				// 	// // p[idx+2] += 0.04;
+// 				// }				
+										
+// 				// if(jointName == "FemurR"){
+// 				// 	if(p[idx+2 > 0])
+// 				// 		p[idx+2] *= 0.5;
+// 				// 	// p[idx+2] -= 0.02;
+// 				// }				
+// 			}
+// 			else if(jn->getType()=="RevoluteJoint")
+// 			{
+// 				Eigen::Vector3d u = dynamic_cast<RevoluteJoint*>(jn)->getAxis();
+// 				Eigen::Vector3d aa = BallJoint::convertToPositions(R);
+// 				double val;
+// 				if((u-Eigen::Vector3d::UnitX()).norm()<1E-4)
+// 					val = aa[0];
+// 				else if((u-Eigen::Vector3d::UnitY()).norm()<1E-4)
+// 					val = aa[1];
+// 				else
+// 					val = aa[2];
+
+// 				if(val>M_PI)
+// 					val -= 2*M_PI;
+// 				else if(val<-M_PI)
+// 					val += 2*M_PI;
+
+// 				p[idx] = val;						
+// 			}
+// 		}
+// 		mMotionFrames[i] = p;
+// 		mMotionFrames[i][4] -= 0.02;
+// 	}
+// }
+
 void
 BVH::
 SetMotionFrames()
@@ -363,73 +478,61 @@ SetMotionFrames()
 			{
 				Eigen::Isometry3d T;
 				T.translation() = 0.01*m_t.segment<3>(0);
-				T.linear() = R;
+				T.translation()[1] -= 0.05;
+				T.linear() = R; // * 0.6; //Eigen::Matrix3d::Identity();// R * 0.0;
+				
 				p.segment<6>(idx) = FreeJoint::convertToPositions(T);
 
-				if(jointName == "Pelvis"){
-					// if(p[idx+2] > 0)
-					// 	p[idx+2] *= 0.8;
-					// else
-					// 	p[idx+2] *= 0.5;
- 
-					// p[idx+1] += 0.02;
-					// if(p[idx+1] < 0)
-					// 	p[idx+1] *= 0.2;
-					
-					// if(p[idx+3] < 0)
-					// 	p[idx+3] *= 0.1; 
-				}			
 			}
-			else if(jn->getType()=="BallJoint"){
-				p.segment<3>(idx) = BallJoint::convertToPositions(R);
+			else if(jn->getType()=="BallJoint")
+			{
+				Eigen::Vector3d ball_jn;
+				
+				// Motion Retargeting
+				if(jn->getName() == "Torso" || jn->getName() == "Spine"||jn->getName() == "FemurR" ||jn->getName() == "FemurL")
+					R *= 0.6;
 
-				if(jointName == "Head" || jointName == "Neck"){
-					p[idx] -= 0.1;
+
+				ball_jn = BallJoint::convertToPositions(R); 
+
+				if(jn->getName() == "FemurR" ||jn->getName() == "FemurL")
+					ball_jn[0] *= 1.2;
+
+				if(jn->getName() == "Torso" ||jn->getName() == "Spine")
+					ball_jn[0] *= 0.1;
+		
+				if(jn->getName() == "TalusR")
+					ball_jn[1] = 0.1;
+				
+				if(jn->getName() == "TalusL")
+					ball_jn[1] = -0.1;
+		
+
+				
+				if(jn->getName() == "ArmR")
+				{
+					ball_jn[0] *= 1.2;
+					ball_jn[1] *= 1.2;
+					ball_jn[2] = M_PI * 0.42;
 				}
-
-				if(jointName == "Spine"){
-					p[idx] -= 0.06;
-					// p[idx] += 0.25; // old man					
- 				}
-
-				if(jointName == "Torso"){
-					// p[idx] += 0.3; // old man
-					// p[idx] -= 0.06;
-
-					// // if(p[idx+1] > 0)
-					// // 	p[idx+1] *= 0.7;
-
-					// if(p[idx+2] > 0)
-					// 	p[idx+2] *= 0.3;
-					// else 
-					// 	p[idx+2] *= 0.6;
+				if(jn->getName() == "ArmL")
+				{
+					ball_jn[0] *= 1.2;
+					ball_jn[1] *= 1.2;
+					ball_jn[2] = -M_PI * 0.42;
 				}
+		
+				for(int i = 0; i < 3;i++)
+					p[idx + i] = std::clamp(ball_jn[i],  jn->getPositionLowerLimit(i), jn->getPositionUpperLimit(i)); 
 
-				// if(jointName == "ShoulderL" || jointName == "ShoulderR")
-				// 	p[idx] -= 0.3;
-
-				if(jointName == "ArmL")
-					p[idx+2] -= 0.05;
-
-				if(jointName == "ArmR")
-					p[idx+2] += 0.05;
-
-				if(jointName == "FemurL"){
-					// if(p[idx+1] > 0)
-					// 	p[idx+1] *= 0.1;
-					// p[idx+2] *= 0.4;					
-					// // p[idx+2] += 0.04;
-				}				
-										
-				if(jointName == "FemurR"){
-					// p[idx+2] *= 0.4;
-					// p[idx+2] -= 0.02;
-				}				
+			
 			}
 			else if(jn->getType()=="RevoluteJoint")
 			{
-				Eigen::Vector3d u = dynamic_cast<RevoluteJoint*>(jn)->getAxis();
+				
+				Eigen::Vector3d u =dynamic_cast<RevoluteJoint*>(jn)->getAxis();
 				Eigen::Vector3d aa = BallJoint::convertToPositions(R);
+				
 				double val;
 				if((u-Eigen::Vector3d::UnitX()).norm()<1E-4)
 					val = aa[0];
@@ -442,8 +545,11 @@ SetMotionFrames()
 					val -= 2*M_PI;
 				else if(val<-M_PI)
 					val += 2*M_PI;
+				
+				if(jn->getName() == "ForeArmR" || jn->getName() == "ForeArmL")
+					val *= 0.3;
 
-				p[idx] = val;						
+				p[idx] = std::clamp(val, jn->getPositionLowerLimit(0), jn->getPositionUpperLimit(0));
 			}
 		}
 		mMotionFrames[i] = p;
