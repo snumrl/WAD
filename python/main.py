@@ -32,7 +32,7 @@ class EpisodeBuffer(object):
 		self.data = []
 
 	def Push(self, *args):
-		self.data.append(Episode(*args))
+		self.data.append(EpisodeAdaptive(*args))
 	def Pop(self):
 		self.data.pop()
 	def GetData(self):

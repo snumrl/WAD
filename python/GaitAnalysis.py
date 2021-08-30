@@ -50,12 +50,12 @@ class DataBuffer(object):
 	def Size(self):
 		return len(self.data)
 
-PARAM_DIV_NUM = 1
+PARAM_DIV_NUM = 25
 PARAM_DIM = 1
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
-		self.num_slaves = int(math.pow(PARAM_DIV_NUM, PARAM_DIM))
+		self.num_slaves = int(math.pow(PARAM_DIV_NUM+1, PARAM_DIM))
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
 		self.use_device = self.env.UseDevice()
@@ -111,16 +111,16 @@ class PPO(object):
 			self.params_real = []
 			self.param_div_num = PARAM_DIV_NUM
 			
-			mul_v = (max_v-min_v)/(self.param_div_num-1)
-			for i in range(self.param_div_num):
+			mul_v = (max_v-min_v)/(self.param_div_num)
+			for i in range(self.param_div_num+1):
 				params = min_v + i*mul_v
 				params_ = params.tolist()
 				self.params_real.append(params_)
 			
-			param_mul = 2.0/(self.param_div_num-1)
+			param_mul = 2.0/(self.param_div_num)
 			param_change_num = len(param_idx)
 			if param_change_num == 1:
-				for i in range(self.param_div_num):
+				for i in range(self.param_div_num+1):
 					params = []
 					for j in range(self.num_paramstate):
 						if j == param_idx[0]:
@@ -130,8 +130,8 @@ class PPO(object):
 					self.params.append(params)
 
 			if param_change_num == 2:
-				for i in range(self.param_div_num):
-					for j in range(self.param_div_num):
+				for i in range(self.param_div_num+1):
+					for j in range(self.param_div_num+1):
 						params = []
 						params_real = []
 						for k in range(self.num_paramstate):

@@ -1376,10 +1376,10 @@ GetReward_Character_Imitation()
 			w_pos = 0.4;			
 		}
 		
-		// if(ees[i]->getName() == "Pelvis"){
-		// 	w_rot = 0.3;
-		// 	w_pos = 0.3;
-		// }
+		if(ees[i]->getName() == "Pelvis"){
+			w_rot = 0.3;
+			w_pos = 0.3;
+		}
 		
 		if(ees[i]->getName() == "TalusR" || ees[i]->getName() == "TalusL"){
 			w_rot = 0.2;
@@ -1499,7 +1499,7 @@ Character::
 GetReward_Phase()
 {
 	double err_scale = 1.0;
-	double phase_scale = 1.0;
+	double phase_scale = 0.5;
 	double phase_err = 0.0;
 
 	double adapPhase = mAdaptivePhase;
@@ -1592,7 +1592,7 @@ GetReward_Pose()
 	double err_scale = 1.0;
 
 	double pos_scale = 0.4;
-	double ori_scale = 0.4;
+	double ori_scale = 0.8;
 	double head_scale = 5.0;
 	double root_scale = 1.0;
 
