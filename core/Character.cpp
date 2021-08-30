@@ -1400,7 +1400,7 @@ GetReward_Character_Imitation()
 		double w_pos = 1.0;
 		if(ees[i]->getName() == "Head"){
 			w_rot = 1.0;
-			w_pos = 1.0;
+			w_pos = 0.5;
 		}
 		// if(ees[i]->getName() == "Pelvis")
 		// 	w = 0.3;
