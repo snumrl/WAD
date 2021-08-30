@@ -415,8 +415,8 @@ Initialize_Forces()
 	     50, 50,             //Thumb, Pinky R
 	     150, 150, 150,      //Spine
 	     150, 150, 150,      //Torso
-	     100, 100, 100,         //Neck
-	     100, 100, 100;         //Head
+	     100, 100, 100,      //Neck
+	     100, 100, 100;      //Head
 	    //  50, 50, 50,         //Shoulder L
 	    //  50, 50, 50,         //Arm L
 	    //  30,                 //ForeArm L
@@ -745,9 +745,10 @@ SetMuscleTuple()
 	// }
 	// else
 	// {
-	mCurrentMuscleTuple.tau_des = mDesiredTorque.tail(mNumActiveDof);
+	//  mCurrentMuscleTuple.tau_des = mDesiredTorque.tail(mNumActiveDof);
 	// }
 
+	mCurrentMuscleTuple.tau_des = mDesiredTorque.tail(mNumActiveDof);
 	mMuscleTuples.push_back(mCurrentMuscleTuple);
 }
 
@@ -759,10 +760,10 @@ SetMeasure(bool isRender)
 		this->SetTrajectory();
 		this->SetCurVelocity();
 	}
-	this->SetComHistory();
 	this->SetFoot();
 	this->SetContact();
-
+	this->SetComHistory();
+	
 	double phase = mPhase;
 	double frame = mFrame;
 	if(mAdaptiveMotion)
@@ -776,10 +777,11 @@ SetMeasure(bool isRender)
 	mJointDatas->SetPhaseState(mPhaseStateLeft, TalusL, mPhaseStateRight, TalusR, mWorld->getTime());
 	mJointDatas->SetAngles();
 	mJointDatas->SetTorques(mDesiredTorque);
+	mJointDatas->SetMoments(mDesiredMoment);
 	if(mUseDevice){
 		mJointDatas->SetDeviceTorques(mDevice->GetDesiredTorques());
 	}
-	mJointDatas->SetMoments(mDesiredMoment);
+	
 	if(mUseMuscle)
 		mMetabolicEnergy->Set(this->GetMuscles(), mCurVel3d, phase, frame);
 
@@ -914,9 +916,6 @@ SetFoot()
 
 			mStrideCurL = strideL;
 			mStrideCurR = strideR;
-
-			// std::cout << "L : " << mStrideCurL << std::endl;
-			// std::cout << "R : " << mStrideCurR << std::endl;
 
 			mSkeleton->setPositions(p_save);
 		}		
@@ -1105,33 +1104,6 @@ GetState_Character()
 	p *= 0.8;
 	v *= 0.2;
 
-	Eigen::VectorXd p_next, p_cur;
-	// if(mAdaptiveMotion){
-	// 	double curTime = this->GetCurTime();
-	// 	double nextTime = curTime + this->GetControlTimeStep();
-
-	// 	Eigen::VectorXd cur_ref_pos, cur_ref_vel;
-	// 	Eigen::VectorXd next_ref_pos, next_ref_vel;
-	// 	this->GetPosAndVel(curTime, cur_ref_pos, cur_ref_vel);
-	// 	this->GetPosAndVel(nextTime, next_ref_pos, next_ref_vel);
-
-	// 	Eigen::VectorXd delta_pos = next_ref_pos - cur_ref_pos;
-		
-	// 	p_cur = mTargetPositions - cur_p;
-	// 	p_next = delta_pos;
-
-	// 	p_cur *= 0.8;
-	// 	p_next *= 0.8;
-	// }
-	// else{
-	// 	double nextTime = this->GetCurTime() + this->GetControlTimeStep();
-		
-	// 	Eigen::VectorXd next_ref_pos, next_ref_vel;
-	// 	this->GetPosAndVel(nextTime, next_ref_pos, next_ref_vel);
-	// 	p_next = next_ref_pos - cur_p;
-	// 	p_next *= 0.8;
-	// }
-
 	double curTime = this->GetCurTime();
 	double nextTime;
 	if(mAdaptiveMotion){
@@ -1141,8 +1113,9 @@ GetState_Character()
 			nextTime = curTime + this->GetControlTimeStep();
 	}
 
-	Eigen::VectorXd cur_ref_pos, cur_ref_vel;
-	Eigen::VectorXd next_ref_pos, next_ref_vel;
+	Eigen::VectorXd p_cur, p_next;
+	Eigen::VectorXd cur_ref_pos, next_ref_pos;
+	Eigen::VectorXd cur_ref_vel, next_ref_vel;
 	this->GetPosAndVel(curTime, cur_ref_pos, cur_ref_vel);
 	this->GetPosAndVel(nextTime, next_ref_pos, next_ref_vel);
 
@@ -1399,11 +1372,15 @@ GetReward_Character_Imitation()
 		double w_rot = 1.0;
 		double w_pos = 1.0;
 		if(ees[i]->getName() == "Head"){
-			w_rot = 0.8;
-			w_pos = 0.8;
+			w_rot = 0.4;
+			w_pos = 0.4;			
 		}
-		// if(ees[i]->getName() == "Pelvis")
-		// 	w = 0.3;
+		
+		if(ees[i]->getName() == "Pelvis"){
+			w_rot = 0.3;
+			w_pos = 0.3;
+		}
+		
 		if(ees[i]->getName() == "TalusR" || ees[i]->getName() == "TalusL"){
 			w_rot = 0.2;
 			w_pos = 0.2;
@@ -1423,7 +1400,7 @@ GetReward_Character_Imitation()
 
 	//=====================================
 
-	double sig_p = 5.0;
+	double sig_p = 10.0;
 	double sig_q = 0.5;
 	double sig_com = 20.0;
 	double sig_ee_rot = 10.0;
@@ -1965,7 +1942,10 @@ SetDesiredTorques()
 		mDesiredTorque[i] = Utils::Clamp(mDesiredTorque[i], -mMaxForces[i], mMaxForces[i]);
 	}
 
-	mDesiredTorquePrev = mDesiredTorque;
+	// std::cout << "spine : " << mDesiredTorque[24] << " " << mDesiredTorque[25] << " " << mDesiredTorque[26] << std::endl;
+	// std::cout << "torso : " << mDesiredTorque[27] << " " << mDesiredTorque[28] << " " << mDesiredTorque[29] << std::endl;
+
+	// mDesiredTorquePrev = mDesiredTorque;
 
 	mDesiredMoment = mM_inv * mDesiredTorque;
 	// std::cout << "moments: " << mDesiredMoment << std::endl;

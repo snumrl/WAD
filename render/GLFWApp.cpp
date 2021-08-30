@@ -609,47 +609,47 @@ bool
 GLFWApp::
 Screenshot()
 {
-    static int count = 0;
-    const char directory[8] = "frames";
-    const char fileBase[8] = "Capture";
-    char fileName[32];
+    // static int count = 0;
+    // const char directory[8] = "frames";
+    // const char fileBase[8] = "Capture";
+    // char fileName[32];
 
-    // create frames directory if not exists
-    using Stat = struct stat;
-    Stat buff;
+    // // create frames directory if not exists
+    // using Stat = struct stat;
+    // Stat buff;
 
-    if (stat(directory, &buff) != 0)
-        mkdir(directory, 0777);
+    // if (stat(directory, &buff) != 0)
+    //     mkdir(directory, 0777);
     
-    if (!S_ISDIR(buff.st_mode))
-    {
-        dtwarn << "[Window::screenshot] 'frames' is not a directory, "
-            << "cannot write a screenshot\n";
-        return false;
-    }
+    // if (!S_ISDIR(buff.st_mode))
+    // {
+    //     dtwarn << "[Window::screenshot] 'frames' is not a directory, "
+    //         << "cannot write a screenshot\n";
+    //     return false;
+    // }
   
-    // png
-    std::snprintf(
-        fileName,
-        sizeof(fileName),
-        "%s%s%s%.4d.png",
-        directory,
-        "/",
-        fileBase,
-        count++);
+    // // png
+    // std::snprintf(
+    //     fileName,
+    //     sizeof(fileName),
+    //     "%s%s%s%.4d.png",
+    //     directory,
+    //     "/",
+    //     fileBase,
+    //     count++);
   
-    // int tw = glutGet(GLUT_WINDOW_WIDTH);
-    // int th = glutGet(GLUT_WINDOW_HEIGHT);
+    // // int tw = glutGet(GLUT_WINDOW_WIDTH);
+    // // int th = glutGet(GLUT_WINDOW_HEIGHT);
 
-    int tw,th;
-    glfwGetFramebufferSize(mWindow, &tw, &th);
-    // glfwGetWindowSize(mWindow, &tw, &th);
-    std::vector<unsigned char> mScreenshotTmp = std::vector<unsigned char>(tw * th * 4);
-    std::vector<unsigned char> mScreenshotTmp2 = std::vector<unsigned char>(tw * th * 4);
+    // int tw,th;
+    // glfwGetFramebufferSize(mWindow, &tw, &th);
+    // // glfwGetWindowSize(mWindow, &tw, &th);
+    // std::vector<unsigned char> mScreenshotTmp = std::vector<unsigned char>(tw * th * 4);
+    // std::vector<unsigned char> mScreenshotTmp2 = std::vector<unsigned char>(tw * th * 4);
 
-    glReadPixels(0, 0, tw, th, GL_RGBA, GL_UNSIGNED_BYTE, &mScreenshotTmp[0]);
+    // glReadPixels(0, 0, tw, th, GL_RGBA, GL_UNSIGNED_BYTE, &mScreenshotTmp[0]);
     
-    // reverse temp2 temp1
+    // // reverse temp2 temp1
     // for (int row = 0; row < th; row++)
     // {
     //     for (int j=0; i<4;)
@@ -659,20 +659,20 @@ Screenshot()
     //         tw * 4);
     // }
     
-    unsigned result = lodepng::encode(fileName, mScreenshotTmp, tw, th);
+    // unsigned result = lodepng::encode(fileName, mScreenshotTmp2, tw, th);
     
-    // if there's an error, display it
-    if (result)
-    {
-        std::cout << "lodepng error " << result << ": "
-                << lodepng_error_text(result) << std::endl;
-        return false;
-    }
-    else
-    {
-        std::cout << "wrote screenshot " << fileName << "\n";
-        return true;
-    }
+    // // if there's an error, display it
+    // if (result)
+    // {
+    //     std::cout << "lodepng error " << result << ": "
+    //             << lodepng_error_text(result) << std::endl;
+    //     return false;
+    // }
+    // else
+    // {
+    //     std::cout << "wrote screenshot " << fileName << "\n";
+    //     return true;
+    // }
 }
 
 void 
@@ -2009,7 +2009,7 @@ DrawShapeFrame(const ShapeFrame* sf)
     if(isDrawCharacter)
     {
         if(mDrawOBJ)
-            color << 0.75, 0.75, 0.75, 0.3;
+            color << 0.65, 0.70, 0.75, 0.3;
         else
             color[3] = 0.8;
     }

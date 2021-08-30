@@ -367,18 +367,18 @@ SetMotionFrames()
 				p.segment<6>(idx) = FreeJoint::convertToPositions(T);
 
 				if(jointName == "Pelvis"){
-					if(p[idx+2] > 0)
-						p[idx+2] *= 0.7;
-					else
-						p[idx+2] *= 0.1;
+					// if(p[idx+2] > 0)
+					// 	p[idx+2] *= 0.8;
+					// else
+					// 	p[idx+2] *= 0.5;
  
-					p[idx+1] += 0.02;
-					if(p[idx+1] < 0)
-						p[idx+1] *= 0.2;
+					// p[idx+1] += 0.02;
+					// if(p[idx+1] < 0)
+					// 	p[idx+1] *= 0.2;
 					
-					if(p[idx+3] < 0)
-						p[idx+3] *= 0.1; 
-				}
+					// if(p[idx+3] < 0)
+					// 	p[idx+3] *= 0.1; 
+				}			
 			}
 			else if(jn->getType()=="BallJoint"){
 				p.segment<3>(idx) = BallJoint::convertToPositions(R);
@@ -394,15 +394,15 @@ SetMotionFrames()
 
 				if(jointName == "Torso"){
 					// p[idx] += 0.3; // old man
-					p[idx] -= 0.06;
+					// p[idx] -= 0.06;
 
-					// if(p[idx+1] > 0)
-					// 	p[idx+1] *= 0.7;
+					// // if(p[idx+1] > 0)
+					// // 	p[idx+1] *= 0.7;
 
-					if(p[idx+2] > 0)
-						p[idx+2] *= 0.3;
-					else 
-						p[idx+2] *= 0.6;
+					// if(p[idx+2] > 0)
+					// 	p[idx+2] *= 0.3;
+					// else 
+					// 	p[idx+2] *= 0.6;
 				}
 
 				// if(jointName == "ShoulderL" || jointName == "ShoulderR")
@@ -415,16 +415,16 @@ SetMotionFrames()
 					p[idx+2] += 0.05;
 
 				if(jointName == "FemurL"){
-					if(p[idx+1] > 0)
-						p[idx+1] *= 0.1;
-					p[idx+2] *= 0.4;					
-					// p[idx+2] += 0.04;
+					// if(p[idx+1] > 0)
+					// 	p[idx+1] *= 0.1;
+					// p[idx+2] *= 0.4;					
+					// // p[idx+2] += 0.04;
 				}				
 										
 				if(jointName == "FemurR"){
-					p[idx+2] *= 0.4;
+					// p[idx+2] *= 0.4;
 					// p[idx+2] -= 0.02;
-				}				 			
+				}				
 			}
 			else if(jn->getType()=="RevoluteJoint")
 			{
@@ -443,7 +443,7 @@ SetMotionFrames()
 				else if(val<-M_PI)
 					val += 2*M_PI;
 
-				p[idx] = val;				
+				p[idx] = val;						
 			}
 		}
 		mMotionFrames[i] = p;

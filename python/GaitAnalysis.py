@@ -50,7 +50,7 @@ class DataBuffer(object):
 	def Size(self):
 		return len(self.data)
 
-PARAM_DIV_NUM = 11
+PARAM_DIV_NUM = 1
 PARAM_DIM = 1
 class PPO(object):
 	def __init__(self,meta_file):
@@ -214,7 +214,6 @@ class PPO(object):
 						stanceRatio[j] = self.env.GetStanceRatioRight(j)
 						gaitTime[j] = self.env.GetGaitTimeRight(j)
 
-
 						self.analysisData[j].Push(reward[j], velocity[j], stride[j], cadence[j], torqueEnergy[j], stanceRatio[j], gaitTime[j])	
 						local_step[j] += 1
 
@@ -238,7 +237,10 @@ class PPO(object):
 	def GaitAnalysis(self):
 
 		f = open("analysis.txt", 'w')
-		f.write("idx p0 p1 p2 p3 p4 r v s c te sr gt" + "\n")
+		if self.use_adaptive_sampling:
+			f.write("idx p0 p1 p2 p3 p4 r v s c te sr gt" + "\n")
+		else:
+			f.write("idx r v s c te sr gt" + "\n")
 		for i in range(self.num_slaves):
 			data = self.analysisData[i].GetData()
 			size = len(data)
@@ -253,7 +255,10 @@ class PPO(object):
 			gt = np.mean(np.array(gaitTime))
 			st = sr * gt #stance time
 
-			f.write("%d %f %f %f %f %f " % (i, self.params_real[i][0], self.params_real[i][1], self.params_real[i][2], self.params_real[i][3], self.params_real[i][4]))
+			if self.use_adaptive_sampling:
+				f.write("%d %f %f %f %f %f " % (i, self.params_real[i][0], self.params_real[i][1], self.params_real[i][2], self.params_real[i][3], self.params_real[i][4]))
+			else:
+				f.write("%d " % (i))
 			f.write("%f %f %f %f %f %f %f %f\n" % (r, v, s, c, te, sr, gt, st))
 			# print(i, " reward : ", np.mesan(np.array(reward)))
 			# print(i, " velocity : ", np.mean(np.array(velocity)))
