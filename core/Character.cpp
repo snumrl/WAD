@@ -1376,10 +1376,10 @@ GetReward_Character_Imitation()
 			w_pos = 0.4;			
 		}
 		
-		if(ees[i]->getName() == "Pelvis"){
-			w_rot = 0.3;
-			w_pos = 0.3;
-		}
+		// if(ees[i]->getName() == "Pelvis"){
+		// 	w_rot = 0.3;
+		// 	w_pos = 0.3;
+		// }
 		
 		if(ees[i]->getName() == "TalusR" || ees[i]->getName() == "TalusL"){
 			w_rot = 0.2;
