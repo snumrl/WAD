@@ -171,66 +171,25 @@ class PPO(object):
 			# 		self.param_mul.append(2.0/self.param_div_num)
 
 			self.params = []
+			idx0 = 1
+			idx1 = 4
+			for i in range(self.param_div_num+1):
+				for j in range(self.param_div_num+1):
+					params = []
+					for k in range(5):
+						if k == idx0:
+							params.append(-1.0 + 0.4*i)
+						elif k == idx1:
+							params.append(-1.0 + 0.4*j)
+						else:
+							params.append(1.0)
+					self.params.append(params)
+			
 			# for i in range(self.num_slaves):
 			# 	k = i%(self.param_div_num +1)
 			# 	params = [k*self.param_mul[i]+self.param_base[i] for i in range(len(self.param_base))]
 			# 	self.params.append(params)
-			self.params.append([1.0, 1.0, 1.0, -1.0, -1.0])
-			self.params.append([1.0, 1.0, 1.0, -1.0, -0.6])
-			self.params.append([1.0, 1.0, 1.0, -1.0, -0.2])
-			self.params.append([1.0, 1.0, 1.0, -1.0, -0.2])
-			self.params.append([1.0, 1.0, 1.0, -1.0,  0.6])
-			self.params.append([1.0, 1.0, 1.0, -1.0,  1.0])
-
-			self.params.append([1.0, 1.0, 1.0, -0.6, -1.0])
-			self.params.append([1.0, 1.0, 1.0, -0.6, -0.6])
-			self.params.append([1.0, 1.0, 1.0, -0.6, -0.2])
-			self.params.append([1.0, 1.0, 1.0, -0.6, -0.2])
-			self.params.append([1.0, 1.0, 1.0, -0.6,  0.6])
-			self.params.append([1.0, 1.0, 1.0, -0.6,  1.0])
-
-			self.params.append([1.0, 1.0, 1.0, -0.2, -1.0])
-			self.params.append([1.0, 1.0, 1.0, -0.2, -0.6])
-			self.params.append([1.0, 1.0, 1.0, -0.2, -0.2])
-			self.params.append([1.0, 1.0, 1.0, -0.2, -0.2])
-			self.params.append([1.0, 1.0, 1.0, -0.2,  0.6])
-			self.params.append([1.0, 1.0, 1.0, -0.2,  1.0])
-
-			self.params.append([1.0, 1.0, 1.0, 0.2, -1.0])
-			self.params.append([1.0, 1.0, 1.0, 0.2, -0.6])
-			self.params.append([1.0, 1.0, 1.0, 0.2, -0.2])
-			self.params.append([1.0, 1.0, 1.0, 0.2, -0.2])
-			self.params.append([1.0, 1.0, 1.0, 0.2,  0.6])
-			self.params.append([1.0, 1.0, 1.0, 0.2,  1.0])
-
-			self.params.append([1.0, 1.0, 1.0, 0.6, -1.0])
-			self.params.append([1.0, 1.0, 1.0, 0.6, -0.6])
-			self.params.append([1.0, 1.0, 1.0, 0.6, -0.2])
-			self.params.append([1.0, 1.0, 1.0, 0.6, -0.2])
-			self.params.append([1.0, 1.0, 1.0, 0.6,  0.6])
-			self.params.append([1.0, 1.0, 1.0, 0.6,  1.0])
-
-			self.params.append([1.0, 1.0, 1.0, 1.0, -1.0])
-			self.params.append([1.0, 1.0, 1.0, 1.0, -0.6])
-			self.params.append([1.0, 1.0, 1.0, 1.0, -0.2])
-			self.params.append([1.0, 1.0, 1.0, 1.0, -0.2])
-			self.params.append([1.0, 1.0, 1.0, 1.0,  0.6])
-			self.params.append([1.0, 1.0, 1.0, 1.0,  1.0])
-
-
-			# self.marginal_buffer = MarginalBuffer(10000)
-			# self.marginal_model = MarginalNN(self.num_paramstate)
-			# self.marginal_value_avg = 1.
-			# self.marginal_learning_rate = 5e-5
-			# if use_cuda:
-			# 	self.marginal_model.cuda()
-			# self.marginal_optimizer = optim.Adam(self.marginal_model.parameters(), lr=self.marginal_learning_rate)
-			# self.marginal_loss = 0.0
-
-			# self.InitialParamStates = []
-			# self.InitialParamStates_num = 1000
-
-			# self.marginal_k = 5
+						
 
 		# ========== Common setting ========== #
 		self.num_simulation_Hz = self.env.GetSimulationHz()

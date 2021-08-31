@@ -211,7 +211,7 @@ class PPO(object):
 					# rewards[j] = self.env.GetReward(j)
 					# reward = rewards[j][0]
 					reward[j] = self.env.GetReward(j)[0] 					
-					if (reward[j] > 0.5 and self.env.isAnalysisPeriod(j)):
+					if (reward[j] > 0.3 and self.env.isAnalysisPeriod(j)):
 						velocity[j] = self.env.GetVelocity(j)
 						stride[j] = self.env.GetStride(j)
 						cadence[j] = self.env.GetCadence(j)

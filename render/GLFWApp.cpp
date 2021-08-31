@@ -41,7 +41,7 @@ GLFWApp(Environment* env)
       mMouseDown(false), mMouseDrag(false),mCapture(false),mRotate(false),mTranslate(false),mDisplayIter(0),
       isDrawCharacter(false),isDrawDevice(false),isDrawTarget(false),isDrawReference(false),
       mDrawOBJ(false),mDrawCharacter(true),mDrawDevice(true),mDrawTarget(false),mDrawReference(false),
-      mSplitViewNum(2),mSplitIdx(0),mViewMode(0),isFirstUImanager(true),mRecordData(false),mParamIdx(0),mDrawDeviceTorque(false),mRecordOnce(false),mNumParamChange(0)
+      mSplitViewNum(2),mSplitIdx(0),mViewMode(0),isFirstUImanager(true),mRecordData(false),mParamIdx(-1),mDrawDeviceTorque(false),mRecordOnce(false),mNumParamChange(0)
 {
     mm = py::module::import("__main__");
 	mns = mm.attr("__dict__");
@@ -439,30 +439,49 @@ InitAnalysis()
         int size = min_v_.size();
         for(int i=0; i<size; i++)
         {
-            if(min_v_[i]!=max_v_[i]){
+            if(min_v_[i] != max_v_[i])
+            {
                 mNumParamChange += 6;
 
-                for(int i=0; i<6; i++)
+                for(int j=0; j<6; j++)
                 {
                     Eigen::VectorXd param(5);
-                    param[0] = 1.0;
-                    param[1] = 1.0;
-                    param[2] = 1.0;
-                    param[3] = -1.0 + 0.4*i;
-                    param[4] = 0.2;
+                    
+                    if(i==1)
+                    {
+                        param[0] = 1.0;
+                        param[1] = -1.0 + 0.4*j;
+                        param[2] = 1.0;
+                        param[3] = 0.0;
+                        param[4] = 0.2;
+                    }
+                    
+                    if(i==3)
+                    {
+                        param[0] = 1.0;
+                        param[1] = 1.0;
+                        param[2] = 1.0;
+                        param[3] = -1.0 + 0.4*j;
+                        param[4] = 0.2;
+                    }
+
+                    if(i==4) 
+                    {
+                        param[0] = 1.0;
+                        param[1] = -1.0;
+                        param[2] = 1.0;
+                        param[3] = 0.0;
+                        param[4] = -1.0 + 0.4*j;
+                    }
                     mParamSet.push_back(param);
                 }
             }
 
-             
-
-            mParamCnt = Eigen::VectorXd::Zero(6);
-            mParamVel = Eigen::VectorXd::Zero(6);
-            mParamStride = Eigen::VectorXd::Zero(6);
-            mParamCadence = Eigen::VectorXd::Zero(6);
-            mParamEnergy = Eigen::VectorXd::Zero(6);
-
-            
+            mParamCnt = Eigen::VectorXd::Zero(mNumParamChange);
+            mParamVel = Eigen::VectorXd::Zero(mNumParamChange);
+            mParamStride = Eigen::VectorXd::Zero(mNumParamChange);
+            mParamCadence = Eigen::VectorXd::Zero(mNumParamChange);
+            mParamEnergy = Eigen::VectorXd::Zero(mNumParamChange);            
         }
 
     }
@@ -998,6 +1017,7 @@ DrawUiFrame_SimState(double x, double y, double w, double h)
             double upper = p.second.second;
             float value = lower + ((params[idx]+1.0)/2.0)*(upper-lower);
             ImGui::SliderFloat(name.c_str(), &value, lower, upper, "%.2f x");    
+            
             if(upper == lower)
                 params[idx] = 1.0;
             else
@@ -1018,7 +1038,15 @@ DrawUiFrame_SimState(double x, double y, double w, double h)
                 double lower = p.second.first;
                 double upper = p.second.second;
                 float value = lower + ((params[idx]+1.0)/2.0)*(upper-lower);
-                ImGui::SliderFloat(name.c_str(), &value, lower, upper, "%.2f x");    
+                if(name == "k"){
+                    ImGui::SliderFloat(name.c_str(), &value, lower, upper, "%.2f Nm");                        
+                }
+                else if(name == "delta_t"){
+                    name = "t";
+                    ImGui::SliderFloat(name.c_str(), &value, lower, upper, "%.2f s");    
+                }                
+                
+                // ImGui::SliderFloat(name.c_str(), &value, lower, upper, "%.2f x");    
                 if(upper == lower)
                     params[idx] = 1.0;
                 else
@@ -1454,7 +1482,7 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
             static float stride[6];
             static float cadence[6];
             static float energy[6];
-            for (int i = 0; i < 6; ++i) {
+            for (int i = 0; i < mNumParamChange; ++i) {
                 xs1[i] = i * 0.1f; 
                 vel[i] = mParamVel[i];
                 stride[i] = mParamStride[i];
@@ -2228,22 +2256,8 @@ keyboardPress(int key, int scancode, int action, int mods)
             case GLFW_KEY_X: mRecordOnce = !mRecordOnce; break;
             case GLFW_KEY_TAB: 
                 mParamIdx = (mParamIdx+1)%mNumParamChange;
-                mEnv->SetParamState(mParamSet[0]); break;
-            case GLFW_KEY_2: 
-                mParamIdx = 1;
-                mEnv->SetParamState(mParamSet[1]); break;
-            case GLFW_KEY_3: 
-                mParamIdx = 2;
-                mEnv->SetParamState(mParamSet[2]); break;
-            case GLFW_KEY_4: 
-                mParamIdx = 3;
-                mEnv->SetParamState(mParamSet[3]); break;
-            case GLFW_KEY_5: 
-                mParamIdx = 4;
-                mEnv->SetParamState(mParamSet[4]); break;
-            case GLFW_KEY_6: 
-                mParamIdx = 5;
-                mEnv->SetParamState(mParamSet[5]); break;
+                mEnv->SetParamState(mParamSet[mParamIdx]); 
+                break;
             default: break;
         }
     }
