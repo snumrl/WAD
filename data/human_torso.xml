@@ -101,7 +101,7 @@
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0" translation="0. 1.0675 -0.0 "/>
         </Joint>
     </Node>
-    <Node name="Torso" parent="Spine" >
+    <Node name="Torso" parent="Spine" endeffector="True">
         <Body type="Box" mass="12.0" size="0.1798 0.2181 0.1337" contact="Off" color="0.6 0.6 1.5 1.0" obj="Torso.obj">
             <Transformation linear="1.0 0.0 0.0 0.0 1.0 -0.0092 0.0 0.0092 1.0 " translation="0.0 1.3032 -0.0 "/>
         </Body>

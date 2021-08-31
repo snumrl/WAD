@@ -51,7 +51,7 @@ class DataBuffer(object):
 		return len(self.data)
 
 PARAM_DIV_NUM = 25
-PARAM_DIM = 1
+PARAM_DIM = 2
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
@@ -77,7 +77,7 @@ class PPO(object):
 		if use_cuda:
 			self.model.cuda()
 
-		self.analysisDatasize = 300*self.num_slaves
+		self.analysisDatasize = 600
 		self.analysisData = [None]*self.num_slaves
 		for j in range(self.num_slaves):
 			self.analysisData[j] = DataBuffer()
@@ -111,25 +111,29 @@ class PPO(object):
 			self.params_real = []
 			self.param_div_num = PARAM_DIV_NUM
 			
-			mul_v = (max_v-min_v)/(self.param_div_num)
-			for i in range(self.param_div_num+1):
-				params = min_v + i*mul_v
-				params_ = params.tolist()
-				self.params_real.append(params_)
 			
+			# for i in range(self.param_div_num+1):
+			# 	params = min_v + i*mul_v
+			# 	params_ = params.tolist()
+			# 	self.params_real.append(params_)
+			mul_v = (max_v-min_v)/(self.param_div_num)
 			param_mul = 2.0/(self.param_div_num)
-			param_change_num = len(param_idx)
-			if param_change_num == 1:
+			self.param_change_num = len(param_idx)
+			if self.param_change_num == 1:
 				for i in range(self.param_div_num+1):
 					params = []
+					params_real = []
 					for j in range(self.num_paramstate):
 						if j == param_idx[0]:
 							params.append(-1 + i*param_mul)
+							params_real.append(min_v[j] + i*mul_v[j])
 						else:
 							params.append(0)
+							params_real.append(min_v[j])
 					self.params.append(params)
+					self.params_real.append(params_real)
 
-			if param_change_num == 2:
+			if self.param_change_num == 2:
 				for i in range(self.param_div_num+1):
 					for j in range(self.param_div_num+1):
 						params = []
@@ -143,10 +147,11 @@ class PPO(object):
 								params_real.append(min_v[k] + j*mul_v[k])
 							else:
 								params.append(0)
-								params.real.append(min_v[k])
+								params_real.append(min_v[k])
 						self.params.append(params)
 						self.params_real.append(params_real)
 
+			print("size : ", len(self.params_real))
 			# print("params : ", self.params)
 	
 	def LoadModel(self, path):
@@ -238,10 +243,21 @@ class PPO(object):
 
 		f = open("analysis.txt", 'w')
 		if self.use_adaptive_sampling:
-			f.write("idx p0 p1 p2 p3 p4 r v s c te sr gt" + "\n")
+			f.write("idx p0 p1 p2 p3 p4 r v s c te sr gt st" + "\n")
 		else:
-			f.write("idx r v s c te sr gt" + "\n")
-		for i in range(self.num_slaves):
+			f.write("idx r v s c te sr gt st" + "\n")
+		
+		div = 0
+		if self.use_adaptive_sampling:
+			if self.param_change_num == 1:
+				div = self.param_div_num+1
+			elif self.param_change_num == 2:
+				div = (self.param_div_num+1)*(self.param_div_num+1)
+		else:
+			div = 1
+
+		print("div : ", div)
+		for i in range(div):
 			data = self.analysisData[i].GetData()
 			size = len(data)
 
@@ -268,6 +284,107 @@ class PPO(object):
 			# print("\n")
 
 		f.close()
+
+		r2 = np.empty((6, 26))
+		v2 = np.empty((6, 26))
+		s2 = np.empty((6, 26))
+		c2 = np.empty((6, 26))
+		te2 = np.empty((6, 26))
+		sr2 = np.empty((6, 26))
+		gt2 = np.empty((6, 26))
+		st2 = np.empty((6, 26))		
+		if self.use_adaptive_sampling:
+			if self.param_change_num == 2:
+				f = open("analysis2.txt", 'w')
+				# f.write("idx p0 p1 p2 p3 p4 r v s c te sr gt st" + "\n")
+				for i in range(26):
+					for j in range(6):
+						idx = i * 26 + j * 5
+						data = self.analysisData[idx].GetData()
+						
+						reward, velocity, stride, cadence, torqueEnergy, stanceRatio, gaitTime = zip(*data)
+						r = np.mean(np.array(reward))
+						v = np.mean(np.array(velocity))
+						s = np.mean(np.array(stride))
+						c = np.mean(np.array(cadence))
+						te = np.mean(np.array(torqueEnergy))
+						sr = np.mean(np.array(stanceRatio))
+						gt = np.mean(np.array(gaitTime))
+						st = sr * gt #stance time
+						
+						r2[j][i] = r 
+						v2[j][i] = v 
+						s2[j][i] = s 
+						c2[j][i] = c 
+						te2[j][i] = te 
+						sr2[j][i] = sr
+						gt2[j][i] = gt 
+						st2[j][i] = st
+				
+				
+				for i in range(26):
+					a = (1.0/25.0)*i
+					f.write("%f " % a)
+				f.write("\n")
+
+				f.write("r" + "\n")
+				for i in range(6):
+					f.write("%f " % (0.1*i))
+					for j in range(26):
+						f.write("%f " % r2[i][j])
+					f.write("\n")
+
+				f.write("v" + "\n")
+				for i in range(6):
+					f.write("%f " % (0.1*i))
+					for j in range(26):
+						f.write("%f " % v2[i][j])
+					f.write("\n")
+
+				f.write("s" + "\n")
+				for i in range(6):
+					f.write("%f " % (0.1*i))
+					for j in range(26):
+						f.write("%f " % s2[i][j])
+					f.write("\n")
+
+				f.write("c" + "\n")
+				for i in range(6):
+					f.write("%f " % (0.1*i))
+					for j in range(26):
+						f.write("%f " % c2[i][j])
+					f.write("\n")
+
+				f.write("te" + "\n")
+				for i in range(6):
+					f.write("%f " % (0.1*i))
+					for j in range(26):
+						f.write("%f " % te2[i][j])
+					f.write("\n")
+
+				f.write("sr" + "\n")
+				for i in range(6):
+					f.write("%f " % (0.1*i))
+					for j in range(26):
+						f.write("%f " % sr2[i][j])
+					f.write("\n")
+
+				f.write("gt" + "\n")
+				for i in range(6):
+					f.write("%f " % (0.1*i))
+					for j in range(26):
+						f.write("%f " % gt2[i][j])
+					f.write("\n")
+
+				f.write("st" + "\n")
+				for i in range(6):
+					f.write("%f " % (0.1*i))
+					for j in range(26):
+						f.write("%f " % st2[i][j])
+					f.write("\n")
+				
+				f.close()
+		
 
 if __name__=="__main__":
 	parser = argparse.ArgumentParser()

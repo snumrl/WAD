@@ -80,7 +80,7 @@ class MarginalBuffer(object):
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
-		self.num_slaves = 32
+		self.num_slaves = 36
 		self.env = EnvManager(meta_file, self.num_slaves)
 		self.use_muscle = self.env.UseMuscle()
 		self.use_device = self.env.UseDevice()
@@ -163,18 +163,60 @@ class PPO(object):
 			self.param_mul = []
 			self.param_base = []
 			self.param_div_num = 5
-			for i in range(self.num_paramstate):
-				self.param_base.append(-1)
-				if(min_v[i] == max_v[i]):
-					self.param_mul.append(0)
-				else:
-					self.param_mul.append(2.0/self.param_div_num)
+			# for i in range(self.num_paramstate):
+			# 	self.param_base.append(-1)
+			# 	if(min_v[i] == max_v[i]):
+			# 		self.param_mul.append(0)
+			# 	else:
+			# 		self.param_mul.append(2.0/self.param_div_num)
 
 			self.params = []
-			for i in range(self.num_slaves):
-				k = i%(self.param_div_num +1)
-				params = [k*self.param_mul[i]+self.param_base[i] for i in range(len(self.param_base))]
-				self.params.append(params)
+			# for i in range(self.num_slaves):
+			# 	k = i%(self.param_div_num +1)
+			# 	params = [k*self.param_mul[i]+self.param_base[i] for i in range(len(self.param_base))]
+			# 	self.params.append(params)
+			self.params.append([1.0, 1.0, 1.0, -1.0, -1.0])
+			self.params.append([1.0, 1.0, 1.0, -1.0, -0.6])
+			self.params.append([1.0, 1.0, 1.0, -1.0, -0.2])
+			self.params.append([1.0, 1.0, 1.0, -1.0, -0.2])
+			self.params.append([1.0, 1.0, 1.0, -1.0,  0.6])
+			self.params.append([1.0, 1.0, 1.0, -1.0,  1.0])
+
+			self.params.append([1.0, 1.0, 1.0, -0.6, -1.0])
+			self.params.append([1.0, 1.0, 1.0, -0.6, -0.6])
+			self.params.append([1.0, 1.0, 1.0, -0.6, -0.2])
+			self.params.append([1.0, 1.0, 1.0, -0.6, -0.2])
+			self.params.append([1.0, 1.0, 1.0, -0.6,  0.6])
+			self.params.append([1.0, 1.0, 1.0, -0.6,  1.0])
+
+			self.params.append([1.0, 1.0, 1.0, -0.2, -1.0])
+			self.params.append([1.0, 1.0, 1.0, -0.2, -0.6])
+			self.params.append([1.0, 1.0, 1.0, -0.2, -0.2])
+			self.params.append([1.0, 1.0, 1.0, -0.2, -0.2])
+			self.params.append([1.0, 1.0, 1.0, -0.2,  0.6])
+			self.params.append([1.0, 1.0, 1.0, -0.2,  1.0])
+
+			self.params.append([1.0, 1.0, 1.0, 0.2, -1.0])
+			self.params.append([1.0, 1.0, 1.0, 0.2, -0.6])
+			self.params.append([1.0, 1.0, 1.0, 0.2, -0.2])
+			self.params.append([1.0, 1.0, 1.0, 0.2, -0.2])
+			self.params.append([1.0, 1.0, 1.0, 0.2,  0.6])
+			self.params.append([1.0, 1.0, 1.0, 0.2,  1.0])
+
+			self.params.append([1.0, 1.0, 1.0, 0.6, -1.0])
+			self.params.append([1.0, 1.0, 1.0, 0.6, -0.6])
+			self.params.append([1.0, 1.0, 1.0, 0.6, -0.2])
+			self.params.append([1.0, 1.0, 1.0, 0.6, -0.2])
+			self.params.append([1.0, 1.0, 1.0, 0.6,  0.6])
+			self.params.append([1.0, 1.0, 1.0, 0.6,  1.0])
+
+			self.params.append([1.0, 1.0, 1.0, 1.0, -1.0])
+			self.params.append([1.0, 1.0, 1.0, 1.0, -0.6])
+			self.params.append([1.0, 1.0, 1.0, 1.0, -0.2])
+			self.params.append([1.0, 1.0, 1.0, 1.0, -0.2])
+			self.params.append([1.0, 1.0, 1.0, 1.0,  0.6])
+			self.params.append([1.0, 1.0, 1.0, 1.0,  1.0])
+
 
 			# self.marginal_buffer = MarginalBuffer(10000)
 			# self.marginal_model = MarginalNN(self.num_paramstate)

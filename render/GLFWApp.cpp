@@ -41,7 +41,7 @@ GLFWApp(Environment* env)
       mMouseDown(false), mMouseDrag(false),mCapture(false),mRotate(false),mTranslate(false),mDisplayIter(0),
       isDrawCharacter(false),isDrawDevice(false),isDrawTarget(false),isDrawReference(false),
       mDrawOBJ(false),mDrawCharacter(true),mDrawDevice(true),mDrawTarget(false),mDrawReference(false),
-      mSplitViewNum(2),mSplitIdx(0),mViewMode(0),isFirstUImanager(true),mRecordData(false),mParamIdx(0),mDrawDeviceTorque(false)
+      mSplitViewNum(2),mSplitIdx(0),mViewMode(0),isFirstUImanager(true),mRecordData(false),mParamIdx(0),mDrawDeviceTorque(false),mRecordOnce(false),mNumParamChange(0)
 {
     mm = py::module::import("__main__");
 	mns = mm.attr("__dict__");
@@ -129,22 +129,7 @@ Initialize()
     this->InitGLFW();    
     this->InitAnalysis();
 
-    for(int i=0; i<6; i++)
-    {
-        Eigen::VectorXd param(5);
-        param[0] = 1.0;
-        param[1] = 1.0;
-        param[2] = 1.0;
-        param[3] = 0.5;
-        param[4] = -1.0 + 0.4*i;
-        mParamSet.push_back(param);
-    }    
-
-    mParamCnt = Eigen::VectorXd::Zero(6);
-    mParamVel = Eigen::VectorXd::Zero(6);
-    mParamStride = Eigen::VectorXd::Zero(6);
-    mParamCadence = Eigen::VectorXd::Zero(6);
-    mParamEnergy = Eigen::VectorXd::Zero(6);
+   
 }
 
 void
@@ -443,9 +428,46 @@ InitAnalysis()
     mJointMomentMinMax["Neck_y"] = std::pair(-200.0, 200.0);
     mJointMomentMinMax["Neck_z"] = std::pair(-200.0, 200.0);
 
-    mAdaptiveParams_Char = mEnv->GetCharacter()->GetAdaptiveParams();
-    if(mEnv->GetUseDevice())       
-        mAdaptiveParams_Device = mEnv->GetDevice()->GetAdaptiveParams();                
+    if(mEnv->GetUseAdaptiveSampling())
+    {
+        mAdaptiveParams_Char = mEnv->GetCharacter()->GetAdaptiveParams();
+        if(mEnv->GetUseDevice())       
+            mAdaptiveParams_Device = mEnv->GetDevice()->GetAdaptiveParams();                
+
+        Eigen::VectorXd min_v_ = mEnv->GetMinV();
+        Eigen::VectorXd max_v_ = mEnv->GetMaxV();
+        int size = min_v_.size();
+        for(int i=0; i<size; i++)
+        {
+            if(min_v_[i]!=max_v_[i]){
+                mNumParamChange += 6;
+
+                for(int i=0; i<6; i++)
+                {
+                    Eigen::VectorXd param(5);
+                    param[0] = 1.0;
+                    param[1] = 1.0;
+                    param[2] = 1.0;
+                    param[3] = -1.0 + 0.4*i;
+                    param[4] = 0.2;
+                    mParamSet.push_back(param);
+                }
+            }
+
+             
+
+            mParamCnt = Eigen::VectorXd::Zero(6);
+            mParamVel = Eigen::VectorXd::Zero(6);
+            mParamStride = Eigen::VectorXd::Zero(6);
+            mParamCadence = Eigen::VectorXd::Zero(6);
+            mParamEnergy = Eigen::VectorXd::Zero(6);
+
+            
+        }
+
+    }
+
+        
 }
 
 void
@@ -1120,8 +1142,20 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
         auto angleGaitLeft = jointData->GetAnglesGaitPhaseLeftPrev();
         auto angleGaitRight = jointData->GetAnglesGaitPhaseRightPrev();
         
+        std::ofstream file;
         if (ImGui::BeginTabItem("Joint Angle"))
-        {            
+        {       
+            std::string fileName = std::to_string(mParamIdx)+" angleData.txt";     
+            if(mRecordOnce)
+            {
+                file.open(fileName);
+                if(file.is_open())
+                    std::cout << fileName << " opened" << std::endl;
+                else
+                    std::cout << "file open failed" << std::endl;
+                
+            }
+                
             double w_ = w/3.0 - 10.0;
             double h_ = h/3.0 - 30.0;
            
@@ -1179,6 +1213,27 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
                             for(int i=0; i<angleGaitR.size(); i++)
                                 angleGaitR[i] *= -1;                                         
                         }
+
+                        file << dataName;
+                        file << "\n";
+                        if(k==0)
+                        {   
+                            int size = angleGaitL.size();
+                            for(int i=0; i<size; i++)
+                            {
+                                double x = i* 1.0/(double)(size-1);
+                                file << std::to_string(x) + " " << std::to_string(angleGaitL[i]) << "\n";
+                            }
+                        }
+                        else if(k==1)
+                        {   
+                            int size = angleGaitR.size();
+                            for(int i=0; i<size; i++)
+                            {
+                                double x = i* 1.0/(double)(size-1);
+                                file << std::to_string(x) + " " << std::to_string(angleGaitR[i]) << "\n";
+                            }
+                        }                        
                     }
 
                     yMin = mJointAngleMinMax[plotName].first;
@@ -1200,6 +1255,11 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
             }
             ImGui::EndTabItem();
         }
+        if(mRecordOnce){
+            file.close();
+            mRecordOnce = false;
+        }
+            
 
         auto torques = jointData->GetTorques();
         auto torquesPhase = jointData->GetTorquesGaitPhasePrev();
@@ -1430,7 +1490,7 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
 
             ImGui::EndTabItem();
         }
-    }
+    }    
 
     ImPlot::SetCurrentContext(mPlotContexts["Main"]);
     ImGui::End();
@@ -2165,8 +2225,9 @@ keyboardPress(int key, int scancode, int action, int mods)
             case GLFW_KEY_D: mDrawDevice = !mDrawDevice; break;
             case GLFW_KEY_Z: mCapture = !mCapture; break;
             case GLFW_KEY_Q: mRecordData = !mRecordData; break;
-            case GLFW_KEY_1: 
-                mParamIdx = 0;
+            case GLFW_KEY_X: mRecordOnce = !mRecordOnce; break;
+            case GLFW_KEY_TAB: 
+                mParamIdx = (mParamIdx+1)%mNumParamChange;
                 mEnv->SetParamState(mParamSet[0]); break;
             case GLFW_KEY_2: 
                 mParamIdx = 1;

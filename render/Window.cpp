@@ -861,8 +861,8 @@ draw()
 	if(mEnv->GetUseDevice())
 		DrawDevice();
 
-	if(mEnv->GetNumParamState() > 0 && mDrawParameter)
-		DrawParameter();
+	// if(mEnv->GetNumParamState() > 0 && mDrawParameter)
+	// 	DrawParameter();
 
 	// DrawTrajectory();
 	// DrawStride();

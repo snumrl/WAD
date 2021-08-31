@@ -56,6 +56,8 @@ public:
     void SetK_(double k);
     double GetK_(){return mK_;}
 
+    double GetSignalY(){return mDeviceSignals_y[0];}
+
     void SetHz(int cHz, int sHz);
     void SetControlHz(int hz){mControlHz = hz;}
     void SetSimulationHz(int hz){mSimulationHz = hz;}

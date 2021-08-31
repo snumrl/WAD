@@ -74,8 +74,8 @@ public:
     const std::map<std::string, std::deque<double>>& GetAnglesGaitPhaseLeft(){return mAnglesGaitPhaseLeft;}        
     const std::map<std::string, std::deque<double>>& GetAnglesGaitPhaseLeftPrev(){return mAnglesGaitPhaseLeftPrev;}        
     const std::map<std::string, std::deque<double>>& GetAnglesGaitPhaseRight(){return mAnglesGaitPhaseRight;}        
-    const std::map<std::string, std::deque<double>>& GetAnglesGaitPhaseRightPrev(){return mAnglesGaitPhaseRightPrev;}        
-    
+    const std::map<std::string, std::deque<double>>& GetAnglesGaitPhaseRightPrev(){return mAnglesGaitPhaseRightPrev;}
+
     double GetReward();
 
 private:
@@ -127,10 +127,13 @@ private:
     std::map<std::string, std::deque<double>> mAngles;
     std::map<std::string, std::deque<double>> mAnglesGaitPhaseLeft;
     std::map<std::string, std::deque<double>> mAnglesGaitPhaseLeftPrev;
+    
     std::map<std::string, std::deque<double>> mAnglesStancePhaseLeftPrev;    
     std::map<std::string, std::deque<double>> mAnglesSwingPhaseLeftPrev;    
+    
     std::map<std::string, std::deque<double>> mAnglesGaitPhaseRight;
     std::map<std::string, std::deque<double>> mAnglesGaitPhaseRightPrev;
+    
     // std::map<std::string, std::deque<double>> mAnglesGaitPhaseTmpRight;
     std::map<std::string, std::deque<double>> mAnglesStancePhaseRightPrev;    
     std::map<std::string, std::deque<double>> mAnglesSwingPhaseRightPrev;    

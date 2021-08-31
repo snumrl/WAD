@@ -406,15 +406,15 @@ Initialize_Forces()
 	mDefaultForces <<
 	     0, 0, 0, 0, 0, 0,   //pelvis
 	     250, 150, 150,      //Femur L
-	     100,                //Tibia L
-	     150, 100, 100,      //Talus L
+	     150,                //Tibia L
+	     200, 150, 150,      //Talus L
 	     50, 50,             //Thumb, Pinky L
 	     250, 150, 150,      //Femur R
-	     100,                //Tibia R
-	     150, 100, 100,      //Talus R
+	     150,                //Tibia R
+	     200, 150, 150,      //Talus R
 	     50, 50,             //Thumb, Pinky R
-	     150, 150, 150,      //Spine
-	     150, 150, 150,      //Torso
+	     100, 100, 100,      //Spine
+	     100, 100, 100,      //Torso
 	     100, 100, 100,      //Neck
 	     100, 100, 100;      //Head
 	    //  50, 50, 50,         //Shoulder L
@@ -1390,7 +1390,8 @@ GetReward_Character_Imitation()
 
 		ee_rot_diff[i] = w_rot * Eigen::AngleAxisd(ref_ee_r[i].inverse() * cur_ee_r[i]).angle();
 		Eigen::Vector3d p = (ref_ee_p[i] - cur_ee_p[i]);
-		p[1] = 0;
+		if(ees[i]->getName() == "Head")
+			p[1] = 0;
 		
 		ee_pos_diff[i] = w_pos * (p).norm();
 	}
@@ -1404,7 +1405,7 @@ GetReward_Character_Imitation()
 	double sig_q = 0.5;
 	double sig_com = 20.0;
 	double sig_ee_rot = 10.0;
-	double sig_ee_pos = 20.0;
+	double sig_ee_pos = 40.0;
 	
 	double r_p = Utils::exp_of_squared(p_diff, sig_p);
 	double r_q = Utils::exp_of_squared(q_diff, sig_q);
@@ -1682,7 +1683,7 @@ GetReward_Vel()
 	double vel = diff/(cur[3]-past[3]);
 
 	// vel_err = fabs(vel-1.0*mSpeedRatio);
-	vel_err = fabs(vel-1.2);
+	vel_err = fabs(vel-1.23);
 
 	double reward = 0.0;
 	reward = exp(-1.0 * vel_scale * vel_err);
@@ -2210,6 +2211,7 @@ SetMassRatio(double r)
 {
 	mMassRatio = r;
 	this->SetMass();
+	this->SetForceRatio(r);
 
 	double param = 0.0;
 	if(mParamMax[0] == mParamMin[0])

@@ -163,7 +163,7 @@ private:
 	bool isDrawCharacter, isDrawDevice, isDrawTarget, isDrawReference;
 	bool isFirstUImanager;
 	
-	bool mRecordData;
+	bool mRecordData, mRecordOnce;
 
 	bool mLegend;
 	int mComparePersonIdx;
@@ -171,6 +171,7 @@ private:
 	double mPhaseRatio;
 	float mLpAlpha = 1.0;
 	int mParamIdx;	
+	int mNumParamChange;
 
 	Eigen::VectorXd mParamCnt;
 	Eigen::VectorXd mParamVel;
