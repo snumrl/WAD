@@ -635,6 +635,8 @@ Reset()
 	mCurVel = 0.0;
 	mCurVel3d.setZero();
 
+	mMassForceRatio = 1.0;
+
 	mGaitPhaseRight.clear();
 	mGaitPhaseLeft.clear();
 
@@ -2211,7 +2213,8 @@ SetMassRatio(double r)
 {
 	mMassRatio = r;
 	this->SetMass();
-	this->SetForceRatio(r);
+	mMassForceRatio = r;
+	// this->SetForc/eRatio(r);
 
 	double param = 0.0;
 	if(mParamMax[0] == mParamMin[0])
@@ -2251,7 +2254,7 @@ void
 Character::
 SetForceRatio(double r)
 {
-	mForceRatio = r;
+	mForceRatio = r * mMassForceRatio;
 
 	if(mUseMuscle)
 	{
@@ -2262,7 +2265,10 @@ SetForceRatio(double r)
 	}
 	else
 	{
+		// std::cout << "rataio : " << mForceRatio << std::endl;
 		mMaxForces = mForceRatio * mDefaultForces;
+		// for(int i=0; i<mMaxForces.size(); i++)
+		// 	std::cout << i << " : " << mMaxForces[i] << std::endl;
 	}
 
 	double param = 0.0;

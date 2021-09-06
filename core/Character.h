@@ -292,6 +292,8 @@ private:
 	bool mAdaptiveLowerBody;
 	bool mIsFirstFoot;
 
+	double mMassForceRatio =1.0;
+
 	double mMass;
 	double mMassRatio;
 	double mMassLower;
