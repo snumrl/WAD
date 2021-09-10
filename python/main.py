@@ -163,32 +163,33 @@ class PPO(object):
 			self.param_mul = []
 			self.param_base = []
 			self.param_div_num = 5
-			# for i in range(self.num_paramstate):
-			# 	self.param_base.append(-1)
-			# 	if(min_v[i] == max_v[i]):
-			# 		self.param_mul.append(0)
-			# 	else:
-			# 		self.param_mul.append(2.0/self.param_div_num)
+			for i in range(self.num_paramstate):
+				self.param_base.append(-1)
+				if(min_v[i] == max_v[i]):
+					self.param_mul.append(0)
+				else:
+					self.param_mul.append(2.0/self.param_div_num)
 
-			self.params = []
-			idx0 = 1
-			idx1 = 4
-			for i in range(self.param_div_num+1):
-				for j in range(self.param_div_num+1):
-					params = []
-					for k in range(5):
-						if k == idx0:
-							params.append(-1.0 + 0.4*i)
-						elif k == idx1:
-							params.append(-1.0 + 0.4*j)
-						else:
-							params.append(1.0)
-					self.params.append(params)
+			# self.params = []
+			# idx0 = 1
+			# idx1 = 4
+			# for i in range(self.param_div_num+1):
+			# 	for j in range(self.param_div_num+1):
+			# 		params = []
+			# 		for k in range(5):
+			# 			if k == idx0:
+			# 				params.append(-1.0 + 0.4*i)
+			# 			elif k == idx1:
+			# 				params.append(-1.0 + 0.4*j)
+			# 			else:
+			# 				params.append(1.0)
+			# 		self.params.append(params)
 			
-			# for i in range(self.num_slaves):
-			# 	k = i%(self.param_div_num +1)
-			# 	params = [k*self.param_mul[i]+self.param_base[i] for i in range(len(self.param_base))]
-			# 	self.params.append(params)
+			self.params = []
+			for i in range(self.num_slaves):
+				k = i%(self.param_div_num +1)
+				params = [k*self.param_mul[i]+self.param_base[i] for i in range(len(self.param_base))]
+				self.params.append(params)
 						
 
 		# ========== Common setting ========== #

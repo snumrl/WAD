@@ -41,7 +41,7 @@ GLFWApp(Environment* env)
       mMouseDown(false), mMouseDrag(false),mCapture(false),mRotate(false),mTranslate(false),mDisplayIter(0),
       isDrawCharacter(false),isDrawDevice(false),isDrawTarget(false),isDrawReference(false),
       mDrawOBJ(false),mDrawCharacter(true),mDrawDevice(true),mDrawTarget(false),mDrawReference(false),
-      mSplitViewNum(2),mSplitIdx(0),mViewMode(0),isFirstUImanager(true),mRecordData(false),mParamIdx(-1),mDrawDeviceTorque(false),mRecordOnce(false),mNumParamChange(0)
+      mSplitViewNum(2),mSplitIdx(0),mViewMode(0),isFirstUImanager(true),mDrawDeviceTorque(false),mRecordOnce(false),mLpAlpha(1.0)
 {
     mm = py::module::import("__main__");
 	mns = mm.attr("__dict__");
@@ -268,14 +268,6 @@ InitGLFW()
     
     ImPlot::SetCurrentContext(mPlotContexts["Main"]);
 
-    this->InitUI();
-}
-
-void
-GLFWApp::
-InitUI()
-{
-    mUiBackground = ImVec4(0.0f, 0.0f, 0.0f, 0.8f);        
 }
 
 void 
@@ -433,60 +425,7 @@ InitAnalysis()
         mAdaptiveParams_Char = mEnv->GetCharacter()->GetAdaptiveParams();
         if(mEnv->GetUseDevice())       
             mAdaptiveParams_Device = mEnv->GetDevice()->GetAdaptiveParams();                
-
-        Eigen::VectorXd min_v_ = mEnv->GetMinV();
-        Eigen::VectorXd max_v_ = mEnv->GetMaxV();
-        int size = min_v_.size();
-        for(int i=0; i<size; i++)
-        {
-            if(min_v_[i] != max_v_[i])
-            {
-                mNumParamChange += 6;
-
-                for(int j=0; j<6; j++)
-                {
-                    Eigen::VectorXd param(5);
-                    
-                    if(i==1)
-                    {
-                        param[0] = 1.0;
-                        param[1] = -1.0 + 0.4*j;
-                        param[2] = 1.0;
-                        param[3] = 0.0;
-                        param[4] = 0.2;
-                    }
-                    
-                    if(i==3)
-                    {
-                        param[0] = 1.0;
-                        param[1] = 1.0;
-                        param[2] = 1.0;
-                        param[3] = -1.0 + 0.4*j;
-                        param[4] = 0.2;
-                    }
-
-                    if(i==4) 
-                    {
-                        param[0] = 1.0;
-                        param[1] = -1.0;
-                        param[2] = 1.0;
-                        param[3] = 0.0;
-                        param[4] = -1.0 + 0.4*j;
-                    }
-                    mParamSet.push_back(param);
-                }
-            }
-
-            mParamCnt = Eigen::VectorXd::Zero(mNumParamChange);
-            mParamVel = Eigen::VectorXd::Zero(mNumParamChange);
-            mParamStride = Eigen::VectorXd::Zero(mNumParamChange);
-            mParamCadence = Eigen::VectorXd::Zero(mNumParamChange);
-            mParamEnergy = Eigen::VectorXd::Zero(mNumParamChange);            
-        }
-
     }
-
-        
 }
 
 void
@@ -515,8 +454,6 @@ StartLoop()
         while (lag >= frameTime) {
             if(mSimulating){
                 this->Update();
-                if(mRecordData)
-                    this->RecordData();
             }
             lag -= frameTime;
         }
@@ -526,37 +463,6 @@ StartLoop()
     }    
 }
 
-void GLFWApp::RecordData()
-{
-    // velocity
-    // stride
-    // stance ratio
-    // stance time
-    // energy 
-
-    int idx = mParamIdx;
-    int cnt = mParamCnt[idx];
-
-    double vel = mEnv->GetCharacter()->GetCurVelocity();
-    mParamVel[idx] = (mParamVel[idx]*cnt + vel)/(cnt+1);
-    
-    double stride = mEnv->GetCharacter()->GetJointDatas()->GetStrideRight();
-    mParamStride[idx] = (mParamStride[idx]*cnt + stride)/(cnt+1);
-
-    double cadence = mEnv->GetCharacter()->GetJointDatas()->GetCadenceRight();
-    mParamCadence[idx] = (mParamCadence[idx]*cnt + cadence)/(cnt+1);
-
-    // double gaitRatio = getGaitRatio();
-    // mParamGaitRatio[idx] = (mParamGaitRatio[idx]*cnt + gaitRatio)/(cnt+1);
-
-    // double stanceTime = getStanceTime();
-    // mParamStanceTime[idx] = (mParamStanceTime[idx]*cnt + stanceTime)/(cnt+1);   
-        
-    double energy = mEnv->GetCharacter()->GetJointDatas()->GetTorqueEnergyPrev();
-    mParamEnergy[idx] = (mParamEnergy[idx]*cnt + energy)/(cnt+1);   
-
-    mParamCnt[idx] += 1;
-}
 
 void GLFWApp::Update()
 {
@@ -650,70 +556,62 @@ bool
 GLFWApp::
 Screenshot()
 {
-    // static int count = 0;
-    // const char directory[8] = "frames";
-    // const char fileBase[8] = "Capture";
-    // char fileName[32];
-
-    // // create frames directory if not exists
-    // using Stat = struct stat;
-    // Stat buff;
-
-    // if (stat(directory, &buff) != 0)
-    //     mkdir(directory, 0777);
+    int w,h;
+    glfwGetFramebufferSize(mWindow, &w, &h);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
     
-    // if (!S_ISDIR(buff.st_mode))
-    // {
-    //     dtwarn << "[Window::screenshot] 'frames' is not a directory, "
-    //         << "cannot write a screenshot\n";
-    //     return false;
-    // }
+    int nSize = w*h*3;
+    char* dataBuffer = (char*)malloc(nSize*sizeof(char));
+    if (!dataBuffer) return false;
+    
+    glReadPixels((GLint)0, (GLint)0,
+            (GLint)w, (GLint)h,
+            GL_BGR, GL_UNSIGNED_BYTE, dataBuffer);
+    
+    static int count = 0;
+    const char directory[8] = "frames";
+    const char fileBase[8] = "Capture";
+    char fileName[32];
+
+    using Stat = struct stat;
+    Stat buff;
+
+    if (stat(directory, &buff) != 0)
+        mkdir(directory, 0777);
+    
+    if (!S_ISDIR(buff.st_mode))
+    {
+        dtwarn << "[Window::screenshot] 'frames' is not a directory, "
+            << "cannot write a screenshot\n";
+        return false;
+    }
   
-    // // png
-    // std::snprintf(
-    //     fileName,
-    //     sizeof(fileName),
-    //     "%s%s%s%.4d.png",
-    //     directory,
-    //     "/",
-    //     fileBase,
-    //     count++);
-  
-    // // int tw = glutGet(GLUT_WINDOW_WIDTH);
-    // // int th = glutGet(GLUT_WINDOW_HEIGHT);
+    // png
+    std::snprintf(
+        fileName,
+        sizeof(fileName),
+        "%s%s%s%.4d.tga",
+        directory,
+        "/",
+        fileBase,
+        count++);
 
-    // int tw,th;
-    // glfwGetFramebufferSize(mWindow, &tw, &th);
-    // // glfwGetWindowSize(mWindow, &tw, &th);
-    // std::vector<unsigned char> mScreenshotTmp = std::vector<unsigned char>(tw * th * 4);
-    // std::vector<unsigned char> mScreenshotTmp2 = std::vector<unsigned char>(tw * th * 4);
-
-    // glReadPixels(0, 0, tw, th, GL_RGBA, GL_UNSIGNED_BYTE, &mScreenshotTmp[0]);
+    FILE *filePtr = fopen(fileName, "wb");
+    if (!filePtr) return false;
     
-    // // reverse temp2 temp1
-    // for (int row = 0; row < th; row++)
-    // {
-    //     for (int j=0; i<4;)
-    //     memcpy(
-    //         &mScreenshotTmp2[row * tw * 4],
-    //         &mScreenshotTmp[(th - row - 1) * tw * 4],
-    //         tw * 4);
-    // }
+    unsigned char TGAheader[12]={0,0,2,0,0,0,0,0,0,0,0,0};
+    unsigned char header[6] = {(unsigned char)(w%256), (unsigned char)(w/256), (unsigned char)(h%256), (unsigned char)(h/256), 24,0};
+    // We write the headers
+    fwrite(TGAheader,	sizeof(unsigned char),	12,	filePtr);
+    fwrite(header,	sizeof(unsigned char),	6,	filePtr);
+    // And finally our image data
+    fwrite(dataBuffer,	sizeof(GLubyte),	nSize,	filePtr);
+    fclose(filePtr);
+    std::cout << fileName << " captured" << std::endl;
     
-    // unsigned result = lodepng::encode(fileName, mScreenshotTmp2, tw, th);
+    free(dataBuffer);
     
-    // // if there's an error, display it
-    // if (result)
-    // {
-    //     std::cout << "lodepng error " << result << ": "
-    //             << lodepng_error_text(result) << std::endl;
-    //     return false;
-    // }
-    // else
-    // {
-    //     std::cout << "wrote screenshot " << fileName << "\n";
-    //     return true;
-    // }
+    return true;
 }
 
 void 
@@ -840,9 +738,6 @@ DrawUiFrame_Manager()
                     mSplitTrackballs[i].setQuaternion(Eigen::Quaterniond(Eigen::AngleAxisd(i*M_PI/2, Eigen::Vector3d::UnitY())));
                 }    
             }
-
-            // if(ImGui::ColorEdit4("Background", (float*)&mUiBackground))
-            //     ImGui::PushStyleColor(ImGuiCol_WindowBg, mUiBackground);        
 
             ImGui::EndTabItem();
         }
@@ -1024,9 +919,10 @@ DrawUiFrame_SimState(double x, double y, double w, double h)
                 params[idx] = (double)(value-lower)/(upper-lower)*2 - 1.0;            
         }       
         
-        ImGui::Separator();
+        
         if(mEnv->GetUseDevice())
         {
+            ImGui::Separator();
             for(auto p : mAdaptiveParams_Device)
             {
                 std::string name = p.first;
@@ -1173,7 +1069,13 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
         std::ofstream file;
         if (ImGui::BeginTabItem("Joint Angle"))
         {       
-            std::string fileName = std::to_string(mParamIdx)+" angleData.txt";     
+            Eigen::VectorXd params = mEnv->GetParamState();
+            std::string fileName = "";
+            for(int i=0; i<params.size(); i++)
+            {
+                fileName = fileName + std::to_string(params[i]) + "_";
+            }
+            fileName = fileName + " angleData.txt";     
             if(mRecordOnce)
             {
                 file.open(fileName);
@@ -1470,54 +1372,7 @@ DrawUiFrame_Analysis(double x, double y, double w, double h)
             // }
                                    
             ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("Gait"))
-        {
-            double w_ = w/2.0 - 10.0;
-            double h_ = h/2.0 - 30.0;
-
-            static float xs1[6];
-            static float vel[6];
-            static float stride[6];
-            static float cadence[6];
-            static float energy[6];
-            for (int i = 0; i < mNumParamChange; ++i) {
-                xs1[i] = i * 0.1f; 
-                vel[i] = mParamVel[i];
-                stride[i] = mParamStride[i];
-                cadence[i] = mParamCadence[i];                               
-                energy[i] = mParamEnergy[i];                               
-            }
-
-            ImPlot::SetNextPlotLimits(-0.05, 0.55, 1.0, 1.6, ImGuiCond_Always);                
-            if (ImPlot::BeginPlot("Velocity", "t", "vel", ImVec2(w_,h_), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
-                ImPlot::PlotLine("vel", xs1, vel, 6);
-                ImPlot::EndPlot();
-            }
-            
-            ImGui::SameLine();
-            ImPlot::SetNextPlotLimits(-0.05, 0.55, 1.0, 1.6, ImGuiCond_Always);                
-            if (ImPlot::BeginPlot("Stride", "t", "stride", ImVec2(w_,h_), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
-                ImPlot::PlotLine("stride", xs1, stride, 6);
-                ImPlot::EndPlot();
-            }
-
-            ImPlot::SetNextPlotLimits(-0.05, 0.55, 50.0, 60.0, ImGuiCond_Always);                
-            if (ImPlot::BeginPlot("Cadence", "t", "cadence", ImVec2(w_,h_), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
-                ImPlot::PlotLine("cadence", xs1, cadence, 6);
-                ImPlot::EndPlot();
-            }
-
-            ImGui::SameLine();
-            ImPlot::SetNextPlotLimits(-0.05, 0.55, 50.0, 80.0, ImGuiCond_Always);                
-            if (ImPlot::BeginPlot("Energy", "t", "energy", ImVec2(w_,h_), ImPlotFlags_CanvasOnly, ImPlotAxisFlags_Lock)) {
-                ImPlot::PlotLine("energy", xs1, energy, 6);
-                ImPlot::EndPlot();
-            }
-
-            ImGui::EndTabItem();
-        }
+        }       
     }    
 
     ImPlot::SetCurrentContext(mPlotContexts["Main"]);
@@ -2252,12 +2107,7 @@ keyboardPress(int key, int scancode, int action, int mods)
             case GLFW_KEY_C: mDrawCharacter = !mDrawCharacter; break;
             case GLFW_KEY_D: mDrawDevice = !mDrawDevice; break;
             case GLFW_KEY_Z: mCapture = !mCapture; break;
-            case GLFW_KEY_Q: mRecordData = !mRecordData; break;
-            case GLFW_KEY_X: mRecordOnce = !mRecordOnce; break;
-            case GLFW_KEY_TAB: 
-                mParamIdx = (mParamIdx+1)%mNumParamChange;
-                mEnv->SetParamState(mParamSet[mParamIdx]); 
-                break;
+            case GLFW_KEY_X: mRecordOnce = !mRecordOnce; break;            
             default: break;
         }
     }

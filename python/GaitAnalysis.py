@@ -51,16 +51,16 @@ class DataBuffer(object):
 		return len(self.data)
 
 PARAM_DIV_NUM = 25
-PARAM_DIM = 2
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
-		self.num_slaves = int(math.pow(PARAM_DIV_NUM+1, PARAM_DIM))
+		self.num_slaves = 1
 		self.env = EnvManager(meta_file, self.num_slaves)
+		
 		self.use_muscle = self.env.UseMuscle()
 		self.use_device = self.env.UseDevice()
 		self.use_adaptive_motion = self.env.UseAdaptiveMotion()
-		
+
 		# ========== Character setting ========== #
 		self.num_state = self.env.GetNumState()
 		self.num_state_char = self.env.GetNumState_Char()
@@ -73,14 +73,9 @@ class PPO(object):
 
 		print("char state : ", self.num_state)
 		print("char action : ", self.num_action)
-		self.model = SimulationNN(self.num_state,self.num_action)
+		self.model = SimulationNN(self.num_state, self.num_action)
 		if use_cuda:
 			self.model.cuda()
-
-		self.analysisDatasize = 600
-		self.analysisData = [None]*self.num_slaves
-		for j in range(self.num_slaves):
-			self.analysisData[j] = DataBuffer()
 
 		# ========== Muscle setting ========= #
 		if self.use_muscle:
@@ -101,59 +96,68 @@ class PPO(object):
 			
 			min_v = np.array(self.env.GetMinV())
 			max_v = np.array(self.env.GetMaxV())
-			param_num = len(min_v)
-			param_idx = []
-			for i in range(param_num):
+			params_num = self.num_paramstate
+			params_change_idx = []
+			params_change_dim = 0
+			for i in range(params_num):
 				if min_v[i] != max_v[i]:
-					param_idx.append(i)
+					params_change_idx.append(i)
+					params_change_dim += 1
 
-			self.params = []
+			self.params_norm = []
 			self.params_real = []
-			self.param_div_num = PARAM_DIV_NUM
+			self.params_num = params_num
+			self.params_change_dim = params_change_dim
+			self.params_div_num = PARAM_DIV_NUM
 			
-			
-			# for i in range(self.param_div_num+1):
-			# 	params = min_v + i*mul_v
-			# 	params_ = params.tolist()
-			# 	self.params_real.append(params_)
-			mul_v = (max_v-min_v)/(self.param_div_num)
-			param_mul = 2.0/(self.param_div_num)
-			self.param_change_num = len(param_idx)
-			if self.param_change_num == 1:
-				for i in range(self.param_div_num+1):
-					params = []
+			mul_v = (max_v-min_v)/(self.params_div_num)
+			param_mul = 2.0/(self.params_div_num)
+			if self.params_change_dim == 1:
+				for i in range(self.params_div_num+1):
+					params_norm = []
 					params_real = []
-					for j in range(self.num_paramstate):
-						if j == param_idx[0]:
-							params.append(-1 + i*param_mul)
+					for j in range(params_num):
+						if j == params_change_idx[0]:
+							params_norm.append(-1 + i*param_mul)
 							params_real.append(min_v[j] + i*mul_v[j])
 						else:
-							params.append(0)
+							params_norm.append(0)
 							params_real.append(min_v[j])
-					self.params.append(params)
+					self.params_norm.append(params_norm)
 					self.params_real.append(params_real)
 
-			if self.param_change_num == 2:
+			if self.params_change_dim == 2:
 				for i in range(self.param_div_num+1):
 					for j in range(self.param_div_num+1):
-						params = []
+						params_norm = []
 						params_real = []
-						for k in range(self.num_paramstate):
-							if k == param_idx[0]:
-								params.append(-1 + i*param_mul)
+						for k in range(params_num):
+							if k == params_change_idx[0]:
+								params_norm.append(-1 + i*param_mul)
 								params_real.append(min_v[k] + i*mul_v[k])
-							elif k == param_idx[1]:
-								params.append(-1 + j*param_mul)
+							elif k == params_change_idx[1]:
+								params_norm.append(-1 + j*param_mul)
 								params_real.append(min_v[k] + j*mul_v[k])
 							else:
-								params.append(0)
+								params_norm.append(0)
 								params_real.append(min_v[k])
-						self.params.append(params)
+						self.params_norm.append(params_norm)
 						self.params_real.append(params_real)
 
-			print("size : ", len(self.params_real))
+			# print("size : ", len(self.params_real))
 			# print("params : ", self.params)
 	
+		# ============Analysis==============
+		if self.use_adaptive_sampling:
+			add_env_num = len(self.params_norm) - self.num_slaves
+			self.env.AddEnvironments(add_env_num)
+			self.num_slaves += add_env_num
+		
+		self.analysisDatasize = 30
+		self.analysisData = [None]*self.num_slaves
+		for j in range(self.num_slaves):
+			self.analysisData[j] = DataBuffer()
+
 	def LoadModel(self, path):
 		self.model.load('../nn/'+path+'.pt')
 		self.rms.load(path)
@@ -162,7 +166,6 @@ class PPO(object):
 		self.muscle_model.load('../nn/'+path+'_muscle.pt')
 
 	def GaitGenerate(self):
-		self.totalData = []
 		velocity = [None]*self.num_slaves
 		stride = [None]*self.num_slaves
 		cadence = [None]*self.num_slaves
@@ -175,7 +178,7 @@ class PPO(object):
 
 		if self.use_adaptive_sampling:
 			for j in range(self.num_slaves):
-				self.env.SetParamState(j, self.params[j])
+				self.env.SetParamState(j, self.params_norm[j])
 		
 		counter = 0
 		local_step = [0]*self.num_slaves
@@ -223,10 +226,9 @@ class PPO(object):
 						local_step[j] += 1
 
 				if self.env.isEndAnalysisPeriod(j) or terminated_state or nan_occur:
-					# self.totalData.append(self.analysisData[j])
 					self.env.Reset(True,j)
 					if self.use_adaptive_sampling:
-						self.env.SetParamState(j, self.params[j])
+						self.env.SetParamState(j, self.params_norm[j])
 
 			isDone = True
 			for j in range(self.num_slaves):
@@ -240,19 +242,16 @@ class PPO(object):
 			states = self.rms.apply(states)
 
 	def GaitAnalysis(self):
-
 		f = open("analysis.txt", 'w')
+		f.write("idx ")
 		if self.use_adaptive_sampling:
-			f.write("idx p0 p1 p2 p3 p4 r v s c te sr gt st" + "\n")
-		else:
-			f.write("idx r v s c te sr gt st" + "\n")
+			for i in range(self.params_num):
+				f.write("p"+str(i)+" ")
+		f.write("Rew Vel Str Cdc tE StrRtio GaitT StncT" + "\n")
 		
 		div = 0
 		if self.use_adaptive_sampling:
-			if self.param_change_num == 1:
-				div = self.param_div_num+1
-			elif self.param_change_num == 2:
-				div = (self.param_div_num+1)*(self.param_div_num+1)
+			div = len(self.params_norm)			
 		else:
 			div = 1
 
@@ -271,10 +270,11 @@ class PPO(object):
 			gt = np.mean(np.array(gaitTime))
 			st = sr * gt #stance time
 
+			f.write("%d " % (i))
 			if self.use_adaptive_sampling:
-				f.write("%d %f %f %f %f %f " % (i, self.params_real[i][0], self.params_real[i][1], self.params_real[i][2], self.params_real[i][3], self.params_real[i][4]))
-			else:
-				f.write("%d " % (i))
+				for j in range(self.params_num):
+					f.write("%f " % (self.params_real[i][j]))
+			
 			f.write("%f %f %f %f %f %f %f %f\n" % (r, v, s, c, te, sr, gt, st))
 			# print(i, " reward : ", np.mesan(np.array(reward)))
 			# print(i, " velocity : ", np.mean(np.array(velocity)))
@@ -285,107 +285,98 @@ class PPO(object):
 
 		f.close()
 
-		r2 = np.empty((6, 26))
-		v2 = np.empty((6, 26))
-		s2 = np.empty((6, 26))
-		c2 = np.empty((6, 26))
-		te2 = np.empty((6, 26))
-		sr2 = np.empty((6, 26))
-		gt2 = np.empty((6, 26))
-		st2 = np.empty((6, 26))		
+		div1 = 6
+		div2 = 26
 		if self.use_adaptive_sampling:
-			if self.param_change_num == 2:
-				f = open("analysis2.txt", 'w')
-				# f.write("idx p0 p1 p2 p3 p4 r v s c te sr gt st" + "\n")
-				for i in range(26):
-					for j in range(6):
-						idx = i * 26 + j * 5
+			if self.params_change_dim == 2:
+				r2 = np.empty((div1, div2))
+				v2 = np.empty((div1, div2))
+				s2 = np.empty((div1, div2))
+				c2 = np.empty((div1, div2))
+				te2 = np.empty((div1, div2))
+				sr2 = np.empty((div1, div2))
+				gt2 = np.empty((div1, div2))
+				st2 = np.empty((div1, div2))	
+
+				f = open("analysis_2dim.txt", 'w')
+				for i in range(div2):
+					for j in range(div1):
+						idx = i * div2 + j * div1 - 1
 						data = self.analysisData[idx].GetData()
 						
 						reward, velocity, stride, cadence, torqueEnergy, stanceRatio, gaitTime = zip(*data)
-						r = np.mean(np.array(reward))
-						v = np.mean(np.array(velocity))
-						s = np.mean(np.array(stride))
-						c = np.mean(np.array(cadence))
-						te = np.mean(np.array(torqueEnergy))
-						sr = np.mean(np.array(stanceRatio))
-						gt = np.mean(np.array(gaitTime))
-						st = sr * gt #stance time
-						
-						r2[j][i] = r 
-						v2[j][i] = v 
-						s2[j][i] = s 
-						c2[j][i] = c 
-						te2[j][i] = te 
-						sr2[j][i] = sr
-						gt2[j][i] = gt 
-						st2[j][i] = st
+						r2[j][i] = np.mean(np.array(reward))
+						v2[j][i] = np.mean(np.array(velocity))
+						s2[j][i] = np.mean(np.array(stride))
+						c2[j][i] = np.mean(np.array(cadence))
+						te2[j][i] = np.mean(np.array(torqueEnergy))
+						sr2[j][i] = np.mean(np.array(stanceRatio))
+						gt2[j][i] = np.mean(np.array(gaitTime))
+						st2[j][i] = sr2[j][i] * gt2[j][i] #stance time
 				
-				
-				for i in range(26):
+				for i in range(div2):
 					a = (1.0/25.0)*i
 					f.write("%f " % a)
 				f.write("\n")
 
-				f.write("r" + "\n")
-				for i in range(6):
+				f.write("Rew" + "\n")
+				for i in range(div1):
 					f.write("%f " % (0.1*i))
-					for j in range(26):
+					for j in range(div2):
 						f.write("%f " % r2[i][j])
 					f.write("\n")
 
-				f.write("v" + "\n")
-				for i in range(6):
+				f.write("Vel" + "\n")
+				for i in range(div1):
 					f.write("%f " % (0.1*i))
-					for j in range(26):
+					for j in range(div2):
 						f.write("%f " % v2[i][j])
 					f.write("\n")
 
-				f.write("s" + "\n")
-				for i in range(6):
+				f.write("Str" + "\n")
+				for i in range(div1):
 					f.write("%f " % (0.1*i))
-					for j in range(26):
+					for j in range(div2):
 						f.write("%f " % s2[i][j])
 					f.write("\n")
 
-				f.write("c" + "\n")
-				for i in range(6):
+				f.write("Cdc" + "\n")
+				for i in range(div1):
 					f.write("%f " % (0.1*i))
-					for j in range(26):
+					for j in range(div2):
 						f.write("%f " % c2[i][j])
 					f.write("\n")
 
-				f.write("te" + "\n")
-				for i in range(6):
+				f.write("tE" + "\n")
+				for i in range(div1):
 					f.write("%f " % (0.1*i))
-					for j in range(26):
+					for j in range(div2):
 						f.write("%f " % te2[i][j])
 					f.write("\n")
 
-				f.write("sr" + "\n")
-				for i in range(6):
+				f.write("strRtio" + "\n")
+				for i in range(div1):
 					f.write("%f " % (0.1*i))
-					for j in range(26):
+					for j in range(div2):
 						f.write("%f " % sr2[i][j])
 					f.write("\n")
 
-				f.write("gt" + "\n")
-				for i in range(6):
+				f.write("gaitT" + "\n")
+				for i in range(div1):
 					f.write("%f " % (0.1*i))
-					for j in range(26):
+					for j in range(div2):
 						f.write("%f " % gt2[i][j])
 					f.write("\n")
 
-				f.write("st" + "\n")
-				for i in range(6):
+				f.write("stncT" + "\n")
+				for i in range(div1):
 					f.write("%f " % (0.1*i))
-					for j in range(26):
+					for j in range(div2):
 						f.write("%f " % st2[i][j])
 					f.write("\n")
 				
 				f.close()
 		
-
 if __name__=="__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-d','--meta',help='meta file')
@@ -419,5 +410,4 @@ if __name__=="__main__":
 
 	print('num states: {}, num actions: {}'.format(ppo.env.GetNumState(),ppo.env.GetNumAction()))
 	ppo.GaitGenerate()
-	ppo.GaitAnalysis()
-	# ppo.Plot()
+	ppo.GaitAnalysis()	

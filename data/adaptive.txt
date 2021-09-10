@@ -2,8 +2,8 @@ character_param 3
 device_param 2
 
 mass 1.0 1.0
-force 0.5 1.0
-speed 1.0 1.0
+force 1.0 1.0
+speed 1.0 1.5
 
 device_k 0.0 1.0
 delta_t 0.3 0.3

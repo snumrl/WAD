@@ -2,8 +2,8 @@
 #include <omp.h>
 
 EnvManager::
-EnvManager(std::string meta_file,int num_envs)
-	:mNumEnvs(num_envs)
+EnvManager(std::string meta_file, int num_envs)
+	:mNumEnvs(num_envs),mMetaFile(meta_file)
 {
 	dart::math::seedRand();
 	omp_set_num_threads(mNumEnvs);
@@ -13,6 +13,21 @@ EnvManager(std::string meta_file,int num_envs)
 
 		env->SetId(i);
 		env->Initialize(meta_file, false);
+	}
+}
+
+void
+EnvManager::
+AddEnvironments(int num_envs)
+{
+	mNumEnvs += num_envs;
+	omp_set_num_threads(mNumEnvs);
+	for(int i = 0;i<num_envs;i++){
+		mEnvs.push_back(new WAD::Environment());
+		WAD::Environment* env = mEnvs.back();
+
+		env->SetId(i);
+		env->Initialize(mMetaFile, false);
 	}
 }
 
@@ -481,6 +496,7 @@ GetGaitTimeRight(int id)
 PYBIND11_MODULE(pywad, m){
 	py::class_<EnvManager>(m, "EnvManager")
 		.def(py::init<std::string, int>())
+		.def("AddEnvironments",&EnvManager::AddEnvironments)
 		.def("Step",&EnvManager::Step)
 		.def("Steps",&EnvManager::Steps)
 		.def("StepsAtOnce",&EnvManager::StepsAtOnce)

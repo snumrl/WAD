@@ -10,6 +10,7 @@ class EnvManager
 public:
 	EnvManager(std::string meta_file, int num_envs);
 
+	void AddEnvironments(int num_envs);
 	void Step(int num, bool onDevice, int id);
 	void Steps(int num, bool onDevice);
 	void StepsAtOnce(bool onDevice);
@@ -81,6 +82,7 @@ public:
 
 private:
 	std::vector<WAD::Environment*> mEnvs;
+	std::string mMetaFile;
 	int mNumEnvs;
 };
 

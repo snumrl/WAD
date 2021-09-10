@@ -1450,8 +1450,8 @@ GetReward_Character_Efficiency()
 	r_Pose = this->GetReward_Pose();
 
 	double r_Vel = 1.0;
-	// r_Vel = this->GetReward_Vel();
-	r_Vel = 1.0;
+	r_Vel = this->GetReward_Vel();
+	// r_Vel = 1.0;
 
 	double r_Phase = 1.0;
 	r_Phase = this->GetReward_Phase();
@@ -1684,8 +1684,9 @@ GetReward_Vel()
 	double diff = std::sqrt(diff_x*diff_x + diff_z*diff_z);
 	double vel = diff/(cur[3]-past[3]);
 
-	// vel_err = fabs(vel-1.0*mSpeedRatio);
-	vel_err = fabs(vel-1.23);
+	vel_err = fabs(vel-1.0*mSpeedRatio);
+	// std::cout << mSpeedRatio << std::endl;
+	// vel_err = fabs(vel-1.23);
 
 	double reward = 0.0;
 	reward = exp(-1.0 * vel_scale * vel_err);

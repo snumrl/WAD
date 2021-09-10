@@ -50,7 +50,6 @@ public:
 	void InitLights();
 	void InitGLFW();
 	void InitGL();
-	void InitUI();
 	void InitAnalysis();
 
 	void StartLoop();
@@ -58,7 +57,6 @@ public:
 	void Update();
 	void SetFocus();	
 
-	void RecordData();
 	bool Screenshot();
 
 	void Draw();
@@ -163,21 +161,13 @@ private:
 	bool isDrawCharacter, isDrawDevice, isDrawTarget, isDrawReference;
 	bool isFirstUImanager;
 	
-	bool mRecordData, mRecordOnce;
+	bool mRecordOnce;
 
 	bool mLegend;
 	int mComparePersonIdx;
 
 	double mPhaseRatio;
-	float mLpAlpha = 1.0;
-	int mParamIdx;	
-	int mNumParamChange;
-
-	Eigen::VectorXd mParamCnt;
-	Eigen::VectorXd mParamVel;
-	Eigen::VectorXd mParamStride;
-	Eigen::VectorXd mParamCadence;
-	Eigen::VectorXd mParamEnergy;
+	float mLpAlpha;
 
 	std::map<std::string, double> perfStats;
 	std::map<std::string, std::pair<double,double>> mJointAngleMinMax;
@@ -188,7 +178,8 @@ private:
 
 	std::vector<Eigen::VectorXd> mParamSet;
 
-	ImVec4 mUiBackground;	 	
+	std::vector<unsigned char> mScreenshotTemp;
+  	std::vector<unsigned char> mScreenshotTemp2;
 
 };
 }
