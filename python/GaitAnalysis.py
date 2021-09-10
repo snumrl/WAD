@@ -51,6 +51,7 @@ class DataBuffer(object):
 		return len(self.data)
 
 PARAM_DIV_NUM = 25
+DIR_NAME = "../analysis/"
 class PPO(object):
 	def __init__(self,meta_file):
 		np.random.seed(seed = int(time.time()))
@@ -242,7 +243,10 @@ class PPO(object):
 			states = self.rms.apply(states)
 
 	def GaitAnalysis(self):
-		f = open("analysis.txt", 'w')
+		fileName = DIR_NAME + "analysis.txt"
+		os.makedirs(os.path.dirname(fileName), exist_ok=True)
+		
+		f = open(fileName, 'w')
 		f.write("idx ")
 		if self.use_adaptive_sampling:
 			for i in range(self.params_num):
@@ -298,7 +302,11 @@ class PPO(object):
 				gt2 = np.empty((div1, div2))
 				st2 = np.empty((div1, div2))	
 
-				f = open("analysis_2dim.txt", 'w')
+				
+				fileName = DIR_NAME + "analysis2.txt"
+				os.makedirs(os.path.dirname(fileName), exist_ok=True)
+		
+				f = open(fileName, 'w')
 				for i in range(div2):
 					for j in range(div1):
 						idx = i * div2 + j * div1 - 1
