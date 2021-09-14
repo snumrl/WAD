@@ -359,6 +359,12 @@ IsEndOfEpisode()
 	char_skel->setPositions(p);
 	char_skel->setVelocities(v);
 
+	double phase;
+	if(mUseAdaptiveMotion)
+		phase = mCharacter->GetAdaptivePhase();
+	else
+		phase = mCharacter->GetPhase();
+
 	if(root_y < 1.4)
 		isTerminal = true;
 	else if(dist > 0.5)
@@ -367,8 +373,10 @@ IsEndOfEpisode()
 		isTerminal = true;
 	else if (dart::math::isNan(p) || dart::math::isNan(v))
 		isTerminal = true;
-	else if(mWorld->getTime() > 10.0)
+	else if(phase > 10.0)
 		isTerminal = true;
+	// else if(mWorld->getTime() > 10.0)
+	// 	isTerminal = true;
 
 	return isTerminal;
 }

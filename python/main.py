@@ -25,9 +25,21 @@ LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
-EpisodeAdaptive = namedtuple('Episode',('s','a','r', 'value', 'logprob', 't'))
 Episode = namedtuple('Episode',('s','a','r', 'value', 'logprob'))
 class EpisodeBuffer(object):
+	def __init__(self):
+		self.data = []
+	def Push(self, *args):
+		self.data.append(Episode(*args))
+	def Pop(self):
+		self.data.pop()
+	def GetData(self):
+		return self.data
+	def Size(self):
+		return len(self.data)
+
+EpisodeAdaptive = namedtuple('Episode',('s','a','r', 'value', 'logprob', 't'))
+class EpisodeAdaptiveBuffer(object):
 	def __init__(self):
 		self.data = []
 
@@ -85,7 +97,8 @@ class PPO(object):
 		self.use_muscle = self.env.UseMuscle()
 		self.use_device = self.env.UseDevice()
 		self.use_adaptive_motion = self.env.UseAdaptiveMotion()
-
+		self.use_adaptive_sampling = self.env.UseAdaptiveSampling()
+		
 		# ========== Character setting ========== #
 		self.num_state = self.env.GetNumState()
 		self.num_state_char = self.env.GetNumState_Char()
@@ -129,8 +142,12 @@ class PPO(object):
 		self.max_return_epoch = 1
 
 		self.episodes = [None]*self.num_slaves
-		for j in range(self.num_slaves):
-			self.episodes[j] = EpisodeBuffer()
+		if self.use_adaptive_sampling:
+			for j in range(self.num_slaves):
+				self.episodes[j] = EpisodeAdaptiveBuffer()
+		else:
+			for j in range(self.num_slaves):
+				self.episodes[j] = EpisodeBuffer()
 
 		# ========== Muscle setting ========= #
 		if self.use_muscle:
@@ -150,47 +167,8 @@ class PPO(object):
 				self.muscle_model.cuda()
 
 		# ===== Adaptive Sampling setting ==== #
-
-		self.use_adaptive_sampling = self.env.UseAdaptiveSampling()
 		if self.use_adaptive_sampling:
-			self.num_paramstate = self.env.GetNumParamState()
-			self.num_paramstate_char = self.env.GetNumParamState_Char()
-			if self.use_device:
-				self.num_paramstate_device = self.env.GetNumParamState_Device()
-			
-			min_v = self.env.GetMinV()
-			max_v = self.env.GetMaxV()
-			self.param_mul = []
-			self.param_base = []
-			self.param_div_num = 5
-			for i in range(self.num_paramstate):
-				self.param_base.append(-1)
-				if(min_v[i] == max_v[i]):
-					self.param_mul.append(0)
-				else:
-					self.param_mul.append(2.0/self.param_div_num)
-
-			# self.params = []
-			# idx0 = 1
-			# idx1 = 4
-			# for i in range(self.param_div_num+1):
-			# 	for j in range(self.param_div_num+1):
-			# 		params = []
-			# 		for k in range(5):
-			# 			if k == idx0:
-			# 				params.append(-1.0 + 0.4*i)
-			# 			elif k == idx1:
-			# 				params.append(-1.0 + 0.4*j)
-			# 			else:
-			# 				params.append(1.0)
-			# 		self.params.append(params)
-			
-			self.params = []
-			for i in range(self.num_slaves):
-				k = i%(self.param_div_num +1)
-				params = [k*self.param_mul[i]+self.param_base[i] for i in range(len(self.param_base))]
-				self.params.append(params)
-						
+			self.SetParameters()
 
 		# ========== Common setting ========== #
 		self.num_simulation_Hz = self.env.GetSimulationHz()
@@ -205,6 +183,53 @@ class PPO(object):
 
 		self.tic = time.time()
 		self.env.Resets(True)
+
+	def SetParameters(self):
+		self.num_paramstate = self.env.GetNumParamState()
+		self.num_paramstate_char = self.env.GetNumParamState_Char()
+		if self.use_device:
+			self.num_paramstate_device = self.env.GetNumParamState_Device()
+			
+		min_v = np.array(self.env.GetMinV())
+		max_v = np.array(self.env.GetMaxV())
+		params_num = self.num_paramstate
+		params_change_idx = []
+		params_change_dim = 0
+		for i in range(params_num):
+			if min_v[i] != max_v[i]:
+				params_change_idx.append(i)
+				params_change_dim += 1
+
+		self.params = []
+		self.params_num = params_num
+		self.params_change_dim = params_change_dim
+		self.params_div_num = 5
+			
+		mul_v = (max_v-min_v)/(self.params_div_num)
+		param_mul = 2.0/(self.params_div_num)
+		if self.params_change_dim == 1:
+			for i in range(self.num_slaves):
+				k = i%(self.params_div_num+1)
+				params = []
+				for j in range(params_num):
+					if j == params_change_idx[0]:
+						params.append(-1 + k*param_mul)
+					else:
+						params.append(0)
+				self.params.append(params)
+					
+		if self.params_change_dim == 2:
+			for i in range(self.param_div_num+1):
+				for j in range(self.param_div_num+1):
+					params = []
+					for k in range(params_num):
+						if k == params_change_idx[0]:
+							params.append(-1 + i*param_mul)
+						elif k == params_change_idx[1]:
+							params.append(-1 + j*param_mul)
+						else:
+							params.append(0)
+					self.params.append(params)
 
 	def SaveModel(self):
 		self.model.save('../nn/current.pt')
@@ -247,7 +272,6 @@ class PPO(object):
 		# if self.use_adaptive_sampling:
 		# 	self.GenerateInitialStates()
 		self.GenerateTransitions()
-
 		self.OptimizeModel()
 
 	def OptimizeModel(self):
@@ -351,11 +375,15 @@ class PPO(object):
 						self.episodes[j].Pop()
 					else:
 						self.total_episodes.append(self.episodes[j])
-					self.episodes[j] = EpisodeBuffer()
 
 					self.env.Reset(True,j)
+
 					if self.use_adaptive_sampling:
+						self.episodes[j] = EpisodeAdaptiveBuffer()						
 						self.env.SetParamState(j, self.params[j])
+					else:
+						self.episodes[j] = EpisodeBuffer()
+
 					# 	initial_state = np.float32(random.choice(self.InitialParamStates))
 					# 	self.env.SetParamState(j, initial_state)
 
@@ -599,7 +627,7 @@ class PPO(object):
 import matplotlib
 import matplotlib.pyplot as plt
 plt.ion()
-def Plot(y,title,num_fig=1,ylim=True,save=False):
+def Plot(y,title,num_fig=0,ylim=True,save=False):
 	temp_y = np.zeros(y.shape)
 	if y.shape[0]>5:
 		temp_y[0] = y[0]
@@ -611,14 +639,15 @@ def Plot(y,title,num_fig=1,ylim=True,save=False):
 
 	plt.figure(num_fig)
 	plt.clf()
-	plt.title(title)
+	plt.title(title, loc="center")
 	plt.plot(y,'b')
-
 	plt.plot(temp_y,'r')
-
+	# plt.draw()
 	plt.show()
+	
 	if ylim:
 		plt.ylim([0,1])
+	
 	if save:
 		x_len = len(y)
 		plt.savefig('../nn/'+str(x_len-1)+'.png')
@@ -674,14 +703,18 @@ if __name__=="__main__":
 	for i in range(ppo.max_iteration-5):
 		ppo.Train()
 		rewards = ppo.Evaluate()
-		if i == 1000:
-			ppo.learning_rate = 5.0*1E-5
-		if i == 2000:
-			ppo.learning_rate = 1.0*1E-5
 		
-		if (i%1000 == 0) or (i == ppo.max_iteration-7):
-			Plot(rewards,'reward',0,False,True)
+		iterSize = 500
+		idx1 = i%iterSize
+		idx2 = iterSize-1
+		# if idx1 == idx2:
+		# 	ppo.learning_rate *= 0.5
+		# 	if ppo.learning_rate < 1.0*1E-5:
+		# 		ppo.learning_rate = 1.0*1E-5	
+		
+		if (idx1 == idx2) or (i == ppo.max_iteration-10):
+			Plot(rewards,'Reward',0,False, True)
 		else:
-			Plot(rewards,'reward',0,False,False)
+			Plot(rewards,'Reward',0,False,False)
 
 
