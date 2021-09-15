@@ -113,6 +113,8 @@ private:
 	bool mUseAdaptiveMotion;
 	bool mUseAdaptiveSampling;
 
+	double mPhaseCount;
+
 	int mNumParamState;
 	int mNumParamState_Character;
 	int mNumParamState_Device;

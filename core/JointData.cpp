@@ -345,7 +345,7 @@ ChangePhaseTorques()
 
     if(mOnCycle)
     {
-        mCycleTorqueErr = mCycleTorqueSum * (1.0/(double)mSimulationHz)*mCycleStep;
+        mCycleTorqueErr = mCycleTorqueSum * (1.0/(double)mSimulationHz);
         // mCycleTorqueErr /= (double)(mDof-6);
         mCycleTorqueErr /= (double)(14);
         mCycleTorqueErr /= (double)(mStrideRight);            

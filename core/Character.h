@@ -72,8 +72,10 @@ public:
 	void SetPhases();
 	double GetPhase(){ return mPhase; }
 	double GetPhasePrev(){ return mPhasePrev; }
+	double GetPhaseDiff(){ return mPhaseDiff; }
 	double GetAdaptivePhase(){ return mAdaptivePhase; }
 	double GetAdaptivePhasePrev(){ return mAdaptivePhasePrev; }
+	double GetAdaptivePhaseDiff(){ return mAdaptivePhaseDiff; }
 	double GetAdaptiveTime(){ return mAdaptiveTime; }
 	std::pair<double,double> GetPhases(){ return mPhases; }
 	std::pair<double,double> GetAdaptivePhases(){ return mAdaptivePhases; }
@@ -267,6 +269,8 @@ private:
 	double mPhasePrev;
 	double mAdaptivePhase;
 	double mAdaptivePhasePrev;
+	double mPhaseDiff;
+	double mAdaptivePhaseDiff;
 	std::pair<double,double> mPhases;
 	std::pair<double,double> mAdaptivePhases;
 	int mPhaseStateRight;

@@ -638,6 +638,9 @@ Reset()
 		mComHistory.push_back(Eigen::Vector4d::Zero());
 
 	mStepCnt = 0;
+	mPhaseDiff = 0.0;
+	mAdaptivePhaseDiff = 0.0;
+
 	mCurCoT = 0.0;
 	mCurVel = 0.0;
 	mCurVel3d.setZero();
@@ -1806,6 +1809,9 @@ SetPhase()
 		phase += (cycleTime)/cycleTime;
 
 	mPhase = phase;
+	mPhaseDiff = (mPhase - mPhasePrev);
+	if(mPhaseDiff < 0)
+		mPhaseDiff += 1.0;
 	
 	mAdaptivePhasePrev = mAdaptivePhase;
 	double adaptivePhase = mAdaptiveTime;
@@ -1816,6 +1822,9 @@ SetPhase()
 		adaptivePhase += (cycleTime)/cycleTime;
 
 	mAdaptivePhase = adaptivePhase;
+	mAdaptivePhaseDiff = (mAdaptivePhase - mAdaptivePhasePrev);
+	if(mAdaptivePhaseDiff < 0)
+		mAdaptivePhaseDiff += 1.0;
 
 	this->SetPhases();
 }

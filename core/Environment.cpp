@@ -301,6 +301,9 @@ Reset(bool RSI)
 	mCharacter->Reset();
 	if(mUseDevice)
 		mDevice->Reset();
+
+	mCharacter->SetPhase();
+	mPhaseCount = 0.0;
 }
 
 void
@@ -328,6 +331,14 @@ Step(bool device_onoff, bool isRender)
 	{
 		mCharacter->SetPhase();
 		mCharacter->SetFrame();
+
+		double diff;
+		if(mUseAdaptiveMotion)
+			diff = mCharacter->GetAdaptivePhaseDiff();
+		else
+			diff = mCharacter->GetPhaseDiff();
+
+		mPhaseCount += diff;
 	}
 }
 
@@ -358,13 +369,8 @@ IsEndOfEpisode()
 
 	char_skel->setPositions(p);
 	char_skel->setVelocities(v);
-
-	double phase;
-	if(mUseAdaptiveMotion)
-		phase = mCharacter->GetAdaptivePhase();
-	else
-		phase = mCharacter->GetPhase();
-
+	
+	std::cout << "phase : " << mPhaseCount << std::endl;
 	if(root_y < 1.4)
 		isTerminal = true;
 	else if(dist > 0.5)
@@ -373,7 +379,7 @@ IsEndOfEpisode()
 		isTerminal = true;
 	else if (dart::math::isNan(p) || dart::math::isNan(v))
 		isTerminal = true;
-	else if(phase > 10.0)
+	else if(mPhaseCount > 10.0)
 		isTerminal = true;
 	// else if(mWorld->getTime() > 10.0)
 	// 	isTerminal = true;

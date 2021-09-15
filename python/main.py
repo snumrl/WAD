@@ -219,8 +219,8 @@ class PPO(object):
 				self.params.append(params)
 					
 		if self.params_change_dim == 2:
-			for i in range(self.param_div_num+1):
-				for j in range(self.param_div_num+1):
+			for i in range(self.params_div_num+1):
+				for j in range(self.params_div_num+1):
 					params = []
 					for k in range(params_num):
 						if k == params_change_idx[0]:

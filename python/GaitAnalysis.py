@@ -154,7 +154,7 @@ class PPO(object):
 			self.env.AddEnvironments(add_env_num)
 			self.num_slaves += add_env_num
 		
-		self.analysisDatasize = 30
+		self.analysisDatasize = 900
 		self.analysisData = [None]*self.num_slaves
 		for j in range(self.num_slaves):
 			self.analysisData[j] = DataBuffer()
