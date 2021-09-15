@@ -370,7 +370,6 @@ IsEndOfEpisode()
 	char_skel->setPositions(p);
 	char_skel->setVelocities(v);
 	
-	std::cout << "phase : " << mPhaseCount << std::endl;
 	if(root_y < 1.4)
 		isTerminal = true;
 	else if(dist > 0.5)
