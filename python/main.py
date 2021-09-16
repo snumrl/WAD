@@ -42,7 +42,6 @@ EpisodeAdaptive = namedtuple('Episode',('s','a','r', 'value', 'logprob', 't'))
 class EpisodeAdaptiveBuffer(object):
 	def __init__(self):
 		self.data = []
-
 	def Push(self, *args):
 		self.data.append(EpisodeAdaptive(*args))
 	def Pop(self):
@@ -142,7 +141,7 @@ class PPO(object):
 		self.max_return_epoch = 1
 
 		self.episodes = [None]*self.num_slaves
-		if self.use_adaptive_sampling:
+		if self.use_adaptive_motion:
 			for j in range(self.num_slaves):
 				self.episodes[j] = EpisodeAdaptiveBuffer()
 		else:
@@ -378,11 +377,13 @@ class PPO(object):
 
 					self.env.Reset(True,j)
 
-					if self.use_adaptive_sampling:
-						self.episodes[j] = EpisodeAdaptiveBuffer()						
-						self.env.SetParamState(j, self.params[j])
+					if self.use_adaptive_motion:
+						self.episodes[j] = EpisodeAdaptiveBuffer()												
 					else:
 						self.episodes[j] = EpisodeBuffer()
+					
+					if self.use_adaptive_sampling:
+						self.env.SetParamState(j, self.params[j])
 
 					# 	initial_state = np.float32(random.choice(self.InitialParamStates))
 					# 	self.env.SetParamState(j, initial_state)

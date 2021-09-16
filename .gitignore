@@ -3,4 +3,5 @@ nn/
 *.a
 *.so
 *.pyc
-python/__pycache__
+python/__pycache_
+analysis/_

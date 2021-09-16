@@ -50,7 +50,7 @@ class DataBuffer(object):
 	def Size(self):
 		return len(self.data)
 
-PARAM_DIV_NUM = 25
+PARAMS_DIV_NUM = 25
 DIR_NAME = "../analysis/"
 class PPO(object):
 	def __init__(self,meta_file):
@@ -109,7 +109,7 @@ class PPO(object):
 			self.params_real = []
 			self.params_num = params_num
 			self.params_change_dim = params_change_dim
-			self.params_div_num = PARAM_DIV_NUM
+			self.params_div_num = PARAMS_DIV_NUM
 			
 			mul_v = (max_v-min_v)/(self.params_div_num)
 			param_mul = 2.0/(self.params_div_num)
@@ -128,8 +128,8 @@ class PPO(object):
 					self.params_real.append(params_real)
 
 			if self.params_change_dim == 2:
-				for i in range(self.param_div_num+1):
-					for j in range(self.param_div_num+1):
+				for i in range(self.params_div_num+1):
+					for j in range(self.params_div_num+1):
 						params_norm = []
 						params_real = []
 						for k in range(params_num):
