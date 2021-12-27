@@ -87,4 +87,6 @@ python3 main.py --option --path
 - Run Trained data
 ```bash
 ./render/render --metadata --network
+./render/viewer --metadata --network
+ex) ./render/render ../data/metadata.txt ../nn/xxx-cpt
 ```

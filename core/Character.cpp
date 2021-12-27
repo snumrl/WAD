@@ -144,7 +144,12 @@ LoadMuscles(const std::string& path)
 				}
 
 				if(body == "FemurL" || body == "FemurR"){
-					muscle_elem->SetFemur(true);
+					muscle_elem->SetFemur(true);					
+				}
+
+				if(body == "TibiaL" || body == "TibiaR")
+				{
+					std::cout << name << std::endl;
 				}
 
 				if(i == 0 || i == num_waypoints-1)
@@ -1883,7 +1888,7 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 	double pd_scale = 0.1;
 	double root_ori_scale = 0.001;
 	double root_pos_scale = 0.001;
-	double lower_scale = 0.001; // adaptive lower body
+	double lower_scale = 0.0005; // adaptive lower body
 	double upper_scale = 0.005; // adaptive upper body
 	double temporal_scale = 0.2; // adaptive temporal displacement
 
@@ -1898,12 +1903,12 @@ SetActionAdaptiveMotion(const Eigen::VectorXd& a)
 		mAction.segment(pd_dof+l_dof,(sp_dof-l_dof)) = a.segment(pd_dof+l_dof,(sp_dof-l_dof)) * upper_scale;
 		mAction[pd_dof+sp_dof] = a[pd_dof+sp_dof] * temporal_scale;
 
-		mAction[pd_dof+6] *= 5.0;
-		mAction[pd_dof+9] *= 5.0;
-		mAction[pd_dof+10] *= 5.0;
-		mAction[pd_dof+15] *= 5.0;
-		mAction[pd_dof+18] *= 5.0;
-		mAction[pd_dof+19] *= 5.0;		
+		mAction[pd_dof+6] *= 10.0;
+		mAction[pd_dof+9] *= 10.0;
+		mAction[pd_dof+10] *= 10.0;
+		mAction[pd_dof+15] *= 10.0;
+		mAction[pd_dof+18] *= 10.0;
+		mAction[pd_dof+19] *= 10.0;		
 
 		for(int i=pd_dof; i<mAction.size(); i++){
 			if(i < pd_dof+3)

@@ -546,7 +546,7 @@ GetMetabolicEnergyRate_BHAR04()
 	double u_f = 1-cos(M_PI/2.0 * u); // 1 - cos(PI/2 * u_t)
 	double u_s = sin(M_PI/2.0 * u); // sin(PI/2 * u_t)
 	double f_FT = 0.5; // percentages of fast twitch muscles
-	double f_ST = 0.5; // percentages of fast twitch muscles
+	double f_ST = 0.5; // percentages of slow twitch muscles
 
 	h_A = mMass * (A_s*u_s*f_ST + A_f*u_f*f_FT);
 

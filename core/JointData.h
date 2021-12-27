@@ -80,8 +80,10 @@ public:
 
 private:
     SkeletonPtr mSkeleton;
+
     int mDof;
     int mJointNum;
+    
     int mWindowSize;
     int mCycleStep;
    
